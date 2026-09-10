@@ -2,6 +2,36 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.0.7] - 2026-09-10
+
+Cuts request values to the ceilings the LMS Labs schemas set. No schema change; the
+upgrade from v1.0.6 is a savepoint only.
+
+### Fixed
+
+- **Oversized wizard values rejected the whole request.** v1.0.6 sent the right
+  field names but did not cut their values to the service's limits, and the schemas
+  are length checked as well as strict: one value over its ceiling rejects the
+  entire request with a generic `INVALID_REQUEST` that names no field. The wizard's
+  own limits are looser than several of the service's, so a participant role longer
+  than 1000 characters, a title over 300, an audience over 500 or a setting over 300
+  was enough to make every generation fail. `title`, `audience`, `role`, `setting`,
+  `language`, `tone` and `complexity` are now cut to 300, 500, 1000, 300, 20, 40 and
+  40 characters respectively before the request is built.
+
+### Changed
+
+- Building a generate request is now its own method, so its shape and its limits can
+  be exercised without a network round trip.
+
+### Testing
+
+18 new checks pin every ceiling, confirm the payload carries no key the schema does
+not name, confirm empty optional fields are omitted rather than sent blank, and
+confirm source content below the service minimum is refused locally with a message
+that says so. The suite is 273 checks and passes on Moodle 4.4.12, 4.5.13 and 5.2.2,
+with CodeSniffer clean.
+
 ## [v1.0.6] - 2026-09-10
 
 Aligns this plugin with the LMS Labs service contract. Until now the plugin sent a

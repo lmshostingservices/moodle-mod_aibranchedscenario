@@ -72,5 +72,11 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091001, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091002) {
+        // Release 1.0.7 changes no schema. It cuts request values to the service's
+        // documented ceilings, in PHP only.
+        upgrade_mod_savepoint(true, 2026091002, 'aibranchedscenario');
+    }
+
     return true;
 }

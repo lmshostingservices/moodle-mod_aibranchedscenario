@@ -421,6 +421,32 @@ class lmslabs_provider implements provider {
      * @return array Keys: scenario, meta.
      */
     public function generate_scenario(array $request): array {
+        $payload = $this->generate_payload($request);
+        $requestid = self::request_id(self::OP_SCENARIO, json_encode($payload));
+        $data = $this->call(self::ROUTE_PREFIX . '/generate', $payload, $requestid);
+        if (!is_array($data)) {
+            throw new generation_exception('error:servicenoscenario');
+        }
+
+        return [
+            'scenario' => scenario_mapper::from_wire($data),
+            'meta'     => $this->lastmeta,
+        ];
+    }
+
+    /**
+     * Build the body of a generate request.
+     *
+     * Kept separate from the call so that the shape and the limits can be exercised
+     * without a network round trip. Every value is cut to the ceiling the service's
+     * schema sets for it: the schema is strict and length checked, so one oversized
+     * value rejects the whole request with a generic error that names no field.
+     *
+     * @param array $request Normalised wizard inputs.
+     * @return array Request body, carrying only keys the schema names.
+     * @throws generation_exception When there is too little source content to send.
+     */
+    protected function generate_payload(array $request): array {
         $source = trim((string)($request['sourcecontent'] ?? ''));
         if (\core_text::strlen($source) < self::MIN_GENERATE_CHARS) {
             throw new generation_exception('error:sourcetooshort', self::MIN_GENERATE_CHARS);
@@ -429,17 +455,18 @@ class lmslabs_provider implements provider {
         $payload = ['sourceContent' => $source];
 
         $optional = [
-            'title'      => $request['title'] ?? '',
-            'audience'   => $request['audience'] ?? '',
-            'role'       => $request['participantrole'] ?? '',
-            'setting'    => $request['setting'] ?? '',
-            'language'   => $request['language'] ?? '',
-            'tone'       => $request['tone'] ?? '',
-            'complexity' => $request['complexity'] ?? '',
+            'title'      => [$request['title'] ?? '', 300],
+            'audience'   => [$request['audience'] ?? '', 500],
+            'role'       => [$request['participantrole'] ?? '', 1000],
+            'setting'    => [$request['setting'] ?? '', 300],
+            'language'   => [$request['language'] ?? '', 20],
+            'tone'       => [$request['tone'] ?? '', 40],
+            'complexity' => [$request['complexity'] ?? '', 40],
         ];
-        foreach ($optional as $name => $value) {
+        foreach ($optional as $name => $spec) {
+            [$value, $max] = $spec;
             if (is_scalar($value) && trim((string)$value) !== '') {
-                $payload[$name] = trim((string)$value);
+                $payload[$name] = \core_text::substr(trim((string)$value), 0, $max);
             }
         }
 
@@ -447,7 +474,7 @@ class lmslabs_provider implements provider {
         if ($decisions >= 3 && $decisions <= 8) {
             $payload['decisions'] = $decisions;
             // One node per decision, plus the beats between them and three outcomes.
-            $payload['maxNodes'] = min(schema::MAX_NODES, ($decisions * 2) + 3);
+            $payload['maxNodes'] = max(3, min(schema::MAX_NODES, ($decisions * 2) + 3));
         }
 
         $objectives = [];
@@ -479,16 +506,7 @@ class lmslabs_provider implements provider {
             $payload['instructions'] = $instructions;
         }
 
-        $requestid = self::request_id(self::OP_SCENARIO, json_encode($payload));
-        $data = $this->call(self::ROUTE_PREFIX . '/generate', $payload, $requestid);
-        if (!is_array($data)) {
-            throw new generation_exception('error:servicenoscenario');
-        }
-
-        return [
-            'scenario' => scenario_mapper::from_wire($data),
-            'meta'     => $this->lastmeta,
-        ];
+        return $payload;
     }
 
     /**
