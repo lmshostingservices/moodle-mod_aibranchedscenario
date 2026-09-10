@@ -2,6 +2,17 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.2.0] - 2026-09-10
+
+A packaging release. No file other than `version.php`, `db/upgrade.php` and this
+changelog differs from v1.1.0. The release pipeline had already recorded the numeric
+version `2026091005`, so v1.1.1 could not be promoted; this release carries a higher
+number. Everything described under v1.1.0 below is what it contains.
+
+### Changed
+
+- Version bumped to `2026091006` / `1.2.0`, with a savepoint-only upgrade step.
+
 ## [v1.1.1] - 2026-09-10
 
 A packaging release. No file other than `version.php`, `db/upgrade.php` and this
