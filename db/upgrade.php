@@ -143,5 +143,35 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091011, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091012) {
+        // Release 1.5.2 changes no schema. The generic course introduction is no longer
+        // written into the opening situation.
+        upgrade_mod_savepoint(true, 2026091012, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091013) {
+        // Release 1.5.3 changes no schema. The service's own failure explanation is no
+        // longer discarded on its way to the teacher.
+        upgrade_mod_savepoint(true, 2026091013, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091014) {
+        // Release 1.6.0 changes no schema. It brings every request the plugin sends
+        // inside the service's published validation rules.
+        upgrade_mod_savepoint(true, 2026091014, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091015) {
+        // Release 1.6.1 changes no schema. It restores a character the previous release
+        // was wrongly leaving out of the request.
+        upgrade_mod_savepoint(true, 2026091015, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091016) {
+        // Release 1.6.2 changes no schema. It shows the field the service objected to
+        // when a request is rejected, instead of an unexplained failure.
+        upgrade_mod_savepoint(true, 2026091016, 'aibranchedscenario');
+    }
+
     return true;
 }

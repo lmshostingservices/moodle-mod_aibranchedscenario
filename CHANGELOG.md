@@ -2,6 +2,135 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.6.2] - 2026-09-10
+
+### Changed
+
+- **A rejected request now names the field the service objected to.** The LMS Labs
+  routes have been extended, in source, to return an `issues` array alongside their
+  refusal — each entry carrying a field path such as `characters.0.role` and a machine
+  reason such as `invalid_type`. The plugin reads that array and shows the teacher which
+  fields were at fault, so "the service could not complete the request" becomes
+  "INVALID_REQUEST: characters.0.role (invalid_type), setting (too_big)".
+- Only the field paths and the reason codes are shown. The service's own issue messages
+  and any submitted values are discarded at the plugin boundary rather than trusted not
+  to contain them, so no teacher content, name or credential fragment can reach a browser
+  or a log through this path. The detail is forced onto one line and cut at 200
+  characters. Where a deployment sends no `issues` array the plugin falls back to the
+  sanitised `message`, and then to the bare error code, so older services behave exactly
+  as before.
+- The conformance suite gains 20 checks for this, including hostile inputs: a field path
+  carrying an API key prefix, a field path spanning several lines, a reason code that is
+  really a sentence of prose, and an issue message containing a person's name are each
+  refused rather than displayed.
+
+### Note
+
+- **The corresponding service changes are written but not published.** They exist in the
+  Replit app's source only; nothing was published or restarted. Until that app is
+  published the service will keep returning its unexplained refusal, and this release
+  will keep falling back to the bare error code. The plugin change is safe to install
+  either way.
+- These changes do not establish the cause of the rejected generation reported on
+  10 September. The request and response recorded against the failed job remain the place
+  that answer will be found.
+
+## [v1.6.1] - 2026-09-10
+
+### Fixed
+
+- **A character the teacher named but gave no job to is sent again.** v1.6.0 left those
+  out of the generation request on the belief that an empty `role` was rejected. It is
+  not: the route requires the property to be present and to be a string, and an empty
+  string satisfies both. An absent, null or non-string value is what it refuses. So the
+  previous release was quietly losing a person the teacher had asked for, in order to
+  avoid a failure that was never going to happen. The name alone is worth something to
+  the generator and is sent as before.
+- The conformance suite encoded the same wrong rule and so agreed with the mistake. It
+  now checks what the route actually requires — present, and a string — and asserts
+  that an empty role is sent as an empty string rather than omitted.
+
+### Note
+
+- The cause of the rejected generation reported on 10 September remains unidentified.
+  The three payload faults corrected in v1.6.0 are real, but none of them is known to
+  be that one. The request and response for a failed job are recorded against it; that
+  record is where the answer is.
+
+## [v1.6.0] - 2026-09-10
+
+The LMS Labs routes validate every request against a strict schema **before** they
+authenticate or charge, and their refusal names no field: `INVALID_REQUEST` and
+nothing else. The published rules were read off the live service and are now encoded
+in the plugin's own test suite, so a request the service would refuse fails here, with
+the offending field named, rather than on a teacher's screen.
+
+### Fixed
+
+- **A character with a name and no role was believed to take the whole generation
+  down.** This was wrong, and is corrected in v1.6.1 below: an empty role is accepted.
+- **The source content ceiling was not enforced where every other ceiling is.** The
+  generate route accepts 60,000 characters and the provider left that to its caller's
+  own clamp. Found by the new conformance test on its first run.
+- **The suggest context could have exceeded its twenty-entry limit.** Room is now
+  reserved for the three entries the plugin adds, so the wizard's own values cannot
+  crowd them out or push the object over.
+
+### Added
+
+- 25 conformance checks covering every field of the generate and suggest payloads:
+  types, minimums, ceilings, item counts, and the properties each object may carry.
+  They are run against deliberately oversized input, which is where a ceiling error
+  actually comes from. 532 checks in total.
+
+### Known, and not fixable from the plugin
+
+- The suggest route puts the field's specification into the prompt as one JSON block
+  and instructs the model to "suggest one concise value". Nothing tells it to follow
+  the specification, and "concise" works against a field that asks for two or three
+  sentences. Until the route's own instruction changes, an opening situation may still
+  come back shorter and flatter than the brief asks for.
+
+## [v1.5.3] - 2026-09-10
+
+### Fixed
+
+- **"The LMS Labs service could not complete the request (no reason given)."** The
+  service does say why. It answers a refusal with its own code and a one-line
+  explanation, and the provider already reduces that to plain text and caps it. The
+  guard added in v1.3.1 to keep provider prose out of the interface accepted only a
+  bare identifier, so `INVALID_REQUEST: The request is invalid or exceeds supported
+  limits.` matched nothing, was never written to the job record, and every failure read
+  "no reason given" — the exact opposite of what the detail was added for. The guard
+  now accepts a failure code with an optional single-line explanation, and still
+  refuses a stack trace, a multi-line message and free prose.
+
+### Changed
+
+- **The second way into the plugin is offered at the start.** Drafting the scenario in
+  another assistant is a choice a teacher makes before touching the wizard, not after
+  walking through six steps of one they intend to bypass. The prompt and the paste box
+  now sit on the Source step beside "Fill the wizard from this content", under a
+  heading that asks which way they want to build it, and importing lands them on the
+  build step rather than back at the top.
+- The prompt button no longer names one assistant.
+- 7 further harness checks, 507 in total.
+
+## [v1.5.2] - 2026-09-10
+
+### Fixed
+
+- **The opening situation still arrived as a course description.** The populate
+  response's `introduction` — the generic content route's course introduction, the
+  field that produces "Active listening is a crucial communication skill…" — was being
+  written straight into the Opening situation. That alone would have been a bad
+  mapping. What made it worse is that it arrived *first*: the wizard only asks for the
+  fields populate left empty, so a course introduction sitting in that box meant the
+  properly briefed request for a real opening scene never ran at all. Every prompt
+  improvement made in v1.3.0 and v1.4.0 was unreachable on the autofill path. The
+  generic introduction is now ignored, and the field is filled by the request that
+  knows what an opening situation is.
+
 ## [v1.5.1] - 2026-09-10
 
 ### Fixed

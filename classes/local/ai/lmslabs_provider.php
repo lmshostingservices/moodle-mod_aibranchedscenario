@@ -59,11 +59,20 @@ class lmslabs_provider implements provider {
     /** @var int Fewest characters of source content the generate route accepts. */
     const MIN_GENERATE_CHARS = 50;
 
+    /** @var int Most characters of source content the generate route accepts. */
+    const MAX_GENERATE_CHARS = 60000;
+
     /** @var int Fewest characters of source content the populate route accepts. */
     const MIN_POPULATE_CHARS = 20;
 
     /** @var int Most characters of source content the suggest route accepts. */
     const MAX_SUGGEST_CHARS = 15000;
+
+    /** @var int Most entries the suggest route accepts in its context object. */
+    const MAX_CONTEXT_KEYS = 20;
+
+    /** @var int Most characters in any one context value. */
+    const MAX_CONTEXT_VALUE = 3000;
 
     /** @var int Most characters of narration text the speech route accepts. */
     const MAX_SPEECH_CHARS = 4500;
@@ -295,21 +304,7 @@ class lmslabs_provider implements provider {
             throw new generation_exception('error:serviceunreadable');
         }
         if ($status < 200 || $status >= 300 || empty($decoded['ok'])) {
-            $code = isset($decoded['error']) && is_string($decoded['error'])
-                ? clean_param($decoded['error'], PARAM_ALPHANUMEXT) : (string)$status;
-            // The service sends a human-readable message alongside the code. Showing it
-            // is the difference between "INVALID_REQUEST" and knowing what to change.
-            // It is the service's own prose, not a provider error or a stack trace: it
-            // is cleaned to plain text and capped, and no part of the request, and in
-            // particular no credential, is ever echoed back into it.
-            $detail = $code;
-            if (isset($decoded['message']) && is_string($decoded['message'])) {
-                $message = trim(clean_param($decoded['message'], PARAM_TEXT));
-                if ($message !== '') {
-                    $detail = $code . ': ' . \core_text::substr($message, 0, 200);
-                }
-            }
-            throw new generation_exception('error:servicefailed', $detail);
+            throw new generation_exception('error:servicefailed', self::failure_detail($decoded, $status));
         }
 
         $this->lastmeta = [
@@ -329,6 +324,59 @@ class lmslabs_provider implements provider {
             throw new generation_exception('error:serviceunreadable');
         }
         return $decoded['data'];
+    }
+
+    /**
+     * Turn a refused response into one safe line naming what the service objected to.
+     *
+     * The routes answer a rejected request with a code, a readable message, and - since
+     * the field-level detail was added - an `issues` array of `{field, code, message}`.
+     * The fields are what a site owner actually needs: "INVALID_REQUEST" alone sent us
+     * guessing for two days.
+     *
+     * Only the field paths and issue codes are used, never the messages and never any
+     * submitted value. The service states that it echoes neither, but this is the seam
+     * where a teacher's screen meets a remote system, so the guarantee is enforced here
+     * rather than relied upon: both are reduced to a strict character set, capped, and
+     * joined into a single line. When no issues are present the readable message is
+     * used as before.
+     *
+     * @param array $decoded Decoded response body.
+     * @param int $status HTTP status.
+     * @return string One line, safe to store and to show.
+     */
+    protected static function failure_detail(array $decoded, int $status): string {
+        $code = isset($decoded['error']) && is_string($decoded['error'])
+            ? clean_param($decoded['error'], PARAM_ALPHANUMEXT) : (string)$status;
+
+        $fields = [];
+        foreach ((array)($decoded['issues'] ?? []) as $issue) {
+            if (!is_array($issue)) {
+                continue;
+            }
+            $field = trim((string)($issue['field'] ?? ''));
+            if ($field === '' || !preg_match('/^[A-Za-z0-9_.\[\]]{1,80}$/', $field)) {
+                continue;
+            }
+            $reason = trim((string)($issue['code'] ?? ''));
+            $fields[] = preg_match('/^[a-z_]{1,40}$/', $reason)
+                ? $field . ' (' . $reason . ')' : $field;
+            if (count($fields) >= 6) {
+                break;
+            }
+        }
+        if ($fields) {
+            return \core_text::substr($code . ': ' . implode(', ', $fields), 0, 200);
+        }
+
+        if (isset($decoded['message']) && is_string($decoded['message'])) {
+            $message = trim(preg_replace('/\s+/u', ' ', clean_param($decoded['message'], PARAM_TEXT)));
+            if ($message !== '') {
+                return \core_text::substr($code . ': ' . $message, 0, 200);
+            }
+        }
+
+        return $code;
     }
 
     /**
@@ -417,7 +465,7 @@ class lmslabs_provider implements provider {
         // Sending what the teacher has already written stops the service overwriting
         // considered answers with generic ones. The route caps that at 30 keys of 5000
         // characters, so only the short scalar fields go.
-        $payload = ['sourceContent' => $source];
+        $payload = ['sourceContent' => \core_text::substr($source, 0, self::MAX_GENERATE_CHARS)];
         $current = self::current_values($request);
         if ($current) {
             $payload['currentValues'] = $current;
@@ -489,11 +537,15 @@ class lmslabs_provider implements provider {
             $payload['sourceContent'] = \core_text::substr($source, 0, self::MAX_SUGGEST_CHARS);
         }
 
+        // The route accepts at most twenty entries in `context`, each a string of at
+        // most three thousand characters, and rejects the whole request otherwise. Room
+        // is reserved here for the three the plugin adds below, so the wizard's own
+        // values can never crowd them out or push the object over the limit.
         $rest = self::current_values($context);
         unset($rest[$field]);
         $rest = array_map(function ($value) {
-            return \core_text::substr($value, 0, 3000);
-        }, array_slice($rest, 0, 18, true));
+            return \core_text::substr($value, 0, self::MAX_CONTEXT_VALUE);
+        }, array_slice($rest, 0, self::MAX_CONTEXT_KEYS - 3, true));
 
         // The route is told the name of the field and nothing about what the field is
         // for, which is why a request for an opening situation came back as a summary of
@@ -521,7 +573,7 @@ class lmslabs_provider implements provider {
             $rest['peopleAlreadyInTheScenario'] = \core_text::substr(
                 implode('; ', array_slice($already, 0, 4)),
                 0,
-                1000
+                self::MAX_CONTEXT_VALUE
             );
         }
 
@@ -585,7 +637,10 @@ class lmslabs_provider implements provider {
             throw new generation_exception('error:sourcetooshort', self::MIN_GENERATE_CHARS);
         }
 
-        $payload = ['sourceContent' => $source];
+        // Every other ceiling is enforced here, at the boundary that knows the route's
+        // limits, and this one was not: it was left to the caller's own clamp. A
+        // request one character over is rejected whole, naming no field.
+        $payload = ['sourceContent' => \core_text::substr($source, 0, self::MAX_GENERATE_CHARS)];
 
         // As for the other routes, a setting of "other" is replaced by what the teacher
         // typed, so the generator is told a place rather than the word "other".
@@ -629,14 +684,24 @@ class lmslabs_provider implements provider {
             $payload['learningObjectives'] = array_slice($objectives, 0, 12);
         }
 
+        // Every character object must carry both name and role as strings. An empty
+        // role is accepted; an absent one, a null or a non-string is not, and rejects
+        // the whole request naming no field. So a character the teacher named but gave
+        // no job to is still sent - the name alone is worth something to the generator,
+        // and dropping it would quietly lose a person they asked for.
         $characters = [];
         foreach ((array)($request['characters'] ?? []) as $character) {
-            if (is_array($character) && trim((string)($character['name'] ?? '')) !== '') {
-                $characters[] = [
-                    'name' => \core_text::substr(trim((string)$character['name']), 0, 120),
-                    'role' => \core_text::substr(trim((string)($character['role'] ?? '')), 0, 200),
-                ];
+            if (!is_array($character)) {
+                continue;
             }
+            $name = trim((string)($character['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $characters[] = [
+                'name' => \core_text::substr($name, 0, 120),
+                'role' => \core_text::substr(trim((string)($character['role'] ?? '')), 0, 200),
+            ];
         }
         if ($characters) {
             $payload['characters'] = array_slice($characters, 0, 6);

@@ -119,7 +119,8 @@ class Wizard {
         });
 
         this.root.querySelectorAll('[data-group]').forEach((group) => this.syncOther(group));
-        this.showStep(1);
+        const wanted = parseInt(new URL(window.location.href).searchParams.get('step'), 10);
+        this.showStep(wanted >= 1 && wanted <= this.stepCount ? wanted : 1);
         return true;
     }
 
@@ -987,7 +988,12 @@ class Wizard {
             });
             if (response.imported) {
                 this.dirty = false;
-                window.location.reload();
+                // An import produces a finished scenario, so the teacher belongs at the
+                // step where it is reviewed and published rather than back at the top of
+                // a wizard they have just bypassed.
+                const url = new URL(window.location.href);
+                url.searchParams.set('step', String(this.stepCount));
+                window.location.assign(url.toString());
             } else {
                 this.showError({message: response.problems});
             }

@@ -413,7 +413,10 @@ class generator {
         // The identifier the service reported travels on the exception, and was being
         // dropped here, which is why the teacher was shown the message with no reason in
         // it. Only a bare upper-case identifier is kept; a provider sentence never is.
-        if ($detail === '' && is_string($exception->a ?? null) && preg_match('/^[A-Z][A-Z0-9_]{1,40}$/', $exception->a)) {
+        if (
+            $detail === '' && is_string($exception->a ?? null)
+                && preg_match('/^[A-Z][A-Z0-9_]{1,40}(: [^\r\n]{1,200})?$/u', $exception->a)
+        ) {
             $detail = $exception->a;
         }
         $record->errormsg = \core_text::substr(trim($exception->errorcode . ' ' . $detail), 0, 500);

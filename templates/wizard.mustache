@@ -130,11 +130,31 @@
                 <textarea class="aibs-textarea" id="aibs-brief" data-field="brief" rows="3">{{source.brief}}</textarea>
             </div>
 
+            <p class="aibs-field-label">{{#str}} whatnext, mod_aibranchedscenario {{/str}}</p>
+
             {{#aiavailable}}
-                <button type="button" class="aibs-btn aibs-btn-secondary" data-action="populate">
+                <button type="button" class="aibs-btn aibs-btn-primary" data-action="populate">
                     {{#str}} autofill, mod_aibranchedscenario {{/str}}
                 </button>
+                <p class="aibs-field-hint">{{#str}} autofillhint, mod_aibranchedscenario {{/str}}</p>
             {{/aiavailable}}
+
+            <details class="aibs-disclosure">
+                <summary class="aibs-disclosure-summary">
+                    {{#str}} draftelsewhere, mod_aibranchedscenario {{/str}}</summary>
+                <div class="aibs-disclosure-body">
+                    <p class="aibs-field-hint">{{#str}} draftelsewherehint, mod_aibranchedscenario {{/str}}</p>
+                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="copyprompt">
+                        {{#str}} copyprompt, mod_aibranchedscenario {{/str}}</button>
+                    <p class="aibs-field-hint">{{#str}} copyprompthint, mod_aibranchedscenario {{/str}}</p>
+                    <pre class="aibs-promptsource" data-region="promptsource" hidden>{{importprompt}}</pre>
+                    <label class="aibs-field-label" for="aibs-import">
+                        {{#str}} field:importjsonpaste, mod_aibranchedscenario {{/str}}</label>
+                    <textarea class="aibs-textarea" id="aibs-import" data-region="import" rows="6"></textarea>
+                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="import">
+                        {{#str}} importdefinition, mod_aibranchedscenario {{/str}}</button>
+                </div>
+            </details>
 
             <div class="aibs-field">
                 <label class="aibs-field-label" for="aibs-title">
@@ -393,22 +413,6 @@
                 {{/published}}
             </div>
 
-            <details class="aibs-disclosure">
-                <summary class="aibs-disclosure-summary">
-                    {{#str}} field:importjson, mod_aibranchedscenario {{/str}}</summary>
-                <div class="aibs-disclosure-body">
-                    <p class="aibs-field-hint">{{#str}} field:importjsonhint, mod_aibranchedscenario {{/str}}</p>
-                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="copyprompt">
-                        {{#str}} copyprompt, mod_aibranchedscenario {{/str}}</button>
-                    <p class="aibs-field-hint">{{#str}} copyprompthint, mod_aibranchedscenario {{/str}}</p>
-                    <pre class="aibs-promptsource" data-region="promptsource" hidden>{{importprompt}}</pre>
-                    <label class="aibs-field-label" for="aibs-import">
-                        {{#str}} field:importjsonpaste, mod_aibranchedscenario {{/str}}</label>
-                    <textarea class="aibs-textarea" id="aibs-import" data-region="import" rows="6"></textarea>
-                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="import">
-                        {{#str}} importdefinition, mod_aibranchedscenario {{/str}}</button>
-                </div>
-            </details>
 
 
             {{#published}}

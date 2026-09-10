@@ -139,11 +139,13 @@ class helper {
                 . get_string('error:validationdetail', 'mod_aibranchedscenario', $detail);
         }
 
-        // Everywhere else the detail was being split off and thrown away, so the teacher
-        // was shown the placeholder itself: "could not complete the request ({$a})".
-        // Only a bare identifier is ever passed through — never a provider message,
-        // which could carry content.
-        if ($detail === '' || !preg_match('/^[A-Z][A-Z0-9_]{1,40}$/', $detail)) {
+        // The shape accepted here is the service's own failure code, optionally followed
+        // by its own one-line explanation, which the provider has already reduced to
+        // plain text and capped. Requiring a bare identifier threw that explanation
+        // away and left every failure reading "no reason given" - the opposite of what
+        // the detail was added for. A provider stack trace or a multi-line message
+        // still does not match and is still discarded.
+        if ($detail === '' || !preg_match('/^[A-Z][A-Z0-9_]{1,40}(: [^\r\n]{1,200})?$/u', $detail)) {
             $detail = get_string('error:nodetail', 'mod_aibranchedscenario');
         }
 

@@ -217,9 +217,16 @@ class scenario_mapper {
         if (isset($fields['audience'])) {
             $out['audience'] = (string)$fields['audience'];
         }
-        if (isset($fields['introduction'])) {
-            $out['openingsituation'] = (string)$fields['introduction'];
-        }
+        // The `introduction` field is deliberately not read. It is the generic content route's
+        // course introduction — the field that produces "Active listening is a crucial
+        // communication skill…" — and writing it into the opening situation was why
+        // that field kept arriving as a course description. Worse, it arrived first:
+        // the wizard only asks for the fields populate left empty, so an opening
+        // situation filled with a course introduction meant the properly briefed
+        // request for a real one never ran. The scenario-specific `openingSituation`
+        // below is read when the service sends it; otherwise the field is left empty
+        // for that request to fill.
+
         if (isset($fields['instructions'])) {
             $out['brief'] = (string)$fields['instructions'];
         }
