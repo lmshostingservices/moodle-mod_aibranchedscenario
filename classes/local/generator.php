@@ -314,6 +314,21 @@ class generator {
         $record->status = self::JOB_ERROR;
         $record->errormsg = \core_text::substr(trim($exception->errorcode . ' ' . $detail), 0, 500);
         $record->timemodified = time();
+
+        // Record what was actually sent and what came back. The service reports a
+        // rejected request without naming the field at fault, so without this the only
+        // way to find out is to reason about code that may not be the code that ran.
+        // The provider has already replaced the API key with its shape and shortened
+        // long values, so nothing here reveals a credential.
+        $exchange = $this->provider->get_last_exchange();
+        if ($exchange) {
+            $record->requestjson = \core_text::substr(
+                (string)json_encode($exchange, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                0,
+                4000
+            );
+        }
+
         $DB->update_record('aibranchedscenario_jobs', $record);
     }
 

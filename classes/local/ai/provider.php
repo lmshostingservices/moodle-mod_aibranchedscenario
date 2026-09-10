@@ -120,4 +120,15 @@ interface provider {
      * @return array Keys: model, durationms, creditsused, creditsremaining.
      */
     public function get_last_meta(): array;
+
+    /**
+     * The most recent request and response, redacted so it can be stored and displayed.
+     *
+     * Implementations must replace credentials with a description of their shape rather
+     * than their value, and must not return generated learner content. The purpose is
+     * to make a rejected request diagnosable after the fact.
+     *
+     * @return array Empty when no call has been made.
+     */
+    public function get_last_exchange(): array;
 }

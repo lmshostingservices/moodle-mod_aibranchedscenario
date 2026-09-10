@@ -2,6 +2,59 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.0.8] - 2026-09-10
+
+Three corrections, each of which cost real time to find because the plugin could not
+show its own working. No schema change; the upgrade from v1.0.7 is a savepoint only.
+
+### Fixed
+
+- **The plugin reported valid API keys as malformed.** It asserted that a key was
+  `aigr_` followed by exactly 64 hexadecimal characters. That figure was assumed
+  here and never taken from the service; real issued keys carry 63. Every real key
+  was therefore labelled "does not match the usual LMS Labs format" on the settings
+  page. The check is now a loose shape test only, it never gates a call, and the
+  false warning is gone. The same wrong figure reached the LMS Labs routes through
+  this plugin's route contract document, where it rejected every real key before
+  authentication; that is fixed separately on the service.
+- **Button text could render white on a light grey background.** The hover rules
+  changed the background without restating the colour, so a site theme's
+  `button:hover { color: #fff }` won on specificity. Measured under a theme rule
+  using `!important`, the plugin's own buttons rendered at a contrast ratio of 1.14,
+  which is unreadable. Colour is now restated in every hover, focus and active
+  state, scoped to the activity's body class, and carries `!important` — used
+  nowhere else in the stylesheet, confined to colour, in interactive states, on this
+  plugin's own components.
+
+### Added
+
+- **Failure diagnostics.** The service reports a rejected request without naming the
+  field at fault, so a failure previously left nothing to investigate but the code
+  that might have run. Every call now records what was sent and what came back, and
+  a failed job stores it. The API key is replaced with a description of its shape —
+  its length and prefix, never its value, which is exactly the fact needed to tell a
+  malformed key from a rejected payload. Long values are shortened to a length and a
+  leading fragment, arrays are summarised by size, and generated narrative is not
+  copied into the diagnostic column.
+- `get_last_exchange()` on the provider contract, so no future provider can quietly
+  drop this.
+
+### Testing
+
+17 new checks: the redacted record never contains the key or any long run of it,
+reports its length and prefix, shortens long values, summarises arrays, and keeps
+non-secret fields intact; the provider contract requires the method; and the key
+shape test accepts real 68-character keys, 69-character keys and short plausible
+ones while rejecting values with no prefix — with resolution proven independent of
+shape either way. The suite is 290 checks and passes on Moodle 4.4.12, 4.5.13 and
+5.2.2, with CodeSniffer clean.
+
+Button colour is now measured rather than asserted. A harness renders the wizard and
+reads the computed colour of every button in every state, under Boost alone and under
+three kinds of hostile theme rule — plain, body-scoped and `!important` — and computes
+the WCAG contrast ratio for each. All twelve combinations pass AA; before this change
+the `!important` case measured 1.14.
+
 ## [v1.0.7] - 2026-09-10
 
 Cuts request values to the ceilings the LMS Labs schemas set. No schema change; the

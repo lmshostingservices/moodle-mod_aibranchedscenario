@@ -78,5 +78,11 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091002, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091003) {
+        // Release 1.0.8 changes no schema. It adds failure diagnostics, corrects an
+        // assumed API key format and defends button colour against site themes.
+        upgrade_mod_savepoint(true, 2026091003, 'aibranchedscenario');
+    }
+
     return true;
 }

@@ -136,6 +136,54 @@ class lmslabs_provider implements provider {
         return $this->lastmeta;
     }
 
+    /** @var array The most recent request and response, redacted, for diagnostics. */
+    protected $lastexchange = [];
+
+    /**
+     * The most recent exchange with the service, safe to store and display.
+     *
+     * The credentials are replaced with their shape rather than their value, and long
+     * text is truncated, so this can be written to the job record and shown to an
+     * administrator without leaking either the API key or learner content.
+     *
+     * @return array
+     */
+    public function get_last_exchange(): array {
+        return $this->lastexchange;
+    }
+
+    /**
+     * Replace credentials with a description of their shape, and shorten long values.
+     *
+     * The shape matters because the service validates the key's format before it
+     * authenticates, so "68 characters, aigr_ prefix" is exactly the fact needed to
+     * tell a malformed key from a rejected payload. The value itself never is.
+     *
+     * @param array $payload Request payload.
+     * @return array Safe to store.
+     */
+    protected static function redact(array $payload): array {
+        $out = [];
+        foreach ($payload as $key => $value) {
+            if ($key === 'apiKey') {
+                $out[$key] = is_string($value)
+                    ? '[' . \core_text::strlen($value) . ' chars, prefix ' . \core_text::substr($value, 0, 5) . ']'
+                    : '[not a string]';
+                continue;
+            }
+            if (is_string($value)) {
+                $out[$key] = \core_text::strlen($value) > 120
+                    ? '[' . \core_text::strlen($value) . ' chars] ' . \core_text::substr($value, 0, 120)
+                    : $value;
+            } else if (is_array($value)) {
+                $out[$key] = '[array of ' . count($value) . ']';
+            } else {
+                $out[$key] = $value;
+            }
+        }
+        return $out;
+    }
+
     /**
      * Build the credential envelope sent with every request.
      *
@@ -188,6 +236,14 @@ class lmslabs_provider implements provider {
             throw new generation_exception('error:requestencode');
         }
 
+        // Keep a redacted copy of what was actually sent. When the service rejects a
+        // request it says only that the request was invalid, naming no field, so
+        // without this the only way to find out what went over the wire is to guess.
+        $this->lastexchange = [
+            'route'   => $path,
+            'request' => self::redact(json_decode($body, true) ?: []),
+        ];
+
         $started = microtime(true);
         $curl = self::make_curl();
         $curl->setHeader([
@@ -210,6 +266,17 @@ class lmslabs_provider implements provider {
         $info = $curl->get_info();
         $status = (int)($info['http_code'] ?? 0);
         $decoded = json_decode((string)$response, true);
+
+        $this->lastexchange['status'] = $status;
+        $this->lastexchange['durationms'] = $durationms;
+        // Only the envelope of the response is kept. Generated narrative is stored as
+        // the scenario itself; repeating it here would duplicate learner-facing content
+        // into a diagnostic column for no benefit.
+        $this->lastexchange['response'] = is_array($decoded)
+            ? array_intersect_key($decoded, array_flip([
+                'ok', 'success', 'error', 'message', 'creditsUsed', 'creditsRemaining', 'isUnlimited',
+            ]))
+            : ['raw' => \core_text::substr((string)$response, 0, 300)];
 
         if ($status === 401 || $status === 403) {
             throw new generation_exception('error:serviceunauthorised');
@@ -301,6 +368,7 @@ class lmslabs_provider implements provider {
         $info = $curl->get_info();
         $status = (int)($info['http_code'] ?? 0);
         $decoded = json_decode((string)$response, true);
+
         if ($status === 401 || $status === 403) {
             $blank['message'] = get_string('status:unauthorised', 'mod_aibranchedscenario');
             return $blank;

@@ -75,15 +75,6 @@ class status_report {
             s(credentials::mask($resolved['apikey']))
         );
 
-        if ($diagnostics['unusualkeyformat']) {
-            // A note, not a block. The key is still sent; only LMS Labs can say
-            // whether it is valid.
-            $rows[] = self::row(
-                get_string('status:keyformat', 'mod_aibranchedscenario'),
-                html_writer::span(get_string('status:usualkeyformat', 'mod_aibranchedscenario'), 'text-warning')
-            );
-        }
-
         $provider = new lmslabs_provider();
         $status = $provider->get_status();
 

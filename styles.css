@@ -771,38 +771,57 @@
     outline-offset: 2px;
 }
 
+.path-mod-aibranchedscenario .aibs-btn-primary,
 .aibs-btn-primary {
     background: var(--aibs-accent);
     box-shadow: 0 1px 2px rgba(16, 24, 40, .1);
     color: #fff;
 }
 
+/* Every interactive state restates its own colour, and is scoped to the activity's
+   body class so that it outranks a site theme's blanket button rules. Themes commonly
+   ship something like `button:hover { color: #fff }`, which is more specific than a
+   bare class selector for the hover state; leaving colour out of these rules is what
+   produced white text on a light grey button under a custom theme. */
+.path-mod-aibranchedscenario .aibs-btn-primary:hover,
+.path-mod-aibranchedscenario .aibs-btn-primary:focus,
+.path-mod-aibranchedscenario .aibs-btn-primary:active,
 .aibs-btn-primary:hover {
     background: var(--aibs-accent-strong);
     box-shadow: var(--aibs-shadow-lg);
+    color: #fff !important;
     transform: translateY(-1px);
 }
 
+.path-mod-aibranchedscenario .aibs-btn-secondary,
 .aibs-btn-secondary {
     background: var(--aibs-surface);
     border-color: var(--aibs-border);
     color: var(--aibs-text);
 }
 
+.path-mod-aibranchedscenario .aibs-btn-secondary:hover,
+.path-mod-aibranchedscenario .aibs-btn-secondary:focus,
+.path-mod-aibranchedscenario .aibs-btn-secondary:active,
 .aibs-btn-secondary:hover {
     background: var(--aibs-surface-alt);
     border-color: var(--aibs-accent-border);
+    color: var(--aibs-text) !important;
     transform: translateY(-1px);
 }
 
+.path-mod-aibranchedscenario .aibs-btn-ghost,
 .aibs-btn-ghost {
     background: transparent;
     color: var(--aibs-muted);
 }
 
+.path-mod-aibranchedscenario .aibs-btn-ghost:hover,
+.path-mod-aibranchedscenario .aibs-btn-ghost:focus,
+.path-mod-aibranchedscenario .aibs-btn-ghost:active,
 .aibs-btn-ghost:hover {
     background: var(--aibs-surface-alt);
-    color: var(--aibs-text);
+    color: var(--aibs-text) !important;
 }
 
 .aibs-btn:disabled {

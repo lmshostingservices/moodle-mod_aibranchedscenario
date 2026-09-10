@@ -25,9 +25,9 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component    = 'mod_aibranchedscenario';
-$plugin->version      = 2026091002;
-$plugin->release      = '1.0.7';
-$plugin->release_prev = '1.0.6';
+$plugin->version      = 2026091003;
+$plugin->release      = '1.0.8';
+$plugin->release_prev = '1.0.7';
 $plugin->maturity     = MATURITY_STABLE;
 $plugin->requires     = 2024042200; // Moodle 4.4.
 $plugin->supported    = [404, 502];  // Moodle 4.4 to 5.2.

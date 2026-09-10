@@ -53,17 +53,17 @@ class credentials {
     const DEFAULT_COMPONENT = 'local_aiconfig';
 
     /**
-     * The shape LMS Labs API keys have used to date.
+     * The loosest shape an LMS Labs API key can have.
      *
-     * This is only ever used to decorate a diagnostic message. It is deliberately not
-     * a gate on resolution: a key that does not match this pattern may still be a
-     * perfectly good key issued under a newer scheme, and only the LMS Labs server can
-     * say whether a key is valid. Refusing to send an unfamiliar key would strand a
-     * correctly configured site with no way to tell what was wrong.
+     * This plugin previously asserted a exact length of 64 hexadecimal characters. That
+     * figure was assumed here rather than taken from the service, and real issued keys
+     * carry 63, so the assertion was wrong and every key it examined was reported as
+     * malformed. Only the service can say whether a key is valid, so this now checks
+     * nothing more than the prefix and a plausible length, and it never gates a call.
      *
      * @var string
      */
-    const KEY_PATTERN = '/^aigr_[0-9a-f]{64}$/';
+    const KEY_PATTERN = '/^aigr_[0-9a-f]{32,128}$/';
 
     /**
      * Components that are tried, in order, when reading shared credentials by setting
@@ -408,6 +408,7 @@ class credentials {
             'localpartial'     => ($localsiteid === '') !== ($localapikey === ''),
             'ignoring'         => self::ignoring_central(),
             'unusualkeyformat' => $resolved['apikey'] !== '' && !self::looks_like_key($resolved['apikey']),
+            'keylength'        => $resolved['apikey'] !== '' ? \core_text::strlen($resolved['apikey']) : 0,
         ];
     }
 
