@@ -348,6 +348,7 @@ $string['error:serviceunauthorised'] = 'The LMS Labs service rejected the site c
 $string['error:serviceratelimited'] = 'The LMS Labs service is rate limiting requests. Try again shortly.';
 $string['error:servicetimeout'] = 'The LMS Labs service did not respond in time. No scenario was saved.';
 $string['error:serviceunreadable'] = 'The LMS Labs service returned a response this plugin could not read.';
+$string['error:sourcetooshort'] = 'The source content is too short. The LMS Labs service needs at least {$a} characters to work from.';
 $string['error:servicefailed'] = 'The LMS Labs service could not complete the request ({$a}).';
 $string['error:servicenoscenario'] = 'The LMS Labs service did not return a scenario.';
 $string['error:servicenoimage'] = 'The LMS Labs service did not return a usable image.';

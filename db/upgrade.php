@@ -66,5 +66,11 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091000, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091001) {
+        // Release 1.0.6 changes no schema. It aligns the LMS Labs request and response
+        // handling with the service's published contract, in PHP only.
+        upgrade_mod_savepoint(true, 2026091001, 'aibranchedscenario');
+    }
+
     return true;
 }

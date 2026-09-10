@@ -2,6 +2,62 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.0.6] - 2026-09-10
+
+Aligns this plugin with the LMS Labs service contract. Until now the plugin sent a
+request shape that had been designed here rather than agreed with the service, and
+every generation call was rejected with `INVALID_REQUEST` before it was even
+authenticated. No schema change; the upgrade from v1.0.5 is a savepoint only.
+
+**This release needs the matching server change to be live.** The service must be
+running the extended scenario contract described below, or generation will return a
+scenario the validator rejects.
+
+### Fixed
+
+- **Requests carried fields the service does not accept.** The LMS Labs routes
+  validate with a strict schema, so any unknown key rejects the whole request. The
+  plugin was sending `pluginId`, `pluginVersion`, `requestId` and `contract` in the
+  body along with payload names of its own invention. The body now carries only
+  `siteId`, `apiKey` and the fields each route declares; the request identifier
+  moved to the `X-Request-Id` header, which is not schema checked.
+- **Each route's payload now matches its schema.** `generate` sends
+  `sourceContent` with the optional `title`, `audience`, `role`, `setting`,
+  `language`, `tone`, `complexity`, `decisions`, `maxNodes`, `learningObjectives`,
+  `characters` and `instructions`; `populate` sends `sourceContent` with
+  `currentValues`; `suggest` sends `field` with `currentValue`, `sourceContent` and
+  `context`. The wizard's longer narrative inputs are folded into `instructions`,
+  which the service caps at 2000 characters.
+- **Minimum source lengths are enforced before the call.** The service needs at
+  least 50 characters to generate and 20 to populate. A teacher who pastes less now
+  gets a clear message instead of a rejected request.
+- **Credit fields were read from the wrong place.** The service returns
+  `creditsUsed`, `creditsRemaining`, `creditsRaw` and `isUnlimited` at the top
+  level; the plugin was looking for a nested `credits` object, so the settings page
+  would have shown a zero balance on a working connection.
+- The service sends a human-readable `message` alongside its error code. It is now
+  shown to the administrator, cleaned to plain text and capped, instead of being
+  discarded in favour of a bare code.
+
+### Added
+
+- `scenario_mapper`, the single seam between the service's wire format and this
+  plugin's stored format. The service speaks camelCase and calls a scene's prose
+  `content`, a choice's prose `label` and a terminal node `end`; everything stored,
+  validated, rendered and scored here uses its own names. Translating in one place
+  means the wire format can change without touching the player, and the stored
+  format can change without renegotiating the API. Every optional field the service
+  omits becomes this plugin's documented default, so a service running an older
+  contract still produces a coherent scenario rather than a fatal.
+
+### Testing
+
+28 new checks cover the mapping in both directions: a full wire scenario mapped and
+then run through the validator, the `__auto__` outcome target, crisis variants,
+outcome bands, a minimal response with every optional field absent, and the
+populate field set. The suite is 255 checks and passes on Moodle 4.4.12, 4.5.13 and
+5.2.2, with CodeSniffer clean.
+
 ## [v1.0.5] - 2026-09-10
 
 Fixes the Central Config credential resolver. A site with valid credentials in

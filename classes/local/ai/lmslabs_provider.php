@@ -55,6 +55,15 @@ class lmslabs_provider implements provider {
     /** @var string Route prefix for this plugin's operations. */
     const ROUTE_PREFIX = '/api/aibranchedscenario';
 
+    /** @var int Fewest characters of source content the generate route accepts. */
+    const MIN_GENERATE_CHARS = 50;
+
+    /** @var int Fewest characters of source content the populate route accepts. */
+    const MIN_POPULATE_CHARS = 20;
+
+    /** @var int Most characters of source content the suggest route accepts. */
+    const MAX_SUGGEST_CHARS = 15000;
+
     /** @var array Metadata from the last successful call. */
     protected $lastmeta = [];
 
@@ -128,21 +137,20 @@ class lmslabs_provider implements provider {
     }
 
     /**
-     * Build the common envelope sent with every request.
+     * Build the credential envelope sent with every request.
      *
-     * @param string $requestid Idempotency handle.
+     * The LMS Labs routes validate their bodies with a strict schema, so any key the
+     * schema does not name causes the whole request to be rejected before it is even
+     * authenticated. Only siteId and apiKey belong in the body; the request
+     * identifier travels in the X-Request-Id header, where it is not schema checked.
+     *
      * @return array
      */
-    protected function envelope(string $requestid): array {
+    protected function envelope(): array {
         $creds = $this->creds();
-        $plugin = \core_plugin_manager::instance()->get_plugin_info('mod_aibranchedscenario');
         return [
-            'siteId'        => $creds['siteid'],
-            'apiKey'        => $creds['apikey'],
-            'pluginId'      => 'mod_aibranchedscenario',
-            'pluginVersion' => $plugin ? (string)$plugin->versiondisk : '',
-            'requestId'     => $requestid,
-            'contract'      => schema::CONTRACT_VERSION,
+            'siteId' => $creds['siteid'],
+            'apiKey' => $creds['apikey'],
         ];
     }
 
@@ -173,7 +181,7 @@ class lmslabs_provider implements provider {
 
         $creds = $this->creds();
         $body = json_encode(
-            array_merge($this->envelope($requestid), $payload),
+            array_merge($this->envelope(), $payload),
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
         );
         if ($body === false) {
@@ -218,7 +226,19 @@ class lmslabs_provider implements provider {
         if ($status < 200 || $status >= 300 || empty($decoded['ok'])) {
             $code = isset($decoded['error']) && is_string($decoded['error'])
                 ? clean_param($decoded['error'], PARAM_ALPHANUMEXT) : (string)$status;
-            throw new generation_exception('error:servicefailed', $code);
+            // The service sends a human-readable message alongside the code. Showing it
+            // is the difference between "INVALID_REQUEST" and knowing what to change.
+            // It is the service's own prose, not a provider error or a stack trace: it
+            // is cleaned to plain text and capped, and no part of the request, and in
+            // particular no credential, is ever echoed back into it.
+            $detail = $code;
+            if (isset($decoded['message']) && is_string($decoded['message'])) {
+                $message = trim(clean_param($decoded['message'], PARAM_TEXT));
+                if ($message !== '') {
+                    $detail = $code . ': ' . \core_text::substr($message, 0, 200);
+                }
+            }
+            throw new generation_exception('error:servicefailed', $detail);
         }
 
         $this->lastmeta = [
@@ -226,9 +246,12 @@ class lmslabs_provider implements provider {
                 ? clean_param($decoded['model'], PARAM_TEXT) : '',
             'provider'         => 'lmslabs',
             'durationms'       => $durationms,
-            'creditsused'      => (int)($decoded['credits']['used'] ?? 0),
-            'creditsremaining' => (int)($decoded['credits']['remaining'] ?? 0),
-            'unlimited'        => !empty($decoded['credits']['unlimited']),
+            'creditsused'      => (int)($decoded['creditsUsed'] ?? 0),
+            // The remaining balance is null on an unlimited plan, and isUnlimited is
+            // the authoritative flag for that case.
+            'creditsremaining' => isset($decoded['creditsRemaining']) && $decoded['creditsRemaining'] !== null
+                ? (int)$decoded['creditsRemaining'] : 0,
+            'unlimited'        => !empty($decoded['isUnlimited']),
         ];
 
         if (!isset($decoded['data']) || !is_array($decoded['data'])) {
@@ -314,15 +337,44 @@ class lmslabs_provider implements provider {
      * @return array Wizard field values, unvalidated.
      */
     public function populate(array $request): array {
-        $payload = [
-            'brief'         => (string)($request['brief'] ?? ''),
-            'sourceContent' => (string)($request['sourcecontent'] ?? ''),
-            'language'      => (string)($request['language'] ?? 'en-AU'),
-            'options'       => self::option_lists(),
-        ];
+        $source = trim((string)($request['sourcecontent'] ?? ''));
+        if (\core_text::strlen($source) < self::MIN_POPULATE_CHARS) {
+            throw new generation_exception('error:sourcetooshort', self::MIN_POPULATE_CHARS);
+        }
+
+        // Sending what the teacher has already written stops the service overwriting
+        // considered answers with generic ones. The route caps that at 30 keys of 5000
+        // characters, so only the short scalar fields go.
+        $payload = ['sourceContent' => $source];
+        $current = self::current_values($request);
+        if ($current) {
+            $payload['currentValues'] = $current;
+        }
+
         $requestid = self::request_id(self::OP_POPULATE, json_encode($payload));
         $data = $this->call(self::ROUTE_PREFIX . '/populate', $payload, $requestid);
-        return is_array($data['fields'] ?? null) ? $data['fields'] : [];
+        return scenario_mapper::fields_from_wire(is_array($data) ? $data : []);
+    }
+
+    /**
+     * Reduce the wizard's current values to the short scalar subset the route accepts.
+     *
+     * @param array $request Wizard values.
+     * @return array At most 30 keys, each a string of at most 5000 characters.
+     */
+    protected static function current_values(array $request): array {
+        $out = [];
+        $names = [
+            'title', 'audience', 'setting', 'participantrole', 'openingsituation',
+            'centralproblem', 'tone', 'complexity', 'industry', 'brief',
+        ];
+        foreach ($names as $name) {
+            $value = $request[$name] ?? '';
+            if (is_scalar($value) && trim((string)$value) !== '') {
+                $out[$name] = \core_text::substr(trim((string)$value), 0, 5000);
+            }
+        }
+        return $out;
     }
 
     /**
@@ -333,16 +385,32 @@ class lmslabs_provider implements provider {
      * @return array Keys: suggestion, values.
      */
     public function suggest(string $field, array $context): array {
-        $payload = [
-            'field'   => $field,
-            'context' => $context,
-            'options' => self::option_lists(),
-        ];
+        $payload = ['field' => \core_text::substr($field, 0, 100)];
+
+        $current = $context[$field] ?? '';
+        if (is_scalar($current) && trim((string)$current) !== '') {
+            $payload['currentValue'] = \core_text::substr(trim((string)$current), 0, 5000);
+        }
+
+        $source = trim((string)($context['sourcecontent'] ?? ''));
+        if ($source !== '') {
+            // This route accepts less source content than the others.
+            $payload['sourceContent'] = \core_text::substr($source, 0, self::MAX_SUGGEST_CHARS);
+        }
+
+        $rest = self::current_values($context);
+        unset($rest[$field]);
+        if ($rest) {
+            $payload['context'] = array_map(function ($value) {
+                return \core_text::substr($value, 0, 3000);
+            }, array_slice($rest, 0, 20, true));
+        }
+
         $requestid = self::request_id(self::OP_SUGGEST, json_encode($payload));
         $data = $this->call(self::ROUTE_PREFIX . '/suggest', $payload, $requestid);
         return [
             'suggestion' => is_string($data['suggestion'] ?? null) ? $data['suggestion'] : '',
-            'values'     => is_array($data['values'] ?? null) ? $data['values'] : [],
+            'values'     => [],
         ];
     }
 
@@ -353,26 +421,108 @@ class lmslabs_provider implements provider {
      * @return array Keys: scenario, meta.
      */
     public function generate_scenario(array $request): array {
-        $payload = [
-            'source'  => $request,
-            'options' => self::option_lists(),
-            'limits'  => [
-                'maxNodes'    => schema::MAX_NODES,
-                'minChoices'  => schema::MIN_CHOICES,
-                'maxChoices'  => schema::MAX_CHOICES,
-                'maxSkillDelta'  => schema::MAX_SKILL_DELTA,
-                'maxMetricDelta' => schema::MAX_METRIC_DELTA,
-            ],
+        $source = trim((string)($request['sourcecontent'] ?? ''));
+        if (\core_text::strlen($source) < self::MIN_GENERATE_CHARS) {
+            throw new generation_exception('error:sourcetooshort', self::MIN_GENERATE_CHARS);
+        }
+
+        $payload = ['sourceContent' => $source];
+
+        $optional = [
+            'title'      => $request['title'] ?? '',
+            'audience'   => $request['audience'] ?? '',
+            'role'       => $request['participantrole'] ?? '',
+            'setting'    => $request['setting'] ?? '',
+            'language'   => $request['language'] ?? '',
+            'tone'       => $request['tone'] ?? '',
+            'complexity' => $request['complexity'] ?? '',
         ];
+        foreach ($optional as $name => $value) {
+            if (is_scalar($value) && trim((string)$value) !== '') {
+                $payload[$name] = trim((string)$value);
+            }
+        }
+
+        $decisions = (int)($request['decisions'] ?? 0);
+        if ($decisions >= 3 && $decisions <= 8) {
+            $payload['decisions'] = $decisions;
+            // One node per decision, plus the beats between them and three outcomes.
+            $payload['maxNodes'] = min(schema::MAX_NODES, ($decisions * 2) + 3);
+        }
+
+        $objectives = [];
+        foreach ((array)($request['principles'] ?? []) as $principle) {
+            $title = is_array($principle) ? ($principle['title'] ?? '') : $principle;
+            if (is_scalar($title) && trim((string)$title) !== '') {
+                $objectives[] = \core_text::substr(trim((string)$title), 0, 500);
+            }
+        }
+        if ($objectives) {
+            $payload['learningObjectives'] = array_slice($objectives, 0, 12);
+        }
+
+        $characters = [];
+        foreach ((array)($request['characters'] ?? []) as $character) {
+            if (is_array($character) && trim((string)($character['name'] ?? '')) !== '') {
+                $characters[] = [
+                    'name' => \core_text::substr(trim((string)$character['name']), 0, 120),
+                    'role' => \core_text::substr(trim((string)($character['role'] ?? '')), 0, 200),
+                ];
+            }
+        }
+        if ($characters) {
+            $payload['characters'] = array_slice($characters, 0, 6);
+        }
+
+        $instructions = self::instructions($request);
+        if ($instructions !== '') {
+            $payload['instructions'] = $instructions;
+        }
+
         $requestid = self::request_id(self::OP_SCENARIO, json_encode($payload));
         $data = $this->call(self::ROUTE_PREFIX . '/generate', $payload, $requestid);
-        if (!is_array($data['scenario'] ?? null)) {
+        if (!is_array($data)) {
             throw new generation_exception('error:servicenoscenario');
         }
+
         return [
-            'scenario' => $data['scenario'],
+            'scenario' => scenario_mapper::from_wire($data),
             'meta'     => $this->lastmeta,
         ];
+    }
+
+    /**
+     * Assemble the free-text steer sent as the instructions field.
+     *
+     * The route caps this at 2000 characters, so the wizard's narrative inputs are
+     * folded into one brief rather than each being given a field of its own.
+     *
+     * @param array $request Wizard values.
+     * @return string
+     */
+    protected static function instructions(array $request): string {
+        $parts = [];
+        $prefixes = [
+            'brief'            => '',
+            'centralproblem'   => 'The central problem is',
+            'openingsituation' => 'The scenario opens with',
+        ];
+        foreach ($prefixes as $name => $prefix) {
+            $value = trim((string)($request[$name] ?? ''));
+            if ($value !== '') {
+                $parts[] = trim($prefix . ' ' . $value);
+            }
+        }
+        foreach (['whyhard' => 'What makes this hard', 'stakes' => 'What is at stake'] as $name => $label) {
+            $items = array_filter(array_map('strval', (array)($request[$name] ?? [])));
+            if ($items) {
+                $parts[] = $label . ': ' . implode('; ', $items);
+            }
+        }
+        if (!empty($request['atmosphere'])) {
+            $parts[] = 'Atmosphere: ' . (string)$request['atmosphere'];
+        }
+        return \core_text::substr(trim(implode("\n\n", $parts)), 0, 2000);
     }
 
     /**
