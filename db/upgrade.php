@@ -136,5 +136,12 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091010, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091011) {
+        // Release 1.5.1 changes no schema. The daily allowance becomes a credit budget
+        // rather than a request count, which needs no migration: it is read from the
+        // job records already there.
+        upgrade_mod_savepoint(true, 2026091011, 'aibranchedscenario');
+    }
+
     return true;
 }

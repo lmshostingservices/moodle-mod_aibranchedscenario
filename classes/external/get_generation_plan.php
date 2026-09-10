@@ -80,6 +80,8 @@ class get_generation_plan extends external_api {
         $provider = new lmslabs_provider();
         $status = $provider->status();
 
+        $allowance = (new \mod_aibranchedscenario\local\generator())->allowance((int)$GLOBALS['USER']->id);
+
         return [
             'decisions'    => $decisions,
             'scenes'       => $scenes,
@@ -93,6 +95,8 @@ class get_generation_plan extends external_api {
                 || !empty($status['connected']) === false
                 || (int)($status['credits'] ?? 0) >= $estimate,
             'replacesdraft' => !empty($scenario->scenariojson),
+            'allowancelimited'   => !empty($allowance['limited']),
+            'allowanceremaining' => (int)$allowance['remaining'],
             'buyurl'       => (string)($status['buyurl'] ?? ''),
         ];
     }
@@ -114,6 +118,8 @@ class get_generation_plan extends external_api {
             'balanceknown'  => new external_value(PARAM_BOOL, 'Whether the balance could be read'),
             'enough'        => new external_value(PARAM_BOOL, 'Whether the balance covers the estimate'),
             'replacesdraft' => new external_value(PARAM_BOOL, 'Whether a working copy would be replaced'),
+            'allowancelimited'   => new external_value(PARAM_BOOL, 'Whether a daily allowance applies'),
+            'allowanceremaining' => new external_value(PARAM_INT, 'How much of the daily allowance is left'),
             'buyurl'        => new external_value(PARAM_URL, 'Where more credits can be bought', VALUE_DEFAULT, ''),
         ]);
     }

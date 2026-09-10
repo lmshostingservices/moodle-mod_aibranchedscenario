@@ -104,7 +104,7 @@ if ($ADMIN->fulltree) {
         'mod_aibranchedscenario/dailyquota',
         get_string('settings:dailyquota', 'mod_aibranchedscenario'),
         get_string('settings:dailyquotadesc', 'mod_aibranchedscenario'),
-        40,
+        400,
         PARAM_INT
     ));
 

@@ -69,22 +69,75 @@ class generator {
      * @return void
      * @throws generation_exception
      */
-    public function check_quota(int $userid): void {
+    public function check_quota(int $userid, string $operation = provider::OP_SCENARIO): void {
         global $DB;
 
         $quota = (int)get_config('mod_aibranchedscenario', 'dailyquota');
         if ($quota <= 0) {
             return;
         }
+
+        // The limit is a credit budget, not a request count. Counting every operation
+        // the same made it meaningless: filling the wizard costs one populate and up to
+        // ten suggestions, so a teacher hit a limit of forty after three or four presses
+        // of a button that spends about thirty credits in total. Each job is now
+        // weighted by what the service charges for it.
+        $tariff = schema::tariff();
         $since = time() - DAYSECS;
-        $used = $DB->count_records_select(
-            'aibranchedscenario_jobs',
-            'userid = :userid AND timecreated > :since',
+        $spent = 0;
+        $counts = $DB->get_records_sql(
+            'SELECT jobtype, COUNT(id) AS total
+               FROM {aibranchedscenario_jobs}
+              WHERE userid = :userid AND timecreated > :since
+           GROUP BY jobtype',
             ['userid' => $userid, 'since' => $since]
         );
-        if ($used >= $quota) {
-            throw new generation_exception('error:quotaexceeded', $quota);
+        foreach ($counts as $row) {
+            $spent += (int)$row->total * (int)($tariff[$row->jobtype] ?? 1);
         }
+
+        $cost = (int)($tariff[$operation] ?? 1);
+        if ($spent + $cost > $quota) {
+            throw new generation_exception('error:quotaexceeded', (object)[
+                'quota' => $quota,
+                'spent' => $spent,
+            ]);
+        }
+    }
+
+    /**
+     * How much of a user's daily allowance is left.
+     *
+     * @param int $userid User id.
+     * @return array Keys: quota, spent, remaining, limited.
+     */
+    public function allowance(int $userid): array {
+        global $DB;
+
+        $quota = (int)get_config('mod_aibranchedscenario', 'dailyquota');
+        if ($quota <= 0) {
+            return ['quota' => 0, 'spent' => 0, 'remaining' => 0, 'limited' => false];
+        }
+
+        $tariff = schema::tariff();
+        $spent = 0;
+        $counts = $DB->get_records_sql(
+            'SELECT jobtype, COUNT(id) AS total
+               FROM {aibranchedscenario_jobs}
+              WHERE userid = :userid AND timecreated > :since
+           GROUP BY jobtype',
+            ['userid' => $userid, 'since' => time() - DAYSECS]
+        );
+        foreach ($counts as $row) {
+            $spent += (int)$row->total * (int)($tariff[$row->jobtype] ?? 1);
+        }
+
+        return [
+            'quota'     => $quota,
+            'spent'     => $spent,
+            'remaining' => max(0, $quota - $spent),
+            'limited'   => true,
+        ];
     }
 
     /**
@@ -97,7 +150,7 @@ class generator {
      * @throws generation_exception
      */
     public function populate(stdClass $scenario, int $userid, array $source): array {
-        $this->check_quota($userid);
+        $this->check_quota($userid, provider::OP_POPULATE);
 
         $brief = (string)($source['brief'] ?? '');
         $sourcecontent = $this->clamp_source((string)($source['sourcecontent'] ?? ''));
@@ -152,7 +205,7 @@ class generator {
      * @throws generation_exception
      */
     public function suggest(stdClass $scenario, int $userid, string $field, array $context): array {
-        $this->check_quota($userid);
+        $this->check_quota($userid, provider::OP_SUGGEST);
         $job = $this->create_job($scenario->id, $userid, provider::OP_SUGGEST, ['field' => $field]);
 
         try {

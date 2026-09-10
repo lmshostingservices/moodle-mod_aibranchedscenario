@@ -2,6 +2,29 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.5.1] - 2026-09-10
+
+### Fixed
+
+- **The daily allowance counted every operation as if it were a full generation.** A
+  scenario costs about twenty credits and a suggested field costs one, but both counted
+  as one request against a limit of forty. Since v1.3.0 filling the wizard has made up
+  to eleven requests in a single press, so a teacher could exhaust a whole day's
+  allowance in three or four presses of one button while spending a fraction of the
+  credits the limit was meant to bound. Each job is now weighted by what the service
+  charges for it, and the setting is described as what it always was: a credit budget.
+- **The refusal said nothing useful.** It named a number and stopped. It now says how
+  much of the allowance has been used, that it resets twenty-four hours after each
+  request, and where an administrator raises it.
+- **Generating warns first** when the allowance will not cover the run, rather than
+  letting the teacher press the button and be refused.
+
+### Changed
+
+- The default allowance is 400 credits a day rather than 40 requests, which is roughly
+  a dozen full generations or thirty wizard fills. **Existing sites keep the value they
+  have** — a site that has been running on 40 should raise it.
+
 ## [v1.5.0] - 2026-09-10
 
 Closes the ten shortfalls found by auditing the plugin against what a demanding

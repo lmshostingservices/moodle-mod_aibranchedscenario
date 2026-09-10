@@ -776,6 +776,10 @@ class Wizard {
             if (plan.balanceknown && !plan.unlimited) {
                 lines.push(await getString('confirmgenerate:balance', 'mod_aibranchedscenario', plan.credits));
             }
+            if (plan.allowancelimited && plan.allowanceremaining < plan.estimate) {
+                lines.push(await getString('confirmgenerate:allowance', 'mod_aibranchedscenario',
+                    plan.allowanceremaining));
+            }
             if (plan.replacesdraft) {
                 lines.push(await getString('confirmgenerate:replaces', 'mod_aibranchedscenario'));
             }
