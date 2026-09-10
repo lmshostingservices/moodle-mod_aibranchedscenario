@@ -1,0 +1,167 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template mod_aibranchedscenario/debrief
+
+    The closing outcome and learning debrief for a finished attempt.
+
+    Classes required for JS:
+    * aibs-debrief
+
+    Data attributes required for JS:
+    * data-action="replay"
+    * data-action="print"
+
+    Context variables required for this template:
+    * outcome string Outcome band reached
+    * outcomeclass string CSS modifier for the outcome band
+    * outcomelabel string Translated outcome band label
+    * outcometitle string Title of the outcome node
+    * outcomeparas string Outcome summary, array of plain-text paragraphs
+    * score float Decision quality as a percentage
+    * decisions int Number of decisions taken
+    * radar array Skill values, each with label, percent and raw
+    * journey array The decision journey
+    * whatmattered array Lessons demonstrated
+    * criticaldecisions array Decisions that changed the outcome
+    * practice array Behaviours to use in practice
+    * sourceconnectionparas string How the lessons connect to the source content
+    * hassourceconnection bool Whether a source connection is present
+    * takeaways array Takeaway cards
+    * hascritical bool Whether critical decisions are listed
+    * haspractice bool Whether practice behaviours are listed
+    * hastakeaways bool Whether takeaway cards are present
+    * allowreplay bool Whether the learner may replay
+
+    Example context (json):
+    {
+        "outcome": "mixed",
+        "outcomeclass": "aibs-outcome-mixed",
+        "outcomelabel": "Mixed outcome",
+        "outcometitle": "The line restarts, late",
+        "outcomeparas": ["The fault was fixed, but two hours were lost."],
+        "score": 62.5,
+        "decisions": 5,
+        "radar": [{"skill": "clarity", "label": "Clarity", "percent": 70, "raw": 3}],
+        "journey": [{"seq": 1, "nodetitle": "The fault nobody logged", "choicetext": "Log it now", "signal": "positive", "signalclass": "aibs-signal-positive", "consequenceparas": ["Sam agrees."], "feedbackparas": ["Good call."], "hasfeedback": true, "principle": "Report faults early"}],
+        "whatmattered": ["Faults are logged the moment they are seen."],
+        "criticaldecisions": ["Choosing to log the fault rather than fix it quietly."],
+        "practice": ["Log it, then fix it."],
+        "sourceconnectionparas": ["Section 4.2 of the procedure."],
+        "hassourceconnection": true,
+        "hascritical": true,
+        "haspractice": true,
+        "hastakeaways": true,
+        "takeaways": [{"heading": "Speak early", "bodyparas": ["Raising a fault early costs less than hiding it."]}],
+        "allowreplay": true
+    }
+}}
+<div class="aibs-debrief aibs-enter">
+
+    <section class="aibs-card aibs-outcome {{outcomeclass}}">
+        <div class="aibs-outcome-head">
+            <span class="aibs-outcome-badge">{{outcomelabel}}</span>
+            <div class="aibs-score" role="img" aria-label="{{#str}} decisionqualityscore, mod_aibranchedscenario, {{score}} {{/str}}">
+                <span class="aibs-score-value">{{score}}</span>
+                <span class="aibs-score-unit">%</span>
+            </div>
+        </div>
+        {{#outcometitle}}<h3 class="aibs-h3">{{outcometitle}}</h3>{{/outcometitle}}
+        <div class="aibs-prose aibs-prose-lead">{{#outcomeparas}}<p>{{.}}</p>{{/outcomeparas}}</div>
+        <p class="aibs-fineprint">{{#str}} decisionstaken, mod_aibranchedscenario, {{decisions}} {{/str}}</p>
+    </section>
+
+    <section class="aibs-card aibs-skills">
+        <h3 class="aibs-h3">{{#str}} howyouhandledit, mod_aibranchedscenario {{/str}}</h3>
+        <ul class="aibs-skill-list">
+            {{#radar}}
+                <li class="aibs-skill">
+                    <span class="aibs-skill-label">{{label}}</span>
+                    <span class="aibs-skill-track">
+                        <span class="aibs-skill-fill" style="width: {{percent}}%"></span>
+                    </span>
+                    <span class="aibs-skill-value">{{percent}}%</span>
+                </li>
+            {{/radar}}
+        </ul>
+    </section>
+
+    <section class="aibs-card aibs-journey">
+        <h3 class="aibs-h3">{{#str}} yourdecisions, mod_aibranchedscenario {{/str}}</h3>
+        <ol class="aibs-journey-list">
+            {{#journey}}
+                <li class="aibs-journey-item {{signalclass}}">
+                    <div class="aibs-journey-head">
+                        <span class="aibs-journey-seq">{{seq}}</span>
+                        <span class="aibs-journey-title">{{nodetitle}}</span>
+                    </div>
+                    <p class="aibs-journey-choice">{{choicetext}}</p>
+                    <div class="aibs-prose aibs-prose-small">{{#consequenceparas}}<p>{{.}}</p>{{/consequenceparas}}</div>
+                    {{#principle}}<p class="aibs-journey-principle">{{principle}}</p>{{/principle}}
+                </li>
+            {{/journey}}
+        </ol>
+    </section>
+
+    <section class="aibs-card aibs-lessons">
+        <h3 class="aibs-h3">{{#str}} whatmattered, mod_aibranchedscenario {{/str}}</h3>
+        <ul class="aibs-lesson-list">
+            {{#whatmattered}}<li class="aibs-lesson">{{.}}</li>{{/whatmattered}}
+        </ul>
+
+        {{#hascritical}}
+            <h4 class="aibs-h4">{{#str}} decisionsthatchanged, mod_aibranchedscenario {{/str}}</h4>
+            <ul class="aibs-lesson-list">
+                {{#criticaldecisions}}<li class="aibs-lesson">{{.}}</li>{{/criticaldecisions}}
+            </ul>
+        {{/hascritical}}
+
+        {{#haspractice}}
+            <h4 class="aibs-h4">{{#str}} applyitinpractice, mod_aibranchedscenario {{/str}}</h4>
+            <ul class="aibs-lesson-list">
+                {{#practice}}<li class="aibs-lesson">{{.}}</li>{{/practice}}
+            </ul>
+        {{/haspractice}}
+
+        {{#hassourceconnection}}
+            <h4 class="aibs-h4">{{#str}} sourceconnection, mod_aibranchedscenario {{/str}}</h4>
+            <div class="aibs-prose">{{#sourceconnectionparas}}<p>{{.}}</p>{{/sourceconnectionparas}}</div>
+        {{/hassourceconnection}}
+    </section>
+
+    {{#hastakeaways}}
+        <section class="aibs-takeaways">
+            {{#takeaways}}
+                <article class="aibs-card aibs-takeaway">
+                    <h4 class="aibs-h4">{{heading}}</h4>
+                    <div class="aibs-prose aibs-prose-small">{{#bodyparas}}<p>{{.}}</p>{{/bodyparas}}</div>
+                </article>
+            {{/takeaways}}
+        </section>
+    {{/hastakeaways}}
+
+    <div class="aibs-debrief-actions">
+        {{#allowreplay}}
+            <button type="button" class="aibs-btn aibs-btn-secondary" data-action="replay">
+                {{#str}} tryagain, mod_aibranchedscenario {{/str}}
+            </button>
+        {{/allowreplay}}
+        <button type="button" class="aibs-btn aibs-btn-ghost" data-action="print">
+            {{#str}} printdebrief, mod_aibranchedscenario {{/str}}
+        </button>
+    </div>
+</div>

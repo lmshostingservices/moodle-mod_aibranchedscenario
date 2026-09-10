@@ -1,0 +1,195 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template mod_aibranchedscenario/player
+
+    The shell of the branching scenario player.
+
+    The shell renders the opening brief, the progress rail and the empty regions the
+    AMD module fills as the learner moves through the scenario.
+
+    Classes required for JS:
+    * aibs-player
+    * aibs-region-node
+    * aibs-region-consequence
+    * aibs-region-debrief
+    * aibs-start
+
+    Data attributes required for JS:
+    * data-region="node"
+    * data-region="consequence"
+    * data-region="debrief"
+    * data-action="start"
+    * data-action="replay"
+
+    Context variables required for this template:
+    * cmid int Course module id
+    * themeclass string CSS class applying the chosen accent theme
+    * title string Activity name
+    * scenariotitle string Title of the published scenario
+    * subtitle string Scenario subtitle
+    * role string The role the learner plays
+    * hookparas string Opening situation, array of plain-text paragraphs
+    * setting string Where the scenario takes place
+    * published bool Whether a revision has been published
+    * canattempt bool Whether this user may attempt the scenario
+    * showtimeline bool Whether to render the progress rail
+    * showmetrics bool Whether to render the dynamics meters
+    * enableaudio bool Whether narration controls are offered
+    * maxattempts int Attempt ceiling, 0 for unlimited
+    * attemptsused int Attempts already started
+    * attemptsleft int Attempts remaining, -1 for unlimited
+    * stagecount int Longest number of decisions on any path
+    * stages array Progress rail entries
+    * metrics array Opening dynamics
+    * hasprinciples bool Whether decision principles are shown
+    * principles array Decision principles drawn from the source content
+
+    Example context (json):
+    {
+        "cmid": 42,
+        "themeclass": "aibs-theme-indigo",
+        "title": "Reporting a hazard",
+        "scenariotitle": "The vibrating machine",
+        "subtitle": "A late shift, a fault nobody logged",
+        "role": "You are the afternoon shift supervisor.",
+        "hookparas": ["It is 2:40 pm."],
+        "setting": "Packing line, main floor",
+        "published": true,
+        "canattempt": true,
+        "showtimeline": true,
+        "showmetrics": true,
+        "enableaudio": false,
+        "maxattempts": 0,
+        "attemptsused": 0,
+        "attemptsleft": -1,
+        "stagecount": 5,
+        "stages": [{"index": 1, "last": false}, {"index": 2, "last": true}],
+        "metrics": [{"key": "trust", "label": "Trust", "value": 50}],
+        "hasprinciples": true,
+        "principles": [{"id": "p1", "title": "Report faults before the next shift", "summary": "Anything that can hurt someone is logged the moment it is seen."}]
+    }
+}}
+<div class="aibs-player {{themeclass}}" data-region="player" data-cmid="{{cmid}}"
+     data-audio="{{#enableaudio}}1{{/enableaudio}}{{^enableaudio}}0{{/enableaudio}}"
+     data-replay="{{#allowreplay}}1{{/allowreplay}}{{^allowreplay}}0{{/allowreplay}}">
+
+    <div class="aibs-shell">
+
+        <header class="aibs-masthead">
+            <div class="aibs-masthead-text">
+                {{#setting}}<p class="aibs-eyebrow">{{setting}}</p>{{/setting}}
+                <h2 class="aibs-title">{{#scenariotitle}}{{scenariotitle}}{{/scenariotitle}}{{^scenariotitle}}{{title}}{{/scenariotitle}}</h2>
+                {{#subtitle}}<p class="aibs-subtitle">{{subtitle}}</p>{{/subtitle}}
+            </div>
+            <div class="aibs-masthead-side">
+                {{#enableaudio}}
+                    <button type="button" class="aibs-btn aibs-btn-ghost" data-action="mute"
+                            aria-pressed="false">{{#str}} narrationon, mod_aibranchedscenario {{/str}}</button>
+                {{/enableaudio}}
+            </div>
+        </header>
+
+        {{#showtimeline}}
+            <nav class="aibs-rail" aria-label="{{#str}} progress, mod_aibranchedscenario {{/str}}">
+                <ol class="aibs-rail-list" data-region="rail">
+                    {{#stages}}
+                        <li class="aibs-rail-step" data-step="{{index}}">
+                            <span class="aibs-rail-dot" aria-hidden="true"></span>
+                            <span class="aibs-rail-label">{{index}}</span>
+                        </li>
+                    {{/stages}}
+                </ol>
+                <p class="aibs-rail-status" data-region="railstatus" role="status" aria-live="polite"></p>
+            </nav>
+        {{/showtimeline}}
+
+        {{#showmetrics}}
+            <div class="aibs-meters" data-region="meters">
+                {{#metrics}}
+                    <div class="aibs-meter" data-metric="{{key}}">
+                        <div class="aibs-meter-head">
+                            <span class="aibs-meter-label">{{label}}</span>
+                            <span class="aibs-meter-value" data-region="metervalue">{{value}}</span>
+                        </div>
+                        <div class="aibs-meter-track" role="img"
+                             aria-label="{{label}}">
+                            <div class="aibs-meter-fill" data-region="meterfill" style="width: {{value}}%"></div>
+                        </div>
+                    </div>
+                {{/metrics}}
+            </div>
+        {{/showmetrics}}
+
+        <div class="aibs-stage">
+
+            <section class="aibs-card aibs-brief" data-region="brief">
+                {{#role}}<p class="aibs-role">{{role}}</p>{{/role}}
+                <div class="aibs-prose">{{#hookparas}}<p>{{.}}</p>{{/hookparas}}</div>
+
+                {{#hasprinciples}}
+                    <div class="aibs-principles">
+                        <h3 class="aibs-h3">{{#str}} whatthistests, mod_aibranchedscenario {{/str}}</h3>
+                        <ul class="aibs-principle-list">
+                            {{#principles}}
+                                <li class="aibs-principle">
+                                    <span class="aibs-principle-title">{{title}}</span>
+                                    {{#summary}}<span class="aibs-principle-summary">{{summary}}</span>{{/summary}}
+                                </li>
+                            {{/principles}}
+                        </ul>
+                    </div>
+                {{/hasprinciples}}
+
+                <div class="aibs-brief-actions">
+                    {{#canattempt}}
+                        {{#published}}
+                            <button type="button" class="aibs-btn aibs-btn-primary aibs-start" data-action="start">
+                                {{#str}} beginscenario, mod_aibranchedscenario {{/str}}
+                            </button>
+                        {{/published}}
+                    {{/canattempt}}
+                    {{^published}}
+                        <p class="aibs-notice">{{#str}} notpublishedyet, mod_aibranchedscenario {{/str}}</p>
+                    {{/published}}
+                    {{#published}}
+                        {{^canattempt}}
+                            <p class="aibs-notice">{{#str}} previewonly, mod_aibranchedscenario {{/str}}</p>
+                        {{/canattempt}}
+                    {{/published}}
+                </div>
+
+                {{#maxattempts}}
+                    <p class="aibs-fineprint">
+                        {{#str}} attemptsremaining, mod_aibranchedscenario, {{attemptsleft}} {{/str}}
+                    </p>
+                {{/maxattempts}}
+            </section>
+
+            <section class="aibs-region" data-region="node" aria-live="polite" hidden></section>
+            <section class="aibs-region" data-region="consequence" aria-live="polite" hidden></section>
+            <section class="aibs-region" data-region="debrief" aria-live="polite" hidden></section>
+
+            <div class="aibs-loading" data-region="loading" hidden>
+                <span class="aibs-spinner" aria-hidden="true"></span>
+                <span class="aibs-loading-text">{{#str}} working, mod_aibranchedscenario {{/str}}</span>
+            </div>
+
+            <div class="aibs-error" data-region="error" role="alert" hidden></div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,461 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template mod_aibranchedscenario/wizard
+
+    The five step authoring wizard, the generation panel and the node text editor.
+
+    Classes required for JS:
+    * aibs-wizard
+
+    Data attributes required for JS:
+    * data-region="wizard"
+    * data-step
+    * data-action
+
+    Context variables required for this template:
+    * cmid int Course module id
+    * themeclass string CSS class applying the chosen accent theme
+    * viewurl string URL of the learner view
+    * aiavailable bool Whether LMS Labs credentials are configured
+    * published bool Whether a revision is published
+    * revision int Current published revision number
+    * hasdraft bool Whether a working copy exists
+    * source object Stored wizard values
+    * characters array Four character slots
+    * principles array Decision principles
+    * hasprinciples bool Whether principles are present
+    * nodes array Nodes of the working copy
+    * nodecount int Number of nodes
+    * decisionoptions array Decision count choices
+    * industries array Option list
+    * settings array Option list
+    * atmospheres array Option list
+    * whyhard array Option list
+    * stakes array Option list
+    * tones array Option list
+    * complexities array Option list
+    * imagestyles array Option list
+    * openingmetrics array Opening dynamics
+    * maxsourcechars int Character ceiling for pasted content
+
+    Example context (json):
+    {
+        "cmid": 42,
+        "themeclass": "aibs-theme-indigo",
+        "viewurl": "https://example.com/mod/aibranchedscenario/view.php?id=42",
+        "aiavailable": true,
+        "published": false,
+        "revision": 0,
+        "hasdraft": false,
+        "source": {"brief": "", "sourcecontent": "", "title": "", "audience": "", "openingsituation": "", "centralproblem": "", "participantrole": "", "imageprompt": ""},
+        "characters": [{"index": 0, "position": 1, "name": "", "role": "", "trait": "", "appearance": ""}],
+        "principles": [],
+        "hasprinciples": false,
+        "nodes": [],
+        "nodecount": 0,
+        "decisionoptions": [{"value": 5, "selected": true}],
+        "industries": [{"key": "training", "label": "Training and assessment", "selected": true}],
+        "settings": [{"key": "trainingroom", "label": "Training room", "selected": true}],
+        "atmospheres": [{"key": "tension", "label": "Tension building", "selected": true}],
+        "whyhard": [{"key": "timepressure", "label": "Time pressure", "selected": false}],
+        "stakes": [{"key": "teamtrust", "label": "Team trust", "selected": false}],
+        "tones": [{"key": "neutral", "label": "Neutral", "selected": true}],
+        "complexities": [{"key": "intermediate", "label": "Intermediate", "selected": true}],
+        "imagestyles": [{"key": "cinematic", "label": "Cinematic", "selected": true}],
+        "openingmetrics": [{"key": "trust", "label": "Trust", "value": 50}],
+        "maxsourcechars": 60000
+    }
+}}
+<div class="aibs-wizard {{themeclass}}" data-region="wizard" data-cmid="{{cmid}}">
+    <div class="aibs-shell">
+
+        {{^aiavailable}}
+            <div class="aibs-error" role="alert">{{#str}} error:nocredentials, mod_aibranchedscenario {{/str}}</div>
+        {{/aiavailable}}
+
+        <ol class="aibs-wizard-steps" data-region="steps">
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="1"
+                    aria-current="step">1. {{#str}} step:source, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="2">2.
+                    {{#str}} step:scene, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="3">3.
+                    {{#str}} step:challenge, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="4">4.
+                    {{#str}} step:people, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="5">5.
+                    {{#str}} step:design, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="6">6.
+                    {{#str}} step:build, mod_aibranchedscenario {{/str}}</button></li>
+        </ol>
+
+        <div class="aibs-error" data-region="error" role="alert" hidden></div>
+
+        <section class="aibs-card" data-region="step" data-step="1">
+            <h3 class="aibs-h3">{{#str}} step:source, mod_aibranchedscenario {{/str}}</h3>
+
+            <div class="aibs-field">
+                <label class="aibs-field-label" for="aibs-sourcecontent">
+                    {{#str}} field:sourcecontent, mod_aibranchedscenario {{/str}}</label>
+                <span class="aibs-field-hint" id="aibs-sourcecontent-hint">
+                    {{#str}} field:sourcecontenthint, mod_aibranchedscenario, {{maxsourcechars}} {{/str}}</span>
+                <textarea class="aibs-textarea" id="aibs-sourcecontent" data-field="sourcecontent" rows="10"
+                    aria-describedby="aibs-sourcecontent-hint" maxlength="{{maxsourcechars}}">{{source.sourcecontent}}</textarea>
+            </div>
+
+            <div class="aibs-field">
+                <label class="aibs-field-label" for="aibs-brief">
+                    {{#str}} field:brief, mod_aibranchedscenario {{/str}}</label>
+                <span class="aibs-field-hint">{{#str}} field:briefhint, mod_aibranchedscenario {{/str}}</span>
+                <textarea class="aibs-textarea" id="aibs-brief" data-field="brief" rows="3">{{source.brief}}</textarea>
+            </div>
+
+            {{#aiavailable}}
+                <button type="button" class="aibs-btn aibs-btn-secondary" data-action="populate">
+                    {{#str}} autofill, mod_aibranchedscenario {{/str}}
+                </button>
+            {{/aiavailable}}
+
+            <div class="aibs-field">
+                <label class="aibs-field-label" for="aibs-title">
+                    {{#str}} field:title, mod_aibranchedscenario {{/str}}</label>
+                <input type="text" class="aibs-input" id="aibs-title" data-field="title"
+                    value="{{source.title}}" maxlength="255">
+            </div>
+
+            <div class="aibs-field">
+                <label class="aibs-field-label" for="aibs-audience">
+                    {{#str}} field:audience, mod_aibranchedscenario {{/str}}</label>
+                <input type="text" class="aibs-input" id="aibs-audience" data-field="audience"
+                    value="{{source.audience}}" maxlength="255">
+            </div>
+
+            <div class="aibs-field">
+                <span class="aibs-field-label" id="aibs-industry-label">
+                    {{#str}} field:industry, mod_aibranchedscenario {{/str}}</span>
+                <div class="aibs-optiongrid" role="group" aria-labelledby="aibs-industry-label"
+                     data-group="industry" data-multiple="0">
+                    {{#industries}}
+                        <button type="button" class="aibs-option" data-action="option" data-value="{{key}}"
+                            aria-pressed="{{#selected}}true{{/selected}}{{^selected}}false{{/selected}}">{{label}}</button>
+                    {{/industries}}
+                </div>
+            </div>
+        </section>
+
+        <section class="aibs-card" data-region="step" data-step="2" hidden>
+            <h3 class="aibs-h3">{{#str}} step:scene, mod_aibranchedscenario {{/str}}</h3>
+
+            <div class="aibs-field">
+                <span class="aibs-field-label" id="aibs-setting-label">
+                    {{#str}} field:setting, mod_aibranchedscenario {{/str}}</span>
+                <div class="aibs-optiongrid" role="group" aria-labelledby="aibs-setting-label"
+                     data-group="setting" data-multiple="0">
+                    {{#settings}}
+                        <button type="button" class="aibs-option" data-action="option" data-value="{{key}}"
+                            aria-pressed="{{#selected}}true{{/selected}}{{^selected}}false{{/selected}}">{{label}}</button>
+                    {{/settings}}
+                </div>
+            </div>
+
+            <div class="aibs-field">
+                <span class="aibs-field-label" id="aibs-atmosphere-label">
+                    {{#str}} field:atmosphere, mod_aibranchedscenario {{/str}}</span>
+                <div class="aibs-optiongrid" role="group" aria-labelledby="aibs-atmosphere-label"
+                     data-group="atmosphere" data-multiple="0">
+                    {{#atmospheres}}
+                        <button type="button" class="aibs-option" data-action="option" data-value="{{key}}"
+                            aria-pressed="{{#selected}}true{{/selected}}{{^selected}}false{{/selected}}">{{label}}</button>
+                    {{/atmospheres}}
+                </div>
+            </div>
+
+            <div class="aibs-field">
+                <label class="aibs-field-label" for="aibs-openingsituation">
+                    {{#str}} field:openingsituation, mod_aibranchedscenario {{/str}}</label>
+                <span class="aibs-field-hint">{{#str}} field:openingsituationhint, mod_aibranchedscenario {{/str}}</span>
+                <textarea class="aibs-textarea" id="aibs-openingsituation" data-field="openingsituation"
+                    rows="5">{{source.openingsituation}}</textarea>
+                {{#aiavailable}}
+                    <button type="button" class="aibs-btn aibs-btn-ghost" data-action="suggest"
+                        data-suggest="openingsituation">{{#str}} suggest, mod_aibranchedscenario {{/str}}</button>
+                {{/aiavailable}}
+            </div>
+        </section>
+
+        <section class="aibs-card" data-region="step" data-step="3" hidden>
+            <h3 class="aibs-h3">{{#str}} step:challenge, mod_aibranchedscenario {{/str}}</h3>
+
+            <div class="aibs-field">
+                <label class="aibs-field-label" for="aibs-centralproblem">
+                    {{#str}} field:centralproblem, mod_aibranchedscenario {{/str}}</label>
+                <textarea class="aibs-textarea" id="aibs-centralproblem" data-field="centralproblem"
+                    rows="4">{{source.centralproblem}}</textarea>
+                {{#aiavailable}}
+                    <button type="button" class="aibs-btn aibs-btn-ghost" data-action="suggest"
+                        data-suggest="centralproblem">{{#str}} suggest, mod_aibranchedscenario {{/str}}</button>
+                {{/aiavailable}}
+            </div>
+
+            <div class="aibs-field">
+                <span class="aibs-field-label" id="aibs-whyhard-label">
+                    {{#str}} field:whyhard, mod_aibranchedscenario {{/str}}</span>
+                <div class="aibs-optiongrid" role="group" aria-labelledby="aibs-whyhard-label"
+                     data-group="whyhard" data-multiple="1">
+                    {{#whyhard}}
+                        <button type="button" class="aibs-option" data-action="option" data-value="{{key}}"
+                            aria-pressed="{{#selected}}true{{/selected}}{{^selected}}false{{/selected}}">{{label}}</button>
+                    {{/whyhard}}
+                </div>
+            </div>
+
+            <div class="aibs-field">
+                <span class="aibs-field-label" id="aibs-stakes-label">
+                    {{#str}} field:stakes, mod_aibranchedscenario {{/str}}</span>
+                <div class="aibs-optiongrid" role="group" aria-labelledby="aibs-stakes-label"
+                     data-group="stakes" data-multiple="1">
+                    {{#stakes}}
+                        <button type="button" class="aibs-option" data-action="option" data-value="{{key}}"
+                            aria-pressed="{{#selected}}true{{/selected}}{{^selected}}false{{/selected}}">{{label}}</button>
+                    {{/stakes}}
+                </div>
+            </div>
+        </section>
+
+        <section class="aibs-card" data-region="step" data-step="4" hidden>
+            <h3 class="aibs-h3">{{#str}} step:people, mod_aibranchedscenario {{/str}}</h3>
+
+            <div class="aibs-field">
+                <label class="aibs-field-label" for="aibs-participantrole">
+                    {{#str}} field:participantrole, mod_aibranchedscenario {{/str}}</label>
+                <input type="text" class="aibs-input" id="aibs-participantrole" data-field="participantrole"
+                    value="{{source.participantrole}}" maxlength="255">
+            </div>
+
+            {{#characters}}
+                <fieldset class="aibs-nodeedit" data-character="{{index}}">
+                    <legend class="aibs-field-label">
+                        {{#str}} field:character, mod_aibranchedscenario, {{position}} {{/str}}</legend>
+                    <div class="aibs-field">
+                        <label class="aibs-field-label" for="aibs-charname-{{index}}">
+                            {{#str}} field:charactername, mod_aibranchedscenario {{/str}}</label>
+                        <input type="text" class="aibs-input" id="aibs-charname-{{index}}"
+                            data-character-field="name" value="{{name}}" maxlength="80">
+                    </div>
+                    <div class="aibs-field">
+                        <label class="aibs-field-label" for="aibs-charrole-{{index}}">
+                            {{#str}} field:characterrole, mod_aibranchedscenario {{/str}}</label>
+                        <input type="text" class="aibs-input" id="aibs-charrole-{{index}}"
+                            data-character-field="role" value="{{role}}" maxlength="120">
+                    </div>
+                    <div class="aibs-field">
+                        <label class="aibs-field-label" for="aibs-chartrait-{{index}}">
+                            {{#str}} field:charactertrait, mod_aibranchedscenario {{/str}}</label>
+                        <input type="text" class="aibs-input" id="aibs-chartrait-{{index}}"
+                            data-character-field="trait" value="{{trait}}" maxlength="200">
+                    </div>
+                    <div class="aibs-field">
+                        <label class="aibs-field-label" for="aibs-charlook-{{index}}">
+                            {{#str}} field:characterappearance, mod_aibranchedscenario {{/str}}</label>
+                        <input type="text" class="aibs-input" id="aibs-charlook-{{index}}"
+                            data-character-field="appearance" value="{{appearance}}" maxlength="400">
+                    </div>
+                </fieldset>
+            {{/characters}}
+        </section>
+
+        <section class="aibs-card" data-region="step" data-step="5" hidden>
+            <h3 class="aibs-h3">{{#str}} step:design, mod_aibranchedscenario {{/str}}</h3>
+
+            <div class="aibs-field">
+                <label class="aibs-field-label" for="aibs-decisions">
+                    {{#str}} field:decisions, mod_aibranchedscenario {{/str}}</label>
+                <span class="aibs-field-hint">{{#str}} field:decisionshint, mod_aibranchedscenario {{/str}}</span>
+                <select class="aibs-select" id="aibs-decisions" data-field="decisions">
+                    {{#decisionoptions}}
+                        <option value="{{value}}" {{#selected}}selected{{/selected}}>{{value}}</option>
+                    {{/decisionoptions}}
+                </select>
+            </div>
+
+            <div class="aibs-field">
+                <span class="aibs-field-label" id="aibs-tone-label">
+                    {{#str}} field:tone, mod_aibranchedscenario {{/str}}</span>
+                <div class="aibs-optiongrid" role="group" aria-labelledby="aibs-tone-label"
+                     data-group="tone" data-multiple="0">
+                    {{#tones}}
+                        <button type="button" class="aibs-option" data-action="option" data-value="{{key}}"
+                            aria-pressed="{{#selected}}true{{/selected}}{{^selected}}false{{/selected}}">{{label}}</button>
+                    {{/tones}}
+                </div>
+            </div>
+
+            <div class="aibs-field">
+                <span class="aibs-field-label" id="aibs-complexity-label">
+                    {{#str}} field:complexity, mod_aibranchedscenario {{/str}}</span>
+                <div class="aibs-optiongrid" role="group" aria-labelledby="aibs-complexity-label"
+                     data-group="complexity" data-multiple="0">
+                    {{#complexities}}
+                        <button type="button" class="aibs-option" data-action="option" data-value="{{key}}"
+                            aria-pressed="{{#selected}}true{{/selected}}{{^selected}}false{{/selected}}">{{label}}</button>
+                    {{/complexities}}
+                </div>
+            </div>
+
+            <div class="aibs-field">
+                <span class="aibs-field-label" id="aibs-imagestyle-label">
+                    {{#str}} field:imagestyle, mod_aibranchedscenario {{/str}}</span>
+                <div class="aibs-optiongrid" role="group" aria-labelledby="aibs-imagestyle-label"
+                     data-group="imagestyle" data-multiple="0">
+                    {{#imagestyles}}
+                        <button type="button" class="aibs-option" data-action="option" data-value="{{key}}"
+                            aria-pressed="{{#selected}}true{{/selected}}{{^selected}}false{{/selected}}">{{label}}</button>
+                    {{/imagestyles}}
+                </div>
+            </div>
+
+            <div class="aibs-field">
+                <label class="aibs-field-label" for="aibs-imageprompt">
+                    {{#str}} field:imageprompt, mod_aibranchedscenario {{/str}}</label>
+                <input type="text" class="aibs-input" id="aibs-imageprompt" data-field="imageprompt"
+                    value="{{source.imageprompt}}" maxlength="600">
+            </div>
+
+            {{#openingmetrics}}
+                <div class="aibs-field">
+                    <label class="aibs-field-label" for="aibs-metric-{{key}}">{{label}}</label>
+                    <input type="range" class="aibs-input" id="aibs-metric-{{key}}" min="0" max="100" step="5"
+                        data-metric-field="{{key}}" value="{{value}}">
+                </div>
+            {{/openingmetrics}}
+        </section>
+
+        <section class="aibs-card" data-region="step" data-step="6" hidden>
+            <h3 class="aibs-h3">{{#str}} step:build, mod_aibranchedscenario {{/str}}</h3>
+            <p class="aibs-field-hint">{{#str}} generateexplain, mod_aibranchedscenario {{/str}}</p>
+
+            <div class="aibs-brief-actions">
+                {{#aiavailable}}
+                    <button type="button" class="aibs-btn aibs-btn-primary" data-action="generate">
+                        {{#str}} generatescenario, mod_aibranchedscenario {{/str}}
+                    </button>
+                {{/aiavailable}}
+                {{#hasdraft}}
+                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="publish">
+                        {{#str}} publishscenario, mod_aibranchedscenario {{/str}}
+                    </button>
+                    <a class="aibs-btn aibs-btn-ghost" href="{{viewurl}}">
+                        {{#str}} previewscenario, mod_aibranchedscenario {{/str}}</a>
+                {{/hasdraft}}
+            </div>
+
+            <details class="aibs-field">
+                <summary class="aibs-field-label">{{#str}} field:importjson, mod_aibranchedscenario {{/str}}</summary>
+                <span class="aibs-field-hint">{{#str}} field:importjsonhint, mod_aibranchedscenario {{/str}}</span>
+                <textarea class="aibs-textarea" id="aibs-import" data-region="import" rows="6"></textarea>
+                <button type="button" class="aibs-btn aibs-btn-secondary" data-action="import">
+                    {{#str}} importdefinition, mod_aibranchedscenario {{/str}}</button>
+            </details>
+
+            <div class="aibs-loading" data-region="loading" hidden>
+                <span class="aibs-spinner" aria-hidden="true"></span>
+                <span class="aibs-loading-text" data-region="loadingtext">
+                    {{#str}} working, mod_aibranchedscenario {{/str}}</span>
+            </div>
+
+            {{#published}}
+                <p class="aibs-fineprint">
+                    {{#str}} publishedrevision, mod_aibranchedscenario, {{revision}} {{/str}}</p>
+            {{/published}}
+
+            {{#hasdraft}}
+                <div class="aibs-nodeeditor">
+                    <h4 class="aibs-h4">{{#str}} editnodes, mod_aibranchedscenario, {{nodecount}} {{/str}}</h4>
+                    {{#nodes}}
+                        <div class="aibs-nodeedit" data-node="{{id}}">
+                            <p class="aibs-field-label">{{id}} &middot; {{type}}</p>
+                            <div class="aibs-field">
+                                <label class="aibs-field-label" for="aibs-node-title-{{id}}">
+                                    {{#str}} field:nodetitle, mod_aibranchedscenario {{/str}}</label>
+                                <input type="text" class="aibs-input" id="aibs-node-title-{{id}}"
+                                    data-node-field="title" value="{{title}}" maxlength="160">
+                            </div>
+                            <div class="aibs-field">
+                                <label class="aibs-field-label" for="aibs-node-situation-{{id}}">
+                                    {{#str}} field:situation, mod_aibranchedscenario {{/str}}</label>
+                                <textarea class="aibs-textarea" id="aibs-node-situation-{{id}}"
+                                    data-node-field="situation" rows="4">{{situation}}</textarea>
+                            </div>
+                            {{^isoutcome}}
+                                <div class="aibs-field">
+                                    <label class="aibs-field-label" for="aibs-node-speech-{{id}}">
+                                        {{#str}} field:facilitatorspeech, mod_aibranchedscenario {{/str}}</label>
+                                    <textarea class="aibs-textarea" id="aibs-node-speech-{{id}}"
+                                        data-node-field="facilitatorspeech" rows="2">{{facilitatorspeech}}</textarea>
+                                </div>
+                                <div class="aibs-field">
+                                    <label class="aibs-field-label" for="aibs-node-challenge-{{id}}">
+                                        {{#str}} field:challenge, mod_aibranchedscenario {{/str}}</label>
+                                    <input type="text" class="aibs-input" id="aibs-node-challenge-{{id}}"
+                                        data-node-field="challenge" value="{{challenge}}" maxlength="600">
+                                </div>
+                            {{/isoutcome}}
+                            {{#isoutcome}}
+                                <div class="aibs-field">
+                                    <label class="aibs-field-label" for="aibs-node-summary-{{id}}">
+                                        {{#str}} field:outcomesummary, mod_aibranchedscenario {{/str}}</label>
+                                    <textarea class="aibs-textarea" id="aibs-node-summary-{{id}}"
+                                        data-node-field="summary" rows="3">{{summary}}</textarea>
+                                </div>
+                            {{/isoutcome}}
+                            {{#choices}}
+                                <fieldset class="aibs-field" data-choice="{{id}}">
+                                    <legend class="aibs-field-label">{{letter}} &rarr; {{next}}</legend>
+                                    <label class="aibs-field-label" for="aibs-choice-text-{{id}}">
+                                        {{#str}} field:choicetext, mod_aibranchedscenario {{/str}}</label>
+                                    <input type="text" class="aibs-input" id="aibs-choice-text-{{id}}"
+                                        data-choice-field="text" value="{{text}}" maxlength="400">
+                                    <label class="aibs-field-label" for="aibs-choice-cons-{{id}}">
+                                        {{#str}} field:consequence, mod_aibranchedscenario {{/str}}</label>
+                                    <textarea class="aibs-textarea" id="aibs-choice-cons-{{id}}"
+                                        data-choice-field="consequence" rows="3">{{consequence}}</textarea>
+                                    <label class="aibs-field-label" for="aibs-choice-fb-{{id}}">
+                                        {{#str}} field:feedback, mod_aibranchedscenario {{/str}}</label>
+                                    <textarea class="aibs-textarea" id="aibs-choice-fb-{{id}}"
+                                        data-choice-field="feedback" rows="3">{{feedback}}</textarea>
+                                </fieldset>
+                            {{/choices}}
+                            <button type="button" class="aibs-btn aibs-btn-secondary" data-action="savenode">
+                                {{#str}} savenode, mod_aibranchedscenario {{/str}}</button>
+                        </div>
+                    {{/nodes}}
+                </div>
+            {{/hasdraft}}
+        </section>
+
+        <div class="aibs-wizard-actions">
+            <button type="button" class="aibs-btn aibs-btn-ghost" data-action="back">
+                {{#str}} back, mod_aibranchedscenario {{/str}}</button>
+            <div class="aibs-brief-actions">
+                <button type="button" class="aibs-btn aibs-btn-secondary" data-action="save">
+                    {{#str}} savedraft, mod_aibranchedscenario {{/str}}</button>
+                <button type="button" class="aibs-btn aibs-btn-primary" data-action="next">
+                    {{#str}} next, mod_aibranchedscenario {{/str}}</button>
+            </div>
+        </div>
+    </div>
+</div>

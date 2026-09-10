@@ -1,0 +1,110 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template mod_aibranchedscenario/consequence
+
+    What happened after a decision, and why it mattered.
+
+    Classes required for JS:
+    * aibs-consequence
+
+    Data attributes required for JS:
+    * data-action="continue"
+
+    Context variables required for this template:
+    * signal string positive, neutral or negative
+    * signalclass string CSS modifier for the signal
+    * signallabel string Translated signal label
+    * consequenceparas array What happened, one entry per paragraph
+    * feedbackparas string Why it mattered, array of plain-text paragraphs
+    * hasfeedback bool Whether feedback is present
+    * principle string Decision principle tested, or empty
+    * deltas array Metric movements caused by the decision
+    * finished bool Whether this was the last decision
+    * continuelabel string Label for the continue button
+
+    Example context (json):
+    {
+        "signal": "negative",
+        "signalclass": "aibs-signal-negative",
+        "signallabel": "Costly",
+        "consequenceparas": ["At 3:15 pm another employee starts the machine."],
+        "feedbackparas": ["A fault that can injure someone is logged immediately."],
+        "hasfeedback": true,
+        "principle": "Report faults before the next shift",
+        "deltas": [{"label": "Trust", "before": 50, "after": 38, "down": true, "up": false, "same": false, "change": "-12"}],
+        "finished": false,
+        "continuelabel": "Continue"
+    }
+}}
+<article class="aibs-card aibs-consequence aibs-enter {{signalclass}}">
+
+    <div class="aibs-consequence-head">
+        <span class="aibs-signal">
+            <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                <circle cx="10" cy="10" r="7.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M6.6 10.2 9 12.6l4.4-5" fill="none" stroke="currentColor" stroke-width="1.7"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{signallabel}}
+        </span>
+        {{#principle}}<span class="aibs-chip aibs-chip-quiet">{{principle}}</span>{{/principle}}
+    </div>
+
+    <div class="aibs-prose aibs-prose-lead">{{#consequenceparas}}<p>{{.}}</p>{{/consequenceparas}}</div>
+
+    {{#deltas}}
+        <div class="aibs-delta-row">
+            <span class="aibs-delta-label">{{label}}</span>
+            <span class="aibs-delta-values">
+                <span class="aibs-delta-before">{{before}}</span>
+                <svg class="aibs-icon aibs-delta-arrow" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <path d="M4 10h11m-4.4-4.6L15.2 10l-4.6 4.6" fill="none" stroke="currentColor"
+                          stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="aibs-delta-after {{#up}}aibs-up{{/up}}{{#down}}aibs-down{{/down}}{{#same}}aibs-same{{/same}}">
+                    {{after}}
+                </span>
+                <span class="aibs-delta-change">{{change}}</span>
+            </span>
+        </div>
+    {{/deltas}}
+
+    {{#hasfeedback}}
+        <div class="aibs-feedback">
+            <h4 class="aibs-h4">
+                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <path d="M10 2.8a5 5 0 0 0-2.9 9.1v1.6h5.8v-1.6A5 5 0 0 0 10 2.8Z" fill="none"
+                          stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                    <path d="M8.2 16.2h3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                {{#str}} whythismattered, mod_aibranchedscenario {{/str}}
+            </h4>
+            <div class="aibs-prose">{{#feedbackparas}}<p>{{.}}</p>{{/feedbackparas}}</div>
+        </div>
+    {{/hasfeedback}}
+
+    <div class="aibs-consequence-actions">
+        <button type="button" class="aibs-btn aibs-btn-primary" data-action="continue">
+            {{continuelabel}}
+            <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                <path d="M4 10h11m-4.4-4.6L15.2 10l-4.6 4.6" fill="none" stroke="currentColor"
+                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+    </div>
+</article>
