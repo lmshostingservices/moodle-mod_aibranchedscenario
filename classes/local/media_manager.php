@@ -18,6 +18,7 @@ namespace mod_aibranchedscenario\local;
 
 use context_module;
 use mod_aibranchedscenario\local\ai\generation_exception;
+use mod_aibranchedscenario\local\ai\image_prompt;
 use mod_aibranchedscenario\local\ai\provider;
 use moodle_url;
 
@@ -164,14 +165,25 @@ class media_manager {
      * @param int $index Zero based node index, used as the file item id.
      * @return bool True when an image was stored.
      */
-    public function generate_scene(provider $provider, array $node, string $style, int $index): bool {
-        $prompt = $node['imageprompt'] !== '' ? $node['imageprompt'] : $node['situation'];
-        if (trim($prompt) === '') {
+    public function generate_scene(
+        provider $provider,
+        array $definition,
+        array $node,
+        string $style,
+        int $index,
+        bool $crisis = false
+    ): bool {
+        $brief = image_prompt::for_node($definition, $node, $style, $crisis);
+        if (trim($brief['prompt']) === '') {
             return false;
         }
+        // The crisis variant of a scene is its own frame, stored beside the calm one,
+        // so a learner who has driven the tension up sees the escalated moment rather
+        // than the picture of the room before it went wrong.
+        $key = $crisis ? $node['id'] . '_crisis' : $node['id'];
         try {
-            $result = $provider->generate_image(\core_text::substr($prompt, 0, 1500), $style);
-            $this->store(self::AREA_SCENE, $index, $node['id'], $result['data'], $result['mimetype']);
+            $result = $provider->generate_image($brief['prompt'], $brief['style'], $brief['scenetitle']);
+            $this->store(self::AREA_SCENE, $index, $key, $result['data'], $result['mimetype']);
             return true;
         } catch (generation_exception $e) {
             debugging('Scene image generation skipped: ' . $e->errorcode, DEBUG_DEVELOPER);

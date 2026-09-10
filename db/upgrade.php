@@ -84,5 +84,17 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091003, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091004) {
+        // Release 1.1.0 changes no schema. It rebuilds scene image briefing and aligns
+        // the media routes with the service contract, in PHP only.
+        upgrade_mod_savepoint(true, 2026091004, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091005) {
+        // Release 1.1.1 changes no schema and no behaviour. It is a packaging bump so a
+        // site that has already seen the v1.1.0 number installs cleanly.
+        upgrade_mod_savepoint(true, 2026091005, 'aibranchedscenario');
+    }
+
     return true;
 }

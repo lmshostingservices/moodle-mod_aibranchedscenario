@@ -101,7 +101,7 @@ interface provider {
      * @return array Keys: data (raw binary), mimetype (string).
      * @throws generation_exception
      */
-    public function generate_image(string $prompt, string $style): array;
+    public function generate_image(string $prompt, string $style, string $scenetitle = ''): array;
 
     /**
      * Generate one narration clip.

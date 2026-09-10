@@ -64,6 +64,9 @@ class lmslabs_provider implements provider {
     /** @var int Most characters of source content the suggest route accepts. */
     const MAX_SUGGEST_CHARS = 15000;
 
+    /** @var int Most characters of narration text the speech route accepts. */
+    const MAX_SPEECH_CHARS = 4500;
+
     /** @var array Metadata from the last successful call. */
     protected $lastmeta = [];
 
@@ -618,12 +621,25 @@ class lmslabs_provider implements provider {
      * @param string $style One of the plugin's image styles.
      * @return array Keys: data, mimetype.
      */
-    public function generate_image(string $prompt, string $style): array {
-        $payload = [
-            'prompt'      => $prompt,
-            'style'       => $style,
-            'aspectRatio' => '16:9',
-        ];
+    public function generate_image(string $prompt, string $style, string $scenetitle = ''): array {
+        $prompt = trim($prompt);
+        if (\core_text::strlen($prompt) < image_prompt::MIN_PROMPT) {
+            throw new generation_exception('error:servicenoimage');
+        }
+
+        // The aspect ratio field is optional and the route accepts only one value, so
+        // it is left out: sending a field that can only ever hold its own default is
+        // one more thing to get wrong, and a strict schema rejects the whole request.
+        $payload = ['prompt' => \core_text::substr($prompt, 0, image_prompt::MAX_PROMPT)];
+        $style = trim($style);
+        if ($style !== '') {
+            $payload['style'] = \core_text::substr($style, 0, image_prompt::MAX_STYLE);
+        }
+        $scenetitle = trim($scenetitle);
+        if ($scenetitle !== '') {
+            $payload['sceneTitle'] = \core_text::substr($scenetitle, 0, image_prompt::MAX_TITLE);
+        }
+
         $requestid = self::request_id(self::OP_IMAGE, json_encode($payload));
         $data = $this->call(self::ROUTE_PREFIX . '/image', $payload, $requestid);
         return $this->decode_binary($data, ['image/png', 'image/jpeg', 'image/webp'], 'error:servicenoimage');
@@ -638,12 +654,22 @@ class lmslabs_provider implements provider {
      * @return array Keys: data, mimetype.
      */
     public function generate_speech(string $text, string $voice, string $language): array {
-        $payload = [
-            'text'     => $text,
-            'voice'    => $voice,
-            'language' => $language,
-            'format'   => 'mp3',
-        ];
+        $text = trim($text);
+        if ($text === '') {
+            throw new generation_exception('error:servicenoaudio');
+        }
+
+        // The route validates both of these with a regular expression, and rejects the
+        // whole request when either fails, so anything that does not match is dropped
+        // in favour of the service's own default rather than sent and refused.
+        $payload = ['text' => \core_text::substr($text, 0, self::MAX_SPEECH_CHARS)];
+        if (preg_match('/^[a-z]{2,3}-[A-Z]{2}$/', $language)) {
+            $payload['language'] = $language;
+        }
+        if (preg_match('/^[A-Za-z][A-Za-z0-9-]{0,49}$/', $voice)) {
+            $payload['voice'] = $voice;
+        }
+
         $requestid = self::request_id(self::OP_SPEECH, json_encode($payload));
         $data = $this->call(self::ROUTE_PREFIX . '/speech', $payload, $requestid);
         return $this->decode_binary($data, ['audio/mpeg', 'audio/mp3', 'audio/wav'], 'error:servicenoaudio');

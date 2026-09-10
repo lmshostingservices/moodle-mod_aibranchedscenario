@@ -195,8 +195,15 @@ class helper {
             'outcome'       => $node['outcome'],
             'summary'       => $node['summary'],
             'summaryparas'   => self::paragraph_list($node['summary']),
-            'imageurl'      => $mediaurls['scene'][$node['id']] ?? '',
-            'imagealt'      => $node['imagealt'],
+            // A crisis frame is stored beside the calm one under the same node id with
+            // a suffix, so a learner who has driven the tension up sees the escalated
+            // moment. Falling back keeps a scenario generated before crisis frames
+            // existed showing its original image rather than none.
+            'imageurl'      => ($crisis ? ($mediaurls['scene'][$node['id'] . '_crisis'] ?? '') : '')
+                ?: ($mediaurls['scene'][$node['id']] ?? ''),
+            'imagealt'      => $node['imagealt'] !== ''
+                ? $node['imagealt']
+                : \mod_aibranchedscenario\local\ai\image_prompt::alt_text($node, $situation, $crisis),
             'audiourl'      => $mediaurls['narration'][$node['id']] ?? '',
             'choices'       => $choices,
         ];

@@ -2,6 +2,71 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.1.1] - 2026-09-10
+
+A packaging release. No file other than `version.php`, `db/upgrade.php` and this
+changelog differs from v1.1.0. It exists so a site that has already recorded the
+v1.1.0 version number — from a part-finished install, a cached ZIP or an aborted
+upgrade — takes the code without needing the previous attempt unpicked first.
+Everything described under v1.1.0 below is what this release contains.
+
+### Changed
+
+- Version bumped to `2026091005` / `1.1.1`, with a savepoint-only upgrade step.
+
+## [v1.1.0] - 2026-09-10
+
+Rebuilds scene imagery. Until now each scene's image was generated from the raw
+narrative prose of that scene alone, which is why a scenario's pictures did not look
+like they belonged to each other. No schema change; the upgrade from v1.0.8 is a
+savepoint only.
+
+### Added
+
+- **`image_prompt`, a composer for scene briefs.** Scenes are generated as separate
+  requests, minutes apart, by a model with no memory between them, so sending each
+  scene's prose on its own produced a different room, a different Sam and a different
+  time of day. Every brief is now built from the same four parts in the same order: a
+  series anchor identical across the whole scenario, the people actually present
+  described from the scenario's own character records, the moment and how it should
+  feel, and direction the model needs. Composition is deterministic, so regenerating
+  one scene cannot quietly change the look of the set.
+- **Endings get an image.** Outcome nodes were skipped entirely. The closing frame is
+  what a learner looks at while reading what their decisions came to, and it was the
+  only scene with nothing to show.
+- **Crisis moments get their own frame.** A node above the tension threshold showed
+  escalated prose against the picture of the room before it went wrong. The crisis
+  variant is now its own image, stored beside the calm one and selected at play time,
+  falling back to the original for scenarios generated before this release.
+- **Style choices are described rather than named.** A single stored word gave the
+  model almost nothing. Each of the six styles now carries its lens, light and
+  palette, so "cinematic" means the same thing in scene one and scene six.
+- **Scene images are never announced with no description.** When the generated
+  scenario supplies no alternative text, one is composed from the scene.
+- `count_images()`, so the number of billable frames a run will produce is knowable
+  before it starts rather than after.
+
+### Fixed
+
+- **The media routes were called with fields they do not accept.** `/image` takes
+  `prompt`, `sceneTitle` and `style`; the plugin sent an `aspectRatio` the route
+  rejected and no scene title at all. `/speech` validates `language` and `voice` with
+  regular expressions and rejects the whole request when either fails; values that do
+  not match are now dropped in favour of the service's own defaults rather than sent
+  and refused.
+
+### Testing
+
+37 new checks cover briefing: every scene carries the same location anchor and the
+same visual treatment; a named character is described by name, role and appearance,
+identically in every scene they appear in, and a scene naming nobody does not invent
+one; composition is deterministic; endings read as closings and a high-risk ending as
+an aftermath while still forbidding injury; the crisis variant differs from the calm
+one but keeps the anchor; teacher direction is appended last; all six styles produce a
+described treatment within the service's limit; alt text is never empty; and an empty
+scene still yields a brief the service will accept. The suite is 327 checks and passes
+on Moodle 4.4.12, 4.5.13 and 5.2.2, with CodeSniffer clean.
+
 ## [v1.0.8] - 2026-09-10
 
 Three corrections, each of which cost real time to find because the plugin could not

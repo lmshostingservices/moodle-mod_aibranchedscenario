@@ -97,12 +97,25 @@ class generate_scenario extends adhoc_task {
 
         $index = 0;
         foreach ($definition['nodes'] as $node) {
+            if ($wantsimages) {
+                // Endings are given a frame too. The closing image is the one a learner
+                // is left looking at while they read what their decisions came to, and
+                // it was previously the only scene with nothing to show.
+                $media->generate_scene($generator->get_provider(), $definition, $node, $style, $index);
+                if (!empty($node['crisisvariant']['situation'])) {
+                    $media->generate_scene(
+                        $generator->get_provider(),
+                        $definition,
+                        $node,
+                        $style,
+                        $index,
+                        true
+                    );
+                }
+            }
             if ($node['type'] === 'outcome') {
                 $index++;
                 continue;
-            }
-            if ($wantsimages) {
-                $media->generate_scene($generator->get_provider(), $node, $style, $index);
             }
             if ($wantsaudio) {
                 $media->generate_narration(
