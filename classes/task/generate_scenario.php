@@ -74,13 +74,6 @@ class generate_scenario extends adhoc_task {
             return;
         }
 
-        $wantsimages = !empty($scenario->enableimages) && get_config('mod_aibranchedscenario', 'allowimages');
-        $wantsaudio = !empty($scenario->enableaudio) && get_config('mod_aibranchedscenario', 'allowaudio');
-        if (!$wantsimages && !$wantsaudio) {
-            mtrace('Scenario ' . $scenario->id . ' generated with ' . count($definition['nodes']) . ' nodes.');
-            return;
-        }
-
         try {
             $context = context_module::instance($cmid);
         } catch (\moodle_exception $e) {
@@ -89,44 +82,10 @@ class generate_scenario extends adhoc_task {
         }
 
         $media = new media_manager($context);
-        $media->clear_working_media();
-
-        $source = scenario_manager::get_source($scenario);
-        $style = $source['imagestyle'] ?? 'cinematic';
-        $voice = media_manager::configured_voice();
-
-        $index = 0;
-        foreach ($definition['nodes'] as $node) {
-            if ($wantsimages) {
-                // Endings are given a frame too. The closing image is the one a learner
-                // is left looking at while they read what their decisions came to, and
-                // it was previously the only scene with nothing to show.
-                $media->generate_scene($generator->get_provider(), $definition, $node, $style, $index);
-                if (!empty($node['crisisvariant']['situation'])) {
-                    $media->generate_scene(
-                        $generator->get_provider(),
-                        $definition,
-                        $node,
-                        $style,
-                        $index,
-                        true
-                    );
-                }
-            }
-            if ($node['type'] === 'outcome') {
-                $index++;
-                continue;
-            }
-            if ($wantsaudio) {
-                $media->generate_narration(
-                    $generator->get_provider(),
-                    $node,
-                    $scenario->scenariolang,
-                    $voice,
-                    $index
-                );
-            }
-            $index++;
+        $counts = $media->generate_for_definition($generator->get_provider(), $scenario, $definition);
+        if (!$counts['images'] && !$counts['narrations']) {
+            mtrace('Scenario ' . $scenario->id . ' generated with ' . count($definition['nodes']) . ' nodes.');
+            return;
         }
 
         mtrace('Scenario ' . $scenario->id . ' generated with media.');

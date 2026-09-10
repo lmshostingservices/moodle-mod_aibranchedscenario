@@ -58,11 +58,46 @@ class validator {
         if (strlen($json) > schema::MAX_SCENARIO_BYTES) {
             throw new validation_exception([get_string('error:scenariotoolarge', 'mod_aibranchedscenario')]);
         }
-        $decoded = json_decode($json, true);
+        $decoded = json_decode(self::unwrap_json($json), true);
         if (!is_array($decoded)) {
             throw new validation_exception([get_string('error:notjson', 'mod_aibranchedscenario')]);
         }
         return self::validate($decoded);
+    }
+
+    /**
+     * Recover the JSON document from what an assistant actually pasted back.
+     *
+     * The import prompt asks for one JSON document and nothing else. Assistants
+     * routinely add a sentence of their own before it, wrap it in a ```json fence, or
+     * both, and a teacher pasting that got "The scenario definition was not valid JSON"
+     * with no idea what to remove. Everything outside the outermost braces is dropped,
+     * which recovers the common cases without accepting anything the decoder would not
+     * have accepted on its own.
+     *
+     * @param string $json Pasted text.
+     * @return string The document, or the original text when no object is found.
+     */
+    protected static function unwrap_json(string $json): string {
+        $trimmed = trim($json);
+
+        // A fenced block, with or without a language tag. The fence marker is built
+        // rather than written literally: the sniffer reads backticks in a string as a
+        // shell escape, which is fair in general and wrong here.
+        $fence = str_repeat(chr(96), 3);
+        if (preg_match('/' . $fence . '[a-z]*\s*(\{.*\})\s*' . $fence . '/su', $trimmed, $matches)) {
+            return $matches[1];
+        }
+
+        // Otherwise take from the first brace to the last, which strips a preamble, a
+        // sign-off, or both.
+        $first = strpos($trimmed, '{');
+        $last = strrpos($trimmed, '}');
+        if ($first !== false && $last !== false && $last > $first) {
+            return substr($trimmed, $first, $last - $first + 1);
+        }
+
+        return $trimmed;
     }
 
     /**

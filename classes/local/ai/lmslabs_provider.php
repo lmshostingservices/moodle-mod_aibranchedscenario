@@ -505,6 +505,26 @@ class lmslabs_provider implements provider {
             $rest['howToAnswer'] = field_brief::common();
         }
 
+        // Asking for a second person without saying who the first one is gets the first
+        // one again. Names and roles only: an appearance is of no use in deciding who is
+        // missing from the scene, and this payload has a ceiling.
+        $already = [];
+        foreach ((array)($context['characters'] ?? []) as $character) {
+            $name = trim((string)($character['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $role = trim((string)($character['role'] ?? ''));
+            $already[] = $role === '' ? $name : $name . ' (' . $role . ')';
+        }
+        if ($already) {
+            $rest['peopleAlreadyInTheScenario'] = \core_text::substr(
+                implode('; ', array_slice($already, 0, 4)),
+                0,
+                1000
+            );
+        }
+
         if ($rest) {
             $payload['context'] = $rest;
         }

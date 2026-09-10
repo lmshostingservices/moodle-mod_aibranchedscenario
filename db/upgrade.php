@@ -114,5 +114,11 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091008, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091009) {
+        // Release 1.4.0 changes no schema. Media generation gains its own ad-hoc task,
+        // which needs no table of its own.
+        upgrade_mod_savepoint(true, 2026091009, 'aibranchedscenario');
+    }
+
     return true;
 }

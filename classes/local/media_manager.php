@@ -20,6 +20,7 @@ use context_module;
 use mod_aibranchedscenario\local\ai\generation_exception;
 use mod_aibranchedscenario\local\ai\image_prompt;
 use mod_aibranchedscenario\local\ai\provider;
+use stdClass;
 use moodle_url;
 
 /**
@@ -154,6 +155,62 @@ class media_manager {
         ], $binary);
 
         return $filename;
+    }
+
+    /**
+     * Generate every scene image and narration clip a definition calls for.
+     *
+     * This loop used to live inside the generation task, which is why a scenario brought
+     * in through the import box arrived with no pictures at all: the route a teacher
+     * takes when they drafted the scenario elsewhere, or have no credits for generation
+     * but plenty for images. Both routes now run the same loop.
+     *
+     * Individual failures are left to the per-item methods, which record them and carry
+     * on. A scenario with seven of its eight pictures is worth more than none.
+     *
+     * @param provider $provider Generation provider.
+     * @param \stdClass $scenario Activity instance.
+     * @param array $definition Validated definition.
+     * @return array Keys: images, narrations - how many of each were attempted.
+     */
+    public function generate_for_definition(provider $provider, \stdClass $scenario, array $definition): array {
+        $wantsimages = !empty($scenario->enableimages) && get_config('mod_aibranchedscenario', 'allowimages');
+        $wantsaudio = !empty($scenario->enableaudio) && get_config('mod_aibranchedscenario', 'allowaudio');
+        if (!$wantsimages && !$wantsaudio) {
+            return ['images' => 0, 'narrations' => 0];
+        }
+
+        $this->clear_working_media();
+
+        $source = scenario_manager::get_source($scenario);
+        $style = $source['imagestyle'] ?? 'cinematic';
+        $voice = self::configured_voice();
+        $counts = ['images' => 0, 'narrations' => 0];
+
+        $index = 0;
+        foreach ($definition['nodes'] as $node) {
+            if ($wantsimages) {
+                // Endings are given a frame too. The closing image is the one a learner
+                // is left looking at while they read what their decisions came to.
+                $this->generate_scene($provider, $definition, $node, $style, $index);
+                $counts['images']++;
+                if (!empty($node['crisisvariant']['situation'])) {
+                    $this->generate_scene($provider, $definition, $node, $style, $index, true);
+                    $counts['images']++;
+                }
+            }
+            if ($node['type'] === 'outcome') {
+                $index++;
+                continue;
+            }
+            if ($wantsaudio) {
+                $this->generate_narration($provider, $node, $scenario->scenariolang, $voice, $index);
+                $counts['narrations']++;
+            }
+            $index++;
+        }
+
+        return $counts;
     }
 
     /**

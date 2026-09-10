@@ -358,6 +358,7 @@ $string['error:serviceunreadable'] = 'The LMS Labs service returned a response t
 $string['error:sourcetooshort'] = 'The source content is too short. The LMS Labs service needs at least {$a} characters to work from.';
 $string['error:servicefailed'] = 'The LMS Labs service could not complete the request ({$a}).';
 $string['error:nodetail'] = 'no reason given';
+$string['error:validationdetail'] = 'What was wrong: {$a}';
 $string['error:servicenoscenario'] = 'The LMS Labs service did not return a scenario.';
 $string['error:servicenoimage'] = 'The LMS Labs service did not return a usable image.';
 $string['error:servicenoaudio'] = 'The LMS Labs service did not return usable audio.';

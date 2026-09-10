@@ -2,6 +2,46 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.4.0] - 2026-09-10
+
+The first release written against a live service rather than a test harness. Every
+fault below was found by using the plugin, or by auditing it against what a demanding
+instructional designer would expect.
+
+### Fixed
+
+- **A rejected scenario said only "try generating again".** The validator's list of
+  what was actually wrong was recorded against the job and never shown, so the honest
+  advice was to spend the credits again on a scenario that would fail identically. The
+  reason is now displayed. This is the one place a stored detail is shown, and it is
+  safe because the text is the plugin's own: field names and rule names, never provider
+  output and never learner content.
+- **The busy indicator was invisible on five of the six wizard steps.** It lived inside
+  the last step's section, which carries `hidden` everywhere else, so pressing Autofill
+  on step one showed nothing at all for up to ninety seconds. It now sits in the wizard
+  shell and is announced to screen readers.
+- **A pasted scenario wrapped in a code fence was rejected as "not valid JSON".** The
+  import prompt asks for one JSON document; assistants routinely add a sentence, a
+  fence, or both. Everything outside the outermost braces is now dropped.
+- **An imported scenario had no pictures.** The media loop ran only inside the
+  generation task, so the route a teacher takes when they drafted the scenario
+  elsewhere produced text and nothing else, even though the definition carries an image
+  brief for every node. Both routes now run the same loop, and importing queues it.
+- **Autofill produced exactly one character.** One request returns one person, and it
+  was asked once. It now asks until the scenario has two, one at a time, each request
+  carrying the people already named — without which the service offers the same person
+  again.
+- **Suggest rewrote one box and left the rest of the step describing the previous
+  idea.** Suggesting the scene now covers the setting, the atmosphere and the opening
+  situation together; suggesting the challenge covers the central problem, the
+  complications and the stakes.
+
+### Changed
+
+- Media generation is its own ad-hoc task, so it can be run for a scenario that already
+  has its text.
+- 17 further harness checks, 446 in total.
+
 ## [v1.3.1] - 2026-09-10
 
 Corrections to v1.3.0, found by reviewing that release's own diff rather than by

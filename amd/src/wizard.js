@@ -469,7 +469,59 @@ class Wizard {
                 return false;
             }
         }
+        return this.fillCharacters();
+    }
+
+    /** @type {Number} How many people a scenario is given when nobody has been named. */
+    static get CHARACTER_TARGET() {
+        return 2;
+    }
+
+    /**
+     * Give the scenario people to be difficult with.
+     *
+     * One request returns one person, so asking once filled Character 1 and left the
+     * rest blank. These have to be asked for one at a time rather than in a batch: each
+     * request carries the people already named, which is the only thing stopping the
+     * service from offering the same person again.
+     *
+     * Two is the target rather than the four slots on the page. A scene with the learner
+     * and two others is as many as an illustration can hold and as many as a five
+     * decision scenario can give anything to do; the remaining slots are there for a
+     * teacher who wants them.
+     *
+     * @returns {Promise} Resolves once the scenario has people, or the service refuses.
+     */
+    async fillCharacters() {
+        for (let attempt = 0; attempt < Wizard.CHARACTER_TARGET; attempt++) {
+            const source = this.collect();
+            const named = Array.isArray(source.characters) ? source.characters.length : 0;
+            if (named >= Wizard.CHARACTER_TARGET || named >= this.characterSlots()) {
+                return true;
+            }
+            let response;
+            try {
+                response = await this.call('suggest_field', {field: 'characterfull', source: source});
+            } catch (error) {
+                this.showError(error);
+                return false;
+            }
+            if (!this.applyCharacter(response.suggestion || '')) {
+                // Nothing usable came back. Asking again would spend another credit on
+                // the same answer.
+                return true;
+            }
+        }
         return true;
+    }
+
+    /**
+     * How many character slots the page offers.
+     *
+     * @returns {Number} The slot count.
+     */
+    characterSlots() {
+        return this.root.querySelectorAll('[data-character]').length;
     }
 
     /**
@@ -480,13 +532,10 @@ class Wizard {
     emptyFields() {
         const order = [
             'title', 'audience', 'industry', 'setting', 'atmosphere', 'openingsituation',
-            'centralproblem', 'whyhard', 'stakes', 'participantrole', 'characterfull',
+            'centralproblem', 'whyhard', 'stakes', 'participantrole',
         ];
         const current = this.collect();
         return order.filter((field) => {
-            if (field === 'characterfull') {
-                return !(Array.isArray(current.characters) && current.characters.length);
-            }
             const value = current[field];
             if (Array.isArray(value)) {
                 return value.length === 0;
@@ -510,12 +559,7 @@ class Wizard {
      * @param {Object} response The web service response.
      * @returns {void}
      */
-    applySuggestion(field, response) {
-        if (field === 'characterfull') {
-            this.applyCharacter(response.suggestion || '');
-            return;
-        }
-
+    applySuggestion(field, response, replace) {
         const group = this.root.querySelector(`[data-group="${field}"]`);
         if (group) {
             // A picker is answered with option keys. The route returns them in `values`;
@@ -544,6 +588,8 @@ class Wizard {
         const input = this.root.querySelector(`[data-field="${field}"]`);
         if (input && response.suggestion) {
             input.value = response.suggestion;
+        } else if (input && !response.suggestion && !replace) {
+            Notification.addNotification({message: this.strings.nosuggestion, type: 'info'});
         }
     }
 
@@ -554,7 +600,7 @@ class Wizard {
      * vertical bars, so this splits on that rather than guessing at prose.
      *
      * @param {String} suggestion The suggested character.
-     * @returns {void}
+     * @returns {Boolean} Whether a slot was filled.
      */
     applyCharacter(suggestion) {
         const parts = suggestion.split('|').map((part) => part.trim()).filter((part) => part !== '');
@@ -562,7 +608,7 @@ class Wizard {
         // instead would otherwise have its whole sentence written into the name field
         // and stored as a person's name.
         if (parts.length < 2) {
-            return;
+            return false;
         }
         const keys = ['name', 'role', 'trait', 'appearance'];
         const fieldsets = this.root.querySelectorAll('[data-character]');
@@ -577,8 +623,9 @@ class Wizard {
                     element.value = parts[index];
                 }
             });
-            return;
+            return true;
         }
+        return false;
     }
 
     /**
@@ -639,7 +686,18 @@ class Wizard {
      * @returns {Promise} Resolves once the suggestion is applied.
      */
     async suggest(element) {
-        const field = element.dataset.suggest;
+        const fields = String(element.dataset.suggest || '').split(',')
+            .map((name) => name.trim()).filter((name) => name !== '');
+        if (!fields.length) {
+            return false;
+        }
+        // A Suggest button sits under one box but belongs to the whole step. Rewriting
+        // the central problem and leaving the complications and the stakes describing
+        // the previous idea left the step contradicting itself.
+        if (fields.length > 1) {
+            return this.suggestFields(fields);
+        }
+        const field = fields[0];
         this.clearError();
         this.setBusy(true);
         try {
@@ -744,6 +802,47 @@ class Wizard {
      *
      * @returns {Promise} Resolves once the definition is stored or rejected.
      */
+    /**
+     * Refresh every field a Suggest button covers.
+     *
+     * These go together or not at all: the answers have to describe one situation, and
+     * a picker rewritten to match a central problem that has itself just changed would
+     * be describing the previous idea. Unlike the autofill pass, this deliberately
+     * replaces values that are already there - the teacher pressed the button.
+     *
+     * @param {Array} fields Field names.
+     * @returns {Promise} Resolves once every field has been attempted.
+     */
+    async suggestFields(fields) {
+        if (this.busy) {
+            return false;
+        }
+        this.clearError();
+        this.setBusy(true, this.strings.fillingfields);
+        try {
+            const source = this.collect();
+            const answers = await Promise.all(fields.map((field) =>
+                this.call('suggest_field', {field: field, source: source})
+                    .then((response) => ({field: field, response: response}))
+                    .catch((error) => ({field: field, error: error}))
+            ));
+            const failure = answers.find((answer) => answer.error);
+            answers.forEach((answer) => {
+                if (!answer.error) {
+                    this.applySuggestion(answer.field, answer.response, true);
+                }
+            });
+            if (failure) {
+                this.showError(failure.error);
+                return false;
+            }
+            this.dirty = true;
+        } finally {
+            this.setBusy(false);
+        }
+        return true;
+    }
+
     /**
      * Copy a prompt the teacher can paste into ChatGPT or any other assistant.
      *

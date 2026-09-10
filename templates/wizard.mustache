@@ -105,6 +105,12 @@
 
         <div class="aibs-error" data-region="error" role="alert" hidden></div>
 
+        <div class="aibs-loading" data-region="loading" role="status" aria-live="polite" hidden>
+            <span class="aibs-spinner" aria-hidden="true"></span>
+            <span class="aibs-loading-text" data-region="loadingtext">
+                {{#str}} working, mod_aibranchedscenario {{/str}}</span>
+        </div>
+
         <section class="aibs-card" data-region="step" data-step="1">
             <h3 class="aibs-h3">{{#str}} step:source, mod_aibranchedscenario {{/str}}</h3>
 
@@ -204,7 +210,7 @@
                     rows="5">{{source.openingsituation}}</textarea>
                 {{#aiavailable}}
                     <button type="button" class="aibs-btn aibs-btn-ghost" data-action="suggest"
-                        data-suggest="openingsituation">{{#str}} suggest, mod_aibranchedscenario {{/str}}</button>
+                        data-suggest="setting,atmosphere,openingsituation">{{#str}} suggest, mod_aibranchedscenario {{/str}}</button>
                 {{/aiavailable}}
             </div>
         </section>
@@ -219,7 +225,7 @@
                     rows="4">{{source.centralproblem}}</textarea>
                 {{#aiavailable}}
                     <button type="button" class="aibs-btn aibs-btn-ghost" data-action="suggest"
-                        data-suggest="centralproblem">{{#str}} suggest, mod_aibranchedscenario {{/str}}</button>
+                        data-suggest="centralproblem,whyhard,stakes">{{#str}} suggest, mod_aibranchedscenario {{/str}}</button>
                 {{/aiavailable}}
             </div>
 
@@ -392,11 +398,6 @@
                 </div>
             </details>
 
-            <div class="aibs-loading" data-region="loading" hidden>
-                <span class="aibs-spinner" aria-hidden="true"></span>
-                <span class="aibs-loading-text" data-region="loadingtext">
-                    {{#str}} working, mod_aibranchedscenario {{/str}}</span>
-            </div>
 
             {{#published}}
                 <p class="aibs-fineprint">

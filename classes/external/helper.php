@@ -125,11 +125,24 @@ class helper {
             return get_string('error:generationfailed', 'mod_aibranchedscenario');
         }
 
-        // Some of these messages name the failure the service reported. The detail was
-        // being split off and thrown away, so the teacher was shown the placeholder
-        // itself: "could not complete the request ({$a})". Only a bare identifier is
-        // ever passed through — never a provider message, which could carry content.
         $detail = trim(substr(trim($stored), strlen($code)));
+
+        // A rejected scenario is the one failure where the reason is the plugin's own
+        // words: the validator's list of what was wrong with the document. Telling a
+        // teacher only to "try generating again" sends them to spend the credits a
+        // second time on a scenario that will fail in exactly the same way. This is the
+        // single exception to never showing a stored detail, and it is safe precisely
+        // because the text is ours, built from field names and rule names, and never
+        // carries provider output or learner content.
+        if ($code === 'error:invalidgeneratedscenario' && $detail !== '') {
+            return get_string($code, 'mod_aibranchedscenario') . ' '
+                . get_string('error:validationdetail', 'mod_aibranchedscenario', $detail);
+        }
+
+        // Everywhere else the detail was being split off and thrown away, so the teacher
+        // was shown the placeholder itself: "could not complete the request ({$a})".
+        // Only a bare identifier is ever passed through — never a provider message,
+        // which could carry content.
         if ($detail === '' || !preg_match('/^[A-Z][A-Z0-9_]{1,40}$/', $detail)) {
             $detail = get_string('error:nodetail', 'mod_aibranchedscenario');
         }

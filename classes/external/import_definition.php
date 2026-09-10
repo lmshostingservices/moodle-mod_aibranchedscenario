@@ -20,6 +20,8 @@ use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
+use mod_aibranchedscenario\local\ai\credentials;
+use mod_aibranchedscenario\local\ai\image_prompt;
 use mod_aibranchedscenario\local\scenario_manager;
 use mod_aibranchedscenario\local\validation_exception;
 use mod_aibranchedscenario\local\validator;
@@ -71,6 +73,8 @@ class import_definition extends external_api {
      * @return array
      */
     public static function execute(int $cmid, string $definition): array {
+        global $USER;
+
         $params = self::validate_parameters(
             self::execute_parameters(),
             ['cmid' => $cmid, 'definition' => $definition]
@@ -82,6 +86,7 @@ class import_definition extends external_api {
             return [
                 'imported'  => false,
                 'nodecount' => 0,
+                'mediaqueued' => 0,
                 'problems'  => get_string('error:notjson', 'mod_aibranchedscenario'),
             ];
         }
@@ -92,6 +97,7 @@ class import_definition extends external_api {
             return [
                 'imported'  => false,
                 'nodecount' => 0,
+                'mediaqueued' => 0,
                 'problems'  => implode("\n", array_slice($e->get_problems(), 0, 20)),
             ];
         }
@@ -104,9 +110,23 @@ class import_definition extends external_api {
             'decisioncount'   => (int)($clean['stats']['decisioncount'] ?? 0),
         ]);
 
+        // An imported scenario used to arrive with no pictures, because the media loop
+        // ran only inside the generation task. A teacher who drafted the scenario
+        // elsewhere and pasted it in still wants the illustrations, and the definition
+        // they pasted carries an imageprompt for every node.
+        $media = 0;
+        if (self::wants_media($resolved['scenario']) && credentials::are_configured()) {
+            $task = new \mod_aibranchedscenario\task\generate_media();
+            $task->set_custom_data((object)['cmid' => (int)$params['cmid']]);
+            $task->set_userid((int)$USER->id);
+            \core\task\manager::queue_adhoc_task($task, true);
+            $media = image_prompt::count_images($clean);
+        }
+
         return [
             'imported'  => true,
             'nodecount' => (int)($clean['stats']['nodecount'] ?? 0),
+            'mediaqueued' => $media,
             'problems'  => '',
         ];
     }
@@ -120,7 +140,25 @@ class import_definition extends external_api {
         return new external_single_structure([
             'imported'  => new external_value(PARAM_BOOL, 'Whether the definition was stored'),
             'nodecount' => new external_value(PARAM_INT, 'Nodes in the stored definition'),
+            'mediaqueued' => new external_value(
+                PARAM_INT,
+                'Scene images queued for background generation',
+                VALUE_DEFAULT,
+                0
+            ),
             'problems'  => new external_value(PARAM_TEXT, 'Validation problems when the import was rejected'),
         ]);
+    }
+
+    /**
+     * Whether this activity is set up to want images or narration.
+     *
+     * @param \stdClass $scenario Activity instance.
+     * @return bool
+     */
+    protected static function wants_media(\stdClass $scenario): bool {
+        $images = !empty($scenario->enableimages) && get_config('mod_aibranchedscenario', 'allowimages');
+        $audio = !empty($scenario->enableaudio) && get_config('mod_aibranchedscenario', 'allowaudio');
+        return $images || $audio;
     }
 }
