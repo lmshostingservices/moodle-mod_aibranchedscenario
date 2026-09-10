@@ -2,6 +2,62 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.5.0] - 2026-09-10
+
+Closes the ten shortfalls found by auditing the plugin against what a demanding
+instructional designer would expect. **This release adds a database column**, so the
+upgrade is not a savepoint only.
+
+### Added
+
+- **Read the draft before publishing it.** "Preview as a learner" led to a page saying
+  nothing was published, because the player can only render a published revision: the
+  only way to see what the AI had written was to publish it to every enrolled learner
+  and then look. A new review page lays out every scene and every branch, including the
+  ones a single run would never reach, with the consequence, the feedback, the score
+  each choice carries and where it leads.
+- **Undo the last generation.** Generating again overwrote the working copy in place and
+  wiped every image, so an hour of hand editing disappeared on one click with nothing to
+  go back to. The copy it replaces is now kept, and restoring swaps the two so an undo
+  can itself be undone.
+- **Say what a run will cost before it starts.** The one button that spends money had
+  less friction in front of it than deleting a forum post. It now asks first, with the
+  credits the run is expected to use, how many scenes and pictures that is, the site's
+  balance, and a warning that it replaces the current draft.
+- **Learners can read their own result again.** Someone who finished, closed the tab and
+  came back was shown "Begin the scenario", which spent another attempt and put the
+  earlier result out of reach for good — or, with one attempt allowed, failed with an
+  error and lost it. The button now says what it will do: carry on, see how you did, or
+  try again.
+- **The report goes deeper than a score.** Every attempt can be opened to read the
+  decisions behind it, which the debrief has always assembled and the report never
+  showed.
+
+### Fixed
+
+- **The debrief fetched per-decision feedback and never rendered it.** The most useful
+  content in it was on the wire, prepared for the template, and dropped.
+- **"Show the debrief" did nothing.** The setting was offered, exported to the template
+  and read by nothing, so a teacher who turned it off got the debrief anyway. Turning it
+  off now ends the scenario without the breakdown.
+- **Media generated after the job reported ready**, so the wizard reloaded and offered
+  Publish while cron was still minutes from finishing the artwork — and a run where
+  every image failed looked identical to a complete one. The job now finishes only when
+  its pictures do, and a partial run says so.
+- **The branching of a branching-scenario authoring tool was read only.** A teacher
+  could reword a choice but not change where it led or what it was worth. Both are now
+  editable, and the target is chosen from the scenes it may point at rather than typed
+  as a node identifier.
+- **Deleting a learner's attempt took one unconfirmed click** on a red button in a table
+  of twenty-five rows. It asks first, and names whose attempt it is.
+- **Saving one scene disarmed the unsaved-changes guard for the whole wizard**, so an
+  edit made on an earlier step was lost without a prompt.
+- Database identifiers are no longer shown to teachers as headings.
+
+### Changed
+
+- 33 further harness checks, 489 in total.
+
 ## [v1.4.0] - 2026-09-10
 
 The first release written against a live service rather than a test harness. Every

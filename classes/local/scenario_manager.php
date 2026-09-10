@@ -95,8 +95,12 @@ class scenario_manager {
         if (strlen($encoded) > schema::MAX_SCENARIO_BYTES) {
             throw new validation_exception([get_string('error:scenariotoolarge', 'mod_aibranchedscenario')]);
         }
+        // Keep the copy this replaces, so one generation or import can be undone. An
+        // hour of hand editing used to disappear on a single click of Generate with no
+        // warning and nothing to go back to.
         $update = (object)[
             'id'           => $scenario->id,
+            'previousjson' => $scenario->scenariojson ?? null,
             'scenariojson' => $encoded,
             'timemodified' => time(),
         ];
@@ -104,11 +108,45 @@ class scenario_manager {
             $update->generationmeta = json_encode(self::sanitise_meta($generationmeta));
         }
         $DB->update_record('aibranchedscenario', $update);
+        $scenario->previousjson = $update->previousjson;
         $scenario->scenariojson = $encoded;
         if ($generationmeta !== null) {
             $scenario->generationmeta = $update->generationmeta;
         }
         return $clean;
+    }
+
+    /**
+     * Put the previous working copy back.
+     *
+     * Exactly one step is kept. Restoring swaps the two, so a teacher who undoes by
+     * mistake can redo, and cannot dig further back than that.
+     *
+     * @param stdClass $scenario Activity instance.
+     * @return bool True when something was restored.
+     */
+    public static function restore_previous(stdClass $scenario): bool {
+        global $DB;
+
+        $previous = $scenario->previousjson ?? null;
+        if (empty($previous)) {
+            return false;
+        }
+        $decoded = json_decode($previous, true);
+        if (!is_array($decoded)) {
+            return false;
+        }
+
+        $DB->update_record('aibranchedscenario', (object)[
+            'id'           => $scenario->id,
+            'scenariojson' => $previous,
+            'previousjson' => $scenario->scenariojson ?? null,
+            'timemodified' => time(),
+        ]);
+        $swap = $scenario->scenariojson ?? null;
+        $scenario->scenariojson = $previous;
+        $scenario->previousjson = $swap;
+        return true;
     }
 
     /**

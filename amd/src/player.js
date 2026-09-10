@@ -108,6 +108,9 @@ class Player {
             return;
         }
         switch (action) {
+            case 'showresult':
+                this.showFinishedResult(parseInt(element.dataset.attemptid, 10));
+                break;
             case 'start':
                 this.startAttempt(false);
                 break;
@@ -344,11 +347,40 @@ class Player {
     }
 
     /**
+     * Show the debrief for an attempt the learner already finished.
+     *
+     * @param {Number} attemptid The finished attempt.
+     * @returns {Promise} Resolves once the debrief is shown.
+     */
+    async showFinishedResult(attemptid) {
+        if (!attemptid) {
+            return false;
+        }
+        this.attemptId = attemptid;
+        this.hideRegion(SELECTORS.brief);
+        return this.showDebrief();
+    }
+
+    /**
      * Fetch and render the debrief for the finished attempt.
      *
      * @returns {Promise} Resolves once the debrief is shown.
      */
     async showDebrief() {
+        // "Show the debrief" was offered in the activity settings, exported to the
+        // template, and read by nothing: a teacher who turned it off got the debrief
+        // anyway. When it is off the learner is told the scenario is finished and left
+        // there, which is the whole point of turning it off.
+        if (this.root.dataset.debrief === '0') {
+            this.hideRegion(SELECTORS.node);
+            this.hideRegion(SELECTORS.consequence);
+            await this.render(SELECTORS.debrief, 'mod_aibranchedscenario/debriefhidden', {
+                allowreplay: this.root.dataset.replay !== '0',
+            });
+            this.setRailComplete();
+            this.focusRegion(SELECTORS.debrief);
+            return true;
+        }
         this.setBusy(true);
         try {
             const response = await this.call('get_debrief', {attemptid: this.attemptId});

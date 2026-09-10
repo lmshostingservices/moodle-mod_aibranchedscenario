@@ -288,6 +288,26 @@ class schema {
     }
 
     /**
+     * What the LMS Labs service charges for each operation, in credits.
+     *
+     * These are the service's published tariff, not a price this plugin sets. They are
+     * held here only so a teacher can be told what a run will cost before they commit
+     * to it. The service remains the authority: what it reports having charged is what
+     * is recorded against the job.
+     *
+     * @return array Operation name to credits.
+     */
+    public static function tariff(): array {
+        return [
+            'scenario' => 20,
+            'populate' => 3,
+            'suggest'  => 1,
+            'image'    => 5,
+            'speech'   => 5,
+        ];
+    }
+
+    /**
      * Check a value against one of the option lists.
      *
      * @param string $value Value to test.

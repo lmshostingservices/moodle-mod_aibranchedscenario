@@ -74,20 +74,22 @@ class generate_scenario extends adhoc_task {
             return;
         }
 
+        $counts = [];
         try {
             $context = context_module::instance($cmid);
+            $media = new media_manager($context);
+            $counts = $media->generate_for_definition($generator->get_provider(), $scenario, $definition);
         } catch (\moodle_exception $e) {
             mtrace('Course module context unavailable; media skipped.');
-            return;
         }
 
-        $media = new media_manager($context);
-        $counts = $media->generate_for_definition($generator->get_provider(), $scenario, $definition);
-        if (!$counts['images'] && !$counts['narrations']) {
-            mtrace('Scenario ' . $scenario->id . ' generated with ' . count($definition['nodes']) . ' nodes.');
-            return;
-        }
+        // Only now is the job finished. Until this point the wizard keeps showing
+        // progress rather than offering Publish on a scenario whose pictures are still
+        // being drawn.
+        $generator->finish_scenario_job($job, $definition, $counts);
 
-        mtrace('Scenario ' . $scenario->id . ' generated with media.');
+        mtrace('Scenario ' . $scenario->id . ' generated: ' . count($definition['nodes']) . ' nodes, '
+            . (int)($counts['images'] ?? 0) . '/' . (int)($counts['imageswanted'] ?? 0) . ' images, '
+            . (int)($counts['narrations'] ?? 0) . '/' . (int)($counts['narrationswanted'] ?? 0) . ' narrations.');
     }
 }

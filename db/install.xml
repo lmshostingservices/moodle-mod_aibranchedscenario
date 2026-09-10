@@ -15,6 +15,7 @@
         <FIELD NAME="theme" TYPE="char" LENGTH="32" NOTNULL="true" DEFAULT="slate" SEQUENCE="false"/>
         <FIELD NAME="scenariolang" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="en-AU" SEQUENCE="false"/>
         <FIELD NAME="scenariojson" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Validated working-copy scenario definition"/>
+        <FIELD NAME="previousjson" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="The working copy as it was before the last generation or import, so one can be undone"/>
         <FIELD NAME="sourcejson" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Authoring wizard inputs so scenarios stay editable"/>
         <FIELD NAME="generationmeta" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Non-secret model and generation metadata"/>
         <FIELD NAME="revision" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>

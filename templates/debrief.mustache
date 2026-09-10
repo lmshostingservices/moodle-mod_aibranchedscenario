@@ -111,6 +111,14 @@
                     </div>
                     <p class="aibs-journey-choice">{{choicetext}}</p>
                     <div class="aibs-prose aibs-prose-small">{{#consequenceparas}}<p>{{.}}</p>{{/consequenceparas}}</div>
+                    {{#hasfeedback}}
+                        <div class="aibs-journey-feedback">
+                            <span class="aibs-journey-feedback-label">
+                                {{#str}} whythismattered, mod_aibranchedscenario {{/str}}</span>
+                            <div class="aibs-prose aibs-prose-small">
+                                {{#feedbackparas}}<p>{{.}}</p>{{/feedbackparas}}</div>
+                        </div>
+                    {{/hasfeedback}}
                     {{#principle}}<p class="aibs-journey-principle">{{principle}}</p>{{/principle}}
                 </li>
             {{/journey}}

@@ -62,6 +62,24 @@ $functions = [
         'services'    => [],
     ],
 
+    'mod_aibranchedscenario_get_generation_plan' => [
+        'classname'   => 'mod_aibranchedscenario\external\get_generation_plan',
+        'description' => 'What one generation run will cost, and what it will replace.',
+        'type'        => 'read',
+        'ajax'        => true,
+        'capabilities' => 'mod/aibranchedscenario:generate',
+        'services'    => [],
+    ],
+
+    'mod_aibranchedscenario_restore_draft' => [
+        'classname'   => 'mod_aibranchedscenario\external\restore_draft',
+        'description' => 'Put back the working copy the last generation or import replaced.',
+        'type'        => 'write',
+        'ajax'        => true,
+        'capabilities' => 'mod/aibranchedscenario:manage',
+        'services'    => [],
+    ],
+
     'mod_aibranchedscenario_queue_generation' => [
         'classname'   => 'mod_aibranchedscenario\external\queue_generation',
         'description' => 'Queue generation of a branching scenario from the stored wizard inputs.',

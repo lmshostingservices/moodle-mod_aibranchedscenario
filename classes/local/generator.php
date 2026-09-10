@@ -253,9 +253,35 @@ class generator {
 
         $job->modelused = (string)($meta['model'] ?? '');
         $job->durationms = (int)($meta['durationms'] ?? 0);
-        $this->finish_job($job, ['stats' => $definition['stats']]);
+
+        // The job is deliberately left running. Images and narration are generated
+        // after this returns, and marking the job ready here told the wizard to reload
+        // and offered a Publish button while cron was still minutes from finishing the
+        // artwork - so a teacher could publish a revision with three of eight images
+        // and never be told.
+        $DB->update_record('aibranchedscenario_jobs', (object)[
+            'id'           => $job->id,
+            'modelused'    => $job->modelused,
+            'durationms'   => $job->durationms,
+            'timemodified' => time(),
+        ]);
 
         return $definition;
+    }
+
+    /**
+     * Mark a scenario job finished, once its media has been produced too.
+     *
+     * @param stdClass $job Job record.
+     * @param array $definition The stored definition.
+     * @param array $media Counts from media_manager::generate_for_definition().
+     * @return void
+     */
+    public function finish_scenario_job(stdClass $job, array $definition, array $media = []): void {
+        $this->finish_job($job, [
+            'stats' => $definition['stats'],
+            'media' => $media,
+        ]);
     }
 
     /**

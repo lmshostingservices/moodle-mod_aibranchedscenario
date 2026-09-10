@@ -1563,3 +1563,135 @@
 .aibs-otherfield {
     margin-top: 10px;
 }
+
+/* The debrief's per-decision feedback. It was fetched, prepared and then not rendered,
+   which left the journey showing what happened but never why it mattered. */
+.aibs-journey-feedback {
+    border-left: 3px solid var(--aibs-accent-border);
+    margin-top: 10px;
+    padding-left: 12px;
+}
+
+.aibs-journey-feedback-label {
+    color: var(--aibs-muted);
+    display: block;
+    font-size: .78rem;
+    font-weight: 650;
+    letter-spacing: .04em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+/* ------------------------------------------------------ draft review page */
+
+.aibs-review-node {
+    margin-bottom: 18px;
+}
+
+.aibs-review-head {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.aibs-review-stage {
+    background: var(--aibs-surface-alt);
+    border-radius: 999px;
+    color: var(--aibs-muted);
+    font-size: .78rem;
+    font-weight: 650;
+    padding: 4px 12px;
+}
+
+.aibs-review-image {
+    border-radius: var(--aibs-radius-sm);
+    display: block;
+    margin-bottom: 14px;
+    max-width: 100%;
+}
+
+.aibs-review-speech {
+    border-left: 3px solid var(--aibs-accent-border);
+    font-style: italic;
+    margin: 12px 0;
+    padding-left: 12px;
+}
+
+.aibs-review-crisis {
+    background: var(--aibs-surface-alt);
+    border-radius: var(--aibs-radius-sm);
+    margin: 12px 0;
+    padding: 12px;
+}
+
+.aibs-review-label {
+    color: var(--aibs-muted);
+    display: block;
+    font-size: .78rem;
+    font-weight: 650;
+    letter-spacing: .04em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.aibs-review-challenge {
+    font-weight: 650;
+    margin: 14px 0 6px;
+}
+
+.aibs-review-choices {
+    display: grid;
+    gap: 12px;
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+}
+
+.aibs-review-choice {
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-left: 4px solid var(--aibs-border);
+    border-radius: var(--aibs-radius-sm);
+    padding: 14px 16px;
+}
+
+.aibs-review-choice.aibs-signal-positive {
+    border-left-color: var(--aibs-positive);
+}
+
+.aibs-review-choice.aibs-signal-negative {
+    border-left-color: var(--aibs-negative);
+}
+
+.aibs-review-choice.aibs-signal-neutral {
+    border-left-color: var(--aibs-neutral);
+}
+
+.aibs-review-choice-text {
+    font-weight: 650;
+    margin: 0 0 8px;
+}
+
+.aibs-review-meta {
+    color: var(--aibs-muted);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: .82rem;
+    gap: 14px;
+    margin: 0 0 10px;
+}
+
+/* The structural half of a choice: how well judged it is, and where it leads. */
+.aibs-choice-structure {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 10px;
+}
+
+.aibs-choice-structure-item {
+    flex: 1 1 220px;
+    min-width: 0;
+}

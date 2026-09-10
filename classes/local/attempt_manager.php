@@ -194,6 +194,32 @@ class attempt_manager {
     }
 
     /**
+     * The most recently finished attempt, if there is one.
+     *
+     * A learner who completes the scenario, closes the tab and comes back tomorrow to
+     * re-read their debrief used to be shown one button, "Begin the scenario". Pressing
+     * it spent another of a limited allowance and put the earlier result out of reach
+     * for good; with one attempt allowed it threw an error and the result was simply
+     * gone. Their own finished attempt is theirs to look at again.
+     *
+     * @param int $userid User id.
+     * @return stdClass|null
+     */
+    public function get_last_finished_attempt(int $userid): ?stdClass {
+        global $DB;
+
+        $records = $DB->get_records(
+            'aibranchedscenario_attempts',
+            ['scenarioid' => $this->scenario->id, 'userid' => $userid, 'status' => self::STATUS_FINISHED],
+            'attemptno DESC',
+            '*',
+            0,
+            1
+        );
+        return $records ? reset($records) : null;
+    }
+
+    /**
      * Whether the user may start a further attempt.
      *
      * @param int $userid User id.

@@ -171,13 +171,17 @@ class media_manager {
      * @param provider $provider Generation provider.
      * @param \stdClass $scenario Activity instance.
      * @param array $definition Validated definition.
-     * @return array Keys: images, narrations - how many of each were attempted.
+     * @return array Keys: images, imageswanted, narrations, narrationswanted. The
+     *               "wanted" counts are what the definition called for; the others are
+     *               what was actually produced, so a partial run is visible rather than
+     *               looking identical to a complete one.
      */
     public function generate_for_definition(provider $provider, \stdClass $scenario, array $definition): array {
         $wantsimages = !empty($scenario->enableimages) && get_config('mod_aibranchedscenario', 'allowimages');
         $wantsaudio = !empty($scenario->enableaudio) && get_config('mod_aibranchedscenario', 'allowaudio');
+        $blank = ['images' => 0, 'imageswanted' => 0, 'narrations' => 0, 'narrationswanted' => 0];
         if (!$wantsimages && !$wantsaudio) {
-            return ['images' => 0, 'narrations' => 0];
+            return $blank;
         }
 
         $this->clear_working_media();
@@ -185,18 +189,22 @@ class media_manager {
         $source = scenario_manager::get_source($scenario);
         $style = $source['imagestyle'] ?? 'cinematic';
         $voice = self::configured_voice();
-        $counts = ['images' => 0, 'narrations' => 0];
+        $counts = $blank;
 
         $index = 0;
         foreach ($definition['nodes'] as $node) {
             if ($wantsimages) {
                 // Endings are given a frame too. The closing image is the one a learner
                 // is left looking at while they read what their decisions came to.
-                $this->generate_scene($provider, $definition, $node, $style, $index);
-                $counts['images']++;
-                if (!empty($node['crisisvariant']['situation'])) {
-                    $this->generate_scene($provider, $definition, $node, $style, $index, true);
+                $counts['imageswanted']++;
+                if ($this->generate_scene($provider, $definition, $node, $style, $index)) {
                     $counts['images']++;
+                }
+                if (!empty($node['crisisvariant']['situation'])) {
+                    $counts['imageswanted']++;
+                    if ($this->generate_scene($provider, $definition, $node, $style, $index, true)) {
+                        $counts['images']++;
+                    }
                 }
             }
             if ($node['type'] === 'outcome') {
@@ -204,8 +212,10 @@ class media_manager {
                 continue;
             }
             if ($wantsaudio) {
-                $this->generate_narration($provider, $node, $scenario->scenariolang, $voice, $index);
-                $counts['narrations']++;
+                $counts['narrationswanted']++;
+                if ($this->generate_narration($provider, $node, $scenario->scenariolang, $voice, $index)) {
+                    $counts['narrations']++;
+                }
             }
             $index++;
         }
@@ -340,6 +350,41 @@ class media_manager {
                 'mod_aibranchedscenario',
                 $filearea,
                 $revisionnumber,
+                '/',
+                $name
+            )->out(false);
+        }
+        return $out;
+    }
+
+    /**
+     * URLs for the working copy's media, keyed by node id.
+     *
+     * The working areas are itemised by node index rather than by revision number, so
+     * this walks them and keys the result the way the draft review page needs it.
+     *
+     * @param string $filearea Working file area.
+     * @return array Node id to URL.
+     */
+    public function urls_for_working(string $filearea): array {
+        $fs = get_file_storage();
+        $files = $fs->get_area_files(
+            $this->context->id,
+            'mod_aibranchedscenario',
+            $filearea,
+            false,
+            'filename',
+            false
+        );
+        $out = [];
+        foreach ($files as $file) {
+            $name = $file->get_filename();
+            $nodeid = pathinfo($name, PATHINFO_FILENAME);
+            $out[$nodeid] = moodle_url::make_pluginfile_url(
+                $this->context->id,
+                'mod_aibranchedscenario',
+                $filearea,
+                $file->get_itemid(),
                 '/',
                 $name
             )->out(false);

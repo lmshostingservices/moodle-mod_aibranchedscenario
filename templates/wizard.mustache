@@ -365,6 +365,9 @@
         <section class="aibs-card" data-region="step" data-step="6" hidden>
             <h3 class="aibs-h3">{{#str}} step:build, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-field-hint">{{#str}} generateexplain, mod_aibranchedscenario {{/str}}</p>
+            {{#hasdraft}}
+                <p class="aibs-field-hint">{{#str}} reviewdrafthint, mod_aibranchedscenario {{/str}}</p>
+            {{/hasdraft}}
 
             <div class="aibs-brief-actions">
                 {{#aiavailable}}
@@ -373,12 +376,21 @@
                     </button>
                 {{/aiavailable}}
                 {{#hasdraft}}
+                    <a class="aibs-btn aibs-btn-secondary" href="{{reviewurl}}">
+                        {{#str}} reviewdraft, mod_aibranchedscenario {{/str}}</a>
+                    {{#hasprevious}}
+                        <button type="button" class="aibs-btn aibs-btn-ghost" data-action="restoredraft"
+                            title="{{#str}} restoredrafthint, mod_aibranchedscenario {{/str}}">
+                            {{#str}} restoredraft, mod_aibranchedscenario {{/str}}</button>
+                    {{/hasprevious}}
                     <button type="button" class="aibs-btn aibs-btn-secondary" data-action="publish">
                         {{#str}} publishscenario, mod_aibranchedscenario {{/str}}
                     </button>
+                {{/hasdraft}}
+                {{#published}}
                     <a class="aibs-btn aibs-btn-ghost" href="{{viewurl}}">
                         {{#str}} previewscenario, mod_aibranchedscenario {{/str}}</a>
-                {{/hasdraft}}
+                {{/published}}
             </div>
 
             <details class="aibs-disclosure">
@@ -409,7 +421,10 @@
                     <h4 class="aibs-h4">{{#str}} editnodes, mod_aibranchedscenario, {{nodecount}} {{/str}}</h4>
                     {{#nodes}}
                         <div class="aibs-nodeedit" data-node="{{id}}">
-                            <p class="aibs-field-label">{{id}} &middot; {{type}}</p>
+                            <p class="aibs-field-label">
+                                {{^isoutcome}}{{#str}} stagenumber, mod_aibranchedscenario, {{stage}} {{/str}}{{/isoutcome}}
+                                {{#isoutcome}}{{#str}} field:ending, mod_aibranchedscenario {{/str}}{{/isoutcome}}
+                            </p>
                             <div class="aibs-field">
                                 <label class="aibs-field-label" for="aibs-node-title-{{id}}">
                                     {{#str}} field:nodetitle, mod_aibranchedscenario {{/str}}</label>
@@ -446,7 +461,29 @@
                             {{/isoutcome}}
                             {{#choices}}
                                 <fieldset class="aibs-field" data-choice="{{id}}">
-                                    <legend class="aibs-field-label">{{letter}} &rarr; {{next}}</legend>
+                                    <legend class="aibs-field-label">{{#str}} field:choice, mod_aibranchedscenario, {{letter}} {{/str}}</legend>
+                                    <div class="aibs-choice-structure">
+                                        <span class="aibs-choice-structure-item">
+                                            <label class="aibs-field-label" for="aibs-choice-signal-{{id}}">
+                                                {{#str}} field:signal, mod_aibranchedscenario {{/str}}</label>
+                                            <select class="aibs-select" id="aibs-choice-signal-{{id}}"
+                                                data-choice-field="signal">
+                                                {{#signaloptions}}
+                                                    <option value="{{key}}" {{#selected}}selected{{/selected}}>{{label}}</option>
+                                                {{/signaloptions}}
+                                            </select>
+                                        </span>
+                                        <span class="aibs-choice-structure-item">
+                                            <label class="aibs-field-label" for="aibs-choice-next-{{id}}">
+                                                {{#str}} field:leadsto, mod_aibranchedscenario {{/str}}</label>
+                                            <select class="aibs-select" id="aibs-choice-next-{{id}}"
+                                                data-choice-field="next">
+                                                {{#targetoptions}}
+                                                    <option value="{{key}}" {{#selected}}selected{{/selected}}>{{label}}</option>
+                                                {{/targetoptions}}
+                                            </select>
+                                        </span>
+                                    </div>
                                     <label class="aibs-field-label" for="aibs-choice-text-{{id}}">
                                         {{#str}} field:choicetext, mod_aibranchedscenario {{/str}}</label>
                                     <input type="text" class="aibs-input" id="aibs-choice-text-{{id}}"

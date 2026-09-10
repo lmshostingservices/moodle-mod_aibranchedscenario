@@ -22,6 +22,7 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use mod_aibranchedscenario\local\scenario_manager;
+use mod_aibranchedscenario\local\schema;
 
 /**
  * Saves edited narrative text for one node of the working scenario copy.
@@ -49,14 +50,22 @@ class save_node_text extends external_api {
             ]),
             'choices' => new external_multiple_structure(
                 new external_single_structure([
-                    'id'          => new external_value(PARAM_ALPHANUMEXT, 'Choice identifier'),
+                    'id'          => new external_value(PARAM_ALPHANUMEXT, 'Choice identifier, empty for a new one'),
                     'text'        => new external_value(PARAM_TEXT, 'Choice text', VALUE_OPTIONAL),
                     'consequence' => new external_value(PARAM_TEXT, 'Consequence text', VALUE_OPTIONAL),
                     'feedback'    => new external_value(PARAM_TEXT, 'Instructional feedback', VALUE_OPTIONAL),
+                    'signal'      => new external_value(PARAM_ALPHA, 'positive, neutral or negative', VALUE_OPTIONAL),
+                    'next'        => new external_value(PARAM_ALPHANUMEXT, 'Node this choice leads to', VALUE_OPTIONAL),
                 ]),
-                'Edited choices',
+                'The complete set of choices for this node, in order',
                 VALUE_DEFAULT,
                 []
+            ),
+            'replacechoices' => new external_value(
+                PARAM_BOOL,
+                'Treat the choices list as the whole set, so one can be added or removed',
+                VALUE_DEFAULT,
+                false
             ),
         ]);
     }
@@ -70,9 +79,16 @@ class save_node_text extends external_api {
      * @param array $choices Edited choices.
      * @return array
      */
-    public static function execute(int $cmid, string $nodeid, array $fields, array $choices): array {
+    public static function execute(
+        int $cmid,
+        string $nodeid,
+        array $fields,
+        array $choices,
+        bool $replacechoices = false
+    ): array {
         $params = self::validate_parameters(self::execute_parameters(), [
             'cmid' => $cmid, 'nodeid' => $nodeid, 'fields' => $fields, 'choices' => $choices,
+            'replacechoices' => $replacechoices,
         ]);
         $resolved = helper::resolve($params['cmid'], 'mod/aibranchedscenario:manage');
 
@@ -92,15 +108,43 @@ class save_node_text extends external_api {
                     $definition['nodes'][$index][$key] = $params['fields'][$key];
                 }
             }
-            foreach ($params['choices'] as $edited) {
-                foreach ($node['choices'] as $position => $choice) {
-                    if ($choice['id'] !== $edited['id']) {
-                        continue;
-                    }
-                    foreach (['text', 'consequence', 'feedback'] as $key) {
-                        if (array_key_exists($key, $edited)) {
-                            $definition['nodes'][$index]['choices'][$position][$key] = $edited[$key];
+            // The branching of a branching-scenario authoring tool used to be read only:
+            // a teacher could reword a choice but not change where it led, what it was
+            // worth, or how many there were. With replacechoices the submitted list is
+            // the whole set for this node, so one can be added or taken away; without
+            // it the old behaviour of editing in place is kept.
+            $existing = [];
+            foreach ($node['choices'] as $choice) {
+                $existing[$choice['id']] = $choice;
+            }
+
+            if ($params['replacechoices']) {
+                $rebuilt = [];
+                foreach ($params['choices'] as $position => $edited) {
+                    $base = $existing[$edited['id']] ?? [
+                        'id'          => $node['id'] . '_' . chr(ord('a') + $position),
+                        'letter'      => strtoupper(chr(ord('a') + $position)),
+                        'text'        => '',
+                        'signal'      => 'neutral',
+                        'consequence' => '',
+                        'feedback'    => '',
+                        'principleid' => '',
+                        'tags'        => [],
+                        'effects'     => [],
+                        'skills'      => [],
+                        'next'        => schema::auto_target(),
+                    ];
+                    $rebuilt[] = self::apply_choice($base, $edited);
+                }
+                $definition['nodes'][$index]['choices'] = $rebuilt;
+            } else {
+                foreach ($params['choices'] as $edited) {
+                    foreach ($node['choices'] as $position => $choice) {
+                        if ($choice['id'] !== $edited['id']) {
+                            continue;
                         }
+                        $definition['nodes'][$index]['choices'][$position] =
+                            self::apply_choice($choice, $edited);
                     }
                 }
             }
@@ -124,5 +168,27 @@ class save_node_text extends external_api {
         return new external_single_structure([
             'saved' => new external_value(PARAM_BOOL, 'Whether the edits were stored'),
         ]);
+    }
+
+    /**
+     * Copy the editable fields of one submitted choice onto the stored one.
+     *
+     * Anything not submitted keeps its stored value, so an editor that offers only
+     * some of these fields cannot silently blank the rest.
+     *
+     * @param array $choice The stored choice.
+     * @param array $edited The submitted values.
+     * @return array
+     */
+    protected static function apply_choice(array $choice, array $edited): array {
+        foreach (['text', 'consequence', 'feedback', 'next'] as $key) {
+            if (array_key_exists($key, $edited)) {
+                $choice[$key] = $edited[$key];
+            }
+        }
+        if (array_key_exists('signal', $edited) && in_array($edited['signal'], schema::signals(), true)) {
+            $choice['signal'] = $edited['signal'];
+        }
+        return $choice;
     }
 }

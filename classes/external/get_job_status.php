@@ -62,11 +62,27 @@ class get_job_status extends external_api {
 
         $definition = scenario_manager::get_working_definition($resolved['scenario']);
 
+        // A run where every image failed used to look exactly like a complete one.
+        $media = '';
+        $result = json_decode((string)$job->resultjson, true);
+        if (is_array($result) && isset($result['media']['imageswanted'])) {
+            $made = (int)$result['media']['images'];
+            $wanted = (int)$result['media']['imageswanted'];
+            if ($wanted > 0 && $made < $wanted) {
+                $media = get_string(
+                    'mediaincomplete',
+                    'mod_aibranchedscenario',
+                    (object)['made' => $made, 'wanted' => $wanted]
+                );
+            }
+        }
+
         return [
             'jobid'         => (int)$job->id,
             'status'        => $job->status,
             'errormessage'  => $job->status === generator::JOB_ERROR
                 ? helper::safe_error_message((string)$job->errormsg) : '',
+            'mediamessage'  => $media,
             'nodecount'     => (int)($definition['stats']['nodecount'] ?? 0),
             'decisioncount' => (int)($definition['stats']['decisioncount'] ?? 0),
         ];
@@ -82,6 +98,12 @@ class get_job_status extends external_api {
             'jobid'         => new external_value(PARAM_INT, 'Job identifier'),
             'status'        => new external_value(PARAM_ALPHA, 'Job status'),
             'errormessage'  => new external_value(PARAM_TEXT, 'Translated failure message, or empty'),
+            'mediamessage'  => new external_value(
+                PARAM_TEXT,
+                'Warning when fewer images were produced than the scenario called for',
+                VALUE_DEFAULT,
+                ''
+            ),
             'nodecount'     => new external_value(PARAM_INT, 'Nodes in the working copy'),
             'decisioncount' => new external_value(PARAM_INT, 'Decision points in the working copy'),
         ]);

@@ -120,5 +120,21 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091009, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091010) {
+        global $DB;
+        $dbman = $DB->get_manager();
+
+        // Generating again used to overwrite the working copy in place, so an hour of
+        // hand editing disappeared on one click with no way back. The previous copy is
+        // now kept so that exactly one step can be undone.
+        $table = new xmldb_table('aibranchedscenario');
+        $field = new xmldb_field('previousjson', XMLDB_TYPE_TEXT, null, null, null, null, null, 'scenariojson');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2026091010, 'aibranchedscenario');
+    }
+
     return true;
 }

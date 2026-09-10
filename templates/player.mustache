@@ -86,7 +86,8 @@
 }}
 <div class="aibs-player {{themeclass}}" data-region="player" data-cmid="{{cmid}}"
      data-audio="{{#enableaudio}}1{{/enableaudio}}{{^enableaudio}}0{{/enableaudio}}"
-     data-replay="{{#allowreplay}}1{{/allowreplay}}{{^allowreplay}}0{{/allowreplay}}">
+     data-replay="{{#allowreplay}}1{{/allowreplay}}{{^allowreplay}}0{{/allowreplay}}"
+     data-debrief="{{#showdebrief}}1{{/showdebrief}}{{^showdebrief}}0{{/showdebrief}}">
 
     <div class="aibs-shell">
 
@@ -158,9 +159,35 @@
                 <div class="aibs-brief-actions">
                     {{#canattempt}}
                         {{#published}}
-                            <button type="button" class="aibs-btn aibs-btn-primary aibs-start" data-action="start">
-                                {{#str}} beginscenario, mod_aibranchedscenario {{/str}}
-                            </button>
+                            {{! A finished attempt is the learner's to read again. Offering only
+                                "Begin the scenario" spent another attempt and put the earlier
+                                result out of reach. }}
+                            {{#hasfinished}}
+                                <button type="button" class="aibs-btn aibs-btn-primary"
+                                    data-action="showresult" data-attemptid="{{finishedattemptid}}">
+                                    {{#str}} seeyourresult, mod_aibranchedscenario {{/str}}
+                                </button>
+                            {{/hasfinished}}
+                            {{#hasopen}}
+                                <button type="button" class="aibs-btn aibs-btn-primary aibs-start" data-action="start">
+                                    {{#str}} resumescenario, mod_aibranchedscenario {{/str}}
+                                </button>
+                            {{/hasopen}}
+                            {{#canstartnew}}
+                                <button type="button" class="aibs-btn {{#hasfinished}}aibs-btn-secondary{{/hasfinished}}{{^hasfinished}}aibs-btn-primary{{/hasfinished}} aibs-start"
+                                    data-action="start">
+                                    {{#hasfinished}}{{#str}} tryagain, mod_aibranchedscenario {{/str}}{{/hasfinished}}
+                                    {{^hasfinished}}{{#str}} beginscenario, mod_aibranchedscenario {{/str}}{{/hasfinished}}
+                                </button>
+                            {{/canstartnew}}
+                            {{^canstartnew}}
+                                {{^hasfinished}}
+                                    {{^hasopen}}
+                                        <p class="aibs-notice">
+                                            {{#str}} noattemptsleft, mod_aibranchedscenario {{/str}}</p>
+                                    {{/hasopen}}
+                                {{/hasfinished}}
+                            {{/canstartnew}}
                         {{/published}}
                     {{/canattempt}}
                     {{^published}}

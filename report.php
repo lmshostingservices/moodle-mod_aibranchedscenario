@@ -48,9 +48,33 @@ $candelete = has_capability('mod/aibranchedscenario:deleteattempts', $context);
 
 if ($candelete) {
     $deleteid = optional_param('delete', 0, PARAM_INT);
+    $confirmed = optional_param('confirm', 0, PARAM_BOOL);
     if ($deleteid) {
-        require_sesskey();
         $attempt = $DB->get_record('aibranchedscenario_attempts', ['id' => $deleteid], '*', IGNORE_MISSING);
+
+        // Deleting an attempt takes the learner's answers, the event log behind them and
+        // their grade, and it cannot be undone. It used to happen on one click of a
+        // link in a table of twenty-five rows.
+        if ($attempt && (int)$attempt->scenarioid === (int)$moduleinstance->id && !$confirmed) {
+            $owner = core_user::get_user((int)$attempt->userid, '*', IGNORE_MISSING);
+            echo $OUTPUT->header();
+            echo $OUTPUT->confirm(
+                get_string(
+                    'confirmdeleteattempt',
+                    'mod_aibranchedscenario',
+                    (object)[
+                        'user'    => $owner ? fullname($owner) : '',
+                        'attempt' => (int)$attempt->attemptno,
+                    ]
+                ),
+                new moodle_url($baseurl, ['delete' => $deleteid, 'confirm' => 1, 'sesskey' => sesskey()]),
+                $baseurl
+            );
+            echo $OUTPUT->footer();
+            exit;
+        }
+
+        require_sesskey();
         if ($attempt && (int)$attempt->scenarioid === (int)$moduleinstance->id) {
             attempt_manager::delete_attempt((int)$attempt->id);
             aibranchedscenario_update_grades($moduleinstance, (int)$attempt->userid);
@@ -62,6 +86,69 @@ if ($candelete) {
             );
         }
     }
+}
+
+// One attempt, read end to end. A teacher opening a branching-scenario report wants to
+// know which way a learner went and where the group went wrong; the table of scores
+// answered neither, though the journey has always been assembled for the debrief.
+$viewid = optional_param('attempt', 0, PARAM_INT);
+if ($viewid) {
+    $attempt = $DB->get_record('aibranchedscenario_attempts', ['id' => $viewid], '*', IGNORE_MISSING);
+    if (!$attempt || (int)$attempt->scenarioid !== (int)$moduleinstance->id) {
+        throw new moodle_exception('error:unknownattempt', 'mod_aibranchedscenario');
+    }
+    $revision = $DB->get_record('aibranchedscenario_revisions', ['id' => $attempt->revisionid], '*', IGNORE_MISSING);
+    $owner = core_user::get_user((int)$attempt->userid, '*', IGNORE_MISSING);
+
+    echo $OUTPUT->header();
+    echo $OUTPUT->heading(format_string($moduleinstance->name));
+    echo html_writer::link(
+        $baseurl,
+        get_string('report:backtolist', 'mod_aibranchedscenario'),
+        ['class' => 'aibs-btn aibs-btn-secondary']
+    );
+
+    if (!$revision) {
+        echo $OUTPUT->notification(get_string('report:revisiongone', 'mod_aibranchedscenario'), 'warning');
+        echo $OUTPUT->footer();
+        exit;
+    }
+
+    $manager = new attempt_manager($moduleinstance, $revision);
+    $journey = $manager->build_journey($attempt);
+
+    echo $OUTPUT->heading(get_string('report:attemptheading', 'mod_aibranchedscenario', (object)[
+        'user'    => $owner ? fullname($owner) : '',
+        'attempt' => (int)$attempt->attemptno,
+    ]), 3);
+    echo html_writer::tag('p', get_string(
+        'decisionqualityscore',
+        'mod_aibranchedscenario',
+        $attempt->score === null ? '-' : round((float)$attempt->score, 1)
+    ), ['class' => 'aibs-fineprint']);
+
+    $list = '';
+    foreach ($journey as $step) {
+        $list .= html_writer::div(
+            html_writer::tag('h4', $step['seq'] . '. ' . $step['nodetitle'])
+                . html_writer::tag('p', $step['choicetext'], ['class' => 'aibs-review-choice-text'])
+                . html_writer::tag(
+                    'p',
+                    get_string('signal:' . $step['signal'], 'mod_aibranchedscenario'),
+                    ['class' => 'aibs-review-meta']
+                )
+                . html_writer::tag('p', $step['consequence'])
+                . ($step['feedback'] !== ''
+                    ? html_writer::div(html_writer::tag('p', $step['feedback']), 'aibs-journey-feedback') : ''),
+            'aibs-review-choice aibs-signal-' . $step['signal']
+        );
+    }
+    echo html_writer::div($list ?: $OUTPUT->notification(
+        get_string('report:nodecisions', 'mod_aibranchedscenario'),
+        'info'
+    ), 'aibs-review-choices');
+    echo $OUTPUT->footer();
+    exit;
 }
 
 echo $OUTPUT->header();
@@ -125,9 +212,7 @@ $table->head = [
     get_string('outcome', 'mod_aibranchedscenario'),
     get_string('started', 'mod_aibranchedscenario'),
 ];
-if ($candelete) {
-    $table->head[] = get_string('actions', 'mod_aibranchedscenario');
-}
+$table->head[] = get_string('actions', 'mod_aibranchedscenario');
 
 $recordset = $DB->get_recordset_sql($sql, $params, $page * $perpage, $perpage);
 foreach ($recordset as $record) {
@@ -139,13 +224,19 @@ foreach ($recordset as $record) {
         $record->outcome === '' ? '-' : get_string('outcome:' . $record->outcome, 'mod_aibranchedscenario'),
         userdate($record->timestarted),
     ];
+    $actions = html_writer::link(
+        new moodle_url($baseurl, ['attempt' => $record->id]),
+        get_string('report:view', 'mod_aibranchedscenario'),
+        ['class' => 'btn btn-sm btn-outline-secondary']
+    );
     if ($candelete) {
-        $row[] = html_writer::link(
+        $actions .= ' ' . html_writer::link(
             new moodle_url($baseurl, ['delete' => $record->id, 'sesskey' => sesskey()]),
             get_string('delete'),
             ['class' => 'btn btn-sm btn-outline-danger']
         );
     }
+    $row[] = $actions;
     $table->data[] = $row;
 }
 $recordset->close();

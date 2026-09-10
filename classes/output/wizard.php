@@ -75,6 +75,39 @@ class wizard implements \renderable, \templatable {
     }
 
     /**
+     * Where a choice may lead, as a list a teacher can choose from.
+     *
+     * A choice's target was shown as a raw node identifier and could not be changed at
+     * all, which made the branching of a branching-scenario authoring tool read only.
+     * Only later stages and endings are offered, because the validator rejects a graph
+     * that loops back.
+     *
+     * @param array $definition The working copy.
+     * @param array $node The node the choice belongs to.
+     * @param string $selected The current target.
+     * @return array
+     */
+    protected function targets(array $definition, array $node, string $selected): array {
+        $out = [[
+            'key'      => schema::auto_target(),
+            'label'    => get_string('review:autotarget', 'mod_aibranchedscenario'),
+            'selected' => $selected === schema::auto_target(),
+        ]];
+        foreach ($definition['nodes'] as $candidate) {
+            $later = (int)$candidate['stage'] > (int)$node['stage'];
+            if (!$later && $candidate['type'] !== 'outcome') {
+                continue;
+            }
+            $out[] = [
+                'key'      => $candidate['id'],
+                'label'    => $candidate['title'] !== '' ? $candidate['title'] : $candidate['id'],
+                'selected' => $selected === $candidate['id'],
+            ];
+        }
+        return $out;
+    }
+
+    /**
      * Export the data used by the template.
      *
      * @param \renderer_base $output The renderer.
@@ -98,6 +131,8 @@ class wizard implements \renderable, \templatable {
                         'feedback'    => $choice['feedback'],
                         'signal'      => $choice['signal'],
                         'next'        => $choice['next'],
+                        'signaloptions' => $this->options(schema::signals(), 'signal', $choice['signal']),
+                        'targetoptions' => $this->targets($definition, $node, $choice['next']),
                     ];
                 }
                 $nodes[] = [
@@ -145,10 +180,15 @@ class wizard implements \renderable, \templatable {
                 '/mod/aibranchedscenario/view.php',
                 ['id' => $this->cm->id]
             ))->out(false),
+            'reviewurl'    => (new \moodle_url(
+                '/mod/aibranchedscenario/review.php',
+                ['id' => $this->cm->id]
+            ))->out(false),
             'aiavailable'  => $credentials['source'] !== credentials::SOURCE_NONE,
             'published'    => $this->scenario->status === scenario_manager::STATUS_PUBLISHED,
             'revision'     => (int)$this->scenario->revision,
             'hasdraft'     => is_array($definition),
+            'hasprevious'  => !empty($this->scenario->previousjson),
             'source'       => $source,
             'characters'   => $characters,
             'principles'   => array_values($source['principles']),

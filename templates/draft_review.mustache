@@ -1,0 +1,140 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template mod_aibranchedscenario/draft_review
+
+    Every scene and every branch of the working copy, for a teacher to read before
+    publishing.
+
+    Context variables required for this template:
+    * hasdraft bool Whether a working copy exists
+    * title string Scenario title
+    * nodes array Scenes with their choices
+    * editurl string Back to the wizard
+
+    Example context (json):
+    {
+        "hasdraft": true,
+        "themeclass": "aibs-theme-indigo",
+        "title": "The handover nobody finished",
+        "subtitle": "A late shift",
+        "role": "You are the registered nurse.",
+        "hookparas": ["It is ten past the end of your shift."],
+        "nodecount": 8,
+        "imagecount": 8,
+        "hasprinciples": false,
+        "principles": [],
+        "nodes": [],
+        "editurl": "https://example.com/mod/aibranchedscenario/edit.php?id=42"
+    }
+}}
+<div class="aibs-player {{themeclass}}">
+    <div class="aibs-shell">
+        {{^hasdraft}}
+            <p class="aibs-prose">{{#str}} review:nodraft, mod_aibranchedscenario {{/str}}</p>
+            <a class="aibs-btn aibs-btn-primary" href="{{editurl}}">
+                {{#str}} editscenario, mod_aibranchedscenario {{/str}}</a>
+        {{/hasdraft}}
+
+        {{#hasdraft}}
+            <div class="aibs-masthead">
+                <div class="aibs-masthead-text">
+                    <p class="aibs-eyebrow">{{#str}} review:eyebrow, mod_aibranchedscenario {{/str}}</p>
+                    <h2 class="aibs-title">{{title}}</h2>
+                    {{#subtitle}}<p class="aibs-subtitle">{{subtitle}}</p>{{/subtitle}}
+                </div>
+                <a class="aibs-btn aibs-btn-secondary" href="{{editurl}}">
+                    {{#str}} review:back, mod_aibranchedscenario {{/str}}</a>
+            </div>
+
+            <p class="aibs-field-hint">
+                {{#str}} review:counts, mod_aibranchedscenario, {{nodecount}} {{/str}}
+                {{#imagecount}}
+                    {{#str}} review:imagecount, mod_aibranchedscenario, {{imagecount}} {{/str}}
+                {{/imagecount}}
+            </p>
+
+            {{#role}}<p class="aibs-prose"><strong>{{role}}</strong></p>{{/role}}
+            <div class="aibs-prose">{{#hookparas}}<p>{{.}}</p>{{/hookparas}}</div>
+
+            {{#hasprinciples}}
+                <section class="aibs-card">
+                    <h3 class="aibs-h3">{{#str}} whatthistests, mod_aibranchedscenario {{/str}}</h3>
+                    <ul class="aibs-lesson-list">
+                        {{#principles}}<li class="aibs-lesson">{{title}}</li>{{/principles}}
+                    </ul>
+                </section>
+            {{/hasprinciples}}
+
+            {{#nodes}}
+                <section class="aibs-card aibs-review-node">
+                    <div class="aibs-review-head">
+                        <span class="aibs-review-stage">
+                            {{^isoutcome}}{{#str}} stagenumber, mod_aibranchedscenario, {{stage}} {{/str}}{{/isoutcome}}
+                            {{#isoutcome}}{{outcomelabel}}{{/isoutcome}}
+                        </span>
+                        <h3 class="aibs-h3">{{title}}</h3>
+                    </div>
+
+                    {{#hasimage}}
+                        <img class="aibs-review-image" src="{{imageurl}}" alt="{{imagealt}}">
+                    {{/hasimage}}
+
+                    <div class="aibs-prose">{{#situationparas}}<p>{{.}}</p>{{/situationparas}}</div>
+                    {{#hasspeech}}<p class="aibs-review-speech">&ldquo;{{speech}}&rdquo;</p>{{/hasspeech}}
+                    {{#hascrisis}}
+                        <div class="aibs-review-crisis">
+                            <span class="aibs-review-label">
+                                {{#str}} review:crisis, mod_aibranchedscenario {{/str}}</span>
+                            <div class="aibs-prose aibs-prose-small">
+                                {{#crisisparas}}<p>{{.}}</p>{{/crisisparas}}</div>
+                        </div>
+                    {{/hascrisis}}
+                    {{#haschallenge}}<p class="aibs-review-challenge">{{challenge}}</p>{{/haschallenge}}
+                    <div class="aibs-prose">{{#summaryparas}}<p>{{.}}</p>{{/summaryparas}}</div>
+
+                    {{#haschoices}}
+                        <ol class="aibs-review-choices">
+                            {{#choices}}
+                                <li class="aibs-review-choice {{signalclass}}">
+                                    <p class="aibs-review-choice-text">
+                                        <span class="aibs-choice-letter">{{letter}}</span> {{text}}</p>
+                                    <p class="aibs-review-meta">
+                                        <span class="aibs-review-signal">{{signallabel}}</span>
+                                        <span class="aibs-review-target">
+                                            {{#str}} review:leadsto, mod_aibranchedscenario {{/str}} {{target}}</span>
+                                        {{#hasskills}}<span class="aibs-review-skills">{{skills}}</span>{{/hasskills}}
+                                    </p>
+                                    <div class="aibs-prose aibs-prose-small">
+                                        {{#consequenceparas}}<p>{{.}}</p>{{/consequenceparas}}</div>
+                                    {{#hasfeedback}}
+                                        <div class="aibs-journey-feedback">
+                                            <span class="aibs-journey-feedback-label">
+                                                {{#str}} whythismattered, mod_aibranchedscenario {{/str}}</span>
+                                            <div class="aibs-prose aibs-prose-small">
+                                                {{#feedbackparas}}<p>{{.}}</p>{{/feedbackparas}}</div>
+                                        </div>
+                                    {{/hasfeedback}}
+                                </li>
+                            {{/choices}}
+                        </ol>
+                    {{/haschoices}}
+                </section>
+            {{/nodes}}
+        {{/hasdraft}}
+    </div>
+</div>

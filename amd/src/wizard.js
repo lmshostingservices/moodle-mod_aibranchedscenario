@@ -22,8 +22,10 @@
  */
 
 import Ajax from 'core/ajax';
-import {get_strings as getStrings} from 'core/str';
+import {get_strings as getStrings, get_string as getString} from 'core/str';
 import Notification from 'core/notification';
+import ModalSaveCancel from 'core/modal_save_cancel';
+import ModalEvents from 'core/modal_events';
 
 const POLL_INTERVAL = 4000;
 const POLL_LIMIT = 150;
@@ -87,7 +89,7 @@ class Wizard {
         const keys = [
             'saved', 'generationqueued', 'generationrunning', 'generationready',
             'published', 'error:generic', 'nosuggestion', 'unsavedchanges',
-            'fillingfields', 'promptcopied',
+            'fillingfields', 'promptcopied', 'restore:nothing',
         ];
         const values = await getStrings(keys.map((key) => ({key, component: 'mod_aibranchedscenario'})));
         keys.forEach((key, index) => {
@@ -162,6 +164,9 @@ class Wizard {
                 break;
             case 'copyprompt':
                 this.copyPrompt();
+                break;
+            case 'restoredraft':
+                this.restoreDraft();
                 break;
             case 'savenode':
                 this.saveNode(element);
@@ -727,6 +732,14 @@ class Wizard {
         if (!await this.save(false)) {
             return false;
         }
+
+        // The one button in the product that spends money used to go straight from
+        // click to request: no balance, no estimate, and no warning that it replaces a
+        // draft somebody may have spent an hour editing.
+        if (!await this.confirmGeneration()) {
+            return false;
+        }
+
         this.setBusy(true, this.strings.generationqueued);
         try {
             const queued = await this.call('queue_generation', {});
@@ -734,6 +747,81 @@ class Wizard {
         } catch (error) {
             this.setBusy(false);
             this.showError(error);
+        }
+        return true;
+    }
+
+    /**
+     * Ask before spending credits, and say what the run will cost.
+     *
+     * @returns {Promise} Resolves true when the teacher confirms.
+     */
+    async confirmGeneration() {
+        let plan;
+        try {
+            plan = await this.call('get_generation_plan', {});
+        } catch (error) {
+            // The estimate is a courtesy. Losing it should not stop a teacher who has
+            // decided to generate, but the warning about replacing a draft still holds.
+            plan = null;
+        }
+
+        const lines = [];
+        if (plan) {
+            lines.push(await getString('confirmgenerate:cost', 'mod_aibranchedscenario', {
+                credits: plan.estimate,
+                scenes: plan.scenes,
+                images: plan.images,
+            }));
+            if (plan.balanceknown && !plan.unlimited) {
+                lines.push(await getString('confirmgenerate:balance', 'mod_aibranchedscenario', plan.credits));
+            }
+            if (plan.replacesdraft) {
+                lines.push(await getString('confirmgenerate:replaces', 'mod_aibranchedscenario'));
+            }
+        } else {
+            lines.push(await getString('confirmgenerate:replaces', 'mod_aibranchedscenario'));
+        }
+
+        const modal = await ModalSaveCancel.create({
+            title: await getString('confirmgenerate:title', 'mod_aibranchedscenario'),
+            body: lines.map((line) => `<p>${line}</p>`).join(''),
+        });
+        modal.setSaveButtonText(await getString('generatescenario', 'mod_aibranchedscenario'));
+
+        return new Promise((resolve) => {
+            modal.getRoot().on(ModalEvents.save, () => resolve(true));
+            modal.getRoot().on(ModalEvents.hidden, () => {
+                modal.destroy();
+                resolve(false);
+            });
+            modal.show();
+        });
+    }
+
+    /**
+     * Put back the working copy the last generation replaced.
+     *
+     * @returns {Promise} Resolves once the page has been reloaded, or the undo refused.
+     */
+    async restoreDraft() {
+        if (this.busy) {
+            return false;
+        }
+        this.clearError();
+        this.setBusy(true);
+        try {
+            const response = await this.call('restore_draft', {});
+            if (response.restored) {
+                this.dirty = false;
+                window.location.reload();
+                return true;
+            }
+            Notification.addNotification({message: this.strings['restore:nothing'], type: 'info'});
+        } catch (error) {
+            this.showError(error);
+        } finally {
+            this.setBusy(false);
         }
         return true;
     }
@@ -761,6 +849,15 @@ class Wizard {
                 this.setBusy(true, this.strings.generationrunning);
             }
             if (status.status === 'ready') {
+                // A run where some or all of the images failed used to look identical
+                // to a complete one, so the teacher published a revision with gaps.
+                if (status.mediamessage) {
+                    this.setBusy(false);
+                    await Notification.alert(
+                        this.strings.generationready,
+                        status.mediamessage
+                    );
+                }
                 this.setBusy(true, this.strings.generationready);
                 this.dirty = false;
                 window.location.reload();
@@ -933,7 +1030,9 @@ class Wizard {
                 choices: choices,
             });
             Notification.addNotification({message: this.strings.saved, type: 'success'});
-            this.dirty = false;
+            // Deliberately not clearing the wizard's dirty flag: this saved one scene,
+            // not the wizard. Clearing it here disarmed the unsaved-changes guard for
+            // an edit made on an earlier step, which was then lost without a prompt.
         } catch (error) {
             this.showError(error);
         } finally {

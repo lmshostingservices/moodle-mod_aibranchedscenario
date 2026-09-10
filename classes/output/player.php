@@ -86,9 +86,16 @@ class player implements \renderable, \templatable {
         }
 
         $attemptsused = 0;
+        $open = null;
+        $finished = null;
+        $canstartnew = false;
         if ($revision) {
             $manager = new attempt_manager($this->scenario, $revision);
-            $attemptsused = $manager->count_user_attempts((int)$GLOBALS['USER']->id);
+            $userid = (int)$GLOBALS['USER']->id;
+            $attemptsused = $manager->count_user_attempts($userid);
+            $open = $manager->get_open_attempt($userid);
+            $finished = $manager->get_last_finished_attempt($userid);
+            $canstartnew = $manager->can_start_new_attempt($userid);
         }
 
         return [
@@ -112,6 +119,10 @@ class player implements \renderable, \templatable {
             'enableaudio'  => !empty($this->scenario->enableaudio),
             'maxattempts'  => (int)$this->scenario->maxattempts,
             'attemptsused' => $attemptsused,
+            'hasopen'      => (bool)$open,
+            'hasfinished'  => (bool)$finished && !$open,
+            'finishedattemptid' => $finished ? (int)$finished->id : 0,
+            'canstartnew'  => $canstartnew && !$open,
             'attemptsleft' => empty($this->scenario->maxattempts)
                 ? -1 : max(0, (int)$this->scenario->maxattempts - $attemptsused),
             'stages'       => $stages,
