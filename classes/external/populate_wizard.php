@@ -38,9 +38,8 @@ class populate_wizard extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'cmid'          => new external_value(PARAM_INT, 'Course module id'),
-            'brief'         => new external_value(PARAM_TEXT, 'Free text brief', VALUE_DEFAULT, ''),
-            'sourcecontent' => new external_value(PARAM_TEXT, 'Pasted source content', VALUE_DEFAULT, ''),
+            'cmid'   => new external_value(PARAM_INT, 'Course module id'),
+            'source' => helper::source_structure(),
         ]);
     }
 
@@ -48,24 +47,25 @@ class populate_wizard extends external_api {
      * Ask the service to fill the wizard.
      *
      * @param int $cmid Course module id.
-     * @param string $brief Free text brief.
-     * @param string $sourcecontent Pasted source content.
+     * @param array $source Everything the teacher has entered so far.
      * @return array
      */
-    public static function execute(int $cmid, string $brief, string $sourcecontent): array {
+    public static function execute(int $cmid, array $source): array {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
-            'cmid' => $cmid, 'brief' => $brief, 'sourcecontent' => $sourcecontent,
+            'cmid' => $cmid, 'source' => $source,
         ]);
         $resolved = helper::resolve($params['cmid'], 'mod/aibranchedscenario:generate');
 
+        // The whole of the current wizard goes to the service, not just the brief and
+        // the pasted content. A teacher who has already chosen an industry expects the
+        // suggestions to belong to it; sending only the source content threw that away.
         $generator = new generator();
         $fields = $generator->populate(
             $resolved['scenario'],
             (int)$USER->id,
-            $params['brief'],
-            $params['sourcecontent']
+            $params['source']
         );
 
         return ['source' => helper::source_payload($fields)];

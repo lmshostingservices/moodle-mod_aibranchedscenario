@@ -87,6 +87,7 @@ class Wizard {
         const keys = [
             'saved', 'generationqueued', 'generationrunning', 'generationready',
             'published', 'error:generic', 'nosuggestion', 'unsavedchanges',
+            'fillingfields', 'promptcopied',
         ];
         const values = await getStrings(keys.map((key) => ({key, component: 'mod_aibranchedscenario'})));
         keys.forEach((key, index) => {
@@ -115,6 +116,7 @@ class Wizard {
             return '';
         });
 
+        this.root.querySelectorAll('[data-group]').forEach((group) => this.syncOther(group));
         this.showStep(1);
         return true;
     }
@@ -158,6 +160,9 @@ class Wizard {
             case 'import':
                 this.importDefinition();
                 break;
+            case 'copyprompt':
+                this.copyPrompt();
+                break;
             case 'savenode':
                 this.saveNode(element);
                 break;
@@ -186,6 +191,18 @@ class Wizard {
             }
             button.classList.toggle('aibs-is-complete', value < step);
         });
+
+        // Two primary buttons sat side by side on the last step, one of which had
+        // nowhere to go, and Back was offered on the first step where it does nothing.
+        const back = this.root.querySelector('[data-action="back"]');
+        const next = this.root.querySelector('[data-action="next"]');
+        if (back) {
+            back.hidden = step === 1;
+        }
+        if (next) {
+            next.hidden = step === this.stepCount;
+        }
+
         this.root.scrollIntoView({behavior: 'smooth', block: 'start'});
     }
 
@@ -210,7 +227,38 @@ class Wizard {
         } else {
             element.setAttribute('aria-pressed', pressed ? 'false' : 'true');
         }
+        this.syncOther(group, true);
         this.dirty = true;
+    }
+
+    /**
+     * Show or hide the detail box that belongs to a group's "Other" option.
+     *
+     * Choosing Other and moving on sent the service the literal word "other", which
+     * tells it nothing. The box asks for the one thing Other is missing, and is only
+     * in the way when Other is not the answer.
+     *
+     * @param {HTMLElement} group The option group.
+     * @returns {void}
+     */
+    syncOther(group, focus) {
+        const detail = this.root.querySelector(`[data-otherfor="${group.dataset.group}"]`);
+        if (!detail) {
+            return;
+        }
+        const chosen = group.querySelector('[aria-pressed="true"]');
+        const wanted = !!chosen && chosen.dataset.value === 'other';
+        const field = detail.closest('.aibs-otherfield') || detail;
+        const wasHidden = field.hidden;
+        field.hidden = !wanted;
+        // Only ever move the caret in response to the click that revealed the box.
+        // Called from init() or from a suggestion it would drag the page about, and
+        // land a screen reader in a text box instead of at the heading.
+        if (wanted && focus && wasHidden) {
+            // The box has only just stopped being hidden, and an element with no layout
+            // box yet cannot take focus, so this waits for the frame that gives it one.
+            window.requestAnimationFrame(() => detail.focus());
+        }
     }
 
     /**
@@ -286,7 +334,9 @@ class Wizard {
         if (text && message) {
             text.textContent = message;
         }
-        this.root.querySelectorAll('[data-action="generate"], [data-action="publish"]').forEach((button) => {
+        this.root.querySelectorAll(
+            '[data-action="generate"], [data-action="publish"], [data-action="populate"], [data-action="suggest"]'
+        ).forEach((button) => {
             button.disabled = busy;
         });
     }
@@ -348,16 +398,22 @@ class Wizard {
      * @returns {Promise} Resolves once the fields are filled.
      */
     async populate() {
+        // Filling the wizard now takes a populate call and up to eight suggestions, so
+        // the window in which a teacher can press the button again is long enough that
+        // they will. A second press would race the first, writing two different
+        // snapshots into the same fields and spending the credits twice.
+        if (this.busy) {
+            return false;
+        }
         this.clearError();
         this.setBusy(true);
         try {
-            const brief = this.root.querySelector('[data-field="brief"]');
-            const content = this.root.querySelector('[data-field="sourcecontent"]');
-            const response = await this.call('populate_wizard', {
-                brief: brief ? brief.value : '',
-                sourcecontent: content ? content.value : '',
-            });
+            // The whole of what the teacher has chosen so far goes up, not just the
+            // source content, so that a chosen industry shapes everything that comes
+            // back rather than being ignored.
+            const response = await this.call('populate_wizard', {source: this.collect()});
             this.apply(response.source);
+            await this.fillGaps();
             this.dirty = true;
         } catch (error) {
             this.showError(error);
@@ -365,6 +421,164 @@ class Wizard {
             this.setBusy(false);
         }
         return true;
+    }
+
+    /**
+     * Fill any field the populate response left empty.
+     *
+     * Populate answers with the shape shared by the other LMS Labs plugins, which
+     * covers a handful of the wizard's fields and none of its pickers. Rather than
+     * leave a teacher to choose a setting, an atmosphere, the complications and the
+     * stakes by hand, whatever is still empty afterwards is asked for one field at a
+     * time. Fields already carrying a value are never touched, so a considered answer
+     * is not overwritten and a second press costs nothing for what is already filled.
+     *
+     * @returns {Promise} Resolves once every empty field has been attempted.
+     */
+    async fillGaps() {
+        const empty = this.emptyFields();
+        if (!empty.length) {
+            return true;
+        }
+
+        // Small batches: enough to keep the wait short, few enough that a slow service
+        // is not hit with fourteen requests at once.
+        const batch = 4;
+        for (let i = 0; i < empty.length; i += batch) {
+            const slice = empty.slice(i, i + batch);
+            this.setBusy(true, this.strings.fillingfields);
+            const source = this.collect();
+            const answers = await Promise.all(slice.map((field) =>
+                this.call('suggest_field', {field: field, source: source})
+                    .then((response) => ({field: field, response: response}))
+                    .catch((error) => ({field: field, error: error}))
+            ));
+            let failure = null;
+            answers.forEach((answer) => {
+                if (answer.error) {
+                    failure = failure || answer.error;
+                    return;
+                }
+                this.applySuggestion(answer.field, answer.response);
+            });
+            // Swallowing these left a teacher looking at a half-filled wizard with no
+            // idea why. The commonest cause is the daily quota, and once that is reached
+            // every remaining request would fail too, so the run stops and says so.
+            if (failure) {
+                this.showError(failure);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Which of the fields worth filling are still empty.
+     *
+     * @returns {Array} Field names, in the order the wizard presents them.
+     */
+    emptyFields() {
+        const order = [
+            'title', 'audience', 'industry', 'setting', 'atmosphere', 'openingsituation',
+            'centralproblem', 'whyhard', 'stakes', 'participantrole', 'characterfull',
+        ];
+        const current = this.collect();
+        return order.filter((field) => {
+            if (field === 'characterfull') {
+                return !(Array.isArray(current.characters) && current.characters.length);
+            }
+            const value = current[field];
+            if (Array.isArray(value)) {
+                return value.length === 0;
+            }
+            if (typeof value === 'undefined' || String(value).trim() === '') {
+                return true;
+            }
+            // Every single-choice picker is rendered with a schema default already
+            // pressed, so "has a value" does not mean "somebody chose it". Treating a
+            // default as an answer is what made industry, setting and atmosphere
+            // impossible to fill.
+            const group = this.root.querySelector(`[data-group="${field}"]`);
+            return !!group && group.dataset.default === String(value);
+        });
+    }
+
+    /**
+     * Write one suggestion into the control it belongs to.
+     *
+     * @param {String} field The field the suggestion is for.
+     * @param {Object} response The web service response.
+     * @returns {void}
+     */
+    applySuggestion(field, response) {
+        if (field === 'characterfull') {
+            this.applyCharacter(response.suggestion || '');
+            return;
+        }
+
+        const group = this.root.querySelector(`[data-group="${field}"]`);
+        if (group) {
+            // A picker is answered with option keys. The route returns them in `values`;
+            // a model answering in text returns them comma separated, which is what the
+            // field's specification asks for.
+            const wanted = (response.values && response.values.length)
+                ? response.values
+                : String(response.suggestion || '').split(',').map((v) => v.trim()).filter(Boolean);
+            const options = Array.from(group.querySelectorAll('[data-action="option"]'));
+            const known = options.map((option) => option.dataset.value);
+            const hits = wanted.filter((value) => known.indexOf(value) >= 0);
+            // Nothing recognisable came back. Leaving the group alone is the only safe
+            // move: clearing it would take away a choice the teacher had made.
+            if (!hits.length) {
+                return;
+            }
+            const multiple = group.dataset.multiple === '1';
+            const chosen = multiple ? hits : hits.slice(0, 1);
+            options.forEach((option) => {
+                option.setAttribute('aria-pressed', chosen.indexOf(option.dataset.value) >= 0 ? 'true' : 'false');
+            });
+            this.syncOther(group);
+            return;
+        }
+
+        const input = this.root.querySelector(`[data-field="${field}"]`);
+        if (input && response.suggestion) {
+            input.value = response.suggestion;
+        }
+    }
+
+    /**
+     * Fill the first empty character from a single suggestion.
+     *
+     * The brief sent with the request asks for the four parts on one line separated by
+     * vertical bars, so this splits on that rather than guessing at prose.
+     *
+     * @param {String} suggestion The suggested character.
+     * @returns {void}
+     */
+    applyCharacter(suggestion) {
+        const parts = suggestion.split('|').map((part) => part.trim()).filter((part) => part !== '');
+        // The brief asks for four bar-separated parts. A model that answers in prose
+        // instead would otherwise have its whole sentence written into the name field
+        // and stored as a person's name.
+        if (parts.length < 2) {
+            return;
+        }
+        const keys = ['name', 'role', 'trait', 'appearance'];
+        const fieldsets = this.root.querySelectorAll('[data-character]');
+        for (const fieldset of fieldsets) {
+            const name = fieldset.querySelector('[data-character-field="name"]');
+            if (name && name.value.trim() !== '') {
+                continue;
+            }
+            keys.forEach((key, index) => {
+                const element = fieldset.querySelector(`[data-character-field="${key}"]`);
+                if (element && parts[index]) {
+                    element.value = parts[index];
+                }
+            });
+            return;
+        }
     }
 
     /**
@@ -390,6 +604,7 @@ class Wizard {
             group.querySelectorAll('[data-action="option"]').forEach((option) => {
                 option.setAttribute('aria-pressed', wanted.indexOf(option.dataset.value) >= 0 ? 'true' : 'false');
             });
+            this.syncOther(group);
         });
 
         if (Array.isArray(source.characters)) {
@@ -529,6 +744,36 @@ class Wizard {
      *
      * @returns {Promise} Resolves once the definition is stored or rejected.
      */
+    /**
+     * Copy a prompt the teacher can paste into ChatGPT or any other assistant.
+     *
+     * A site without LMS Labs credits, or a teacher who would rather iterate somewhere
+     * else, still needs a way in. The prompt describes the definition this plugin
+     * imports and carries the teacher's own source content with it, so what comes back
+     * pastes straight into the box below.
+     *
+     * @returns {Promise} Resolves once the prompt is on the clipboard.
+     */
+    async copyPrompt() {
+        const template = this.root.querySelector('[data-region="promptsource"]');
+        const content = this.root.querySelector('[data-field="sourcecontent"]');
+        if (!template) {
+            return false;
+        }
+        const prompt = template.textContent.trim()
+            + '\n\n----- SOURCE CONTENT -----\n\n'
+            + (content ? content.value : '');
+        try {
+            await navigator.clipboard.writeText(prompt);
+            Notification.addNotification({message: this.strings.promptcopied, type: 'success'});
+        } catch (error) {
+            // Clipboard access is refused in some browsers and over plain HTTP. Showing
+            // the prompt is the fallback: the teacher can still select and copy it.
+            template.hidden = false;
+        }
+        return true;
+    }
+
     async importDefinition() {
         const field = this.root.querySelector('[data-region="import"]');
         if (!field || field.value.trim() === '') {

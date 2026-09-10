@@ -124,7 +124,17 @@ class helper {
         if (!$manager->string_exists($code, 'mod_aibranchedscenario')) {
             return get_string('error:generationfailed', 'mod_aibranchedscenario');
         }
-        return get_string($code, 'mod_aibranchedscenario');
+
+        // Some of these messages name the failure the service reported. The detail was
+        // being split off and thrown away, so the teacher was shown the placeholder
+        // itself: "could not complete the request ({$a})". Only a bare identifier is
+        // ever passed through — never a provider message, which could carry content.
+        $detail = trim(substr(trim($stored), strlen($code)));
+        if ($detail === '' || !preg_match('/^[A-Z][A-Z0-9_]{1,40}$/', $detail)) {
+            $detail = get_string('error:nodetail', 'mod_aibranchedscenario');
+        }
+
+        return get_string($code, 'mod_aibranchedscenario', $detail);
     }
 
     /**
@@ -289,6 +299,7 @@ class helper {
             'sourcecontent'    => new external_value(PARAM_TEXT, 'Pasted source content', VALUE_DEFAULT, ''),
             'title'            => new external_value(PARAM_TEXT, 'Scenario title', VALUE_DEFAULT, ''),
             'industry'         => new external_value(PARAM_ALPHANUMEXT, 'Subject domain', VALUE_DEFAULT, 'training'),
+            'industryother'    => new external_value(PARAM_TEXT, 'Industry when Other is chosen', VALUE_DEFAULT, ''),
             'audience'         => new external_value(PARAM_TEXT, 'Intended audience', VALUE_DEFAULT, ''),
             'setting'          => new external_value(
                 PARAM_ALPHANUMEXT,
@@ -296,6 +307,7 @@ class helper {
                 VALUE_DEFAULT,
                 'trainingroom'
             ),
+            'settingother'     => new external_value(PARAM_TEXT, 'Setting when Other is chosen', VALUE_DEFAULT, ''),
             'atmosphere'       => new external_value(
                 PARAM_ALPHANUMEXT,
                 'Emotional register',
@@ -372,8 +384,10 @@ class helper {
             'sourcecontent'    => (string)($source['sourcecontent'] ?? ''),
             'title'            => (string)($source['title'] ?? ''),
             'industry'         => (string)($source['industry'] ?? 'training'),
+            'industryother'    => (string)($source['industryother'] ?? ''),
             'audience'         => (string)($source['audience'] ?? ''),
             'setting'          => (string)($source['setting'] ?? 'trainingroom'),
+            'settingother'     => (string)($source['settingother'] ?? ''),
             'atmosphere'       => (string)($source['atmosphere'] ?? 'tension'),
             'openingsituation' => (string)($source['openingsituation'] ?? ''),
             'centralproblem'   => (string)($source['centralproblem'] ?? ''),

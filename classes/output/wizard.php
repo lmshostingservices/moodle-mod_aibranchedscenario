@@ -172,7 +172,17 @@ class wizard implements \renderable, \templatable {
                 ['key' => 'tension', 'label' => get_string('metric:tension', 'mod_aibranchedscenario'),
                     'value' => (int)$source['openingmetrics']['tension']],
             ],
+            // The wizard has to be able to tell "the teacher chose Training room" from
+            // "nobody has chosen anything yet", because the pickers are rendered with a
+            // schema default already pressed. Without this, autofill treats every
+            // picker as answered and never fills one.
+            'defaults'       => [
+                'industry'   => source_normaliser::blank()['industry'],
+                'setting'    => source_normaliser::blank()['setting'],
+                'atmosphere' => source_normaliser::blank()['atmosphere'],
+            ],
             'maxsourcechars' => $maxsourcechars,
+            'importprompt'   => \mod_aibranchedscenario\local\import_prompt::text((int)$source['decisions']),
         ];
     }
 }

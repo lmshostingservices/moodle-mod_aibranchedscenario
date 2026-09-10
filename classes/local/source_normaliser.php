@@ -38,8 +38,10 @@ class source_normaliser {
             'sourcecontent'    => '',
             'title'            => '',
             'industry'         => 'training',
+            'industryother'    => '',
             'audience'         => '',
             'setting'          => 'trainingroom',
+            'settingother'     => '',
             'atmosphere'       => 'tension',
             'openingsituation' => '',
             'centralproblem'   => '',
@@ -79,6 +81,15 @@ class source_normaliser {
             ? $raw['industry'] : $out['industry'];
         $out['setting'] = schema::in_list($raw['setting'] ?? '', schema::settings_list())
             ? $raw['setting'] : $out['setting'];
+
+        // The detail box that belongs to "Other" is hidden rather than emptied when a
+        // listed option is chosen, and a hidden input is still submitted. Keeping the
+        // description only while its picker says "other" stops text the teacher believes
+        // they replaced from being stored and sent to the service.
+        $out['industryother'] = $out['industry'] === 'other'
+            ? self::line($raw['industryother'] ?? '', 120) : '';
+        $out['settingother'] = $out['setting'] === 'other'
+            ? self::line($raw['settingother'] ?? '', 255) : '';
         $out['atmosphere'] = schema::in_list($raw['atmosphere'] ?? '', schema::atmospheres())
             ? $raw['atmosphere'] : $out['atmosphere'];
         $out['tone'] = schema::in_list($raw['tone'] ?? '', schema::tones()) ? $raw['tone'] : $out['tone'];

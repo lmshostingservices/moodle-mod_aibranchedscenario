@@ -102,5 +102,17 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091006, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091007) {
+        // Release 1.3.0 changes no schema. Two new wizard values, the described setting
+        // and industry, live inside the existing source JSON column.
+        upgrade_mod_savepoint(true, 2026091007, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091008) {
+        // Release 1.3.1 changes no schema. It corrects nine faults found by reviewing
+        // the 1.3.0 changes before they were installed anywhere.
+        upgrade_mod_savepoint(true, 2026091008, 'aibranchedscenario');
+    }
+
     return true;
 }

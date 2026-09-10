@@ -148,11 +148,17 @@
                 <span class="aibs-field-label" id="aibs-industry-label">
                     {{#str}} field:industry, mod_aibranchedscenario {{/str}}</span>
                 <div class="aibs-optiongrid" role="group" aria-labelledby="aibs-industry-label"
-                     data-group="industry" data-multiple="0">
+                     data-group="industry" data-multiple="0" data-default="{{defaults.industry}}">
                     {{#industries}}
                         <button type="button" class="aibs-option" data-action="option" data-value="{{key}}"
                             aria-pressed="{{#selected}}true{{/selected}}{{^selected}}false{{/selected}}">{{label}}</button>
                     {{/industries}}
+                </div>
+                <div class="aibs-otherfield" hidden>
+                    <label class="aibs-field-hint" for="aibs-industryother">
+                        {{#str}} field:industryother, mod_aibranchedscenario {{/str}}</label>
+                    <input type="text" class="aibs-input" id="aibs-industryother" data-field="industryother"
+                        data-otherfor="industry" value="{{source.industryother}}" maxlength="120">
                 </div>
             </div>
         </section>
@@ -164,11 +170,17 @@
                 <span class="aibs-field-label" id="aibs-setting-label">
                     {{#str}} field:setting, mod_aibranchedscenario {{/str}}</span>
                 <div class="aibs-optiongrid" role="group" aria-labelledby="aibs-setting-label"
-                     data-group="setting" data-multiple="0">
+                     data-group="setting" data-multiple="0" data-default="{{defaults.setting}}">
                     {{#settings}}
                         <button type="button" class="aibs-option" data-action="option" data-value="{{key}}"
                             aria-pressed="{{#selected}}true{{/selected}}{{^selected}}false{{/selected}}">{{label}}</button>
                     {{/settings}}
+                </div>
+                <div class="aibs-otherfield" hidden>
+                    <label class="aibs-field-hint" for="aibs-settingother">
+                        {{#str}} field:settingother, mod_aibranchedscenario {{/str}}</label>
+                    <input type="text" class="aibs-input" id="aibs-settingother" data-field="settingother"
+                        data-otherfor="setting" value="{{source.settingother}}" maxlength="255">
                 </div>
             </div>
 
@@ -176,7 +188,7 @@
                 <span class="aibs-field-label" id="aibs-atmosphere-label">
                     {{#str}} field:atmosphere, mod_aibranchedscenario {{/str}}</span>
                 <div class="aibs-optiongrid" role="group" aria-labelledby="aibs-atmosphere-label"
-                     data-group="atmosphere" data-multiple="0">
+                     data-group="atmosphere" data-multiple="0" data-default="{{defaults.atmosphere}}">
                     {{#atmospheres}}
                         <button type="button" class="aibs-option" data-action="option" data-value="{{key}}"
                             aria-pressed="{{#selected}}true{{/selected}}{{^selected}}false{{/selected}}">{{label}}</button>
@@ -363,12 +375,21 @@
                 {{/hasdraft}}
             </div>
 
-            <details class="aibs-field">
-                <summary class="aibs-field-label">{{#str}} field:importjson, mod_aibranchedscenario {{/str}}</summary>
-                <span class="aibs-field-hint">{{#str}} field:importjsonhint, mod_aibranchedscenario {{/str}}</span>
-                <textarea class="aibs-textarea" id="aibs-import" data-region="import" rows="6"></textarea>
-                <button type="button" class="aibs-btn aibs-btn-secondary" data-action="import">
-                    {{#str}} importdefinition, mod_aibranchedscenario {{/str}}</button>
+            <details class="aibs-disclosure">
+                <summary class="aibs-disclosure-summary">
+                    {{#str}} field:importjson, mod_aibranchedscenario {{/str}}</summary>
+                <div class="aibs-disclosure-body">
+                    <p class="aibs-field-hint">{{#str}} field:importjsonhint, mod_aibranchedscenario {{/str}}</p>
+                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="copyprompt">
+                        {{#str}} copyprompt, mod_aibranchedscenario {{/str}}</button>
+                    <p class="aibs-field-hint">{{#str}} copyprompthint, mod_aibranchedscenario {{/str}}</p>
+                    <pre class="aibs-promptsource" data-region="promptsource" hidden>{{importprompt}}</pre>
+                    <label class="aibs-field-label" for="aibs-import">
+                        {{#str}} field:importjsonpaste, mod_aibranchedscenario {{/str}}</label>
+                    <textarea class="aibs-textarea" id="aibs-import" data-region="import" rows="6"></textarea>
+                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="import">
+                        {{#str}} importdefinition, mod_aibranchedscenario {{/str}}</button>
+                </div>
             </details>
 
             <div class="aibs-loading" data-region="loading" hidden>

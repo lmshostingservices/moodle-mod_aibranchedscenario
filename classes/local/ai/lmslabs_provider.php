@@ -18,6 +18,7 @@ namespace mod_aibranchedscenario\local\ai;
 
 use curl;
 use mod_aibranchedscenario\local\schema;
+use mod_aibranchedscenario\local\source_normaliser;
 
 /**
  * LMS Labs implementation of the generation provider.
@@ -439,12 +440,31 @@ class lmslabs_provider implements provider {
             'title', 'audience', 'setting', 'participantrole', 'openingsituation',
             'centralproblem', 'tone', 'complexity', 'industry', 'brief',
         ];
+        // A picker rendered with a schema default already selected sends that default
+        // with every request. Passing it on as a current value told the service the
+        // teacher had chosen a training room in a neutral tone, whatever the source
+        // content was about, and the service reasonably wrote to it.
+        $blank = source_normaliser::blank();
         foreach ($names as $name) {
             $value = $request[$name] ?? '';
-            if (is_scalar($value) && trim((string)$value) !== '') {
-                $out[$name] = \core_text::substr(trim((string)$value), 0, 5000);
+            if (!is_scalar($value) || trim((string)$value) === '') {
+                continue;
+            }
+            if (array_key_exists($name, $blank) && $value === $blank[$name]) {
+                continue;
+            }
+            $out[$name] = \core_text::substr(trim((string)$value), 0, 5000);
+        }
+
+        // Choosing "other" is not an answer. Where the teacher said what they meant,
+        // what they said is what goes to the service in place of the option key.
+        foreach (['industry', 'setting'] as $name) {
+            $detail = trim((string)($request[$name . 'other'] ?? ''));
+            if (($out[$name] ?? '') === 'other' && $detail !== '') {
+                $out[$name] = \core_text::substr($detail, 0, 500);
             }
         }
+
         return $out;
     }
 
@@ -471,17 +491,39 @@ class lmslabs_provider implements provider {
 
         $rest = self::current_values($context);
         unset($rest[$field]);
+        $rest = array_map(function ($value) {
+            return \core_text::substr($value, 0, 3000);
+        }, array_slice($rest, 0, 18, true));
+
+        // The route is told the name of the field and nothing about what the field is
+        // for, which is why a request for an opening situation came back as a summary of
+        // the source. The specification travels in the context record, whose keys are
+        // already free-form, so this needs nothing new from the service.
+        $brief = field_brief::for_field($field);
+        if ($brief !== '') {
+            $rest['whatThisFieldNeeds'] = $brief;
+            $rest['howToAnswer'] = field_brief::common();
+        }
+
         if ($rest) {
-            $payload['context'] = array_map(function ($value) {
-                return \core_text::substr($value, 0, 3000);
-            }, array_slice($rest, 0, 20, true));
+            $payload['context'] = $rest;
         }
 
         $requestid = self::request_id(self::OP_SUGGEST, json_encode($payload));
         $data = $this->call(self::ROUTE_PREFIX . '/suggest', $payload, $requestid);
+        // The route answers a picker with option keys in `values` and a text field with
+        // `suggestion`. This returned an empty list whatever came back, so a suggestion
+        // for a picker was thrown away and the teacher saw nothing happen.
+        $values = [];
+        foreach ((array)($data['values'] ?? []) as $value) {
+            if (is_scalar($value) && (string)$value !== '') {
+                $values[] = \core_text::substr((string)$value, 0, 100);
+            }
+        }
+
         return [
             'suggestion' => is_string($data['suggestion'] ?? null) ? $data['suggestion'] : '',
-            'values'     => [],
+            'values'     => array_values(array_unique($values)),
         ];
     }
 
@@ -525,11 +567,19 @@ class lmslabs_provider implements provider {
 
         $payload = ['sourceContent' => $source];
 
+        // As for the other routes, a setting of "other" is replaced by what the teacher
+        // typed, so the generator is told a place rather than the word "other".
+        $setting = (string)($request['setting'] ?? '');
+        $settingother = trim((string)($request['settingother'] ?? ''));
+        if ($setting === 'other' && $settingother !== '') {
+            $setting = $settingother;
+        }
+
         $optional = [
             'title'      => [$request['title'] ?? '', 300],
             'audience'   => [$request['audience'] ?? '', 500],
             'role'       => [$request['participantrole'] ?? '', 1000],
-            'setting'    => [$request['setting'] ?? '', 300],
+            'setting'    => [$setting, 300],
             'language'   => [$request['language'] ?? '', 20],
             'tone'       => [$request['tone'] ?? '', 40],
             'complexity' => [$request['complexity'] ?? '', 40],

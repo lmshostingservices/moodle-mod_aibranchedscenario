@@ -2,6 +2,127 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.3.1] - 2026-09-10
+
+Corrections to v1.3.0, found by reviewing that release's own diff rather than by
+running it. Every one of them failed silently. v1.3.0 was never installed anywhere;
+this supersedes it.
+
+### Fixed
+
+- **Autofill could still not fill a picker.** Industry, setting and atmosphere are
+  rendered with a schema default already selected, and both the new gap-filler and the
+  new merge rule asked "is this empty?" — so a default counted as an answer, the
+  pickers were skipped, and the service's own choice was discarded on arrival. The
+  wizard is now told which selection is only a default, on the client and on the
+  server.
+- **The service was told the defaults were decisions.** Every request carried
+  `industry: training, setting: trainingroom, tone: neutral` as current values, so it
+  wrote a training-room scenario whatever the source content was about — and then the
+  plugin refused its answer. Defaults are no longer sent.
+- **The scenario mapping lost every collision with the generic one.** `$out + $extra`
+  keeps the left operand, so a response carrying both `introduction` and a real
+  `openingSituation` kept the introduction: exactly the fault the new mapping exists to
+  correct.
+- **A failed suggestion was swallowed.** The gap-filler caught and discarded every
+  rejection, so a teacher over their daily quota saw a half-filled wizard and no
+  message. The run now stops at the first failure and shows it.
+- **Autofill was re-entrant.** It now takes up to nine calls, and only the generate and
+  publish buttons were disabled while it ran; a second press started a second run
+  writing a different snapshot into the same fields. `busy` was set and never read.
+- **The Other detail box stole focus on page load.** A saved draft with Other chosen
+  dragged the page to the text box on every load, and dropped a screen reader into it.
+  The caret now moves only on the click that reveals the box — and does so on the next
+  frame, since an element that has only just stopped being hidden cannot take focus.
+- **The failure code still never reached the teacher.** `{$a}` was replaced, but the
+  code travels on the exception and the job record never stored it, so every message
+  read "no reason given". It is stored now; a provider sentence still is not.
+- **A prose answer became a character's name.** The character suggestion is split on
+  vertical bars; a model answering in prose had its whole sentence written into the
+  name field and stored.
+- **A hidden Other description was still saved and sent.** Switching from Other to a
+  listed option hides the box without clearing it, and a hidden input is still
+  submitted. A description is now kept only while its picker says Other.
+- **Clicking a decision flashed the keyboard focus ring**, because the new rule used
+  `:focus` rather than `:focus-visible` for the outline.
+
+### Changed
+
+- 14 further harness checks, 429 in total.
+
+## [v1.3.0] - 2026-09-10
+
+The wizard fills itself, the prompts say what they mean, and no interactive state can
+be repainted by a site theme.
+
+### Fixed
+
+- **The decision buttons turned white on hover.** The v1.0.8 fix restated colour on
+  `.aibs-btn-*` only. The buttons a learner actually hovers are `.aibs-choice`, whose
+  hover, focus and active rules set no colour at all, so a theme's
+  `button:hover { color: #fff }` won in that state. Every interactive state on every
+  control the plugin ships now restates both its colour and its background, and both
+  are measured: 36 readings across six theme scenarios, including one that paints a
+  dark background with `!important`, and the lowest contrast ratio is 5.91.
+- **Autofill could only ever fill four fields.** `/populate` is the content route
+  shared with the other LMS Labs plugins, and the plugin read five keys from it:
+  title, audience, brief, principles, and `introduction` — which it wrote into the
+  Opening situation. That is why Autofill left the setting, atmosphere, central
+  problem, complications, stakes, role and every character blank for the teacher to
+  choose by hand, and why the Opening situation read like a course introduction. It
+  was one. The mapper now also reads a scenario-specific response when the service
+  sends one, and the wizard fills whatever is still empty afterwards by asking for one
+  field at a time.
+- **Suggest returned a summary of the source.** The request named the field and sent
+  the source content, and said nothing about what the field was for. Every field now
+  travels with its own specification and a worked example.
+- **Five of those fields could never have worked.** Industry, setting, atmosphere, why
+  it is hard and what is at stake are pickers, so a prose suggestion matched no option;
+  the answer was discarded and, worse, the group was cleared — taking away a choice the
+  teacher had made. Those briefs now list the option keys, and an unrecognised answer
+  leaves the group untouched.
+- **The service also discarded picker answers.** `provider::suggest()` returned an
+  empty `values` list whatever came back.
+- **"The request could not be completed ({$a})."** The failure detail was split off the
+  stored error and thrown away, so the teacher was shown the placeholder. The reported
+  code is passed through; a provider sentence still never is.
+- **The image safety direction could be cut out of the prompt.** It sat in the middle of
+  the brief and the whole string was trimmed from the tail, so three people with full
+  appearance records could push the ban on lettering, real people and injury past the
+  ceiling. It is now appended after the rest has been fitted, which also puts it last,
+  where a model weights it most.
+- **The image anchor contradicted itself.** It promised every frame "the same lighting"
+  and "the same people", both of which the mood and cast blocks then overrode — teaching
+  the model that the paragraph was soft. It now says exactly what holds and what varies.
+- **"Frame 3 of the set"** invited the numeral the direction forbids, and was not true:
+  branch nodes share a stage, so a set could contain three frame twos.
+- **The import prompt described a document the validator rejects.** It named an outcome
+  band of `poor`, which is silently coerced to `mixed` — relabelling every bad ending as
+  the middling one — and a language of `en`, which is discarded. Both now come from the
+  schema, along with the id rules, the acyclic-graph rule, the length limits, the crisis
+  variant and the choice tags.
+- **Two primary buttons sat side by side on the last step**, one of which had nowhere to
+  go, and Back was offered on the first step. Each is now withdrawn where it does not
+  apply.
+
+### Added
+
+- **A detail box on "Other".** Choosing Other sent the service the literal word; where
+  the teacher says what they mean, that is what is sent instead, to suggestion,
+  autofill and generation alike.
+- **A prompt for another assistant.** The import block now offers a copyable prompt
+  describing this plugin's scenario format, with the teacher's source content attached
+  and one decision node written out in full, so a site without credits still has a way
+  in. It is composed from the schema, so it cannot drift from what the validator
+  accepts.
+- 88 further harness checks, 415 in total.
+
+### Changed
+
+- `populate_wizard` now takes the whole current wizard rather than a brief and the
+  source content, so a chosen industry shapes what comes back. Answers the teacher has
+  already given are never overwritten.
+
 ## [v1.2.0] - 2026-09-10
 
 A packaging release. No file other than `version.php`, `db/upgrade.php` and this

@@ -16,6 +16,8 @@
 
 namespace mod_aibranchedscenario\local\ai;
 
+use mod_aibranchedscenario\local\schema;
+
 /**
  * Translates between the LMS Labs wire format and this plugin's own scenario shape.
  *
@@ -236,6 +238,91 @@ class scenario_mapper {
                 $out['principles'] = $principles;
             }
         }
+
+        // The union operator keeps its left operand on a collision, so array_merge is
+        // used instead: a response carrying both the generic `introduction` and a real
+        // `openingSituation` would otherwise have kept the introduction, which is exactly
+        // the fault the scenario-specific mapping exists to correct.
+        return array_merge($out, self::scenario_fields_from_wire($fields));
+    }
+
+    /**
+     * The scenario-specific half of a populate response.
+     *
+     * The populate route is shared with the other LMS Labs plugins, so its documented
+     * shape is the generic one handled above: a title, an introduction, instructions
+     * and learning objectives. Those five keys were all the plugin read, which is why a
+     * teacher who pressed Autofill still had to choose a setting, an atmosphere, the
+     * complications, the stakes, the role and every character by hand, and why the
+     * Opening situation arrived reading like a course introduction — it was one.
+     *
+     * Everything below is read when the service sends it and ignored when it does not,
+     * so the richer response can be turned on server-side without a plugin release.
+     * Option keys are checked against the wizard's own lists; a value the wizard cannot
+     * display is dropped rather than stored.
+     *
+     * @param array $fields Decoded populate response.
+     * @return array Wizard values.
+     */
+    protected static function scenario_fields_from_wire(array $fields): array {
+        $out = [];
+
+        $text = [
+            'settingother'     => 'settingDescription',
+            'openingsituation' => 'openingSituation',
+            'centralproblem'   => 'centralProblem',
+            'participantrole'  => 'participantRole',
+            'imageprompt'      => 'imagePrompt',
+        ];
+        foreach ($text as $local => $wire) {
+            if (isset($fields[$wire]) && is_scalar($fields[$wire]) && trim((string)$fields[$wire]) !== '') {
+                $out[$local] = (string)$fields[$wire];
+            }
+        }
+
+        $lists = [
+            'industry'   => [schema::industries(), false],
+            'setting'    => [schema::settings_list(), false],
+            'atmosphere' => [schema::atmospheres(), false],
+            'tone'       => [schema::tones(), false],
+            'complexity' => [schema::complexities(), false],
+            'whyhard'    => [schema::whyhard(), true],
+            'stakes'     => [schema::stakes(), true],
+        ];
+        foreach ($lists as $local => [$allowed, $multiple]) {
+            if (!isset($fields[$local])) {
+                continue;
+            }
+            $chosen = [];
+            foreach ((array)$fields[$local] as $value) {
+                if (is_scalar($value) && in_array((string)$value, $allowed, true)) {
+                    $chosen[] = (string)$value;
+                }
+            }
+            if (!$chosen) {
+                continue;
+            }
+            $out[$local] = $multiple ? array_values(array_unique($chosen)) : $chosen[0];
+        }
+
+        if (isset($fields['characters']) && is_array($fields['characters'])) {
+            $characters = [];
+            foreach (array_slice($fields['characters'], 0, 4) as $character) {
+                if (!is_array($character) || trim((string)($character['name'] ?? '')) === '') {
+                    continue;
+                }
+                $characters[] = [
+                    'name'       => (string)$character['name'],
+                    'role'       => (string)($character['role'] ?? ''),
+                    'trait'      => (string)($character['trait'] ?? ''),
+                    'appearance' => (string)($character['appearance'] ?? ''),
+                ];
+            }
+            if ($characters) {
+                $out['characters'] = $characters;
+            }
+        }
+
         return $out;
     }
 

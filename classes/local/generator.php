@@ -88,34 +88,53 @@ class generator {
     }
 
     /**
-     * Fill the wizard from a brief and pasted source content.
+     * Fill the wizard from everything the teacher has entered so far.
      *
      * @param stdClass $scenario Activity instance.
      * @param int $userid Requesting user.
-     * @param string $brief Free text brief.
-     * @param string $sourcecontent Pasted source content.
+     * @param array $source Current wizard values, including the pasted source content.
      * @return array Normalised wizard values.
      * @throws generation_exception
      */
-    public function populate(stdClass $scenario, int $userid, string $brief, string $sourcecontent): array {
+    public function populate(stdClass $scenario, int $userid, array $source): array {
         $this->check_quota($userid);
+
+        $brief = (string)($source['brief'] ?? '');
+        $sourcecontent = $this->clamp_source((string)($source['sourcecontent'] ?? ''));
         $job = $this->create_job($scenario->id, $userid, provider::OP_POPULATE, ['chars' => strlen($sourcecontent)]);
 
         try {
-            $fields = $this->provider->populate([
+            $fields = $this->provider->populate(array_merge($source, [
                 'brief'         => $brief,
-                'sourcecontent' => $this->clamp_source($sourcecontent),
+                'sourcecontent' => $sourcecontent,
                 'language'      => $scenario->scenariolang,
-            ]);
+            ]));
         } catch (generation_exception $e) {
             $this->fail_job($job, $e);
             throw $e;
         }
 
+        // What the teacher has already answered wins. The service is told those values
+        // so it can work around them, but a suggestion must never quietly replace a
+        // choice someone made on purpose.
+        //
+        // A value equal to the schema default is not such a choice. Every picker is
+        // rendered with a default already selected, so treating those as answers meant
+        // the service's industry, setting, atmosphere, tone and complexity were thrown
+        // away on arrival and the wizard came back saying "Training room" whatever the
+        // source content was about.
         $existing = scenario_manager::get_source($scenario);
-        $merged = array_merge(source_normaliser::blank(), $existing, is_array($fields) ? $fields : []);
+        $blank = source_normaliser::blank();
+        $merged = array_merge($blank, $existing, is_array($fields) ? $fields : []);
+        foreach ($source as $name => $value) {
+            $filled = is_array($value) ? $value !== [] : trim((string)$value) !== '';
+            $isdefault = array_key_exists($name, $blank) && $value === $blank[$name];
+            if ($filled && !$isdefault) {
+                $merged[$name] = $value;
+            }
+        }
         $merged['brief'] = $brief;
-        $merged['sourcecontent'] = $this->clamp_source($sourcecontent);
+        $merged['sourcecontent'] = $sourcecontent;
         $clean = source_normaliser::normalise($merged);
 
         $this->finish_job($job, ['fields' => $clean]);
@@ -312,6 +331,12 @@ class generator {
         global $DB;
         $record = is_object($job) ? $job : (object)['id' => $job];
         $record->status = self::JOB_ERROR;
+        // The identifier the service reported travels on the exception, and was being
+        // dropped here, which is why the teacher was shown the message with no reason in
+        // it. Only a bare upper-case identifier is kept; a provider sentence never is.
+        if ($detail === '' && is_string($exception->a ?? null) && preg_match('/^[A-Z][A-Z0-9_]{1,40}$/', $exception->a)) {
+            $detail = $exception->a;
+        }
         $record->errormsg = \core_text::substr(trim($exception->errorcode . ' ' . $detail), 0, 500);
         $record->timemodified = time();
 

@@ -558,21 +558,41 @@
     width: 100%;
 }
 
+/* The decision buttons carry the scenario, and they were the element this whole
+   class of bug was actually about. A site theme's `button:hover { color: #fff }` is
+   (0,1,1) and outranks the `.aibs-choice` rule above at (0,1,0), so in the hover
+   state the resting colour stopped applying and the text turned white against the
+   pale hover background. Every interactive state below restates its own colour. */
+.path-mod-aibranchedscenario .aibs-choice:hover:not(:disabled),
 .aibs-choice:hover:not(:disabled) {
-    background: var(--aibs-accent-soft);
+    background: var(--aibs-accent-soft) !important;
     border-color: var(--aibs-accent-border);
     box-shadow: var(--aibs-shadow-lg);
+    color: var(--aibs-text) !important;
     transform: translateY(-2px);
 }
 
+/* Colour is restated for :focus so a theme cannot repaint the text, but the focus
+   ring itself stays on :focus-visible: painting it on plain :focus would flash the
+   keyboard indicator on every mouse click. */
+.path-mod-aibranchedscenario .aibs-choice:focus,
+.aibs-choice:focus {
+    color: var(--aibs-text) !important;
+}
+
+.path-mod-aibranchedscenario .aibs-choice:focus-visible,
 .aibs-choice:focus-visible {
+    background: var(--aibs-accent-soft) !important;
     border-color: var(--aibs-accent);
     box-shadow: 0 0 0 4px var(--aibs-accent-soft);
+    color: var(--aibs-text) !important;
     outline: 2px solid var(--aibs-accent);
     outline-offset: 2px;
 }
 
+.path-mod-aibranchedscenario .aibs-choice:active:not(:disabled),
 .aibs-choice:active:not(:disabled) {
+    color: var(--aibs-text) !important;
     transform: translateY(0);
 }
 
@@ -787,7 +807,7 @@
 .path-mod-aibranchedscenario .aibs-btn-primary:focus,
 .path-mod-aibranchedscenario .aibs-btn-primary:active,
 .aibs-btn-primary:hover {
-    background: var(--aibs-accent-strong);
+    background: var(--aibs-accent-strong) !important;
     box-shadow: var(--aibs-shadow-lg);
     color: #fff !important;
     transform: translateY(-1px);
@@ -804,7 +824,7 @@
 .path-mod-aibranchedscenario .aibs-btn-secondary:focus,
 .path-mod-aibranchedscenario .aibs-btn-secondary:active,
 .aibs-btn-secondary:hover {
-    background: var(--aibs-surface-alt);
+    background: var(--aibs-surface-alt) !important;
     border-color: var(--aibs-accent-border);
     color: var(--aibs-text) !important;
     transform: translateY(-1px);
@@ -820,7 +840,7 @@
 .path-mod-aibranchedscenario .aibs-btn-ghost:focus,
 .path-mod-aibranchedscenario .aibs-btn-ghost:active,
 .aibs-btn-ghost:hover {
-    background: var(--aibs-surface-alt);
+    background: var(--aibs-surface-alt) !important;
     color: var(--aibs-text) !important;
 }
 
@@ -1164,9 +1184,28 @@
         color .2s var(--aibs-ease), transform .2s var(--aibs-ease);
 }
 
+/* A theme that paints a dark grey hover background on every button turned these into
+   blue-on-charcoal. A state that leaves the background to the theme is as broken as one
+   that leaves the colour to it, so both are restated here. */
+.path-mod-aibranchedscenario .aibs-wizard-step:hover,
 .aibs-wizard-step:hover {
+    background: var(--aibs-accent-soft) !important;
     border-color: var(--aibs-accent-border);
+    color: var(--aibs-accent-strong) !important;
     transform: translateY(-1px);
+}
+
+/* The current and completed steps carry their own colour, and hovering one must not
+   drop it back to the resting grey. */
+.path-mod-aibranchedscenario .aibs-wizard-step[aria-current="step"]:hover,
+.aibs-wizard-step[aria-current="step"]:hover {
+    background: var(--aibs-accent-strong) !important;
+    color: #fff !important;
+}
+
+.path-mod-aibranchedscenario .aibs-wizard-step.aibs-is-complete:hover,
+.aibs-wizard-step.aibs-is-complete:hover {
+    color: var(--aibs-accent-strong) !important;
 }
 
 .aibs-wizard-step[aria-current="step"] {
@@ -1219,9 +1258,14 @@
     resize: vertical;
 }
 
+.path-mod-aibranchedscenario .aibs-input:focus,
+.path-mod-aibranchedscenario .aibs-textarea:focus,
+.path-mod-aibranchedscenario .aibs-select:focus,
 .aibs-input:focus,
 .aibs-textarea:focus,
 .aibs-select:focus {
+    background: var(--aibs-surface) !important;
+    color: var(--aibs-text) !important;
     border-color: var(--aibs-accent);
     box-shadow: 0 0 0 4px var(--aibs-accent-soft);
     outline: none;
@@ -1248,10 +1292,18 @@
         transform .2s var(--aibs-ease);
 }
 
+.path-mod-aibranchedscenario .aibs-option:hover,
 .aibs-option:hover {
-    background: var(--aibs-accent-soft);
+    background: var(--aibs-accent-soft) !important;
     border-color: var(--aibs-accent-border);
+    color: var(--aibs-text) !important;
     transform: translateY(-1px);
+}
+
+/* A chosen option is accent-coloured, and hovering it must keep that. */
+.path-mod-aibranchedscenario .aibs-option[aria-pressed="true"]:hover,
+.aibs-option[aria-pressed="true"]:hover {
+    color: var(--aibs-accent-strong) !important;
 }
 
 .aibs-option[aria-pressed="true"] {
@@ -1444,4 +1496,70 @@
     .path-mod-aibranchedscenario .aibs-enter {
         animation: none;
     }
+}
+
+/* -------------------------------------------------- disclosure and prompt */
+
+/* The import block was a bare summary line under a primary button, which read as a
+   stray heading rather than something to open. */
+.aibs-disclosure {
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius-sm);
+    margin-top: 22px;
+}
+
+.aibs-disclosure-summary {
+    color: var(--aibs-text);
+    cursor: pointer;
+    font-weight: 650;
+    list-style: none;
+    padding: 14px 16px;
+}
+
+.aibs-disclosure-summary::-webkit-details-marker {
+    display: none;
+}
+
+.aibs-disclosure-summary::before {
+    content: "+";
+    display: inline-block;
+    font-weight: 700;
+    margin-right: 10px;
+    width: 1ch;
+}
+
+.aibs-disclosure[open] .aibs-disclosure-summary::before {
+    content: "\2212";
+}
+
+.path-mod-aibranchedscenario .aibs-disclosure-summary:hover,
+.aibs-disclosure-summary:hover {
+    background: var(--aibs-surface-alt) !important;
+    color: var(--aibs-text) !important;
+}
+
+.aibs-disclosure-body {
+    border-top: 1px solid var(--aibs-border-soft);
+    padding: 16px;
+}
+
+.aibs-disclosure-body > * + * {
+    margin-top: 10px;
+}
+
+.aibs-promptsource {
+    background: var(--aibs-surface-alt);
+    border-radius: var(--aibs-radius-sm);
+    font-size: .82rem;
+    max-height: 320px;
+    overflow: auto;
+    padding: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* The detail box that belongs to an option group's "Other" choice. */
+.aibs-otherfield {
+    margin-top: 10px;
 }

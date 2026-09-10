@@ -107,15 +107,25 @@ class image_prompt {
         }
 
         $parts[] = self::moment($node, $situation, $crisis);
-        $parts[] = self::direction();
 
-        // A teacher's own direction is the last word, so it can override anything above.
+        // A teacher's own direction is the last word on content, so it can override
+        // anything above it.
         $teacher = trim((string)($node['imageprompt'] ?? ''));
         if ($teacher !== '') {
             $parts[] = 'Additional direction: ' . $teacher;
         }
 
-        $prompt = self::fit(implode(' ', array_filter($parts)));
+        // The safety direction is appended after the rest has been cut to fit. Three
+        // people with full appearance records plus a crisis moment can reach the ceiling
+        // on their own, and cutting from the tail would have removed the only text that
+        // forbids lettering, real people and injury. Putting it last also puts it where
+        // a model weights it most, with no teacher text after it.
+        $direction = self::direction();
+        $body = self::fit(
+            implode(' ', array_filter($parts)),
+            self::MAX_PROMPT - \core_text::strlen($direction) - 1
+        );
+        $prompt = trim($body . ' ' . $direction);
 
         return [
             'prompt'     => $prompt,
@@ -134,10 +144,18 @@ class image_prompt {
      */
     protected static function series_anchor(array $definition, string $style): string {
         $setting = trim((string)($definition['setting'] ?? ''));
+        // An anchor that promises "the same lighting" is contradicted a few sentences
+        // later by the crisis and outcome moods, which deliberately harden the light,
+        // and "the same people" is contradicted by naming only whoever is in this scene.
+        // An instruction the rest of the prompt overrides teaches a model that the whole
+        // paragraph is soft, so this says exactly what does and does not change.
         $anchor = 'One frame from a single continuous set of images for one workplace training '
-            . 'scenario. Every frame in the set shares the same location, the same time of day, '
-            . 'the same lighting and the same people, and must look like it was captured on the '
-            . 'same occasion as the others.';
+            . 'scenario. Every frame is the same place on the same occasion, with the same '
+            . 'recurring cast, the same time of day, the same source of light and the same '
+            . 'visual treatment, so the set reads as one shoot rather than as unrelated '
+            . 'pictures. Framing, who is present, and how hard the light falls change from '
+            . 'frame to frame; the location, the palette and where the light comes from do '
+            . 'not. Only the people named below appear in this frame.';
         if ($setting !== '') {
             $anchor .= ' Location, unchanged throughout: ' . $setting . '.';
         }
@@ -241,9 +259,12 @@ class image_prompt {
                 . 'the people who have to decide, light a little lower and more directional.';
         }
 
+        // A numeral in an image brief invites a slate, a corner caption or a strip
+        // number, which the direction forbids, and the number was not even reliable:
+        // branch nodes share a stage, so a set could contain three "Frame 2"s.
         $shot = $type === 'outcome'
-            ? 'Closing frame of the set.'
-            : 'Frame ' . max(1, $stage) . ' of the set.';
+            ? 'This is the closing moment of the set.'
+            : ($stage <= 1 ? 'This is an early moment in the set.' : 'This is a later moment in the set.');
 
         return $shot . ' ' . ($action !== '' ? 'What is happening: ' . $action . ' ' : '') . $mood;
     }
@@ -272,9 +293,13 @@ class image_prompt {
      * @return string
      */
     protected static function direction(): string {
-        return 'Do not render any text, lettering, captions, signage, watermarks, logos or brand '
-            . 'marks anywhere in the image. Do not depict any real, identifiable or public person. '
-            . 'No injury, blood or distress. Workplace-appropriate for adult vocational learners.';
+        return 'Do not render any text, lettering, numerals, captions, subtitles, signage, '
+            . 'watermarks, logos or brand marks anywhere in the image. Do not depict any real, '
+            . 'identifiable or public person, and do not imitate any living person\'s likeness. '
+            . 'Everyone shown is an adult in ordinary workplace clothing: no children or young '
+            . 'people, no nudity, no weapons. No injury, no blood, no physical harm, and no '
+            . 'medical procedure shown in detail. Workplace-appropriate for adult vocational '
+            . 'learners.';
     }
 
     /**
@@ -342,14 +367,14 @@ class image_prompt {
      * @param string $prompt Composed brief.
      * @return string
      */
-    protected static function fit(string $prompt): string {
+    protected static function fit(string $prompt, int $max = self::MAX_PROMPT): string {
         $prompt = trim(preg_replace('/\s+/u', ' ', $prompt));
-        if (\core_text::strlen($prompt) > self::MAX_PROMPT) {
-            $prompt = trim(\core_text::substr($prompt, 0, self::MAX_PROMPT));
+        if (\core_text::strlen($prompt) > $max) {
+            $prompt = trim(\core_text::substr($prompt, 0, $max));
         }
         if (\core_text::strlen($prompt) < self::MIN_PROMPT) {
             // Nothing usable was supplied; a bare but valid brief still beats a failure.
-            $prompt = 'A workplace training scene. ' . self::direction();
+            $prompt = 'A workplace training scene.';
         }
         return $prompt;
     }
