@@ -2,6 +2,62 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.6.3] - 2026-09-10
+
+The graph validator asks whether a scenario holds together. It does not ask whether the
+scenario is worth playing, and a generator that has just been taught to connect its nodes
+is exactly the generator that connects them all to the same place.
+
+### Added
+
+- **The draft review page now names decisions that change little.** Six things are
+  reported: every choice on a node leading to the same next scene; skill scores that are
+  identical across all choices, or all zero; two choices that say the same thing; two
+  choices with the same consequence; a decision node offering a single answer; and a
+  scenario where every route ends at the same outcome. Each is listed against the scene it
+  belongs to, above the scenes themselves.
+- **These are advisory and never block publishing.** A slightly flat scenario is still the
+  teacher's to publish, and refusing it here would only send them back to a generator that
+  would do the same thing again. The panel is styled as a note, not an error. The point is
+  that the teacher meets a decorative decision before a learner does.
+- A beat with one way forward is left alone — only a `decision` node with a single choice
+  is reported, because a beat legitimately has one continuation.
+
+### Fixed
+
+- **A failed job recorded its duration as zero.** The column was written only on success,
+  so the jobs table showed every failure as instantaneous while the real figure — 62,560 ms
+  on the generation investigated today — sat inside the diagnostic JSON where no report
+  could reach it. `fail_job()` now records duration and model alongside the error. This is
+  the difference between a rejected payload and a call the service gave up on.
+
+### Testing
+
+38 new checks. Beyond the six detections and their negative cases, the suite covers what
+the first run of it caught: percentage similarity is meaningless on short text, where
+"Consequence of A" and "Consequence of B" are 94% alike and say different things. Below 40
+characters two strings must now match exactly. Also checked: case and punctuation alone
+cannot hide a repeated choice; outcome nodes are never judged as if they had choices; an
+unscored node is not also reported as identically scored; a single decision leading to one
+ending is not called out; and an empty definition, a definition with no nodes, and a node
+with no choices are all handled rather than fatal. The panel is also rendered, not merely
+computed: a healthy draft shows none, a degenerate one shows it above the scenes, and every
+scene still renders either way.
+
+The first run of these checks caught a false positive worth recording. Choices that
+converge on one node are this plugin's own architecture — branch and bottleneck, where two
+routes rejoin and what the learner did is carried in the skill scores rather than the path.
+The demo scenario used by the browser pass does this three times. Reporting it would have
+put a note on every well-built scenario until teachers stopped reading the panel, so a
+shared destination is now only reported when the scoring is identical too, and the auto
+target — "the ending this learner has earned" — is exempt outright. 590 checks pass on
+Moodle 4.4.12, 4.5.13 and 5.2.2, CodeSniffer clean.
+
+### Note
+
+- This release does not change what the service generates. It makes what arrives legible
+  before it reaches learners. The generator itself is being corrected service-side.
+
 ## [v1.6.2] - 2026-09-10
 
 ### Changed

@@ -24,6 +24,7 @@
     * hasdraft bool Whether a working copy exists
     * title string Scenario title
     * nodes array Scenes with their choices
+    * warnings array Places where a decision changes little, shown but never blocking
     * editurl string Back to the wizard
 
     Example context (json):
@@ -38,6 +39,11 @@
         "imagecount": 8,
         "hasprinciples": false,
         "principles": [],
+        "haswarnings": true,
+        "warnings": [
+            {"message": "All 3 choices lead to the same next scene, so the decision changes nothing.",
+             "atnode": true, "node": "The handover"}
+        ],
         "nodes": [],
         "editurl": "https://example.com/mod/aibranchedscenario/edit.php?id=42"
     }
@@ -79,6 +85,21 @@
                     </ul>
                 </section>
             {{/hasprinciples}}
+
+            {{#haswarnings}}
+                <section class="aibs-card aibs-review-quality">
+                    <h3 class="aibs-h3">{{#str}} review:quality, mod_aibranchedscenario {{/str}}</h3>
+                    <p class="aibs-field-hint">{{#str}} review:qualityhint, mod_aibranchedscenario {{/str}}</p>
+                    <ul class="aibs-quality-list">
+                        {{#warnings}}
+                            <li class="aibs-quality-item">
+                                {{#atnode}}<strong>{{#str}} review:qualityat, mod_aibranchedscenario, {{node}} {{/str}}</strong>
+                                {{/atnode}}{{message}}
+                            </li>
+                        {{/warnings}}
+                    </ul>
+                </section>
+            {{/haswarnings}}
 
             {{#nodes}}
                 <section class="aibs-card aibs-review-node">

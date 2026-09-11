@@ -422,6 +422,15 @@ class generator {
         $record->errormsg = \core_text::substr(trim($exception->errorcode . ' ' . $detail), 0, 500);
         $record->timemodified = time();
 
+        // How long a failed call ran is the fact that separates a rejected payload from
+        // a call the service gave up on, and it was being recorded only for successes,
+        // so the jobs table showed every failure as having taken no time at all.
+        $meta = $this->provider->get_last_meta();
+        if (!isset($record->modelused)) {
+            $record->modelused = (string)($meta['model'] ?? '');
+        }
+        $record->durationms = (int)($meta['durationms'] ?? 0);
+
         // Record what was actually sent and what came back. The service reports a
         // rejected request without naming the field at fault, so without this the only
         // way to find out is to reason about code that may not be the code that ran.

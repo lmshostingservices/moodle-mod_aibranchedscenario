@@ -173,5 +173,11 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091016, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091017) {
+        // Release 1.6.3 changes no schema. The draft review page gains advisory notes
+        // about decisions that change little, which are computed when the page is built.
+        upgrade_mod_savepoint(true, 2026091017, 'aibranchedscenario');
+    }
+
     return true;
 }

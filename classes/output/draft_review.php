@@ -19,6 +19,7 @@ namespace mod_aibranchedscenario\output;
 use context_module;
 use mod_aibranchedscenario\external\helper;
 use mod_aibranchedscenario\local\media_manager;
+use mod_aibranchedscenario\local\quality_review;
 use mod_aibranchedscenario\local\scenario_manager;
 use mod_aibranchedscenario\local\schema;
 use stdClass;
@@ -143,9 +144,22 @@ class draft_review implements \renderable, \templatable {
             ];
         }
 
+        // Playable is not the same as worth playing. These never block publishing; they
+        // are here so the teacher meets a decorative decision before a learner does.
+        $warnings = [];
+        foreach (quality_review::warnings($definition) as $warning) {
+            $warnings[] = [
+                'message' => $warning['message'],
+                'atnode'  => $warning['node'] !== '',
+                'node'    => $warning['node'],
+            ];
+        }
+
         return [
             'cmid'        => (int)$this->cm->id,
             'hasdraft'    => true,
+            'warnings'    => $warnings,
+            'haswarnings' => $warnings !== [],
             'themeclass'  => 'aibs-theme-' . $this->scenario->theme,
             'title'       => $definition['title'],
             'subtitle'    => $definition['subtitle'],

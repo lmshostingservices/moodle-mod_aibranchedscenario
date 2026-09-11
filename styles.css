@@ -1626,6 +1626,31 @@
     padding: 12px;
 }
 
+/* Advisory only. This panel never means the draft cannot be published, so it is
+   deliberately not styled as an error: a neutral rule rather than a red one. */
+.aibs-review-quality {
+    border-left: 4px solid var(--aibs-neutral);
+}
+
+.aibs-quality-list {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+}
+
+.aibs-quality-item {
+    background: var(--aibs-surface-alt);
+    border-radius: var(--aibs-radius-sm);
+    color: var(--aibs-text);
+    margin-bottom: 6px;
+    padding: 10px 12px;
+}
+
+.aibs-quality-item strong {
+    color: var(--aibs-text);
+    margin-right: 4px;
+}
+
 .aibs-review-label {
     color: var(--aibs-muted);
     display: block;
