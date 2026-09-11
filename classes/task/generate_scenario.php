@@ -88,8 +88,11 @@ class generate_scenario extends adhoc_task {
         // being drawn.
         $generator->finish_scenario_job($job, $definition, $counts);
 
-        mtrace('Scenario ' . $scenario->id . ' generated: ' . count($definition['nodes']) . ' nodes, '
-            . (int)($counts['images'] ?? 0) . '/' . (int)($counts['imageswanted'] ?? 0) . ' images, '
-            . (int)($counts['narrations'] ?? 0) . '/' . (int)($counts['narrationswanted'] ?? 0) . ' narrations.');
+        mtrace(
+            'Scenario ' . $scenario->id . ' generated: ' . count($definition['nodes']) . ' nodes, '
+                . (int)($counts['images'] ?? 0) . '/' . (int)($counts['imageswanted'] ?? 0) . ' images, '
+                . (int)($counts['narrations'] ?? 0) . '/'
+                . (int)($counts['narrationswanted'] ?? 0) . ' narrations.'
+        );
     }
 }

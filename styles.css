@@ -156,6 +156,39 @@
     margin-bottom: 22px;
 }
 
+/* Inside the sticky strip the title carries no bottom margin and the eyebrow and
+   subtitle share one line with it, so the whole header is two rows rather than five. */
+.aibs-masthead-compact {
+    align-items: center;
+    gap: 12px 16px;
+    margin-bottom: 0;
+}
+
+.aibs-masthead-compact .aibs-title {
+    font-size: clamp(1.1rem, .95rem + .6vw, 1.4rem);
+}
+
+.aibs-titlemeta {
+    align-items: baseline;
+    color: var(--aibs-muted);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: .82rem;
+    gap: 4px 10px;
+    margin: 2px 0 0;
+}
+
+.aibs-titlemeta-setting {
+    font-weight: 650;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.aibs-titlemeta-setting + .aibs-titlemeta-sub::before {
+    content: "\00B7";
+    margin-right: 10px;
+}
+
 .aibs-masthead-text {
     flex: 1 1 320px;
     min-width: 0;
@@ -189,7 +222,18 @@
 /* ------------------------------------------------------------ progress rail */
 
 .aibs-rail {
-    margin-bottom: 20px;
+    align-items: center;
+    display: flex;
+    flex: 1 1 260px;
+    gap: 12px;
+    margin-bottom: 0;
+    min-width: 0;
+}
+
+.aibs-rail-status {
+    flex: none;
+    margin: 0;
+    white-space: nowrap;
 }
 
 .aibs-rail-list {
@@ -261,51 +305,100 @@
 
 .aibs-rail-status {
     color: var(--aibs-muted);
-    font-size: .85rem;
-    margin: 10px 0 0;
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+/* ------------------------------------------------------- continue (a beat) */
+
+/* A beat has one way on. In the lettered choice list it read as a multiple-choice
+   question with a single answer, so it is a plain button, centred, and not dressed as
+   a decision. */
+.aibs-continuewrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 22px;
+}
+
+.path-mod-aibranchedscenario .aibs-continuebtn,
+.aibs-continuebtn {
+    align-items: center;
+    display: inline-flex;
+    gap: 10px;
+    min-width: 220px;
+    justify-content: center;
+}
+
+/* ------------------------------------------------------------------ topbar */
+
+/* Title, progress and dynamics in one strip that stays put while the scene scrolls
+   under it. It sits below whatever the site theme has already pinned to the top of the
+   window; the offset is measured at runtime and set as --aibs-sticky-top, because no
+   theme publishes its own header height. */
+.aibs-topbar {
+    background: var(--aibs-canvas);
+    border-bottom: 1px solid var(--aibs-border);
+    margin: calc(clamp(18px, 3vw, 40px) * -1) calc(clamp(18px, 3vw, 40px) * -1) 20px;
+    padding: 12px clamp(18px, 3vw, 40px);
+    position: sticky;
+    top: var(--aibs-sticky-top, 0px);
+    z-index: 20;
+}
+
+.aibs-statusbar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    margin-top: 10px;
 }
 
 /* ------------------------------------------------------------------ meters */
 
 .aibs-meters {
-    display: grid;
-    gap: 12px;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    margin-bottom: 22px;
-}
-
-.aibs-meter {
-    background: var(--aibs-surface);
-    border: 1px solid var(--aibs-border);
-    border-radius: var(--aibs-radius-sm);
-    box-shadow: var(--aibs-shadow-sm);
-    padding: 12px 14px;
-}
-
-.aibs-meter-head {
-    align-items: baseline;
     display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
+    flex: 1 1 320px;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin: 0;
+    min-width: 0;
+}
+
+/* Each reading is one line: name, bar, number. The three used to be full cards stacked
+   under the progress rail, which cost about 120px of the top of every scene to show
+   three two-digit numbers. */
+.aibs-meter {
+    align-items: center;
+    display: flex;
+    flex: 1 1 150px;
+    gap: 8px;
+    min-width: 0;
 }
 
 .aibs-meter-label {
     color: var(--aibs-muted);
-    font-size: .8rem;
-    font-weight: 600;
-    letter-spacing: .02em;
+    flex: none;
+    font-size: .72rem;
+    font-weight: 650;
+    letter-spacing: .03em;
+    text-transform: uppercase;
 }
 
 .aibs-meter-value {
-    font-size: 1.05rem;
+    flex: none;
+    font-size: .85rem;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
+    min-width: 2ch;
+    text-align: right;
 }
 
 .aibs-meter-track {
     background: var(--aibs-surface-alt);
     border-radius: 999px;
-    height: 8px;
+    flex: 1 1 auto;
+    height: 5px;
+    min-width: 36px;
     overflow: hidden;
 }
 
@@ -323,6 +416,396 @@
 
 .aibs-meter.aibs-is-falling .aibs-meter-value {
     color: var(--aibs-negative);
+}
+
+/* The estimate sits beside the status line, quieter than it, because it is context
+   rather than news. It appears only for the operations that run for minutes, and it
+   drops below the status on a narrow screen rather than squeezing it. */
+.aibs-loading-eta {
+    color: var(--aibs-muted);
+    font-size: .84rem;
+    opacity: .9;
+}
+
+.aibs-loading-eta[hidden] {
+    display: none;
+}
+
+/* ------------------------------------------------------- narration control */
+
+/* Was a line of text that read as a status and behaved as a button, which is why it was
+   mistaken for a label. It is now unmistakably pressable, states what it will do on
+   hover, and says out loud when there is nothing to play or when the browser has
+   refused to start it. */
+.aibs-audiobtn {
+    align-items: center;
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: 999px;
+    color: var(--aibs-text);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: .82rem;
+    font-weight: 600;
+    gap: 8px;
+    padding: 6px 14px 6px 8px;
+    transition: background-color .18s var(--aibs-ease), border-color .18s var(--aibs-ease),
+        color .18s var(--aibs-ease);
+}
+
+.aibs-audiobtn:hover:not(:disabled),
+.aibs-audiobtn:focus-visible:not(:disabled) {
+    background: var(--aibs-accent-soft);
+    border-color: var(--aibs-accent-border);
+    color: var(--aibs-accent-strong);
+}
+
+.aibs-audiobtn:disabled {
+    color: var(--aibs-muted);
+    cursor: default;
+    opacity: .75;
+}
+
+/* A speaker drawn from two shapes, so there is no icon font to go missing. */
+.aibs-audiobtn-icon {
+    align-items: center;
+    background: var(--aibs-accent-soft);
+    border-radius: 999px;
+    display: inline-flex;
+    flex: none;
+    height: 24px;
+    justify-content: center;
+    position: relative;
+    width: 24px;
+}
+
+.aibs-audiobtn-icon::before {
+    border-bottom: 4px solid transparent;
+    border-right: 7px solid var(--aibs-accent-strong);
+    border-top: 4px solid transparent;
+    content: "";
+    height: 0;
+    margin-left: -3px;
+    width: 0;
+}
+
+.aibs-audiobtn-wave {
+    border: 2px solid var(--aibs-accent-strong);
+    border-bottom-color: transparent;
+    border-left-color: transparent;
+    border-bottom-left-radius: 0;
+    border-radius: 999px;
+    border-top-color: transparent;
+    height: 12px;
+    margin-left: 1px;
+    width: 12px;
+}
+
+.aibs-audiobtn[data-state="off"] .aibs-audiobtn-icon,
+.aibs-audiobtn[data-state="none"] .aibs-audiobtn-icon {
+    background: var(--aibs-surface-alt);
+}
+
+.aibs-audiobtn[data-state="off"] .aibs-audiobtn-icon::before,
+.aibs-audiobtn[data-state="none"] .aibs-audiobtn-icon::before {
+    border-right-color: var(--aibs-muted);
+}
+
+/* Muted and unrecorded both show a bar through the speaker, because both mean silence. */
+.aibs-audiobtn[data-state="off"] .aibs-audiobtn-wave,
+.aibs-audiobtn[data-state="none"] .aibs-audiobtn-wave {
+    background: var(--aibs-muted);
+    border: 0;
+    border-radius: 1px;
+    height: 13px;
+    margin-left: -6px;
+    transform: rotate(45deg);
+    width: 2px;
+}
+
+/* Blocked is the one state that wants the eye: it is the only one the learner can fix. */
+.aibs-audiobtn[data-state="blocked"] {
+    background: var(--aibs-accent-soft);
+    border-color: var(--aibs-accent-border);
+    color: var(--aibs-accent-strong);
+}
+
+.aibs-audiobtn[data-state="blocked"] .aibs-audiobtn-wave {
+    animation: aibs-audiopulse 1.6s ease-in-out infinite;
+}
+
+@keyframes aibs-audiopulse {
+    0%, 100% { opacity: .35; }
+    50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aibs-audiobtn[data-state="blocked"] .aibs-audiobtn-wave {
+        animation: none;
+    }
+}
+
+/* ------------------------------------------------------------------ toasts */
+
+/* Attached to the body and fixed to the viewport, so a message about a button at the
+   bottom of a long form appears beside that button rather than at the top of the
+   document where nobody is looking. Not scoped to .aibs- ancestry like the rest of this
+   file, because the element is a sibling of the page content; the class prefix is what
+   keeps it from reaching anything else. */
+.aibs-toasts {
+    bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    left: 50%;
+    max-width: min(420px, calc(100vw - 32px));
+    pointer-events: none;
+    position: fixed;
+    transform: translateX(-50%);
+    width: max-content;
+    z-index: 1080;
+}
+
+.aibs-toast {
+    align-items: flex-start;
+    background: #fff;
+    border: 1px solid #e0e4ea;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(16, 24, 40, .06), 0 16px 40px -16px rgba(16, 24, 40, .35);
+    color: #171a20;
+    cursor: pointer;
+    display: flex;
+    font-size: .92rem;
+    gap: 10px;
+    line-height: 1.45;
+    opacity: 0;
+    padding: 12px 16px;
+    pointer-events: auto;
+    transform: translateY(10px) scale(.98);
+    transition: opacity .26s cubic-bezier(.2, .7, .3, 1),
+        transform .26s cubic-bezier(.2, .7, .3, 1);
+}
+
+.aibs-toast.aibs-toast-in {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.aibs-toast.aibs-toast-leaving {
+    opacity: 0;
+    transform: translateY(6px) scale(.98);
+}
+
+/* The mark is drawn in CSS rather than taken from an icon font, so it cannot come out
+   as a missing glyph on a site that strips webfonts. */
+.aibs-toast-icon {
+    border-radius: 999px;
+    flex: none;
+    height: 18px;
+    margin-top: 1px;
+    position: relative;
+    width: 18px;
+}
+
+.aibs-toast-icon::before {
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 700;
+    left: 50%;
+    line-height: 1;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.aibs-toast-success .aibs-toast-icon {
+    background: #047857;
+}
+
+.aibs-toast-success .aibs-toast-icon::before {
+    content: "\2713";
+}
+
+.aibs-toast-info .aibs-toast-icon {
+    background: #475467;
+}
+
+.aibs-toast-info .aibs-toast-icon::before {
+    content: "i";
+    font-style: italic;
+}
+
+.aibs-toast-error .aibs-toast-icon {
+    background: #b42318;
+}
+
+.aibs-toast-error .aibs-toast-icon::before {
+    content: "!";
+}
+
+.aibs-toast-error {
+    border-color: #f6c9c5;
+}
+
+.aibs-toast-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aibs-toast {
+        transition-duration: .01ms;
+    }
+}
+
+@media (max-width: 600px) {
+    .aibs-toasts {
+        left: 16px;
+        max-width: none;
+        right: 16px;
+        transform: none;
+        width: auto;
+    }
+}
+
+/* ------------------------------------------------------------------ legend */
+
+/* An explanation the learner opens once and then never needs again, so it sits
+   closed by default and takes no vertical space until it is wanted. It is styled
+   as a quiet affordance rather than a callout: the meters are the subject, this is
+   a footnote to them. */
+.aibs-legend {
+    margin: 0 0 18px;
+}
+
+.aibs-legend-summary {
+    align-items: center;
+    border-radius: var(--aibs-radius-sm);
+    color: var(--aibs-muted);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: .82rem;
+    font-weight: 600;
+    gap: 7px;
+    list-style: none;
+    padding: 5px 9px 5px 7px;
+    transition: color .18s var(--aibs-ease), background-color .18s var(--aibs-ease);
+}
+
+.aibs-legend-summary::-webkit-details-marker {
+    display: none;
+}
+
+.aibs-legend-summary:hover,
+.aibs-legend-summary:focus-visible {
+    background: var(--aibs-surface-alt);
+    color: var(--aibs-text);
+}
+
+/* A question mark drawn in CSS rather than pulled from an icon font, so it cannot
+   be missing on a site that strips webfonts. */
+.aibs-legend-icon {
+    align-items: center;
+    background: var(--aibs-accent-soft);
+    border: 1px solid var(--aibs-accent-border);
+    border-radius: 999px;
+    color: var(--aibs-accent-strong);
+    display: inline-flex;
+    flex: none;
+    font-size: .68rem;
+    font-weight: 700;
+    height: 16px;
+    justify-content: center;
+    width: 16px;
+}
+
+.aibs-legend-icon::before {
+    content: "?";
+}
+
+.aibs-legend-body {
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius);
+    box-shadow: var(--aibs-shadow-sm);
+    margin-top: 8px;
+    padding: 18px;
+}
+
+.aibs-legend-lead {
+    color: var(--aibs-text);
+    font-size: .92rem;
+    margin: 0 0 16px;
+}
+
+.aibs-legend-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.aibs-legend-item {
+    border-top: 2px solid var(--aibs-accent-border);
+    padding-top: 11px;
+}
+
+.aibs-legend-name {
+    color: var(--aibs-text);
+    display: block;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.aibs-legend-desc {
+    color: var(--aibs-text);
+    font-size: .88rem;
+    margin: 0 0 10px;
+}
+
+.aibs-legend-move {
+    color: var(--aibs-muted);
+    font-size: .82rem;
+    line-height: 1.45;
+    margin: 0 0 4px;
+}
+
+.aibs-legend-move span {
+    font-weight: 650;
+}
+
+.aibs-legend-up span {
+    color: var(--aibs-positive);
+}
+
+.aibs-legend-down span {
+    color: var(--aibs-negative);
+}
+
+.aibs-legend-note {
+    border-top: 1px solid var(--aibs-border-soft);
+    color: var(--aibs-muted);
+    font-size: .85rem;
+    margin: 14px 0 0;
+    padding-top: 12px;
+}
+
+.aibs-legend-note + .aibs-legend-note {
+    border-top: 0;
+    margin-top: 8px;
+    padding-top: 0;
+}
+
+/* --------------------------------------------------------------- step lead */
+
+.aibs-step-lead {
+    color: var(--aibs-muted);
+    font-size: .92rem;
+    line-height: 1.5;
+    margin: -4px 0 20px;
+    max-width: 62ch;
 }
 
 /* ------------------------------------------------------------------- cards */
@@ -530,6 +1013,20 @@
     margin: 20px 0 14px;
 }
 
+/* An author's challenge line is often an instruction rather than a question. Sitting in
+   bold directly above the lettered options it read as the first of them. When the player
+   supplies the question itself, that line steps back to being context. */
+.aibs-challenge-context {
+    color: var(--aibs-muted);
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.aibs-challenge-ask {
+    margin-top: 0;
+}
+
 /* ----------------------------------------------------------------- choices */
 
 .aibs-choices {
@@ -556,6 +1053,21 @@
     transition: border-color .2s var(--aibs-ease), box-shadow .2s var(--aibs-ease),
         transform .2s var(--aibs-ease), background-color .2s var(--aibs-ease);
     width: 100%;
+}
+
+/* The resting state needs the same defence as the interactive ones. A theme shipping a
+   blanket `button { color: #fff !important }` beats the rule above whatever its
+   specificity, because only !important outranks !important, and the text went white on
+   white before the learner had touched anything. Measured at a contrast of 1.0. */
+.path-mod-aibranchedscenario .aibs-choice,
+.aibs-choice {
+    background: var(--aibs-surface) !important;
+    color: var(--aibs-text) !important;
+}
+
+.path-mod-aibranchedscenario .aibs-choice .aibs-choice-text,
+.aibs-choice .aibs-choice-text {
+    color: var(--aibs-text) !important;
 }
 
 /* The decision buttons carry the scenario, and they were the element this whole
@@ -596,15 +1108,35 @@
     transform: translateY(0);
 }
 
+/* Choosing disables every option, and a site theme's own rule for a disabled button
+   then supplied a colour of its own — white, over this light background. The hover work
+   restated colour on hover and focus but left the chosen and disabled states to be
+   inherited, which is how the same fault came back wearing a different state. Both now
+   say what colour they are, at the same specificity and with the same !important the
+   hover rules need to outrank a theme. */
+.path-mod-aibranchedscenario .aibs-choice:disabled,
 .aibs-choice:disabled {
+    background: var(--aibs-surface) !important;
+    color: var(--aibs-text) !important;
     cursor: default;
     opacity: .55;
 }
 
-.aibs-choice.aibs-is-chosen {
-    background: var(--aibs-accent-soft);
+.path-mod-aibranchedscenario .aibs-choice.aibs-is-chosen,
+.path-mod-aibranchedscenario .aibs-choice.aibs-is-chosen:disabled,
+.aibs-choice.aibs-is-chosen,
+.aibs-choice.aibs-is-chosen:disabled {
+    background: var(--aibs-accent-soft) !important;
     border-color: var(--aibs-accent);
+    color: var(--aibs-text) !important;
     opacity: 1;
+}
+
+.path-mod-aibranchedscenario .aibs-choice.aibs-is-chosen .aibs-choice-text,
+.aibs-choice.aibs-is-chosen .aibs-choice-text,
+.path-mod-aibranchedscenario .aibs-choice:disabled .aibs-choice-text,
+.aibs-choice:disabled .aibs-choice-text {
+    color: var(--aibs-text) !important;
 }
 
 .aibs-choice-letter {
@@ -745,6 +1277,16 @@
 .aibs-delta-change {
     color: var(--aibs-muted);
     font-size: .82rem;
+}
+
+/* The change reads as a direction of benefit rather than a sign: tension falling is a
+   gain, so it is green like a rise in the other two. */
+.aibs-delta-change.aibs-up {
+    color: var(--aibs-positive);
+}
+
+.aibs-delta-change.aibs-down {
+    color: var(--aibs-negative);
 }
 
 .aibs-feedback {
@@ -1062,9 +1604,14 @@
     align-items: center;
     color: var(--aibs-muted);
     display: flex;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 4px 10px;
     justify-content: center;
     padding: 26px;
+}
+
+.aibs-loading-text {
+    font-weight: 600;
 }
 
 .aibs-loading[hidden] {
@@ -1719,4 +2266,285 @@
 .aibs-choice-structure-item {
     flex: 1 1 220px;
     min-width: 0;
+}
+
+/* --------------------------------------------------- the slide, and who speaks */
+
+/* A decision used to be a picture with the text under it, so on a laptop the options
+   were below the fold and the learner scrolled to find out what they were choosing
+   between. Side by side, the picture and the decision are on screen together. */
+@media (min-width: 900px) {
+    .path-mod-aibranchedscenario .aibs-slide {
+        align-items: stretch;
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    }
+
+    .path-mod-aibranchedscenario .aibs-slide .aibs-scene {
+        border-radius: var(--aibs-radius) 0 0 var(--aibs-radius);
+        height: 100%;
+    }
+
+    .path-mod-aibranchedscenario .aibs-slide .aibs-scene-img {
+        aspect-ratio: auto;
+        height: 100%;
+        min-height: 100%;
+    }
+
+    .path-mod-aibranchedscenario .aibs-slide .aibs-node-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+}
+
+/* Who is speaking, sitting on the picture they are in. */
+.aibs-speaker {
+    align-items: center;
+    background: rgba(17, 22, 31, .62);
+    border-radius: 999px;
+    bottom: 12px;
+    color: #fff;
+    display: flex;
+    gap: 8px;
+    left: 12px;
+    padding: 6px 14px 6px 6px;
+    position: absolute;
+    max-width: calc(100% - 24px);
+}
+
+.aibs-avatar {
+    align-items: center;
+    background: var(--aibs-accent);
+    border: 2px solid rgba(255, 255, 255, .85);
+    border-radius: 999px;
+    color: #fff !important;
+    display: inline-flex;
+    flex: none;
+    height: 42px;
+    justify-content: center;
+    padding: 0;
+    position: relative;
+    width: 42px;
+}
+
+button.aibs-avatar {
+    cursor: pointer;
+}
+
+.aibs-avatar-initial {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.aibs-avatar-play {
+    bottom: -3px;
+    background: var(--aibs-accent);
+    border: 2px solid #fff;
+    border-radius: 999px;
+    height: 18px;
+    padding: 1px;
+    position: absolute;
+    right: -5px;
+    width: 18px;
+}
+
+/* Nothing on a picture says "this one you press". The ring keeps asking until it has
+   been played, and stops the moment it has. */
+.aibs-avatar.aibs-is-unplayed {
+    animation: aibs-avatar-pulse 2.1s ease-out infinite;
+}
+
+.aibs-avatar.aibs-is-played {
+    animation: none;
+}
+
+@keyframes aibs-avatar-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, .75); }
+    70%  { box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aibs-avatar.aibs-is-unplayed {
+        animation: none;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, .7);
+    }
+}
+
+.aibs-speaker-name {
+    font-size: .86rem;
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+.aibs-speaker-hint {
+    font-size: .78rem;
+    opacity: .85;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+    .aibs-speaker-hint {
+        display: none;
+    }
+}
+
+/* A way on that is still listening to the screen it is on. */
+.aibs-btn.aibs-is-waiting,
+.aibs-continuebtn.aibs-is-waiting {
+    cursor: progress;
+    opacity: .45;
+}
+
+/* ------------------------------------------------------------ outcome rings */
+
+.aibs-rings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    list-style: none;
+    margin: 20px 0 0;
+    padding: 0;
+}
+
+.aibs-ring {
+    align-items: center;
+    background: var(--aibs-surface-alt);
+    border-radius: var(--aibs-radius-sm);
+    display: flex;
+    flex: 1 1 150px;
+    flex-direction: column;
+    gap: 2px;
+    padding: 14px 10px 12px;
+    text-align: center;
+}
+
+.aibs-ring-dial {
+    display: block;
+    height: 72px;
+    position: relative;
+    width: 72px;
+}
+
+.aibs-ring-dial svg {
+    height: 72px;
+    transform: rotate(-90deg);
+    width: 72px;
+}
+
+.aibs-ring-track {
+    fill: none;
+    stroke: var(--aibs-border);
+    stroke-width: 7;
+    opacity: .55;
+}
+
+.aibs-ring-fill {
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 7;
+}
+
+.aibs-ring-fill.aibs-is-animated {
+    transition: stroke-dasharray .9s var(--aibs-ease);
+}
+
+.aibs-ring-value {
+    font-size: 1.18rem;
+    font-weight: 700;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.aibs-ring-label {
+    font-size: .84rem;
+    font-weight: 600;
+    margin-top: 6px;
+}
+
+.aibs-ring-change {
+    font-size: .78rem;
+    color: var(--aibs-muted);
+}
+
+/* Traffic light on where the room now stands. The ring colours itself; the number in
+   the middle inherits it, so one glance carries both. */
+.aibs-ring.aibs-tone-good {
+    color: var(--aibs-positive);
+}
+
+.aibs-ring.aibs-tone-warn {
+    color: #b26a00;
+}
+
+.aibs-ring.aibs-tone-bad {
+    color: var(--aibs-negative);
+}
+
+.aibs-ring .aibs-ring-label {
+    color: var(--aibs-text);
+}
+
+/* ------------------------------------------------------------------ pricing */
+
+/* The button that spends money used to be the first place a teacher found out what it
+   spends. This sits above the wizard, before anything has been filled in. */
+/* Same voice as a step lead-in, but its own class: the card is not a step. */
+.aibs-pricing-lead {
+    color: var(--aibs-muted);
+    margin: 6px 0 0;
+}
+
+.aibs-pricing-head {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.aibs-pricing-now {
+    color: var(--aibs-accent);
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.aibs-pricing-list {
+    display: grid;
+    gap: 6px;
+    list-style: none;
+    margin: 14px 0 12px;
+    padding: 0;
+}
+
+.aibs-pricing-row {
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: var(--aibs-radius-sm);
+    display: flex;
+    gap: 10px;
+    padding: 9px 12px;
+}
+
+.aibs-pricing-row.aibs-is-current {
+    background: var(--aibs-surface-alt);
+    border-color: var(--aibs-accent-border);
+}
+
+.aibs-pricing-label {
+    flex: 1 1 auto;
+}
+
+.aibs-pricing-amount {
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+    white-space: nowrap;
 }

@@ -188,7 +188,7 @@ class media_manager {
 
         $source = scenario_manager::get_source($scenario);
         $style = $source['imagestyle'] ?? 'cinematic';
-        $voice = self::configured_voice();
+        $voice = self::configured_voice('narrator');
         $counts = $blank;
 
         $index = 0;
@@ -215,6 +215,40 @@ class media_manager {
                 $counts['narrationswanted']++;
                 if ($this->generate_narration($provider, $node, $scenario->scenariolang, $voice, $index)) {
                     $counts['narrations']++;
+                }
+                // A line is only worth its own clip when it is said by somebody with a
+                // voice of their own. An unattributed line would be read by the narrator
+                // anyway, so it stays inside the narrator's clip and costs nothing extra.
+                if (self::has_own_voice($node)) {
+                    $counts['narrationswanted']++;
+                    if ($this->generate_speech_line($provider, $node, $scenario->scenariolang, $index)) {
+                        $counts['narrations']++;
+                    }
+                }
+                // The consequence screen is half of what a learner reads, and narrating
+                // only the decisions made the voice appear to cut out every second screen.
+                // Each branch is narrated separately because which one is heard is not
+                // known until the learner chooses. Choice ids are unique across the
+                // definition, so they sit in the same area as the node clips.
+                // Two economies here, both of them free. A single-choice beat's
+                // consequence is filler - "Continue to the next decision point" - and is
+                // never worth a clip. And a site can turn consequence narration off
+                // altogether, which is most of the speech in a scenario.
+                $narrateconsequences = get_config('mod_aibranchedscenario', 'narrationscope') === 'full';
+                $branches = ($narrateconsequences && count($node['choices']) > 1) ? $node['choices'] : [];
+                foreach ($branches as $choice) {
+                    $counts['narrationswanted']++;
+                    if (
+                        $this->generate_choice_narration(
+                            $provider,
+                            $choice,
+                            $scenario->scenariolang,
+                            $voice,
+                            $index
+                        )
+                    ) {
+                        $counts['narrations']++;
+                    }
                 }
             }
             $index++;
@@ -275,7 +309,14 @@ class media_manager {
         string $voice,
         int $index
     ): bool {
-        $text = trim($node['situation'] . "\n\n" . $node['facilitatorspeech']);
+        // The narrator reads the situation, and reads the spoken line too when nobody
+        // with a voice of their own says it. A line by a named character is its own clip
+        // in that character's voice, which is why a scenario no longer sounds like one
+        // person reading a play aloud.
+        $text = trim((string)$node['situation']);
+        if (!self::has_own_voice($node)) {
+            $text = trim($text . "\n\n" . (string)($node['facilitatorspeech'] ?? ''));
+        }
         if ($text === '') {
             return false;
         }
@@ -285,6 +326,86 @@ class media_manager {
             return true;
         } catch (generation_exception $e) {
             debugging('Narration generation skipped: ' . $e->errorcode, DEBUG_DEVELOPER);
+            return false;
+        }
+    }
+
+    /**
+     * Whether this node's spoken line should be recorded separately from the narration.
+     *
+     * @param array $node Normalised node.
+     * @return bool
+     */
+    public static function has_own_voice(array $node): bool {
+        if (trim((string)($node['facilitatorspeech'] ?? '')) === '') {
+            return false;
+        }
+        $gender = (string)($node['speakergender'] ?? '');
+        return $gender === 'male' || $gender === 'female';
+    }
+
+    /**
+     * Generate and store the spoken line for whoever talks on this node.
+     *
+     * @param provider $provider Generation provider.
+     * @param array $node Normalised node.
+     * @param string $language BCP-47 language code.
+     * @param int $index Zero based node index, used as the file item id.
+     * @return bool True when audio was stored.
+     */
+    public function generate_speech_line(
+        provider $provider,
+        array $node,
+        string $language,
+        int $index
+    ): bool {
+        $text = trim((string)($node['facilitatorspeech'] ?? ''));
+        if ($text === '') {
+            return false;
+        }
+        try {
+            $result = $provider->generate_speech(
+                \core_text::substr($text, 0, 4500),
+                self::voice_for_speaker($node),
+                $language
+            );
+            $this->store(self::AREA_NARRATION, $index, $node['id'] . '_said', $result['data'], $result['mimetype']);
+            return true;
+        } catch (generation_exception $e) {
+            debugging('Character line generation skipped: ' . $e->errorcode, DEBUG_DEVELOPER);
+            return false;
+        }
+    }
+
+    /**
+     * Generate and store the narration for what follows one choice.
+     *
+     * @param provider $provider Generation provider.
+     * @param array $choice Normalised choice.
+     * @param string $language BCP-47 language code.
+     * @param string $voice Voice identifier.
+     * @param int $index Zero based node index, used as the file item id.
+     * @return bool True when audio was stored.
+     */
+    public function generate_choice_narration(
+        provider $provider,
+        array $choice,
+        string $language,
+        string $voice,
+        int $index
+    ): bool {
+        // The consequence is the story; the feedback is the lesson drawn out of it and is
+        // read rather than heard, so only the story half is spoken.
+        $text = trim($choice['consequence'] ?? '');
+        if ($text === '') {
+            return false;
+        }
+        try {
+            $result = $provider->generate_speech(\core_text::substr($text, 0, 4500), $voice, $language);
+            $this->store(self::AREA_NARRATION, $index, $choice['id'], $result['data'], $result['mimetype']);
+            return true;
+        } catch (generation_exception $e) {
+            debugging('Consequence narration generation skipped: ' . $e->errorcode, DEBUG_DEVELOPER);
             return false;
         }
     }
@@ -404,15 +525,63 @@ class media_manager {
     }
 
     /**
-     * The configured narration voice, validated against a safe shape.
+     * The voices the service offers, and which kind of part each one suits.
      *
+     * The list is fixed here rather than fetched, because a site administrator has to be
+     * able to choose one while the service is unreachable, and because a voice that has
+     * been removed upstream should fall back to a known good name rather than to silence.
+     *
+     * @return array Voice identifier mapped to 'female', 'male' or 'neutral'.
+     */
+    public static function voices(): array {
+        return [
+            'Aoede'  => 'female',
+            'Kore'   => 'female',
+            'Leda'   => 'female',
+            'Zephyr' => 'female',
+            'Puck'   => 'male',
+            'Charon' => 'male',
+            'Fenrir' => 'male',
+            'Orus'   => 'male',
+        ];
+    }
+
+    /**
+     * The configured voice for one part, validated against a safe shape.
+     *
+     * @param string $role narrator, male or female.
      * @return string
      */
-    public static function configured_voice(): string {
-        $voice = (string)get_config('mod_aibranchedscenario', 'defaultvoice');
+    public static function configured_voice(string $role = 'narrator'): string {
+        $defaults = ['narrator' => 'Aoede', 'male' => 'Puck', 'female' => 'Kore'];
+        if (!isset($defaults[$role])) {
+            $role = 'narrator';
+        }
+        // The old single setting is still read for the narrator, so a site that set a
+        // voice before there were three keeps the voice it chose.
+        $voice = (string)get_config('mod_aibranchedscenario', $role . 'voice');
+        if ($voice === '' && $role === 'narrator') {
+            $voice = (string)get_config('mod_aibranchedscenario', 'defaultvoice');
+        }
         if ($voice === '' || !preg_match('/^[A-Za-z][A-Za-z0-9\-]{1,32}$/', $voice)) {
-            $voice = 'Aoede';
+            $voice = $defaults[$role];
         }
         return $voice;
+    }
+
+    /**
+     * The voice a named speaker should be given.
+     *
+     * @param array $node Normalised node.
+     * @return string Voice identifier.
+     */
+    public static function voice_for_speaker(array $node): string {
+        $gender = (string)($node['speakergender'] ?? '');
+        if ($gender === 'male' || $gender === 'female') {
+            return self::configured_voice($gender);
+        }
+        // Nobody named, or somebody who is not in the cast: the narrator reads the line,
+        // which is exactly what happened before characters had voices of their own.
+        return self::configured_voice('narrator');
     }
 }

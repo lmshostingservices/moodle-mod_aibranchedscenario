@@ -286,7 +286,16 @@ class validator {
             $this->fail(get_string('error:missinghook', 'mod_aibranchedscenario'));
         }
 
-        $out['nodes'] = $this->normalise_nodes($raw['nodes'] ?? [], $principleids);
+        // Who speaks on a node is stored as a name; the gender that chooses a voice for
+        // that person lives on the character record, so the two are married up here,
+        // while both are in hand, rather than being looked up again at play time.
+        $voices = [];
+        foreach (array_merge([$out['facilitator']], $out['characters']) as $person) {
+            if (($person['name'] ?? '') !== '') {
+                $voices[\core_text::strtolower($person['name'])] = $person['gender'] ?? '';
+            }
+        }
+        $out['nodes'] = $this->normalise_nodes($raw['nodes'] ?? [], $principleids, $voices);
         $nodeids = array_column($out['nodes'], 'id');
 
         $start = $this->identifier($raw['startnode'] ?? '');
@@ -389,7 +398,7 @@ class validator {
      * @param string[] $principleids Valid principle identifiers.
      * @return array
      */
-    protected function normalise_nodes($raw, array $principleids): array {
+    protected function normalise_nodes($raw, array $principleids, array $voices = []): array {
         if (!is_array($raw) || !$raw) {
             $this->fail(get_string('error:nonodes', 'mod_aibranchedscenario'));
             return [];
@@ -417,7 +426,7 @@ class validator {
                 continue;
             }
             $seen[] = $id;
-            $out[] = $this->normalise_node($rawnode, $id, $principleids);
+            $out[] = $this->normalise_node($rawnode, $id, $principleids, $voices);
         }
         return $out;
     }
@@ -430,7 +439,7 @@ class validator {
      * @param string[] $principleids Valid principle identifiers.
      * @return array
      */
-    protected function normalise_node(array $raw, string $id, array $principleids): array {
+    protected function normalise_node(array $raw, string $id, array $principleids, array $voices = []): array {
         $type = schema::in_list($raw['type'] ?? '', schema::nodetypes()) ? $raw['type'] : 'decision';
 
         $node = [
@@ -441,6 +450,8 @@ class validator {
             'bottleneck'         => !empty($raw['bottleneck']),
             'situation'          => $this->text($raw['situation'] ?? ''),
             'facilitatorspeech'  => $this->text($raw['facilitatorspeech'] ?? '', 1500),
+            'speaker'            => $this->short($raw['speaker'] ?? '', 80),
+            'speakergender'      => '',
             'challenge'          => $this->text($raw['challenge'] ?? '', 600),
             'imageprompt'        => $this->short($raw['imageprompt'] ?? '', 600),
             'imagealt'           => $this->short($raw['imagealt'] ?? '', 250),
@@ -452,6 +463,13 @@ class validator {
 
         if ($node['situation'] === '') {
             $this->fail(get_string('error:nodenosituation', 'mod_aibranchedscenario', $id));
+        }
+
+        // A scenario written before speakers were recorded names nobody, and a generated
+        // one may name somebody who is not in the cast. Both are left with an empty
+        // gender, which the player reads as "use the narrator's voice".
+        if ($node['speaker'] !== '') {
+            $node['speakergender'] = $voices[\core_text::strtolower($node['speaker'])] ?? '';
         }
 
         if (isset($raw['crisisvariant']) && is_array($raw['crisisvariant'])) {
@@ -544,6 +562,16 @@ class validator {
             $text = $this->text($rawchoice['text'] ?? '', 400);
             if ($text === '') {
                 $this->fail(get_string('error:choicenotext', 'mod_aibranchedscenario', $id));
+            }
+
+            // A choice with no consequence renders as a signal word and a Continue button
+            // and nothing else: the learner is shown a screen that tells them nothing
+            // about what their decision did. An empty string was being accepted here, so
+            // the only sign of it was a blank card at play time. A beat's synthesised
+            // choice legitimately has none, which is why this is checked on decisions.
+            if ($this->text($rawchoice['consequence'] ?? '', 1800) === '') {
+                $a = (object)['node' => $id, 'letter' => $letters[$position]];
+                $this->fail(get_string('error:choicenoconsequence', 'mod_aibranchedscenario', $a));
             }
 
             $principleid = $this->identifier($rawchoice['principleid'] ?? '');

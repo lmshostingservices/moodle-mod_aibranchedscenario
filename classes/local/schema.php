@@ -308,6 +308,112 @@ class schema {
     }
 
     /**
+     * What a teacher is charged for one generated scenario, in credits.
+     *
+     * Set by the product owner, not derived from the service tariff above: the tariff is
+     * what each operation costs this plugin to run, and this is the published price of the
+     * finished thing. The three parts add up to the four prices that were set — scenario
+     * alone, scenario with pictures, scenario with narration, and both.
+     *
+     * The price is quoted in credits, because credits are what a teacher's balance is
+     * held in and what is actually deducted. The cash equivalent is shown beside it so
+     * nobody has to do the conversion in their head, and the rate that converts one to the
+     * other is a setting, as are all three parts: a partner reselling this does not
+     * necessarily sell it at the same price or in the same currency.
+     *
+     * @return array Keys: base, images, voice, rate, currency.
+     */
+    public static function pricing(): array {
+        $number = static function (string $name, float $fallback): float {
+            $value = get_config('mod_aibranchedscenario', $name);
+            if ($value === false || $value === '' || !is_numeric($value) || (float)$value <= 0) {
+                return $fallback;
+            }
+            return round((float)$value, 2);
+        };
+        $credits = static function (string $name, int $fallback) {
+            $value = get_config('mod_aibranchedscenario', $name);
+            if ($value === false || $value === '' || !is_numeric($value) || (int)$value < 0) {
+                return $fallback;
+            }
+            return (int)$value;
+        };
+        $currency = (string)get_config('mod_aibranchedscenario', 'pricecurrency');
+        if (!preg_match('/^[A-Z]{3}$/', $currency)) {
+            $currency = 'USD';
+        }
+        return [
+            'base'     => $credits('pricebase', 100),
+            'images'   => $credits('priceimages', 50),
+            'voice'    => $credits('pricevoice', 50),
+            // Credits to one unit of the currency. Ten credits to the dollar puts a
+            // scenario with pictures and narration at 200 credits, which is $20.
+            'rate'     => $number('creditrate', 10.0),
+            'currency' => $currency,
+        ];
+    }
+
+    /**
+     * The price of one scenario with the options a teacher has chosen.
+     *
+     * @param bool $withimages Whether scene images are being generated.
+     * @param bool $withvoice Whether narration is being generated.
+     * @return array Keys: base, images, voice, total, money, rate, currency.
+     */
+    public static function price_for(bool $withimages, bool $withvoice): array {
+        $pricing = self::pricing();
+        $images = $withimages ? $pricing['images'] : 0;
+        $voice = $withvoice ? $pricing['voice'] : 0;
+        $total = $pricing['base'] + $images + $voice;
+        return [
+            'base'     => $pricing['base'],
+            'images'   => $images,
+            'voice'    => $voice,
+            'total'    => $total,
+            'money'    => round($total / $pricing['rate'], 2),
+            'rate'     => $pricing['rate'],
+            'currency' => $pricing['currency'],
+        ];
+    }
+
+    /**
+     * Format an amount of money for display.
+     *
+     * @param float $amount Amount in whole currency units.
+     * @param string $currency ISO currency code.
+     * @return string
+     */
+    public static function money(float $amount, string $currency = ''): string {
+        if ($currency === '') {
+            $currency = self::pricing()['currency'];
+        }
+        $decimals = (float)$amount === floor((float)$amount) ? 0 : 2;
+        return '$' . number_format($amount, $decimals) . ' ' . $currency;
+    }
+
+    /**
+     * Format a price as the credits charged and what they are worth.
+     *
+     * @param int $credits Credits charged.
+     * @param string $currency ISO currency code.
+     * @param float $rate Credits to one unit of that currency.
+     * @return string
+     */
+    public static function price_text(int $credits, string $currency = '', float $rate = 0.0): string {
+        $pricing = self::pricing();
+        if ($currency === '') {
+            $currency = $pricing['currency'];
+        }
+        if ($rate <= 0) {
+            $rate = $pricing['rate'];
+        }
+        return get_string('pricecredits', 'mod_aibranchedscenario', (object)[
+            'credits' => number_format($credits),
+            'money'   => self::money(round($credits / $rate, 2), $currency),
+        ]);
+    }
+
+    /**
      * Check a value against one of the option lists.
      *
      * @param string $value Value to test.

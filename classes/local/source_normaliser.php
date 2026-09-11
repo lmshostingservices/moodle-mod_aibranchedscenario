@@ -53,7 +53,10 @@ class source_normaliser {
             'decisions'        => 5,
             'tone'             => 'neutral',
             'complexity'       => 'intermediate',
-            'imagestyle'       => 'cinematic',
+            // Photorealistic is the default: a cinematic still is graded dark by every
+            // model that draws one, and a workplace scenario reads better as a room the
+            // learner could walk into than as a film frame.
+            'imagestyle'       => 'photorealistic',
             'imageprompt'      => '',
             'openingmetrics'   => ['engagement' => 50, 'trust' => 50, 'tension' => 30],
         ];

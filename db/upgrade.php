@@ -218,5 +218,60 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091105, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091106) {
+        // Release 1.9.0 changes no schema. A scenario stored before it may contain a
+        // choice with no consequence, which is now refused: those are re-validated on
+        // save and on publish, so such a scenario must be generated or imported again.
+        upgrade_mod_savepoint(true, 2026091106, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091107) {
+        // Release 1.9.1 changes no schema. A beat is now rendered differently, which is a
+        // presentation change over the same stored definition.
+        upgrade_mod_savepoint(true, 2026091107, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091108) {
+        // Release 1.9.2 changes no schema. Consequence screens are now narrated, which is
+        // new media rather than new storage: a scenario published before this release has
+        // no clip for a branch and plays silently on that screen until it is regenerated.
+        upgrade_mod_savepoint(true, 2026091108, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091109) {
+        // Release 1.10.0 changes no schema. Nodes may now record who speaks, which is
+        // stored inside the existing definition JSON, and narration is now split into a
+        // narrator clip and a character clip: a scenario published before this release
+        // keeps the single clip it has until it is generated again.
+        upgrade_mod_savepoint(true, 2026091109, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091110) {
+        // Release 1.11.0 changes no schema. It adds price settings, which take their
+        // defaults, and reduces what is narrated: a scenario already generated keeps the
+        // clips it has, and generating it again produces fewer of them.
+        upgrade_mod_savepoint(true, 2026091110, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091111) {
+        // Release 1.11.1 changes no schema. Prices are now held in credits rather than in
+        // currency: a site that had already set them takes the new defaults, so a site
+        // which changed them should check them again.
+        upgrade_mod_savepoint(true, 2026091111, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091112) {
+        // Release 1.12.0 changes no schema and no behaviour: it is the version number the
+        // work released as 1.10.0, 1.11.0 and 1.11.1 is published under.
+        upgrade_mod_savepoint(true, 2026091112, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091113) {
+        // Release 1.12.1 changes no schema. The price settings are now typed as integers
+        // rather than accepted raw, so a value that is not a number is refused at the
+        // point it is entered instead of quietly falling back when it is read.
+        upgrade_mod_savepoint(true, 2026091113, 'aibranchedscenario');
+    }
+
     return true;
 }

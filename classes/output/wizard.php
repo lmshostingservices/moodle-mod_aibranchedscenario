@@ -18,6 +18,7 @@ namespace mod_aibranchedscenario\output;
 
 use context_module;
 use mod_aibranchedscenario\local\ai\credentials;
+use mod_aibranchedscenario\local\generator;
 use mod_aibranchedscenario\local\scenario_manager;
 use mod_aibranchedscenario\local\schema;
 use mod_aibranchedscenario\local\source_normaliser;
@@ -222,7 +223,83 @@ class wizard implements \renderable, \templatable {
                 'atmosphere' => source_normaliser::blank()['atmosphere'],
             ],
             'maxsourcechars' => $maxsourcechars,
+            'generationeta'  => self::eta_phrase(),
             'importprompt'   => \mod_aibranchedscenario\local\import_prompt::text((int)$source['decisions']),
+            'pricing'        => self::pricing_card($this->scenario),
         ];
+    }
+
+    /**
+     * What the four ways of generating a scenario cost, with the current one marked.
+     *
+     * A teacher should not have to press the button that spends money to find out what
+     * it spends. The card is shown before anything is filled in, and the same price is
+     * repeated in the confirmation, so there is no point at which the cost is a surprise.
+     *
+     * @param \stdClass $scenario Activity instance.
+     * @return array Template context.
+     */
+    protected static function pricing_card(\stdClass $scenario): array {
+        $withimages = !empty($scenario->enableimages) && get_config('mod_aibranchedscenario', 'allowimages');
+        $withvoice = !empty($scenario->enableaudio) && get_config('mod_aibranchedscenario', 'allowaudio');
+        $rows = [];
+        foreach ([[false, false], [true, false], [false, true], [true, true]] as $combination) {
+            [$images, $voice] = $combination;
+            $price = schema::price_for($images, $voice);
+            $key = 'price:' . ($images ? 'images' : 'noimages') . ($voice ? 'voice' : 'novoice');
+            $rows[] = [
+                'label'   => get_string($key, 'mod_aibranchedscenario'),
+                'amount'  => schema::price_text($price['total'], $price['currency'], $price['rate']),
+                'current' => $images === $withimages && $voice === $withvoice,
+            ];
+        }
+        $current = schema::price_for($withimages, $withvoice);
+        return [
+            'rows'     => $rows,
+            'amount'   => schema::price_text($current['total'], $current['currency'], $current['rate']),
+            'credits'  => $current['total'],
+            'currency' => $current['currency'],
+        ];
+    }
+
+    /**
+     * A sentence telling the teacher how long a generation usually takes here.
+     *
+     * Generation runs for minutes, not seconds, and a progress message with no sense of
+     * scale is how a teacher concludes it has hung and presses the button again. The
+     * range comes from this site's own completed runs where it has enough of them, and
+     * says so, because "on this site" is what makes the number believable.
+     *
+     * @return string
+     */
+    protected static function eta_phrase(): string {
+        $estimate = (new generator())->estimate();
+        $range = (object)[
+            'low'  => self::eta_amount($estimate['low']),
+            'high' => self::eta_amount($estimate['high']),
+        ];
+        $phrase = get_string('eta:range', 'mod_aibranchedscenario', $range);
+        return get_string(
+            $estimate['measured'] ? 'generationeta' : 'generationetadefault',
+            'mod_aibranchedscenario',
+            $phrase
+        );
+    }
+
+    /**
+     * Render a duration the way a person would say it.
+     *
+     * @param int $seconds Duration in seconds.
+     * @return string
+     */
+    protected static function eta_amount(int $seconds): string {
+        if ($seconds < 90) {
+            return get_string('eta:seconds', 'mod_aibranchedscenario', (int)(round($seconds / 5) * 5));
+        }
+        $minutes = (int)round($seconds / 60);
+        if ($minutes <= 1) {
+            return get_string('eta:minute', 'mod_aibranchedscenario');
+        }
+        return get_string('eta:minutes', 'mod_aibranchedscenario', $minutes);
     }
 }

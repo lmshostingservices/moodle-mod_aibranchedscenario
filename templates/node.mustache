@@ -33,6 +33,12 @@
     * situationparas string Situation, array of plain-text paragraphs
     * speech string What a character says, plain text
     * challenge string The direct question put to the learner
+    * challengeisquestion bool Whether that line already reads as a question
+    * askwhatyoudo bool Whether the player supplies the question itself
+    * speaker string Who says the speech line, or empty
+    * speakerinitial string First letter of that name, for the avatar
+    * hasspeaker bool Whether a named person says the line
+    * hasspeechaudio bool Whether that line has a recording to play
     * crisis bool Whether the crisis variant is showing
     * imageurl string Scene image URL, or empty
     * imagealt string Scene image alternative text
@@ -47,6 +53,12 @@
         "situationparas": ["Sam lowers his voice."],
         "speech": "Can't we just fix it ourselves?",
         "challenge": "What do you say to Sam?",
+        "challengeisquestion": true,
+        "askwhatyoudo": false,
+        "speaker": "Sam",
+        "speakerinitial": "S",
+        "hasspeaker": true,
+        "hasspeechaudio": true,
         "crisis": false,
         "imageurl": "",
         "imagealt": "",
@@ -54,11 +66,36 @@
         "choices": [{"id": "n2_a", "letter": "A", "text": "Log the fault now and tell the supervisor."}]
     }
 }}
-<article class="aibs-card aibs-node aibs-enter" data-nodeid="{{id}}" data-stage="{{stage}}">
+<article class="aibs-card aibs-node aibs-slide aibs-enter" data-nodeid="{{id}}" data-stage="{{stage}}">
 
     {{#hasimage}}
         <div class="aibs-scene">
             <img src="{{imageurl}}" alt="{{imagealt}}" class="aibs-scene-img" loading="lazy">
+            {{#hasspeaker}}
+                <span class="aibs-speaker">
+                    {{#hasspeechaudio}}
+                        <button type="button" class="aibs-avatar aibs-is-unplayed" data-action="speak"
+                                title="{{#str}} listento, mod_aibranchedscenario, {{speaker}} {{/str}}"
+                                aria-label="{{#str}} listento, mod_aibranchedscenario, {{speaker}} {{/str}}">
+                            <span class="aibs-avatar-initial" aria-hidden="true">{{speakerinitial}}</span>
+                            <svg class="aibs-icon aibs-avatar-play" viewBox="0 0 20 20"
+                                 aria-hidden="true" focusable="false">
+                                <path d="M7.4 5.6 14.2 10l-6.8 4.4Z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    {{/hasspeechaudio}}
+                    {{^hasspeechaudio}}
+                        <span class="aibs-avatar aibs-is-silent">
+                            <span class="aibs-avatar-initial" aria-hidden="true">{{speakerinitial}}</span>
+                        </span>
+                    {{/hasspeechaudio}}
+                    <span class="aibs-speaker-name">{{speaker}}</span>
+                    {{#hasspeechaudio}}
+                        <span class="aibs-speaker-hint">
+                            {{#str}} listento, mod_aibranchedscenario, {{speaker}} {{/str}}</span>
+                    {{/hasspeechaudio}}
+                </span>
+            {{/hasspeaker}}
         </div>
     {{/hasimage}}
 
@@ -91,8 +128,32 @@
             </blockquote>
         {{/speech}}
 
-        {{#challenge}}<p class="aibs-challenge">{{challenge}}</p>{{/challenge}}
+        {{#challenge}}
+            <p class="aibs-challenge {{^challengeisquestion}}aibs-challenge-context{{/challengeisquestion}}">
+                {{challenge}}</p>
+        {{/challenge}}
 
+        {{#askwhatyoudo}}
+            <p class="aibs-challenge aibs-challenge-ask">
+                {{#str}} whatdoyoudo, mod_aibranchedscenario {{/str}}</p>
+        {{/askwhatyoudo}}
+
+        {{#iscontinue}}
+            <div class="aibs-continuewrap">
+                {{#choices}}
+                    <button type="button" class="aibs-btn aibs-btn-primary aibs-continuebtn"
+                            data-action="choose" data-choiceid="{{id}}">
+                        <span class="aibs-choice-text">{{text}}</span>
+                        <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                            <path d="M4 10h11M11 6l4 4-4 4" fill="none" stroke="currentColor"
+                                  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                {{/choices}}
+            </div>
+        {{/iscontinue}}
+
+        {{^iscontinue}}
         <fieldset class="aibs-choices">
             <legend class="aibs-visually-hidden">{{#str}} choosealegend, mod_aibranchedscenario {{/str}}</legend>
             {{#choices}}
@@ -106,5 +167,6 @@
                 </button>
             {{/choices}}
         </fieldset>
+        {{/iscontinue}}
     </div>
 </article>

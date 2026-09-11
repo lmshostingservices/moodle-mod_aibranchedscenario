@@ -24,6 +24,7 @@
 import Ajax from 'core/ajax';
 import {get_strings as getStrings, get_string as getString} from 'core/str';
 import Notification from 'core/notification';
+import Toast from 'mod_aibranchedscenario/toast';
 import ModalSaveCancel from 'core/modal_save_cancel';
 import ModalEvents from 'core/modal_events';
 
@@ -37,6 +38,7 @@ const SELECTORS = {
     error: '[data-region="error"]',
     loading: '[data-region="loading"]',
     loadingText: '[data-region="loadingtext"]',
+    loadingEta: '[data-region="loadingeta"]',
 };
 
 /**
@@ -209,7 +211,66 @@ class Wizard {
             next.hidden = step === this.stepCount;
         }
 
-        this.root.scrollIntoView({behavior: 'smooth', block: 'start'});
+        this.scrollBelowHeader(this.root);
+    }
+
+    /**
+     * How much of the top of the viewport the theme has already taken.
+     *
+     * Sites pin a course banner, a navbar, or both, to the top of the window, so scrolling
+     * a step to the top of the viewport put its heading underneath them and the teacher
+     * arrived at a step already scrolled past its own title. There is no way to ask a
+     * theme how tall its header is, so this measures what is actually painted across the
+     * top edge.
+     *
+     * @returns {Number} Height in pixels to stay clear of.
+     */
+    stickyOffset() {
+        let offset = 0;
+        const width = window.innerWidth || document.documentElement.clientWidth;
+        const probes = [width * 0.5, width * 0.15, width * 0.85];
+        probes.forEach((x) => {
+            let found;
+            try {
+                found = document.elementsFromPoint(Math.round(x), 2) || [];
+            } catch (e) {
+                found = [];
+            }
+            found.forEach((element) => {
+                if (!element || element === document.body || element === document.documentElement) {
+                    return;
+                }
+                if (this.root.contains(element)) {
+                    return;
+                }
+                const position = window.getComputedStyle(element).position;
+                if (position !== 'fixed' && position !== 'sticky') {
+                    return;
+                }
+                const rect = element.getBoundingClientRect();
+                if (rect.top <= 2 && rect.bottom > offset) {
+                    offset = rect.bottom;
+                }
+            });
+        });
+        return Math.min(offset, (window.innerHeight || 800) / 3);
+    }
+
+    /**
+     * Bring an element to rest just below whatever the theme has pinned to the top.
+     *
+     * @param {Element} element The element to bring into view.
+     * @returns {void}
+     */
+    scrollBelowHeader(element) {
+        if (!element) {
+            return;
+        }
+        const top = element.getBoundingClientRect().top + window.pageYOffset
+            - this.stickyOffset() - 16;
+        const reduced = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({top: Math.max(0, top), behavior: reduced ? 'auto' : 'smooth'});
     }
 
     /**
@@ -330,7 +391,17 @@ class Wizard {
      * @param {String} message Optional status message.
      * @returns {void}
      */
-    setBusy(busy, message) {
+    /**
+     * Show or hide the busy indicator.
+     *
+     * @param {Boolean} busy Whether work is in progress.
+     * @param {String} [message] Status text to show.
+     * @param {Boolean} [showEta] Whether to show how long this usually takes. Only the
+     *     long operations pass this: quoting minutes beside a one-second suggestion
+     *     would read as a warning rather than as reassurance.
+     * @returns {void}
+     */
+    setBusy(busy, message, showEta) {
         this.busy = busy;
         const loading = this.root.querySelector(SELECTORS.loading);
         if (loading) {
@@ -339,6 +410,10 @@ class Wizard {
         const text = this.root.querySelector(SELECTORS.loadingText);
         if (text && message) {
             text.textContent = message;
+        }
+        const eta = this.root.querySelector(SELECTORS.loadingEta);
+        if (eta) {
+            eta.hidden = !(busy && showEta);
         }
         this.root.querySelectorAll(
             '[data-action="generate"], [data-action="publish"], [data-action="populate"], [data-action="suggest"]'
@@ -359,9 +434,14 @@ class Wizard {
             Notification.exception(error);
             return;
         }
-        region.textContent = (error && error.message) ? error.message : this.strings['error:generic'];
+        const message = (error && error.message) ? error.message : this.strings['error:generic'];
+        region.textContent = message;
         region.hidden = false;
-        region.scrollIntoView({behavior: 'smooth', block: 'center'});
+        this.scrollBelowHeader(region);
+        // The region is at the top of a long form. Scrolling to it helps a sighted
+        // teacher who is already looking at the page; the toast is for the one who
+        // pressed a button at the bottom and is watching that button.
+        Toast.show(message, 'error');
     }
 
     /**
@@ -389,7 +469,8 @@ class Wizard {
             await this.call('save_source', {source: this.collect()});
             this.dirty = false;
             if (announce) {
-                Notification.addNotification({message: this.strings.saved, type: 'success'});
+                Toast.show(this.strings.saved, 'success');
+            Notification.addNotification({message: this.strings.saved, type: 'success'});
             }
         } catch (error) {
             this.showError(error);
@@ -595,6 +676,7 @@ class Wizard {
         if (input && response.suggestion) {
             input.value = response.suggestion;
         } else if (input && !response.suggestion && !replace) {
+            Toast.show(this.strings.nosuggestion, 'info');
             Notification.addNotification({message: this.strings.nosuggestion, type: 'info'});
         }
     }
@@ -713,7 +795,8 @@ class Wizard {
                 input.value = response.suggestion;
                 this.dirty = true;
             } else if (!response.suggestion) {
-                Notification.addNotification({message: this.strings.nosuggestion, type: 'info'});
+                Toast.show(this.strings.nosuggestion, 'info');
+            Notification.addNotification({message: this.strings.nosuggestion, type: 'info'});
             }
         } catch (error) {
             this.showError(error);
@@ -741,7 +824,7 @@ class Wizard {
             return false;
         }
 
-        this.setBusy(true, this.strings.generationqueued);
+        this.setBusy(true, this.strings.generationqueued, true);
         try {
             const queued = await this.call('queue_generation', {});
             await this.poll(queued.jobid);
@@ -769,8 +852,16 @@ class Wizard {
 
         const lines = [];
         if (plan) {
+            // The price comes first, because it is the thing a teacher is deciding about.
+            lines.push(await getString('confirmgenerate:price', 'mod_aibranchedscenario', {
+                price: plan.price,
+                images: plan.images,
+                narrations: plan.narrations,
+            }));
+            // Deliberately carries no credit figure of its own: the price above is the
+            // number that is deducted, and a second, smaller credit number beside it read
+            // as a contradiction rather than as extra detail.
             lines.push(await getString('confirmgenerate:cost', 'mod_aibranchedscenario', {
-                credits: plan.estimate,
                 scenes: plan.scenes,
                 images: plan.images,
             }));
@@ -822,6 +913,7 @@ class Wizard {
                 window.location.reload();
                 return true;
             }
+            Toast.show(this.strings['restore:nothing'], 'info');
             Notification.addNotification({message: this.strings['restore:nothing'], type: 'info'});
         } catch (error) {
             this.showError(error);
@@ -851,7 +943,7 @@ class Wizard {
                 return false;
             }
             if (status.status === 'running') {
-                this.setBusy(true, this.strings.generationrunning);
+                this.setBusy(true, this.strings.generationrunning, true);
             }
             if (status.status === 'ready') {
                 // A run where some or all of the images failed used to look identical
@@ -889,6 +981,7 @@ class Wizard {
         this.setBusy(true);
         try {
             await this.call('publish_scenario', {});
+            Toast.show(this.strings.published, 'success');
             Notification.addNotification({message: this.strings.published, type: 'success'});
             this.dirty = false;
         } catch (error) {
@@ -966,6 +1059,7 @@ class Wizard {
             + (content ? content.value : '');
         try {
             await navigator.clipboard.writeText(prompt);
+            Toast.show(this.strings.promptcopied, 'success');
             Notification.addNotification({message: this.strings.promptcopied, type: 'success'});
         } catch (error) {
             // Clipboard access is refused in some browsers and over plain HTTP. Showing
@@ -1039,6 +1133,7 @@ class Wizard {
                 fields: fields,
                 choices: choices,
             });
+            Toast.show(this.strings.saved, 'success');
             Notification.addNotification({message: this.strings.saved, type: 'success'});
             // Deliberately not clearing the wizard's dirty flag: this saved one scene,
             // not the wizard. Clearing it here disarmed the unsaved-changes guard for

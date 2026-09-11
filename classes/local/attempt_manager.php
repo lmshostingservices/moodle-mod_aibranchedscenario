@@ -621,8 +621,15 @@ class attempt_manager {
             if (!$chosen) {
                 continue;
             }
+            // A beat has one way on, so its event records the learner pressing Continue.
+            // Listed among the decisions it produced entries like "Continue to the next
+            // decision point" with nothing to say about them, and pushed the numbering out
+            // of step with the decision count printed directly above the list.
+            if (count($node['choices']) < 2) {
+                continue;
+            }
             $journey[] = [
-                'seq'         => (int)$event->seq,
+                'seq'         => count($journey) + 1,
                 'nodetitle'   => $node['title'] !== '' ? $node['title'] : $node['id'],
                 'choicetext'  => $chosen['text'],
                 'signal'      => $chosen['signal'],

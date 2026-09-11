@@ -92,6 +92,9 @@ class submit_choice extends external_api {
             'feedback'       => $result['feedback'],
             'feedbackparas'   => helper::paragraph_list($result['feedback']),
             'principle'      => $result['principle'],
+            // Narration for the branch the learner actually took. Stored under the choice
+            // id alongside the node clips.
+            'audiourl'       => $mediaurls['narration'][$params['choiceid']] ?? '',
             'before'         => $result['before'],
             'after'          => $result['after'],
             'finished'       => (bool)$result['finished'],
@@ -113,6 +116,7 @@ class submit_choice extends external_api {
             'feedback'        => new external_value(PARAM_TEXT, 'Instructional feedback'),
             'feedbackparas'    => helper::paragraphs_structure('Feedback as plain text; escape before use as HTML'),
             'principle'       => new external_value(PARAM_TEXT, 'Decision principle this choice tested'),
+            'audiourl'        => new external_value(PARAM_URL, 'Narration for this consequence, or empty'),
             'before'          => helper::metrics_structure(),
             'after'           => helper::metrics_structure(),
             'finished'        => new external_value(PARAM_BOOL, 'Whether the attempt has now finished'),

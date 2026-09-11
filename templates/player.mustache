@@ -91,49 +91,115 @@
 
     <div class="aibs-shell">
 
-        <header class="aibs-masthead">
-            <div class="aibs-masthead-text">
-                {{#setting}}<p class="aibs-eyebrow">{{setting}}</p>{{/setting}}
-                <h2 class="aibs-title">{{#scenariotitle}}{{scenariotitle}}{{/scenariotitle}}{{^scenariotitle}}{{title}}{{/scenariotitle}}</h2>
-                {{#subtitle}}<p class="aibs-subtitle">{{subtitle}}</p>{{/subtitle}}
-            </div>
-            <div class="aibs-masthead-side">
-                {{#enableaudio}}
-                    <button type="button" class="aibs-btn aibs-btn-ghost" data-action="mute"
-                            aria-pressed="false">{{#str}} narrationon, mod_aibranchedscenario {{/str}}</button>
-                {{/enableaudio}}
-            </div>
-        </header>
+        <div class="aibs-topbar" data-region="topbar">
+            <header class="aibs-masthead aibs-masthead-compact">
+                <div class="aibs-masthead-text">
+                    <h2 class="aibs-title">{{#scenariotitle}}{{scenariotitle}}{{/scenariotitle}}{{^scenariotitle}}{{title}}{{/scenariotitle}}</h2>
+                    <p class="aibs-titlemeta">
+                        {{#setting}}<span class="aibs-titlemeta-setting">{{setting}}</span>{{/setting}}
+                        {{#subtitle}}<span class="aibs-titlemeta-sub">{{subtitle}}</span>{{/subtitle}}
+                    </p>
+                </div>
+                <div class="aibs-masthead-side">
+                    {{#enableaudio}}
+                        <button type="button" class="aibs-audiobtn" data-action="mute"
+                                data-region="mutebutton" aria-pressed="true"
+                                title="{{#str}} narration:tipon, mod_aibranchedscenario {{/str}}"
+                                aria-label="{{#str}} narration:tipon, mod_aibranchedscenario {{/str}}">
+                            <span class="aibs-audiobtn-icon" aria-hidden="true">
+                                <span class="aibs-audiobtn-wave"></span>
+                            </span>
+                            <span class="aibs-audiobtn-text" data-region="mutelabel">
+                                {{#str}} narration:on, mod_aibranchedscenario {{/str}}</span>
+                        </button>
+                    {{/enableaudio}}
+                </div>
+            </header>
 
-        {{#showtimeline}}
-            <nav class="aibs-rail" aria-label="{{#str}} progress, mod_aibranchedscenario {{/str}}">
-                <ol class="aibs-rail-list" data-region="rail">
-                    {{#stages}}
-                        <li class="aibs-rail-step" data-step="{{index}}">
-                            <span class="aibs-rail-dot" aria-hidden="true"></span>
-                            <span class="aibs-rail-label">{{index}}</span>
-                        </li>
-                    {{/stages}}
-                </ol>
-                <p class="aibs-rail-status" data-region="railstatus" role="status" aria-live="polite"></p>
-            </nav>
-        {{/showtimeline}}
+            <div class="aibs-statusbar">
+                {{#showtimeline}}
+                    <nav class="aibs-rail" aria-label="{{#str}} progress, mod_aibranchedscenario {{/str}}">
+                        <p class="aibs-rail-status" data-region="railstatus" role="status" aria-live="polite"></p>
+                        <ol class="aibs-rail-list" data-region="rail">
+                            {{#stages}}
+                                <li class="aibs-rail-step" data-step="{{index}}">
+                                    <span class="aibs-rail-dot" aria-hidden="true"></span>
+                                    <span class="aibs-rail-label">{{index}}</span>
+                                </li>
+                            {{/stages}}
+                        </ol>
+                    </nav>
+                {{/showtimeline}}
+
+                {{#showmetrics}}
+                    <div class="aibs-meters" data-region="meters">
+                        {{#metrics}}
+                            <div class="aibs-meter" data-metric="{{key}}">
+                                <span class="aibs-meter-label">{{label}}</span>
+                                <div class="aibs-meter-track" role="img" aria-label="{{label}}">
+                                    <div class="aibs-meter-fill" data-region="meterfill"
+                                         style="width: {{value}}%"></div>
+                                </div>
+                                <span class="aibs-meter-value" data-region="metervalue">{{value}}</span>
+                            </div>
+                        {{/metrics}}
+                    </div>
+                {{/showmetrics}}
+            </div>
+        </div>
 
         {{#showmetrics}}
-            <div class="aibs-meters" data-region="meters">
-                {{#metrics}}
-                    <div class="aibs-meter" data-metric="{{key}}">
-                        <div class="aibs-meter-head">
-                            <span class="aibs-meter-label">{{label}}</span>
-                            <span class="aibs-meter-value" data-region="metervalue">{{value}}</span>
+            <details class="aibs-legend">
+                <summary class="aibs-legend-summary">
+                    <span class="aibs-legend-icon" aria-hidden="true"></span>
+                    {{#str}} metrics:explain, mod_aibranchedscenario {{/str}}
+                </summary>
+                <div class="aibs-legend-body">
+                    <p class="aibs-legend-lead">{{#str}} metrics:lead, mod_aibranchedscenario {{/str}}</p>
+                    <div class="aibs-legend-grid">
+                        <div class="aibs-legend-item" data-metric="engagement">
+                            <span class="aibs-legend-name">
+                                {{#str}} metric:engagement, mod_aibranchedscenario {{/str}}</span>
+                            <p class="aibs-legend-desc">
+                                {{#str}} metric:engagementdesc, mod_aibranchedscenario {{/str}}</p>
+                            <p class="aibs-legend-move aibs-legend-up">
+                                <span>{{#str}} metrics:up, mod_aibranchedscenario {{/str}}</span>
+                                {{#str}} metric:engagementup, mod_aibranchedscenario {{/str}}</p>
+                            <p class="aibs-legend-move aibs-legend-down">
+                                <span>{{#str}} metrics:down, mod_aibranchedscenario {{/str}}</span>
+                                {{#str}} metric:engagementdown, mod_aibranchedscenario {{/str}}</p>
                         </div>
-                        <div class="aibs-meter-track" role="img"
-                             aria-label="{{label}}">
-                            <div class="aibs-meter-fill" data-region="meterfill" style="width: {{value}}%"></div>
+                        <div class="aibs-legend-item" data-metric="trust">
+                            <span class="aibs-legend-name">
+                                {{#str}} metric:trust, mod_aibranchedscenario {{/str}}</span>
+                            <p class="aibs-legend-desc">
+                                {{#str}} metric:trustdesc, mod_aibranchedscenario {{/str}}</p>
+                            <p class="aibs-legend-move aibs-legend-up">
+                                <span>{{#str}} metrics:up, mod_aibranchedscenario {{/str}}</span>
+                                {{#str}} metric:trustup, mod_aibranchedscenario {{/str}}</p>
+                            <p class="aibs-legend-move aibs-legend-down">
+                                <span>{{#str}} metrics:down, mod_aibranchedscenario {{/str}}</span>
+                                {{#str}} metric:trustdown, mod_aibranchedscenario {{/str}}</p>
+                        </div>
+                        <div class="aibs-legend-item" data-metric="tension">
+                            <span class="aibs-legend-name">
+                                {{#str}} metric:tension, mod_aibranchedscenario {{/str}}</span>
+                            <p class="aibs-legend-desc">
+                                {{#str}} metric:tensiondesc, mod_aibranchedscenario {{/str}}</p>
+                            <p class="aibs-legend-move aibs-legend-up">
+                                <span>{{#str}} metrics:up, mod_aibranchedscenario {{/str}}</span>
+                                {{#str}} metric:tensionup, mod_aibranchedscenario {{/str}}</p>
+                            <p class="aibs-legend-move aibs-legend-down">
+                                <span>{{#str}} metrics:down, mod_aibranchedscenario {{/str}}</span>
+                                {{#str}} metric:tensiondown, mod_aibranchedscenario {{/str}}</p>
                         </div>
                     </div>
-                {{/metrics}}
-            </div>
+                    <p class="aibs-legend-note">
+                        {{#str}} metrics:noright, mod_aibranchedscenario {{/str}}</p>
+                    <p class="aibs-legend-note">
+                        {{#str}} metrics:gradedby, mod_aibranchedscenario {{/str}}</p>
+                </div>
+            </details>
         {{/showmetrics}}
 
         <div class="aibs-stage">

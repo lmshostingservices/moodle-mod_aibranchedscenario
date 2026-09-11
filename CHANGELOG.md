@@ -2,6 +2,289 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.12.1] - 2026-09-11
+
+### Fixed
+
+- **Release pipeline blocker.** The four price settings were accepting `PARAM_RAW_TRIMMED`,
+  which is the wrong type for a number and is refused on review. They are `PARAM_INT` now,
+  with the credits-to-currency rate as `PARAM_FLOAT`, so a value that is not a number is
+  refused where it is typed rather than quietly falling back when it is read. The
+  validation on the reading side is kept: a setting can still be wrong in the database,
+  and a price that falls back is better than a price of nothing.
+- Two multi-line `mtrace()` calls in the scheduled tasks put their first argument on the
+  same line as the opening parenthesis. Style only.
+
+918 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
+## [v1.12.0] - 2026-09-11
+
+The version number this run of work is published under. No code changes from v1.11.1:
+the slide player, the character voices, the click-to-hear avatar, the outcome cues, the
+progress rings, the pricing card and the narration savings are all as described in the
+three entries below.
+
+918 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
+## [v1.11.1] - 2026-09-11
+
+### Changed
+
+- **The price is quoted in credits, with the cash beside it**: 200 credits ($20 USD) for a
+  scenario with images and narration, 100 credits ($10 USD) for the scenario alone, 150
+  credits ($15 USD) with either one. Credits are what a balance is held in and what is
+  actually deducted, so they lead; the conversion rate is a setting, so a site can quote
+  its own currency.
+- **One credit figure at the moment of spending, not two.** The confirmation used to show
+  the price and, beside it, what the run costs this site to produce. Those are different
+  numbers and the difference is not a teacher's business. The price is now the only credit
+  figure shown, and it is what the balance is tested against; the production cost is still
+  calculated and is still returned to the plugin, just never displayed.
+
+### Testing
+
+918 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
+## [v1.11.0] - 2026-09-11
+
+A price on the thing, said out loud before the button is pressed.
+
+### Added
+
+- **What a scenario costs, on the wizard.** All four prices are shown before anything is
+  filled in, with the one matching the current settings marked: scenario alone $10 USD,
+  with scene images $15, with narration $15, with both $20. The same price leads the
+  generation confirmation, with the number of images and narration clips it covers.
+- **Prices are site settings.** Base, images and narration are three amounts that add up,
+  with a currency code, so a partner reselling this can set their own. These are prices,
+  not the LMS Labs credit tariff: credits are what the service charges the site, and these
+  are what the site charges for the finished scenario. Both are now shown at generation
+  time, which is the only place they meet.
+- **How much is narrated is now a choice.** Scenes and character lines only, or everything
+  including every branch of every decision. Narration is most of what a scenario costs to
+  generate, and the cheaper setting is the default.
+
+### Changed
+
+- **Two narration savings that cost nothing.** A beat's single "continue" consequence is
+  filler and is no longer recorded at all. A spoken line with no named character behind it
+  would have been read in the narrator's voice anyway, so it stays inside the narrator's
+  clip instead of becoming a second one; only a named character with a gender on record
+  gets a clip of their own.
+- The clip estimate shown to a teacher is now the number actually generated, rather than
+  one per decision, which was wrong in both directions.
+
+### Testing
+
+41 new checks, 912 in total on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing.
+CodeSniffer clean.
+
+### Note
+
+- A five-decision scenario with three choices at each: about 40 clips before this release,
+  about 25 with everything narrated, about 10 on the default setting. The remaining lever
+  is generating a consequence clip the first time a learner actually reaches it rather than
+  generating all of them up front, which would cut the typical bill by roughly two thirds
+  again at the cost of a wait on first play. Not built.
+- The credit tariff in `schema::tariff()` still does not match the route's own source.
+  That is a separate question from the prices above.
+
+## [v1.10.0] - 2026-09-11
+
+Everything still outstanding from a full playthrough, in one release.
+
+### Added
+
+- **The slide player.** A decision is now the picture on the left and the decision on the
+  right, so the options are on screen with the scene rather than below the fold.
+- **Characters have their own voices.** Three settings — narrator, male character, female
+  character. The narrator reads the situation; a character's line is its own clip in the
+  voice that matches the gender recorded for them, and falls back to the narrator when the
+  scenario names nobody. A site that had set a voice before keeps it as the narrator.
+- **Click the avatar to hear what they are thinking.** The speaker appears on the scene
+  with their initial, their name and a play mark, and the ring around it keeps pulsing
+  until it has been played.
+- **The way on waits for the screen to be heard.** Continue is held until the narration and
+  the character's line have both finished. Only Continue: the lettered options are never
+  taken away from the learner. Muting, a browser that refuses to play, or a screen with no
+  recording all hand it straight back.
+- **Success and failure cues.** A short rising cue on a well-judged screen, a falling one
+  on a costly screen, nothing on a mixed one. Synthesised in the browser, so the plugin
+  still ships no audio files, and it follows the mute control.
+- **Progress rings.** The consequence screen's rows of numbers are now three traffic-light
+  rings that fill from where the metric was and count to where it is. Every metric is
+  shown, including the ones that did not move. Neither animation runs for a learner who has
+  asked for reduced motion.
+
+### Fixed
+
+- **Costly and well judged used the same tick.** Each signal now has its own mark: a tick,
+  a dash, a warning triangle.
+- **Scene images were generic.** The brief was throwing away every quoted line — the most
+  concrete thing on the page — and never mentioned what the scene was. It now carries the
+  spoken line as described speech and names the moment.
+- **Images came back dark.** Photorealistic is now the default style rather than cinematic,
+  and both photographic styles ask for bright, evenly lit, true-to-life colour.
+- **Print or save.** The handler now catches a frame that is not allowed to open a print
+  dialogue, tries the page it sits in, and says plainly when the browser refuses. I could
+  not reproduce the original failure, so this is a defence rather than a confirmed fix.
+
+### Testing
+
+57 new checks, 871 in total on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing.
+CodeSniffer clean.
+
+### Note
+
+- Narration now costs roughly four times what it did: a five-decision scenario with three
+  choices at each goes from about 10 clips to about 40. The tariff needs a decision before
+  this ships.
+- The content itself — tension, characters who say what they think, feedback that gives the
+  mechanism — and the spelling of the chosen language are generated by the LMS Labs service,
+  not by this plugin. The brief for those is delivered alongside this release.
+
+## [v1.9.2] - 2026-09-11
+
+Five things a learner sees on a real playthrough, all reported from the same scenario.
+
+### Fixed
+
+- **A well-judged choice was showing a red penalty.** Engagement +12 and Trust +12 came up
+  green while Tension -8 came up red on the same screen, because the change was coloured by
+  its sign. Tension is the one metric whose good direction is downwards. It is now coloured
+  by whether the learner gained or lost, and the number is spelled out as "reduced by 8" or
+  "raised by 6" rather than left as a bare signed figure to be read as a score.
+- **The question above the options was not a question.** Authors write the challenge line
+  as an instruction as often as not, and "Ensure Jamie understands the project guidelines."
+  in bold directly above A, B and C read as the first of them. When the line does not end in
+  a question mark it now steps back to context and the player asks "What do you do?" in its
+  place. The authoring prompt also now requires that line to be a question.
+- **The debrief numbered the Continue presses as decisions.** A beat has one way on, so its
+  event recorded a press of Continue; listed among the decisions it produced entries reading
+  "Continue to the next decision point" with nothing to say about them, and pushed the
+  numbering out of step with the decision count printed above the list. Only decisions are
+  listed now, numbered from one.
+- **Narration stopped on every second screen.** Only the decision screens had a clip, so the
+  voice cut out on each consequence while the control still said "Narration on". Consequence
+  screens are now narrated as well, one clip per branch since which one is heard is not known
+  until the learner chooses. A screen with no clip puts the control into its "nothing to play
+  here" state rather than claiming to be playing.
+
+### Note
+
+- Consequence narration is new audio, not new storage: a scenario published before this
+  release has no clip for its branches and stays silent on those screens until it is
+  generated again.
+- It also costs more to generate. A five-decision scenario with three choices at each goes
+  from about 10 narration clips to about 40. That is a pricing decision, not a technical one,
+  so the per-operation tariff needs a look before this ships.
+
+## [v1.9.1] - 2026-09-11
+
+### Fixed
+
+- **A narrative beat looked like a multiple-choice question with one answer.** A beat has
+  one synthesised way on, and it was being rendered in the lettered choice list, so
+  "A — Move forward to the next decision point" read as an option to weigh rather than a
+  way on. It is now a single centred button with no letter.
+- **The chosen language now decides the spelling.** The authoring prompt said to write in
+  "the language and spelling of the source content", so a teacher who chose Australian
+  English got "Finalizing the Meeting" whenever the material they pasted was American. The
+  rule now names the chosen variety as the one that governs — every word of the scenario,
+  not just its prose — with the -ise, -our and -re conventions spelled out and mixing them
+  forbidden.
+
+### Testing
+
+11 new checks: a beat is marked as one way on and a decision is not, the template renders
+it as a button outside the choice fieldset and without an option letter, and the prompt
+states that the source content's own spelling does not get a vote, names the conventions,
+gives worked spellings and forbids mixing them.
+
+786 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit 45 tests / 283 assertions passing.
+CodeSniffer clean.
+
+### Note
+
+- The spelling rule applies to the draft-elsewhere prompt, which is this plugin's. Scenario
+  generation uses the service's own system prompt, so the same rule has to be added there
+  before an AI-generated scenario respects it.
+
+## [v1.9.0] - 2026-09-11
+
+The first release driven by watching a real generated scenario being played.
+
+### Added
+
+- **The room dynamics explain themselves.** A quiet "What these mean" opens a panel saying
+  what engagement, trust and tension are, what raises and lowers each, that they are not
+  the grade, and what the grade actually comes from. It says plainly that there is no right
+  answer to find — there are choices that land and choices that cost you something.
+- **Every wizard step says what it is for** before it asks for anything.
+- **Generation says how long it usually takes**, measured from this site's own completed
+  runs rather than a number written into the code, with the extremes trimmed once there are
+  enough samples. Until a site has three successful runs it uses the shipped estimate and
+  does not claim to know.
+- **Confirmation now appears where the button is.** Moodle's notifications render at the
+  top of the document; the wizard's buttons are at the bottom of a long form, so Publish put
+  its success message off screen and the button read as broken. A toast appears beside the
+  action as well. Moodle's notification is still raised, not replaced.
+
+### Changed
+
+- **The top bar is half the height and stays put.** Title, setting, subtitle, progress and
+  the three dynamics were five stacked blocks costing about 300px at the top of every
+  scene; they are now one strip of about 135px that sticks while the scene scrolls under
+  it. It parks itself below whatever the site theme has pinned above it, measured at
+  runtime, because no theme publishes its header height.
+- **Narration is a control rather than a line of text.** It was a status label that happened
+  to be a button, which is why it read as "narration is off" rather than "turn narration
+  off". It now has an icon, hover text and four honest states.
+- Moving to a new scene or a new wizard step now lands the content below the theme's header
+  rather than behind it.
+
+### Fixed
+
+- **A refused autoplay was being swallowed.** Browsers will not start sound before the
+  person has interacted with the page; the rejection was caught and discarded, leaving a
+  silent player and a control claiming narration was on. That is almost certainly why
+  narration was never heard. The refusal is now visible, and the control becomes the way to
+  start it.
+- **A choice with no consequence is refused.** The generator returned one, and the learner
+  was shown a signal word, a Continue button, and nothing else — a screen that says nothing
+  about what their decision did. A blank screen is worse than a rejected scenario, because
+  nobody finds out.
+- **Decision buttons keep their own colour in every state.** A theme shipping
+  `button { color: #fff !important }` turned resting choice text white on white, measured at
+  a contrast of 1.0. The hover work covered hover and focus and left rest, chosen and
+  disabled to be inherited, which is how the same fault came back wearing a different state.
+
+### Changed — authoring prompt
+
+- The draft-elsewhere prompt now demands the mechanism rather than a restatement. "You
+  addressed Jamie's confusion directly" tells a learner nothing they did not just read;
+  feedback must say what the behaviour did to the named person and what that changes next.
+  The worked examples were rewritten to model it, since a rule the examples ignore is
+  advice.
+
+### Testing
+
+A new probe measures the decision buttons in every state a learner can put them in —
+resting, hover, chosen and disabled — against four hostile theme rules. The hover probe ran
+only on the authoring wizard, so the player's own buttons had never been measured at all,
+which is exactly where the fault was. Resting and hover now read 17.43 and 15.36 under every
+rule tried, including a blanket `!important`.
+
+775 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit 45 tests / 283 assertions passing.
+CodeSniffer clean.
+
+### Note
+
+- **The chosen state is defended but not measured.** The probe cannot catch it: choosing
+  replaces the whole block within a few hundred milliseconds. The fix restates colour and
+  background on that state the same way as the others, but it has not been observed under a
+  hostile rule, and should not be described as verified.
+
 ## [v1.8.1] - 2026-09-11
 
 **A generated scenario reached the plugin for the first time, and the plugin rejected it.**

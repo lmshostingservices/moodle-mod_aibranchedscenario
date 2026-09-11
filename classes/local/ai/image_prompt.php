@@ -69,10 +69,10 @@ class image_prompt {
      */
     protected static function style_phrases(): array {
         return [
-            'photorealistic' => 'photorealistic documentary photography, natural available light, '
-                . '35mm lens, shallow depth of field, muted realistic colour',
-            'cinematic'      => 'cinematic still, anamorphic 40mm lens, soft key light with gentle '
-                . 'falloff, restrained teal and amber palette, filmic grain',
+            'photorealistic' => 'photorealistic documentary photography, bright natural daylight, '
+                . 'evenly lit, 35mm lens, shallow depth of field, true-to-life colour',
+            'cinematic'      => 'cinematic still, anamorphic 40mm lens, bright soft key light with '
+                . 'gentle falloff, restrained teal and amber palette, filmic grain',
             'illustration'   => 'clean editorial illustration, flat shapes with subtle texture, '
                 . 'limited three-colour palette, confident line work',
             'watercolour'    => 'loose watercolour illustration, visible paper grain, soft bleeding '
@@ -266,7 +266,23 @@ class image_prompt {
             ? 'This is the closing moment of the set.'
             : ($stage <= 1 ? 'This is an early moment in the set.' : 'This is a later moment in the set.');
 
-        return $shot . ' ' . ($action !== '' ? 'What is happening: ' . $action . ' ' : '') . $mood;
+        // What a character says, and what the learner is being asked, are the two lines
+        // that make one scene different from the next. Briefing only the situation prose
+        // produced a set of interchangeable meeting-room pictures.
+        $spoken = self::condense((string)($node['facilitatorspeech'] ?? ''));
+        if ($crisis && !empty($node['crisisvariant']['facilitatorspeech'])) {
+            $spoken = self::condense((string)$node['crisisvariant']['facilitatorspeech']);
+        }
+        $said = $spoken !== ''
+            ? 'One person is saying, in substance: ' . $spoken
+                . ' Show them mid-sentence and the others reacting to it. '
+            : '';
+
+        $moment = trim((string)($node['title'] ?? ''));
+        $named = $moment !== '' ? 'This moment is ' . $moment . '. ' : '';
+
+        return $shot . ' ' . $named
+            . ($action !== '' ? 'What is happening: ' . $action . ' ' : '') . $said . $mood;
     }
 
     /**
@@ -316,8 +332,17 @@ class image_prompt {
         if ($text === '') {
             return '';
         }
-        // Drop quoted speech.
-        $text = trim((string)preg_replace('/["\x{201C}\x{201D}][^"\x{201C}\x{201D}]*["\x{201C}\x{201D}]/u', '', $text));
+        // Quoted speech used to be dropped, on the reasoning that a quote in an image
+        // brief invites lettering or a speech bubble. What it actually did was remove the
+        // most concrete thing on the page: a scene whose whole content was a line of
+        // dialogue condensed to nothing, and the model was left inventing a generic
+        // office. The quotation marks come off instead, so the words describe what is
+        // being said while the safety direction below keeps text out of the picture.
+        $text = trim((string)preg_replace(
+            '/["\x{201C}\x{201D}]([^"\x{201C}\x{201D}]*)["\x{201C}\x{201D}]/u',
+            '$1',
+            $text
+        ));
         $sentences = preg_split('/(?<=[.!?])\s+/u', $text) ?: [];
         $kept = array_slice(array_filter(array_map('trim', $sentences)), 0, 2);
         return \core_text::substr(implode(' ', $kept), 0, 600);

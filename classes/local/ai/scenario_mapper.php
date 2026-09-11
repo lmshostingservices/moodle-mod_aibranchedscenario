@@ -132,6 +132,10 @@ class scenario_mapper {
             'title'             => (string)($node['title'] ?? ''),
             'situation'         => (string)($node['content'] ?? ($node['situation'] ?? '')),
             'facilitatorspeech' => (string)($node['facilitatorSpeech'] ?? ''),
+            // Who says that line. The service may name them on the node or inside the
+            // speech object; either way the name is matched against the cast so the line
+            // can be spoken in that person's voice.
+            'speaker'           => (string)($node['speaker'] ?? ($node['speakerName'] ?? '')),
             'challenge'         => (string)($node['challenge'] ?? ''),
         ];
 

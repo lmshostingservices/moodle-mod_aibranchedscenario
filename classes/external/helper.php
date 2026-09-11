@@ -221,6 +221,14 @@ class helper {
             'situationparas' => self::paragraph_list($situation),
             'speech'        => $speech,
             'challenge'     => $challenge,
+            // Authors write the challenge line as an instruction about as often as they
+            // write it as a question ("Ensure Jamie understands the guidelines."), and sat
+            // directly above the lettered options that reads as a statement with answers
+            // under it. When it is not already a question the player adds the question
+            // itself rather than leaving the learner to infer one.
+            'challengeisquestion' => substr(rtrim($challenge), -1) === '?',
+            'askwhatyoudo'  => substr(rtrim($challenge), -1) !== '?'
+                && !($node['type'] === 'beat' && count($choices) === 1),
             'crisis'        => $crisis,
             'outcome'       => $node['outcome'],
             'summary'       => $node['summary'],
@@ -235,7 +243,14 @@ class helper {
                 ? $node['imagealt']
                 : \mod_aibranchedscenario\local\ai\image_prompt::alt_text($node, $situation, $crisis),
             'audiourl'      => $mediaurls['narration'][$node['id']] ?? '',
+            // The character's own line, played when the learner clicks the avatar.
+            'speechurl'     => $mediaurls['narration'][$node['id'] . '_said'] ?? '',
+            'speaker'       => (string)($node['speaker'] ?? ''),
             'choices'       => $choices,
+            // A beat carries the story forward and has one synthesised way on. Rendered
+            // in the lettered choice list it read as a multiple-choice question with a
+            // single answer, which is not a decision and should not look like one.
+            'iscontinue'    => $node['type'] === 'beat' && count($choices) === 1,
         ];
     }
 
@@ -264,6 +279,14 @@ class helper {
             'situationparas' => self::paragraphs_structure('Situation rendered as plain text; escape before use as HTML'),
             'speech'        => new external_value(PARAM_TEXT, 'What a character says'),
             'challenge'     => new external_value(PARAM_TEXT, 'The direct question put to the learner'),
+            'challengeisquestion' => new external_value(
+                PARAM_BOOL,
+                'Whether the challenge line is already phrased as a question'
+            ),
+            'askwhatyoudo'  => new external_value(
+                PARAM_BOOL,
+                'Whether the player should add the question above the options itself'
+            ),
             'crisis'        => new external_value(PARAM_BOOL, 'Whether the crisis variant is showing'),
             'outcome'       => new external_value(PARAM_ALPHA, 'Outcome band for terminal nodes'),
             'summary'       => new external_value(PARAM_TEXT, 'Outcome summary text'),
@@ -271,6 +294,12 @@ class helper {
             'imageurl'      => new external_value(PARAM_URL, 'Scene image URL, or empty'),
             'imagealt'      => new external_value(PARAM_TEXT, 'Scene image alternative text'),
             'audiourl'      => new external_value(PARAM_URL, 'Narration audio URL, or empty'),
+            'speechurl'     => new external_value(PARAM_URL, 'The speaker\'s own line, or empty'),
+            'speaker'       => new external_value(PARAM_TEXT, 'Who says the spoken line, or empty'),
+            'iscontinue'    => new external_value(
+                PARAM_BOOL,
+                'Whether this node offers one way on rather than a decision'
+            ),
             'choices'       => new external_multiple_structure(
                 new external_single_structure([
                     'id'     => new external_value(PARAM_ALPHANUMEXT, 'Choice identifier'),

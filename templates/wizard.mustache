@@ -109,10 +109,33 @@
             <span class="aibs-spinner" aria-hidden="true"></span>
             <span class="aibs-loading-text" data-region="loadingtext">
                 {{#str}} working, mod_aibranchedscenario {{/str}}</span>
+            <span class="aibs-loading-eta" data-region="loadingeta" hidden>{{generationeta}}</span>
         </div>
+
+        <section class="aibs-card aibs-pricing" data-region="pricing">
+            <div class="aibs-pricing-head">
+                <h3 class="aibs-h3">{{#str}} pricing:heading, mod_aibranchedscenario {{/str}}</h3>
+                <span class="aibs-pricing-now">{{pricing.amount}}</span>
+            </div>
+            <p class="aibs-pricing-lead">{{#str}} pricing:lead, mod_aibranchedscenario {{/str}}</p>
+            <ul class="aibs-pricing-list">
+                {{#pricing.rows}}
+                    <li class="aibs-pricing-row {{#current}}aibs-is-current{{/current}}">
+                        <span class="aibs-pricing-label">{{label}}</span>
+                        <span class="aibs-pricing-amount">{{amount}}</span>
+                        {{#current}}
+                            <span class="aibs-chip aibs-chip-quiet">
+                                {{#str}} pricing:yours, mod_aibranchedscenario {{/str}}</span>
+                        {{/current}}
+                    </li>
+                {{/pricing.rows}}
+            </ul>
+            <p class="aibs-fineprint">{{#str}} pricing:note, mod_aibranchedscenario {{/str}}</p>
+        </section>
 
         <section class="aibs-card" data-region="step" data-step="1">
             <h3 class="aibs-h3">{{#str}} step:source, mod_aibranchedscenario {{/str}}</h3>
+            <p class="aibs-step-lead">{{#str}} step:sourcelead, mod_aibranchedscenario {{/str}}</p>
 
             <div class="aibs-field">
                 <label class="aibs-field-label" for="aibs-sourcecontent">
@@ -191,6 +214,7 @@
 
         <section class="aibs-card" data-region="step" data-step="2" hidden>
             <h3 class="aibs-h3">{{#str}} step:scene, mod_aibranchedscenario {{/str}}</h3>
+            <p class="aibs-step-lead">{{#str}} step:scenelead, mod_aibranchedscenario {{/str}}</p>
 
             <div class="aibs-field">
                 <span class="aibs-field-label" id="aibs-setting-label">
@@ -237,6 +261,7 @@
 
         <section class="aibs-card" data-region="step" data-step="3" hidden>
             <h3 class="aibs-h3">{{#str}} step:challenge, mod_aibranchedscenario {{/str}}</h3>
+            <p class="aibs-step-lead">{{#str}} step:challengelead, mod_aibranchedscenario {{/str}}</p>
 
             <div class="aibs-field">
                 <label class="aibs-field-label" for="aibs-centralproblem">
@@ -276,6 +301,7 @@
 
         <section class="aibs-card" data-region="step" data-step="4" hidden>
             <h3 class="aibs-h3">{{#str}} step:people, mod_aibranchedscenario {{/str}}</h3>
+            <p class="aibs-step-lead">{{#str}} step:peoplelead, mod_aibranchedscenario {{/str}}</p>
 
             <div class="aibs-field">
                 <label class="aibs-field-label" for="aibs-participantrole">
@@ -318,6 +344,7 @@
 
         <section class="aibs-card" data-region="step" data-step="5" hidden>
             <h3 class="aibs-h3">{{#str}} step:design, mod_aibranchedscenario {{/str}}</h3>
+            <p class="aibs-step-lead">{{#str}} step:designlead, mod_aibranchedscenario {{/str}}</p>
 
             <div class="aibs-field">
                 <label class="aibs-field-label" for="aibs-decisions">
@@ -384,6 +411,7 @@
 
         <section class="aibs-card" data-region="step" data-step="6" hidden>
             <h3 class="aibs-h3">{{#str}} step:build, mod_aibranchedscenario {{/str}}</h3>
+            <p class="aibs-step-lead">{{#str}} step:buildlead, mod_aibranchedscenario {{/str}}</p>
             <p class="aibs-field-hint">{{#str}} generateexplain, mod_aibranchedscenario {{/str}}</p>
             {{#hasdraft}}
                 <p class="aibs-field-hint">{{#str}} reviewdrafthint, mod_aibranchedscenario {{/str}}</p>

@@ -21,19 +21,26 @@
 
     Classes required for JS:
     * aibs-consequence
+    * aibs-ring-fill
+    * aibs-ring-value
 
     Data attributes required for JS:
     * data-action="continue"
+    * data-from, data-to on the ring value
+    * data-dash on the ring fill
 
     Context variables required for this template:
     * signal string positive, neutral or negative
     * signalclass string CSS modifier for the signal
     * signallabel string Translated signal label
+    * ispositive bool Whether the signal is positive
+    * isneutral bool Whether the signal is neutral
+    * isnegative bool Whether the signal is negative
     * consequenceparas array What happened, one entry per paragraph
     * feedbackparas string Why it mattered, array of plain-text paragraphs
     * hasfeedback bool Whether feedback is present
     * principle string Decision principle tested, or empty
-    * deltas array Metric movements caused by the decision
+    * deltas array One entry per metric, each with its ring geometry
     * finished bool Whether this was the last decision
     * continuelabel string Label for the continue button
 
@@ -42,11 +49,15 @@
         "signal": "negative",
         "signalclass": "aibs-signal-negative",
         "signallabel": "Costly",
+        "ispositive": false,
+        "isneutral": false,
+        "isnegative": true,
         "consequenceparas": ["At 3:15 pm another employee starts the machine."],
         "feedbackparas": ["A fault that can injure someone is logged immediately."],
         "hasfeedback": true,
         "principle": "Report faults before the next shift",
-        "deltas": [{"label": "Trust", "before": 50, "after": 38, "down": true, "up": false, "same": false, "change": "-12"}],
+        "deltas": [{"label": "Trust", "before": 50, "after": 38, "change": "down 12",
+            "tone": "aibs-tone-bad", "dash": "66.9 175.9", "good": false, "bad": true, "same": false}],
         "finished": false,
         "continuelabel": "Continue"
     }
@@ -55,11 +66,27 @@
 
     <div class="aibs-consequence-head">
         <span class="aibs-signal">
-            <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-                <circle cx="10" cy="10" r="7.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
-                <path d="M6.6 10.2 9 12.6l4.4-5" fill="none" stroke="currentColor" stroke-width="1.7"
-                      stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            {{#ispositive}}
+                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <circle cx="10" cy="10" r="7.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M6.6 10.2 9 12.6l4.4-5" fill="none" stroke="currentColor" stroke-width="1.7"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            {{/ispositive}}
+            {{#isneutral}}
+                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <circle cx="10" cy="10" r="7.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M6.4 10h7.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+            {{/isneutral}}
+            {{#isnegative}}
+                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <path d="M10 2.6 18.4 17H1.6L10 2.6Z" fill="none" stroke="currentColor"
+                          stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="M10 7.6v4.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    <circle cx="10" cy="14.4" r="0.95" fill="currentColor"/>
+                </svg>
+            {{/isnegative}}
             {{signallabel}}
         </span>
         {{#principle}}<span class="aibs-chip aibs-chip-quiet">{{principle}}</span>{{/principle}}
@@ -67,22 +94,22 @@
 
     <div class="aibs-prose aibs-prose-lead">{{#consequenceparas}}<p>{{.}}</p>{{/consequenceparas}}</div>
 
-    {{#deltas}}
-        <div class="aibs-delta-row">
-            <span class="aibs-delta-label">{{label}}</span>
-            <span class="aibs-delta-values">
-                <span class="aibs-delta-before">{{before}}</span>
-                <svg class="aibs-icon aibs-delta-arrow" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-                    <path d="M4 10h11m-4.4-4.6L15.2 10l-4.6 4.6" fill="none" stroke="currentColor"
-                          stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span class="aibs-delta-after {{#up}}aibs-up{{/up}}{{#down}}aibs-down{{/down}}{{#same}}aibs-same{{/same}}">
-                    {{after}}
+    <ul class="aibs-rings">
+        {{#deltas}}
+            <li class="aibs-ring {{tone}}">
+                <span class="aibs-ring-dial">
+                    <svg viewBox="0 0 72 72" aria-hidden="true" focusable="false">
+                        <circle class="aibs-ring-track" cx="36" cy="36" r="28"/>
+                        <circle class="aibs-ring-fill" cx="36" cy="36" r="28"
+                                data-dash="{{dash}}" data-startdash="{{startdash}}"/>
+                    </svg>
+                    <span class="aibs-ring-value" data-from="{{before}}" data-to="{{after}}">{{before}}</span>
                 </span>
-                <span class="aibs-delta-change">{{change}}</span>
-            </span>
-        </div>
-    {{/deltas}}
+                <span class="aibs-ring-label">{{label}}</span>
+                <span class="aibs-ring-change {{#good}}aibs-up{{/good}}{{#bad}}aibs-down{{/bad}}">{{change}}</span>
+            </li>
+        {{/deltas}}
+    </ul>
 
     {{#hasfeedback}}
         <div class="aibs-feedback">

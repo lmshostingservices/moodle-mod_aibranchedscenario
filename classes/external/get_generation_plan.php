@@ -72,10 +72,29 @@ class get_generation_plan extends external_api {
         $wantsaudio = !empty($scenario->enableaudio) && get_config('mod_aibranchedscenario', 'allowaudio');
 
         $images = $wantsimages ? $scenes : 0;
-        $narrations = $wantsaudio ? $decisions : 0;
-        $estimate = $tariff['scenario']
+        // What the speech bill actually looks like: one clip for the situation on every
+        // node that is not an ending, one for each named character's line, and one for
+        // each branch of a decision when consequence narration is on. Beats are not
+        // counted: their single "continue" consequence is filler and is never recorded.
+        $narrations = 0;
+        if ($wantsaudio) {
+            $narrations = ($scenes - 3) + $decisions;
+            if (get_config('mod_aibranchedscenario', 'narrationscope') === 'full') {
+                $narrations += $decisions * 3;
+            }
+        }
+        // What the run costs this site to produce, which is not what the teacher pays and
+        // is not shown to them. It is kept because the daily allowance is a budget of
+        // service operations rather than of sales.
+        $servicecost = $tariff['scenario']
             + ($images * $tariff['image'])
             + ($narrations * $tariff['speech']);
+
+        // The price is what is deducted, so it is the number the balance has to cover.
+        // Showing the teacher two different credit figures on one dialogue - what they are
+        // charged and what it costs us to make - is how a support ticket starts.
+        $price = schema::price_for($wantsimages, $wantsaudio);
+        $estimate = (int)$price['total'];
 
         $provider = new lmslabs_provider();
         $status = $provider->status();
@@ -85,9 +104,13 @@ class get_generation_plan extends external_api {
         return [
             'decisions'    => $decisions,
             'scenes'       => $scenes,
+            'price'        => schema::price_text($price['total'], $price['currency'], $price['rate']),
+            'pricetotal'   => $price['total'],
+            'pricecurrency' => $price['currency'],
             'images'       => $images,
             'narrations'   => $narrations,
             'estimate'     => $estimate,
+            'servicecost'  => $servicecost,
             'credits'      => (int)($status['credits'] ?? 0),
             'unlimited'    => !empty($status['unlimited']),
             'balanceknown' => !empty($status['connected']),
@@ -110,9 +133,13 @@ class get_generation_plan extends external_api {
         return new external_single_structure([
             'decisions'     => new external_value(PARAM_INT, 'Decision points the scenario will contain'),
             'scenes'        => new external_value(PARAM_INT, 'Scenes the scenario will contain'),
+            'price'         => new external_value(PARAM_TEXT, 'What this scenario costs, formatted'),
+            'pricetotal'    => new external_value(PARAM_INT, 'What this scenario costs, in credits'),
+            'pricecurrency' => new external_value(PARAM_ALPHA, 'ISO currency code for the price'),
             'images'        => new external_value(PARAM_INT, 'Images that will be generated'),
             'narrations'    => new external_value(PARAM_INT, 'Narration clips that will be generated'),
-            'estimate'      => new external_value(PARAM_INT, 'Credits the run is expected to cost'),
+            'estimate'      => new external_value(PARAM_INT, 'Credits the teacher is charged'),
+            'servicecost'   => new external_value(PARAM_INT, 'Credits the run costs this site to produce'),
             'credits'       => new external_value(PARAM_INT, 'Credits currently available'),
             'unlimited'     => new external_value(PARAM_BOOL, 'Whether the plan is unlimited'),
             'balanceknown'  => new external_value(PARAM_BOOL, 'Whether the balance could be read'),

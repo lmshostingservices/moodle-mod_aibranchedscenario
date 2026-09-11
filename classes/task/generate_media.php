@@ -71,7 +71,9 @@ class generate_media extends \core\task\adhoc_task {
         $media = new media_manager($context);
         $counts = $media->generate_for_definition($generator->get_provider(), $scenario, $definition);
 
-        mtrace('Activity ' . $scenario->id . ' media: '
-            . $counts['images'] . ' images, ' . $counts['narrations'] . ' narrations.');
+        mtrace(
+            'Activity ' . $scenario->id . ' media: '
+                . $counts['images'] . ' images, ' . $counts['narrations'] . ' narrations.'
+        );
     }
 }

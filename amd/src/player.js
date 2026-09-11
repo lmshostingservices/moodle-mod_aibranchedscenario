@@ -58,6 +58,18 @@ class Player {
         this.cmid = parseInt(root.dataset.cmid, 10);
         this.audioEnabled = root.dataset.audio === '1';
         this.muted = false;
+        // Set when the browser refuses to start sound without a gesture, and when the
+        // current scene simply has no recording. Both look identical to a learner —
+        // silence — so both have to be said out loud on the control.
+        this.audioBlocked = false;
+        this.audioUrl = '';
+        // A screen can carry two recordings: the narrator reading the situation, which
+        // starts on its own, and the character's own line, which the learner plays by
+        // clicking the avatar. The way on is held back until both have been heard.
+        this.speechUrl = '';
+        this.narrationDone = true;
+        this.speechDone = true;
+        this.cueContext = null;
         this.attemptId = 0;
         this.nextSeq = 1;
         this.step = 0;
@@ -77,11 +89,22 @@ class Player {
             'signal:positive', 'signal:neutral', 'signal:negative',
             'continue', 'seewhathappened', 'metric:engagement', 'metric:trust',
             'metric:tension', 'error:generic', 'narrationon', 'narrationoff',
+            'narration:on', 'narration:off', 'narration:blocked', 'narration:none',
+            'narration:tipon', 'narration:tipoff', 'narration:tipblocked', 'narration:tipnone',
             'stageprogress', 'attemptfinished',
+            'deltaup', 'deltadown', 'deltareduced', 'deltaraised', 'deltasame',
+            'error:printblocked', 'listento',
         ];
         const values = await getStrings(keys.map((key) => ({key, component: 'mod_aibranchedscenario'})));
         keys.forEach((key, index) => {
             this.strings[key] = values[index];
+        });
+
+        this.syncStickyOffset();
+        let resizeTimer = null;
+        window.addEventListener('resize', () => {
+            window.clearTimeout(resizeTimer);
+            resizeTimer = window.setTimeout(() => this.syncStickyOffset(), 150);
         });
 
         this.root.addEventListener('click', (event) => {
@@ -104,7 +127,7 @@ class Player {
      * @returns {void}
      */
     handle(action, element) {
-        if (this.busy && action !== 'mute' && action !== 'print') {
+        if (this.busy && action !== 'mute' && action !== 'print' && action !== 'speak') {
             return;
         }
         switch (action) {
@@ -126,8 +149,11 @@ class Player {
             case 'mute':
                 this.toggleMute(element);
                 break;
+            case 'speak':
+                this.playSpeech(element);
+                break;
             case 'print':
-                window.print();
+                this.printDebrief();
                 break;
             default:
                 break;
@@ -275,11 +301,16 @@ class Player {
      * @returns {Promise} Resolves once rendered.
      */
     async renderNode(node) {
-        const context = Object.assign({}, node, {hasimage: Boolean(node.imageurl)});
+        const context = Object.assign({}, node, {
+            hasimage: Boolean(node.imageurl),
+            hasspeaker: Boolean(node.speech) && Boolean(node.speaker),
+            hasspeechaudio: Boolean(node.speechurl),
+            speakerinitial: (node.speaker || '').trim().charAt(0).toUpperCase(),
+        });
         await this.render(SELECTORS.node, 'mod_aibranchedscenario/node', context);
         this.hideRegion(SELECTORS.consequence);
         this.updateRail();
-        this.playAudio(node.audiourl);
+        this.playAudio(node.audiourl, node.speechurl);
         this.focusRegion(SELECTORS.node);
     }
 
@@ -292,21 +323,53 @@ class Player {
     async renderConsequence(response) {
         const metricKeys = ['engagement', 'trust', 'tension'];
         const deltas = [];
+        // Ring geometry. r = 28 in a 72 box, so the full circle is 2 * PI * 28.
+        const circumference = 175.93;
         metricKeys.forEach((key) => {
             const before = response.before[key];
             const after = response.after[key];
-            if (before === after) {
-                return;
-            }
             const change = after - before;
+            // Tension is the one metric where the good direction is downwards, so a fall
+            // there reads as a gain. Colouring by the sign alone put a green +12 next to a
+            // red -8 on the same well-judged choice, which told the learner the opposite of
+            // what happened. The wording spells the direction out rather than leaving a bare
+            // signed number to be read as a score.
+            const inverted = key === 'tension';
+            const good = change === 0 ? false : (inverted ? change < 0 : change > 0);
+            const size = Math.abs(change);
+            let wording = this.strings.deltasame;
+            if (change !== 0) {
+                wording = inverted
+                    ? (change < 0 ? this.strings.deltareduced : this.strings.deltaraised)
+                    : (change > 0 ? this.strings.deltaup : this.strings.deltadown);
+                wording = wording.replace('{$a}', size);
+            }
+            // Traffic light on the standing value rather than on the movement: a learner
+            // wants to know where the room is now, and the arrow underneath says which way
+            // it just moved. Tension reads the other way round, so it is inverted here too.
+            const standing = inverted ? 100 - after : after;
+            let tone = 'aibs-tone-warn';
+            if (standing >= 67) {
+                tone = 'aibs-tone-good';
+            } else if (standing < 34) {
+                tone = 'aibs-tone-bad';
+            }
+            const arc = (value) => {
+                const bounded = Math.max(0, Math.min(100, value));
+                const filled = (circumference * bounded) / 100;
+                return filled.toFixed(1) + ' ' + circumference;
+            };
             deltas.push({
                 label: this.strings['metric:' + key],
                 before: before,
                 after: after,
-                up: change > 0,
-                down: change < 0,
+                tone: tone,
+                startdash: arc(before),
+                dash: arc(after),
+                good: good,
+                bad: change !== 0 && !good,
                 same: change === 0,
-                change: (change > 0 ? '+' : '') + change,
+                change: wording,
             });
         });
 
@@ -314,6 +377,9 @@ class Player {
             signal: response.signal,
             signalclass: 'aibs-signal-' + response.signal,
             signallabel: this.strings['signal:' + response.signal],
+            ispositive: response.signal === 'positive',
+            isneutral: response.signal === 'neutral',
+            isnegative: response.signal === 'negative',
             consequenceparas: response.consequenceparas,
             feedbackparas: response.feedbackparas,
             hasfeedback: response.feedbackparas.length > 0,
@@ -325,6 +391,14 @@ class Player {
 
         this.hideRegion(SELECTORS.node);
         await this.render(SELECTORS.consequence, 'mod_aibranchedscenario/consequence', context);
+        this.animateRings();
+        // A costly screen and a well-judged one look alike for the second it takes to
+        // start reading. The cue says which it is before a word has been read.
+        this.playCue(response.signal);
+        // Consequence screens are narrated too. Scenarios generated before that was true
+        // carry no clip for the branch, and passing the empty string moves the control to
+        // its "nothing on this screen" state rather than leaving it claiming to be playing.
+        this.playAudio(response.audiourl || '', '');
         this.updateRail();
         this.focusRegion(SELECTORS.consequence);
     }
@@ -461,7 +535,93 @@ class Player {
         const target = heading || region;
         target.setAttribute('tabindex', '-1');
         target.focus({preventScroll: true});
-        region.scrollIntoView({behavior: 'smooth', block: 'start'});
+        this.scrollBelowHeader(region);
+    }
+
+    /**
+     * Park the plugin's sticky bar below whatever the theme has pinned above it.
+     *
+     * Two sticky elements both asking for top: 0 overlap, so the theme's course banner
+     * would sit on top of the scenario's own bar. The measurement has to happen in the
+     * browser because no theme publishes its header height, and it has to be redone on
+     * resize because most of them collapse the banner at narrow widths.
+     *
+     * @returns {void}
+     */
+    syncStickyOffset() {
+        const bar = this.root.querySelector('[data-region="topbar"]');
+        if (!bar) {
+            return;
+        }
+        // Measured with the bar's own contribution removed, or it would compound on
+        // every call until it walked off the bottom of the screen.
+        bar.style.setProperty('--aibs-sticky-top', '0px');
+        const offset = this.stickyOffset();
+        bar.style.setProperty('--aibs-sticky-top', Math.round(offset) + 'px');
+    }
+
+    /**
+     * How much of the top of the viewport the theme has already taken.
+     *
+     * Sites pin a course banner, a navbar, or both, to the top of the window. Scrolling a
+     * new scene to the top of the viewport therefore put its first line underneath them,
+     * and the learner arrived at a scene already scrolled past its own opening. There is
+     * no way to ask a theme how tall its header is, so this measures what is actually
+     * painted across the top edge: anything fixed or sticky that covers the top of the
+     * window is counted, and the tallest wins.
+     *
+     * @returns {Number} Height in pixels to stay clear of.
+     */
+    stickyOffset() {
+        let offset = 0;
+        const width = window.innerWidth || document.documentElement.clientWidth;
+        // Several points across the edge, because a header may be split into pieces or
+        // sit to one side.
+        const probes = [width * 0.5, width * 0.15, width * 0.85];
+        probes.forEach((x) => {
+            let found;
+            try {
+                found = document.elementsFromPoint(Math.round(x), 2) || [];
+            } catch (e) {
+                found = [];
+            }
+            found.forEach((element) => {
+                if (!element || element === document.body || element === document.documentElement) {
+                    return;
+                }
+                if (this.root.contains(element)) {
+                    return;
+                }
+                const position = window.getComputedStyle(element).position;
+                if (position !== 'fixed' && position !== 'sticky') {
+                    return;
+                }
+                const rect = element.getBoundingClientRect();
+                if (rect.top <= 2 && rect.bottom > offset) {
+                    offset = rect.bottom;
+                }
+                return;
+            });
+        });
+        // A full height overlay would otherwise push the scene off the bottom of the
+        // screen, so nothing is allowed to claim more than a third of it.
+        const ceiling = (window.innerHeight || 800) / 3;
+        return Math.min(offset, ceiling);
+    }
+
+    /**
+     * Bring a region to rest just below whatever the theme has pinned to the top.
+     *
+     * @param {Element} region The element to bring into view.
+     * @returns {void}
+     */
+    scrollBelowHeader(region) {
+        const gap = 16;
+        const top = region.getBoundingClientRect().top + window.pageYOffset
+            - this.stickyOffset() - gap;
+        const reduced = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({top: Math.max(0, top), behavior: reduced ? 'auto' : 'smooth'});
     }
 
     /**
@@ -565,21 +725,278 @@ class Player {
     }
 
     /**
-     * Play the narration for a node, when narration is enabled and not muted.
+     * Animate the consequence rings and count their numbers to the new value.
      *
-     * @param {String} url The audio URL, or an empty string.
      * @returns {void}
      */
-    playAudio(url) {
-        if (!this.audioEnabled || this.muted || !url) {
+    animateRings() {
+        const reduced = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        this.root.querySelectorAll('.aibs-ring-fill').forEach((ring) => {
+            const to = ring.dataset.dash;
+            if (reduced) {
+                ring.style.strokeDasharray = to;
+                return;
+            }
+            ring.style.strokeDasharray = ring.dataset.startdash || '0 175.93';
+            ring.classList.add('aibs-is-animated');
+            window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
+                    ring.style.strokeDasharray = to;
+                });
+            });
+        });
+
+        this.root.querySelectorAll('.aibs-ring-value').forEach((value) => {
+            const from = parseInt(value.dataset.from, 10);
+            const to = parseInt(value.dataset.to, 10);
+            if (isNaN(from) || isNaN(to) || reduced || from === to) {
+                value.textContent = isNaN(to) ? value.textContent : String(to);
+                return;
+            }
+            const started = window.performance ? window.performance.now() : Date.now();
+            const duration = 900;
+            const step = (now) => {
+                const elapsed = Math.min(1, (now - started) / duration);
+                // Ease out, so the number settles rather than stopping dead.
+                const eased = 1 - Math.pow(1 - elapsed, 3);
+                value.textContent = String(Math.round(from + ((to - from) * eased)));
+                if (elapsed < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        });
+    }
+
+    /**
+     * Sound the short cue that says whether a screen went well or badly.
+     *
+     * Synthesised rather than shipped as files: two tones carry the meaning, and a
+     * plugin that ships no audio assets has nothing to license, localise or cache.
+     *
+     * @param {String} signal positive, neutral or negative.
+     * @returns {void}
+     */
+    playCue(signal) {
+        if (!this.audioEnabled || this.muted || signal === 'neutral') {
+            return;
+        }
+        const Context = window.AudioContext || window.webkitAudioContext;
+        if (!Context) {
+            return;
+        }
+        try {
+            if (!this.cueContext) {
+                this.cueContext = new Context();
+            }
+            const ctx = this.cueContext;
+            if (ctx.state === 'suspended' && ctx.resume) {
+                ctx.resume();
+            }
+            // Rising major third for a good screen, falling minor third for a costly one.
+            const notes = signal === 'positive' ? [523.25, 659.25] : [392.0, 311.13];
+            notes.forEach((frequency, index) => {
+                const at = ctx.currentTime + (index * 0.13);
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.0001, at);
+                gain.gain.exponentialRampToValueAtTime(0.13, at + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.26);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(at);
+                osc.stop(at + 0.3);
+            });
+        } catch (e) {
+            // A browser that will not make a sound is not a reason to stop the scenario.
+            this.cueContext = null;
+        }
+    }
+
+    /**
+     * Play the narration for a screen, when narration is enabled and not muted.
+     *
+     * @param {String} url The narrator's audio URL, or an empty string.
+     * @param {String} speechurl The character's own line, or an empty string.
+     * @returns {void}
+     */
+    playAudio(url, speechurl) {
+        this.audioUrl = url || '';
+        this.speechUrl = speechurl || '';
+        this.narrationDone = !this.audioUrl;
+        this.speechDone = !this.speechUrl;
+        if (!this.audioEnabled) {
+            this.narrationDone = true;
+            this.speechDone = true;
+            this.releaseWayOn();
+            return;
+        }
+        this.audioBlocked = false;
+        this.holdWayOn();
+        if (!this.audioUrl || this.muted) {
+            if (this.muted) {
+                this.narrationDone = true;
+                this.speechDone = true;
+            }
+            this.releaseWayOn();
+            this.refreshAudioButton();
             return;
         }
         this.stopAudio();
-        this.audio = new Audio(url);
-        this.audio.play().catch(() => {
-            // Autoplay was refused by the browser; the learner can still read the scene.
-            return true;
+        this.audio = new Audio(this.audioUrl);
+        this.audio.addEventListener('ended', () => {
+            this.narrationDone = true;
+            this.releaseWayOn();
         });
+        const started = this.audio.play();
+        if (started && typeof started.catch === 'function') {
+            started.catch(() => {
+                // Browsers refuse to start sound before the person has interacted with
+                // the page. Swallowing that left a silent player and a control claiming
+                // narration was on, which is indistinguishable from being broken. The
+                // refusal is now visible and the control becomes the way to start it.
+                this.audioBlocked = true;
+                // Nobody can listen to something the browser will not play, so the way on
+                // is handed back rather than held behind a recording that never starts.
+                this.narrationDone = true;
+                this.speechDone = true;
+                this.releaseWayOn();
+                this.refreshAudioButton();
+            });
+        }
+        this.refreshAudioButton();
+    }
+
+    /**
+     * Play the character's own line, and stop the avatar asking to be clicked.
+     *
+     * @param {HTMLElement} element The avatar button.
+     * @returns {void}
+     */
+    playSpeech(element) {
+        if (!this.speechUrl || !this.audioEnabled) {
+            return;
+        }
+        this.stopAudio();
+        // The narrator is reading the same screen. Cutting it off is what a person
+        // expects when they deliberately press something else.
+        this.narrationDone = true;
+        if (element) {
+            element.classList.remove('aibs-is-unplayed');
+            element.classList.add('aibs-is-played');
+        }
+        this.audio = new Audio(this.speechUrl);
+        this.audio.addEventListener('ended', () => {
+            this.speechDone = true;
+            this.releaseWayOn();
+        });
+        const started = this.audio.play();
+        if (started && typeof started.catch === 'function') {
+            started.catch(() => {
+                this.speechDone = true;
+                this.releaseWayOn();
+            });
+        }
+    }
+
+    /**
+     * Hold back the way on until the screen has been heard.
+     *
+     * Only the single Continue button is held. The lettered options are the learner's
+     * own decision and are never taken away from them, because a disabled decision with
+     * no explanation is indistinguishable from a broken page.
+     *
+     * @returns {void}
+     */
+    holdWayOn() {
+        if (this.narrationDone && this.speechDone) {
+            return;
+        }
+        this.root.querySelectorAll('[data-action="continue"], .aibs-continuebtn').forEach((button) => {
+            button.disabled = true;
+            button.classList.add('aibs-is-waiting');
+        });
+    }
+
+    /**
+     * Give the way on back once everything on the screen has been heard.
+     *
+     * @returns {void}
+     */
+    releaseWayOn() {
+        if (!this.narrationDone || !this.speechDone) {
+            return;
+        }
+        this.root.querySelectorAll('[data-action="continue"], .aibs-continuebtn').forEach((button) => {
+            button.disabled = false;
+            button.classList.remove('aibs-is-waiting');
+        });
+    }
+
+    /**
+     * Open the browser's print dialog for the debrief.
+     *
+     * @returns {void}
+     */
+    printDebrief() {
+        try {
+            if (typeof window.print === 'function') {
+                window.print();
+                return;
+            }
+        } catch (e) {
+            // A frame that was given no permission to open a modal throws here rather
+            // than printing, which is one way this button could look like it did nothing.
+            try {
+                if (window.top && window.top !== window && typeof window.top.print === 'function') {
+                    window.top.print();
+                    return;
+                }
+            } catch (crossorigin) {
+                // A frame belonging to another site cannot be asked, and should not be.
+                this.showError({message: this.strings['error:printblocked']});
+                return;
+            }
+        }
+        this.showError({message: this.strings['error:printblocked']});
+    }
+
+    /**
+     * Put the narration control into the state it is actually in.
+     *
+     * @returns {void}
+     */
+    refreshAudioButton() {
+        const button = this.root.querySelector('[data-region="mutebutton"]');
+        if (!button) {
+            return;
+        }
+        const label = button.querySelector('[data-region="mutelabel"]');
+        let state = 'on';
+        if (!this.audioUrl) {
+            state = 'none';
+        } else if (this.muted) {
+            state = 'off';
+        } else if (this.audioBlocked) {
+            state = 'blocked';
+        }
+        const tips = {
+            on: 'narration:tipon',
+            off: 'narration:tipoff',
+            blocked: 'narration:tipblocked',
+            none: 'narration:tipnone',
+        };
+        if (label) {
+            label.textContent = this.strings['narration:' + state];
+        }
+        button.setAttribute('title', this.strings[tips[state]]);
+        button.setAttribute('aria-label', this.strings[tips[state]]);
+        button.setAttribute('aria-pressed', state === 'on' ? 'true' : 'false');
+        button.dataset.state = state;
+        button.disabled = state === 'none';
     }
 
     /**
@@ -604,12 +1021,26 @@ class Player {
      * @returns {void}
      */
     toggleMute(button) {
+        // When the browser blocked playback, this press is the gesture it was waiting
+        // for, so the control plays rather than mutes. Anything else would ask the
+        // learner to press it twice to hear one scene.
+        if (this.audioBlocked && !this.muted && this.audioUrl) {
+            this.audioBlocked = false;
+            this.playAudio(this.audioUrl, this.speechUrl);
+            this.refreshAudioButton();
+            return;
+        }
         this.muted = !this.muted;
-        button.setAttribute('aria-pressed', this.muted ? 'true' : 'false');
-        button.textContent = this.muted ? this.strings.narrationoff : this.strings.narrationon;
         if (this.muted) {
             this.stopAudio();
+            // Muting is a decision not to listen, so the way on is not held any longer.
+            this.narrationDone = true;
+            this.speechDone = true;
+            this.releaseWayOn();
+        } else if (this.audioUrl) {
+            this.playAudio(this.audioUrl, this.speechUrl);
         }
+        this.refreshAudioButton();
     }
 }
 

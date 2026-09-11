@@ -115,7 +115,16 @@ class import_prompt {
                 . 'anyone else. Give each a "gender" of male, female or neutral: the '
                 . 'illustrator uses it to keep the same person recognisable from one '
                 . 'frame to the next. Give no age and no ethnicity.',
-            '- Write in the language and spelling of the source content.',
+            '- Write EVERY word of the scenario in the language named in "language", using '
+                . 'that variety\'s spelling, punctuation and idiom throughout - titles, '
+                . 'situations, choices, consequences, feedback, debrief, all of it. The '
+                . 'source content\'s own spelling does not decide this and must not be '
+                . 'copied: a teacher who chose en-AU gets Australian spelling even if the '
+                . 'material they pasted was written in the United States. For en-AU and '
+                . 'en-GB that means -ise not -ize (finalise, organise, recognise), -our not '
+                . '-or (behaviour, favour), -re not -er (centre), and travelled, practise '
+                . 'as the verb, programme for a plan. For en-US it means the opposite. '
+                . 'Never mix the two inside one scenario.',
             '',
             'WHAT MAKES IT GOOD',
             '',
@@ -134,9 +143,24 @@ class import_prompt {
                 . '"correct", "incorrect", "well done", "unfortunately", "the best choice '
                 . 'would have been", and no mention of scores, skills or what was being '
                 . 'assessed anywhere the learner reads.',
-            '- Feedback says what the choice cost or bought, in the same voice as the '
-                . 'story: one or two sentences of consequence, not praise, not a lecture, '
-                . 'and never addressed to the learner as a student.',
+            '- Feedback explains the MECHANISM, never restates the choice. The learner '
+                . 'has just read what they did; telling them again teaches nothing. Every '
+                . 'feedback must answer why it worked or why it did not, in this shape: '
+                . 'what the behaviour did to the other person, and what that changes next. '
+                . 'Name the person. "You addressed Priya\'s confusion directly" is a '
+                . 'restatement and is wrong; "Reading it out with her made the gap hers to '
+                . 'find, so she raised the next one instead of working around you" is the '
+                . 'mechanism and is right.',
+            '- The same applies when a choice goes badly: say what it cost the other '
+                . 'person and what they will do differently because of it, not that it was '
+                . 'a poor choice. One or two sentences, in the same voice as the story, '
+                . 'not praise, not a lecture, and never addressed to the learner as a '
+                . 'student.',
+            '- "challenge" must be a question addressed to the learner and must end in a '
+                . 'question mark: "What do you say to Jamie?", "How do you answer that?". '
+                . 'An instruction such as "Ensure Jamie understands the guidelines." is '
+                . 'wrong, because it sits directly above the lettered options and reads as '
+                . 'one of them rather than as the question they answer.',
             '- Never name the skill being assessed in "situation", "challenge", a '
                 . 'choice\'s "text", "consequence" or "feedback". Name it only in the '
                 . 'debrief.',
@@ -173,22 +197,25 @@ class import_prompt {
                 . 'from home if anything is off.",',
             '     "consequence": "She writes it down. She does not ask you the third '
                 . 'question she had.",',
-            '     "feedback": "The handover ended on your certainty rather than on '
-                . 'hers."},',
+            '     "feedback": "Ending on your certainty left her holding a question she '
+                . 'had not finished asking, so she stopped asking. The next gap will be '
+                . 'found by someone on the next shift."},',
             '    {"id": "n2_b", "signal": "positive",',
             '     "text": "Sit down, open the chart, and read the last two entries out '
                 . 'with her.",',
             '     "consequence": "It takes four minutes. She finds the gap you had not '
                 . 'noticed and marks it.",',
-            '     "feedback": "Checking together cost the four minutes and closed the '
-                . 'gap."},',
+            '     "feedback": "Reading it out together made the chart hers to check '
+                . 'rather than yours to defend, so she found the gap and marked it. She '
+                . 'will open the next one without waiting to be asked."},',
             '    {"id": "n2_c", "signal": "neutral",',
             '     "text": "Ask her to put her questions in the ward group chat so you '
                 . 'can answer them properly later.",',
             '     "consequence": "She agrees. By the time you reply she has already '
                 . 'made her own call on it.",',
-            '     "feedback": "The question moved off the ward and the decision was '
-                . 'made without you."}',
+            '     "feedback": "Moving it to the chat told her the question was real but '
+                . 'not urgent, so she made the call alone and is now less likely to bring '
+                . 'you the next one."}',
             '  ]',
             '}',
         ]);
