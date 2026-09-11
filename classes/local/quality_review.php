@@ -59,9 +59,13 @@ class quality_review {
      */
     public static function warnings(array $definition): array {
         $out = [];
+        // Spelling is a property of the whole document, not of any node, so it is checked
+        // before the node walk and survives the early return below. It did not, and the
+        // check quietly never ran on a definition whose nodes had not been read yet.
+        $spelling = self::spelling_warnings($definition);
         $nodes = $definition['nodes'] ?? [];
         if (!is_array($nodes) || !$nodes) {
-            return $out;
+            return $spelling;
         }
 
         foreach ($nodes as $node) {
@@ -72,7 +76,100 @@ class quality_review {
         }
 
         $scenario = self::scenario_warnings($nodes);
-        return array_merge($scenario, $out);
+        return array_merge($spelling, $scenario, $out);
+    }
+
+    /**
+     * Words spelled for the wrong variety of English.
+     *
+     * A teacher picks en-AU and the writing comes back with "finalizing" and "organize" in
+     * it. The prompt asks for the chosen variety in as many words, but asking is not the
+     * same as getting, and an RTO sending this to learners will be the one who notices.
+     *
+     * This does not rewrite anything. It reads the scenario the service returned and says
+     * which words disagree with the language that was asked for, so the teacher can fix
+     * them in the editor before publishing rather than after a learner reads them. The list
+     * is a closed set of common pairs, not a rule about suffixes, because a rule about
+     * suffixes flags "size" and "prize" and stops being worth reading.
+     *
+     * @param array $definition A validated definition.
+     * @return array Warning rows.
+     */
+    protected static function spelling_warnings(array $definition): array {
+        $language = (string)($definition['language'] ?? '');
+        // Only the English varieties differ this way, and only these three differ from
+        // each other in a way a reader notices.
+        $british = ['en-AU', 'en-GB', 'en-NZ'];
+        if (!in_array($language, array_merge($british, ['en-US']), true)) {
+            return [];
+        }
+        $wantsbritish = in_array($language, $british, true);
+
+        // Pairs written as american => british. "practice" and "license" are deliberately
+        // absent: in British and Australian English both are correct as nouns and wrong
+        // only as verbs, and a checker that cannot tell one from the other would flag the
+        // correct spelling about as often as the wrong one.
+        $pairs = [
+            'analyze' => 'analyse', 'apologize' => 'apologise', 'authorize' => 'authorise',
+            'behavior' => 'behaviour', 'canceled' => 'cancelled', 'center' => 'centre',
+            'color' => 'colour', 'criticize' => 'criticise', 'defense' => 'defence',
+            'emphasize' => 'emphasise', 'favor' => 'favour', 'finalize' => 'finalise',
+            'fulfill' => 'fulfil', 'honor' => 'honour', 'judgment' => 'judgement',
+            'labor' => 'labour', 'minimize' => 'minimise',
+            'neighbor' => 'neighbour', 'organize' => 'organise',
+            'prioritize' => 'prioritise', 'realize' => 'realise', 'recognize' => 'recognise',
+            'summarize' => 'summarise', 'traveled' => 'travelled', 'utilize' => 'utilise',
+        ];
+
+        $text = \core_text::strtolower(self::all_prose($definition));
+        $found = [];
+        foreach ($pairs as $american => $britishword) {
+            $wrong = $wantsbritish ? $american : $britishword;
+            // Matched as a stem, with the trailing e taken off first, so that finalize,
+            // finalizes, finalized and finalizing all count. Adding a suffix to the whole
+            // word instead gave "finalize" + "ing" = "finalizeing", which matches nothing,
+            // so the check silently found no problems in text full of them. Bounded at both
+            // ends, so "color" does not fire on "Colorado".
+            $stem = preg_quote(rtrim($wrong, 'e'), '/');
+            if (preg_match('/\b' . $stem . '(e|es|ed|ing|er|ers|ation|ations|s|ly)?\b/u', $text)) {
+                $found[$wrong] = $wantsbritish ? $britishword : $american;
+            }
+        }
+        if (!$found) {
+            return [];
+        }
+        $shown = array_slice(array_keys($found), 0, 8);
+        return [[
+            'nodeid'  => '',
+            'node'    => get_string('quality:spellingnode', 'mod_aibranchedscenario'),
+            'message' => get_string('quality:spelling', 'mod_aibranchedscenario', (object)[
+                'language' => $language,
+                'words'    => implode(', ', $shown),
+            ]),
+        ]];
+    }
+
+    /**
+     * Every piece of prose in a definition, run together for a text search.
+     *
+     * @param array $definition A validated definition.
+     * @return string
+     */
+    protected static function all_prose(array $definition): string {
+        $bits = [];
+        $walk = function ($value) use (&$walk, &$bits) {
+            if (is_string($value)) {
+                $bits[] = $value;
+                return;
+            }
+            if (is_array($value)) {
+                foreach ($value as $item) {
+                    $walk($item);
+                }
+            }
+        };
+        $walk($definition);
+        return implode(' ', $bits);
     }
 
     /**

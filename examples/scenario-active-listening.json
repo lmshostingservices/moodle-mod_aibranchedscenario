@@ -16,17 +16,23 @@
     {
       "id": "p1",
       "title": "Notice the withdrawal, not just the interruption",
-      "summary": "The moment that matters is when someone stops trying, and it is almost always quiet."
+      "summary": "The moment that matters is when someone stops trying, and it is almost always quiet.",
+      "example": "\"You went quiet after Dan cut in — what were you going to say?\"",
+      "pitfall": "Moving the meeting on because nobody objected, which reads as agreement and is usually just people giving up."
     },
     {
       "id": "p2",
       "title": "Describe behaviour, not character",
-      "summary": "A person can act on \"three times on Thursday\". Nobody can act on \"you're a poor listener\"."
+      "summary": "A person can act on \"three times on Thursday\". Nobody can act on \"you're a poor listener\".",
+      "example": "\"You spoke over Priya three times on Thursday\" rather than \"you dominate meetings\".",
+      "pitfall": "Softening it into a character note — \"you can be a bit much\" — which cannot be acted on and is heard as an insult."
     },
     {
       "id": "p3",
       "title": "A workaround is a decision",
-      "summary": "Accommodating a problem without naming its cost is how the accommodation becomes permanent."
+      "summary": "Accommodating a problem without naming its cost is how the accommodation becomes permanent.",
+      "example": "\"We can work around it this week, and here is what that costs us if it becomes the norm.\"",
+      "pitfall": "Quietly absorbing the extra work to keep the peace, which turns a temporary fix into the way things are done."
     }
   ],
   "startnode": "n1",

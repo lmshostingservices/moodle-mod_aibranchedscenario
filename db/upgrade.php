@@ -380,5 +380,10 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091130, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091131) {
+        // Release 1.20.0 changes no schema: the fixed frame, the narration and the bar.
+        upgrade_mod_savepoint(true, 2026091131, 'aibranchedscenario');
+    }
+
     return true;
 }

@@ -520,6 +520,15 @@ class validator {
             if ($title === '') {
                 continue;
             }
+            foreach (['example', 'pitfall'] as $needed) {
+                if ($this->text($item[$needed] ?? '', 600) === '') {
+                    $this->problems[] = get_string(
+                        'error:principleneeds' . $needed,
+                        'mod_aibranchedscenario',
+                        $title
+                    );
+                }
+            }
             $seen[] = $id;
             $out[] = [
                 'id'      => $id,
@@ -527,8 +536,14 @@ class validator {
                 'summary' => $this->text($item['summary'] ?? '', 800),
                 // A principle stated is a principle forgotten. These are the words a
                 // learner can actually use, and the ones that sound reasonable and are
-                // not. Both are optional: a scenario written before they existed still
-                // validates and simply teaches less at the start.
+                // not.
+                //
+                // They used to be optional, and the consequence was visible on screen: a
+                // teaching slide carrying one sentence and half a screen of nothing,
+                // because the service had simply left them out. A slide that teaches one
+                // line is not worth a slide. They are required now, and a definition that
+                // omits them is rejected with the principle named, rather than quietly
+                // publishing a scenario that teaches less than it should.
                 'example' => $this->text($item['example'] ?? '', 600),
                 'pitfall' => $this->text($item['pitfall'] ?? '', 600),
             ];

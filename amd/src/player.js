@@ -50,6 +50,39 @@ const SELECTORS = {
 class Player {
 
     /**
+     * The smallest a slide may be and still be worth framing, in pixels.
+     *
+     * Below this there is not enough screen for a picture, a paragraph and a set of
+     * options, so the player stops holding the slide to one screen and lets the page
+     * scroll instead - which is honest, rather than hiding the overflow of a box that
+     * was never going to fit.
+     *
+     * @type {Number}
+     */
+    static MIN_FRAME = 420;
+
+    /**
+     * The largest a slide is allowed to be, in pixels.
+     *
+     * The frame used to take whatever was left of the window, which on a tall screen made
+     * a very tall slide: the picture column is capped in width by the player, so growing
+     * only the height crops a 16:9 photograph into a letterbox on its side and leaves the
+     * text floating in the middle of an enormous card. There is no need to use every pixel.
+     * A slide is capped at a size that suits its own proportions, and anyone who wants the
+     * whole screen has the fullscreen control for exactly that.
+     *
+     * @type {Number}
+     */
+    static MAX_FRAME = 620;
+
+    /**
+     * Height held for the deck arrows on screens that do not have them, in pixels.
+     *
+     * @type {Number}
+     */
+    static NAV_RESERVE = 52;
+
+    /**
      * Create a controller bound to a player root element.
      *
      * @param {HTMLElement} root The player root element.
@@ -76,6 +109,13 @@ class Player {
         this.step = 0;
         this.pendingNode = null;
         this.audio = null;
+        this.wayOnTimer = null;
+        // The frame is measured once and then held. Recomputing it on every screen made it
+        // a slightly different size on a lesson slide, a decision and a consequence, so the
+        // card grew and shrank as the learner moved through. It is re-measured only when
+        // the window itself changes.
+        this.frameHeight = 0;
+        this.frameMeasured = false;
         this.strings = {};
         this.busy = false;
     }
@@ -110,6 +150,10 @@ class Player {
         window.addEventListener('resize', () => {
             window.clearTimeout(resizeTimer);
             resizeTimer = window.setTimeout(() => {
+                // The window is the only thing that may change the frame.
+                this.frameHeight = 0;
+                this.frameMeasured = false;
+                this.root.style.removeProperty('--aibs-slide-max');
                 this.syncStickyOffset();
                 this.fitSlide();
             }, 150);
@@ -119,7 +163,11 @@ class Player {
         // has to be measured again in both directions.
         ['fullscreenchange', 'webkitfullscreenchange'].forEach((name) => {
             document.addEventListener(name, () => {
+                this.frameHeight = 0;
+                this.frameMeasured = false;
+                this.root.style.removeProperty('--aibs-slide-max');
                 this.syncStickyOffset();
+                this.fitSlide();
                 this.refreshFullscreenButton();
             });
         });
@@ -717,17 +765,57 @@ class Player {
         // in this list: it lives inside the bar now and opens over the scene, so the bar's
         // own height already accounts for it and measuring it again would double count.
         let chrome = this.outerHeight(bar, true) - barheight;
-        ['.aibs-deck-nav'].forEach((selector) => {
-            const element = this.root.querySelector(selector);
-            if (element && element.offsetParent !== null) {
-                chrome += this.outerHeight(element, false);
-            }
-        });
+
+        // The arrows are reserved for on every screen, including the ones that do not have
+        // them. Measuring them only where they appear made the frame taller on a decision
+        // than on a lesson slide, so the card visibly grew and shrank as the learner moved
+        // through - which is the thing a fixed frame exists to prevent. The space is held
+        // whether or not anything is standing in it.
+        const nav = this.root.querySelector('.aibs-deck-nav');
+        chrome += nav && nav.offsetParent !== null
+            ? this.outerHeight(nav, false)
+            : Player.NAV_RESERVE;
         const rootstyle = window.getComputedStyle(this.root);
         chrome += parseFloat(rootstyle.paddingBottom) || 0;
 
-        const available = Math.max(300, viewport - Math.round(offset) - barheight - chrome - 12);
-        this.root.style.setProperty('--aibs-slide-max', Math.round(available) + 'px');
+        // What is actually left, before any opinion about whether it is enough.
+        const available = viewport - Math.round(offset) - barheight - chrome - 12;
+
+        // Whether a slide can be a fixed frame is a question about how much room there is,
+        // and only the browser knows that. It used to be asked as a media query - at least
+        // 900 wide and 620 tall - which cannot see the theme's header or the course
+        // banner above the player. On a 900x620 window under a 260px banner the query says
+        // yes and there are 180 pixels to work with; the floor of 300 then produced a frame
+        // taller than the space it was meant to fit into, and the overflow was hidden with
+        // nothing to scroll. Measured across seventeen window sizes and three banner
+        // heights, eleven of forty-eight combinations overflowed this way.
+        //
+        // So the question is answered from the measurement. Below the minimum a slide can
+        // honestly be, the plugin stops pretending: the frame is dropped, the slide becomes
+        // as tall as its content and the page scrolls, which is the right behaviour when
+        // there is genuinely not enough screen. Above it, the frame is exactly the space
+        // available and nothing goes below the fold.
+        // Already measured: hand back the same answer rather than working out a new one.
+        // Both halves of it are held - the height and whether there is a frame at all -
+        // because a screen that decided there was no room and a screen that decided there
+        // was would otherwise disagree, and the card would change shape between them.
+        if (this.frameMeasured) {
+            this.root.classList.toggle('aibs-no-frame', !this.frameHeight);
+            this.root.style.setProperty('--aibs-slide-max', this.frameHeight + 'px');
+            return Boolean(this.frameHeight);
+        }
+
+        const framed = available >= Player.MIN_FRAME;
+        this.root.classList.toggle('aibs-no-frame', !framed);
+        // Capped, not maximised. See MAX_FRAME.
+        const height = framed ? Math.round(Math.min(available, Player.MAX_FRAME)) : 0;
+        this.root.style.setProperty('--aibs-slide-max', height + 'px');
+        if (!framed) {
+            // Settled: there is no room here, and that does not change screen by screen.
+            this.frameMeasured = true;
+            this.frameHeight = 0;
+        }
+        return framed;
     }
 
     /**
@@ -776,14 +864,19 @@ class Player {
         //
         // So the strip is walked downwards instead: anything fixed or sticky that touches
         // the band already claimed extends it, and the walk stops at the first gap.
+        // The walk goes from one band to the next, not in fixed steps. Stepping by a fixed
+        // amount looked right and was wrong: with a sixteenth of the ceiling as the stride,
+        // a 945px window steps 30px at a time, so after claiming a 60px site bar the next
+        // sample lands at 89px - past the four-pixel gap test - and the walk stops without
+        // ever probing inside the course banner sitting at 60 to 187. It reported 60px of
+        // pinned furniture where there were 187, and the player's own bar parked itself
+        // underneath the banner.
+        // Probing just below whatever has been claimed cannot miss the next band, however
+        // tall or short either one is. The walk ends when a probe claims nothing new.
         let band = 0;
-        const steps = 16;
-        for (let step = 0; step <= steps; step++) {
-            const y = Math.round((ceiling / steps) * step);
-            if (y > band + 4) {
-                // A gap: everything below this is page content, not pinned furniture.
-                break;
-            }
+        for (let guard = 0; guard < 12; guard++) {
+            const y = Math.min(Math.round(band) + 2, Math.round(ceiling));
+            const before = band;
             [width * 0.5, width * 0.15, width * 0.85].forEach((x) => {
                 let found;
                 try {
@@ -811,6 +904,11 @@ class Player {
                     }
                 });
             });
+
+            // Nothing below the last band is pinned, so there is nothing more to find.
+            if (band <= before || band >= ceiling) {
+                break;
+            }
         }
         return Math.min(band, ceiling);
     }
@@ -1045,17 +1143,40 @@ class Player {
             return;
         }
         const viewport = window.innerHeight || document.documentElement.clientHeight;
-        const rect = slide.getBoundingClientRect();
+        // Measured on the player, not on the slide. The slide is not the last thing on the
+        // screen - the deck's arrows, the card's own bottom margin and the player's padding
+        // all sit below it - so a slide that ended above the fold could still leave eighty
+        // pixels of the player below it, which is exactly what it did at every window size.
+        const rect = this.root.getBoundingClientRect();
         const overflow = Math.round(rect.bottom - viewport);
         if (overflow <= 0) {
+            // It fits as measured, so this is the frame from here on.
+            if (!this.frameHeight) {
+                const declaredok = parseInt(
+                    window.getComputedStyle(this.root).getPropertyValue('--aibs-slide-max'), 10);
+                if (!isNaN(declaredok) && declaredok > 0) {
+                    this.frameHeight = declaredok;
+                    this.frameMeasured = true;
+                }
+            }
             return;
         }
         const declared = parseInt(
             window.getComputedStyle(this.root).getPropertyValue('--aibs-slide-max'), 10);
         const base = isNaN(declared) ? Math.round(rect.height) : declared;
         // Eight pixels of daylight, so a rounded edge is not flush with the fold.
-        this.root.style.setProperty(
-            '--aibs-slide-max', Math.max(300, base - overflow - 8) + 'px');
+        const wanted = base - overflow - 8;
+        if (wanted < Player.MIN_FRAME) {
+            // Correcting this far would make a frame too small to read. The frame is given
+            // up instead of being shrunk into something unusable with its overflow hidden.
+            this.root.classList.add('aibs-no-frame');
+            this.root.style.setProperty('--aibs-slide-max', '0px');
+            return;
+        }
+        // This is the frame for the rest of the session, at this window size.
+        this.frameHeight = wanted;
+        this.frameMeasured = true;
+        this.root.style.setProperty('--aibs-slide-max', wanted + 'px');
     }
 
     /**
@@ -1200,6 +1321,12 @@ class Player {
      * @returns {void}
      */
     playAudio(url, speechurl) {
+        // First, before any of the early exits below. Whatever is playing belongs to the
+        // screen being left, and it has to stop whether or not the screen being arrived at
+        // has a recording of its own. It did not: on a slide with no clip, or with the
+        // narration muted, both early returns skipped the stop and the previous reading
+        // carried on over the new card.
+        this.stopAudio();
         this.audioUrl = url || '';
         this.speechUrl = speechurl || '';
         this.narrationDone = !this.audioUrl;
@@ -1226,6 +1353,14 @@ class Player {
         this.audio.addEventListener('ended', () => {
             this.narrationDone = true;
             this.releaseWayOn();
+        });
+        // A clip that dies half way through fires error, not ended. Without this the way
+        // on was held behind a recording that was never going to finish.
+        this.audio.addEventListener('error', () => {
+            this.narrationDone = true;
+            this.speechDone = true;
+            this.releaseWayOn();
+            this.refreshAudioButton();
         });
         const started = this.audio.play();
         if (started && typeof started.catch === 'function') {
@@ -1269,6 +1404,10 @@ class Player {
             this.speechDone = true;
             this.releaseWayOn();
         });
+        this.audio.addEventListener('error', () => {
+            this.speechDone = true;
+            this.releaseWayOn();
+        });
         const started = this.audio.play();
         if (started && typeof started.catch === 'function') {
             started.catch(() => {
@@ -1295,6 +1434,30 @@ class Player {
             button.disabled = true;
             button.classList.add('aibs-is-waiting');
         });
+        // The deck's arrows are the way on through the opening lesson, so they wait for the
+        // reading the same way Continue does. They fade rather than disable, so the learner
+        // can see where they will be, and they come back on their own after the longest
+        // clip we would ever generate - a recording that stalls must never be the reason
+        // somebody cannot leave a slide.
+        this.setDeckWaiting(true);
+        window.clearTimeout(this.wayOnTimer);
+        this.wayOnTimer = window.setTimeout(() => {
+            this.narrationDone = true;
+            this.speechDone = true;
+            this.releaseWayOn();
+        }, 90000);
+    }
+
+    /**
+     * Fade the deck arrows while a recording is still playing.
+     *
+     * @param {Boolean} waiting Whether the reading is still going.
+     * @returns {void}
+     */
+    setDeckWaiting(waiting) {
+        this.root.querySelectorAll('.aibs-deck-nav').forEach((nav) => {
+            nav.classList.toggle('aibs-is-waiting', Boolean(waiting));
+        });
     }
 
     /**
@@ -1306,10 +1469,12 @@ class Player {
         if (!this.narrationDone || !this.speechDone) {
             return;
         }
+        window.clearTimeout(this.wayOnTimer);
         this.root.querySelectorAll('[data-action="continue"], .aibs-continuebtn').forEach((button) => {
             button.disabled = false;
             button.classList.remove('aibs-is-waiting');
         });
+        this.setDeckWaiting(false);
     }
 
     /**

@@ -69,6 +69,12 @@
        disappears. It is a token so that it reads as deliberate rather than as a white
        somebody forgot. */
     --aibs-on-photo: #fff;
+    /* The inverse pair, for a round control answering the pointer. Hovering used to tint
+       the circle and turn the icon the accent colour, which put a second colour on screen
+       competing with whatever the scenario's own accent was. An inverse has no colour to
+       conflict with: the circle fills, the mark inside it reverses out. */
+    --aibs-invert: #475467;
+    --aibs-on-invert: #fff;
     --aibs-accent: #4f46e5;
     --aibs-accent-strong: #3730a3;
     --aibs-accent-soft: #eef0fe;
@@ -151,6 +157,8 @@
     --aibs-neutral-soft: #1f2732;
     --aibs-warn: #fbbf24;
     --aibs-on-accent: #0b0e13;
+    --aibs-invert: #cbd5e1;
+    --aibs-on-invert: #11141a;
     /* A shadow is the absence of light, so on a dark ground it has almost no work to do and
        the light palette's soft greys turn into grey haze. These are near-black and tighter. */
     --aibs-shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
@@ -280,10 +288,14 @@
     width: 100%;
 }
 
+/* No gutter. The player used to sit inside forty pixels of its own background colour on
+   every side, which on a fixed frame is forty pixels taken straight off the slide and given
+   to nothing. The card now reaches the player's edges and the card's own border and shadow
+   do the separating, which is what they were for. */
 .aibs-shell {
     box-sizing: border-box;
     display: block;
-    padding: clamp(18px, 3vw, 40px);
+    padding: 0;
     width: 100%;
 }
 
@@ -492,11 +504,12 @@
    under it. It sits below whatever the site theme has already pinned to the top of the
    window; the offset is measured at runtime and set as --aibs-sticky-top, because no
    theme publishes its own header height. */
+/* The negative margins are gone with the gutter they were escaping. */
 .aibs-topbar {
     background: var(--aibs-canvas);
     border-bottom: 1px solid var(--aibs-border);
-    margin: calc(clamp(18px, 3vw, 40px) * -1) calc(clamp(18px, 3vw, 40px) * -1) 20px;
-    padding: 12px clamp(18px, 3vw, 40px);
+    margin: 0 0 10px;
+    padding: 8px clamp(14px, 1.6vw, 22px);
     position: sticky;
     top: var(--aibs-sticky-top, 0px);
     z-index: 20;
@@ -610,11 +623,13 @@
         color .18s var(--aibs-ease);
 }
 
+.path-mod-aibranchedscenario .aibs-audiobtn:hover:not(:disabled),
+.path-mod-aibranchedscenario .aibs-audiobtn:focus-visible:not(:disabled),
 .aibs-audiobtn:hover:not(:disabled),
 .aibs-audiobtn:focus-visible:not(:disabled) {
-    background: var(--aibs-accent-soft);
-    border-color: var(--aibs-accent-border);
-    color: var(--aibs-accent-strong);
+    background: var(--aibs-invert) !important;
+    border-color: var(--aibs-invert);
+    color: var(--aibs-on-invert) !important;
 }
 
 .aibs-audiobtn:disabled {
@@ -866,9 +881,11 @@
     display: none;
 }
 
+/* The mark inverts; the disc behind it stays out of the way, or the control reads as two
+   rings inside one another. */
 .aibs-legend-summary:hover,
 .aibs-legend-summary:focus-visible {
-    background: var(--aibs-surface-alt);
+    background: transparent;
     color: var(--aibs-text);
 }
 
@@ -891,10 +908,12 @@
 }
 
 .aibs-legend[open] .aibs-legend-icon,
+.aibs-legend[open] .aibs-legend-icon,
 .aibs-legend-summary:hover .aibs-legend-icon,
 .aibs-legend-summary:focus-visible .aibs-legend-icon {
-    background: var(--aibs-accent);
-    color: var(--aibs-on-accent);
+    background: var(--aibs-invert);
+    border-color: var(--aibs-invert);
+    color: var(--aibs-on-invert);
 }
 
 .aibs-legend-icon::before {
@@ -1008,8 +1027,26 @@
     padding: clamp(18px, 2.2vw, 30px);
 }
 
+/* `hidden` has to actually hide things, and here it did not.
+   The browser's own `[hidden] { display: none }` lives in the user-agent stylesheet, which
+   loses to any author rule at all. Every slide in this file is given a display of its own -
+   the decision slide is a grid so the picture can sit beside the text, the closing slide
+   and the debrief slides are flex columns - and each of those declarations silently
+   outranked the browser's rule. So a slide the player had hidden was still laid out, at
+   full height, below the one on screen.
+   That is where the scrolling came from. It was never the frame arithmetic: the frame was
+   sized correctly and then a second, invisible copy of a slide was stacked underneath it,
+   adding six or seven hundred pixels per hidden slide. An opening deck of five principles
+   was six slides tall. Nothing measured downstream could have found this, because every
+   element it measured was the right size.
+   One rule, at the top of the file's specificity, ends the argument. It is one of the few
+   places !important is the correct tool: the point is precisely that nothing may override
+   it. */
+.path-mod-aibranchedscenario [hidden],
+.aibs-player [hidden],
+.aibs-wizard [hidden],
 .aibs-region[hidden] {
-    display: none;
+    display: none !important;
 }
 
 .aibs-h3 {
@@ -1891,11 +1928,12 @@
 /* A theme that paints a dark grey hover background on every button turned these into
    blue-on-charcoal. A state that leaves the background to the theme is as broken as one
    that leaves the colour to it, so both are restated here. */
+/* Inverse, like every other control. See --aibs-invert. */
 .path-mod-aibranchedscenario .aibs-wizard-step:hover,
 .aibs-wizard-step:hover {
-    background: var(--aibs-accent-soft) !important;
-    border-color: var(--aibs-accent-border);
-    color: var(--aibs-accent-strong) !important;
+    background: var(--aibs-invert) !important;
+    border-color: var(--aibs-invert);
+    color: var(--aibs-on-invert) !important;
     transform: translateY(-1px);
 }
 
@@ -2007,7 +2045,9 @@
 /* A chosen option is accent-coloured, and hovering it must keep that. */
 .path-mod-aibranchedscenario .aibs-option[aria-pressed="true"]:hover,
 .aibs-option[aria-pressed="true"]:hover {
-    color: var(--aibs-accent-strong) !important;
+    background: var(--aibs-invert) !important;
+    border-color: var(--aibs-invert);
+    color: var(--aibs-on-invert) !important;
 }
 
 .aibs-option[aria-pressed="true"] {
@@ -2896,15 +2936,37 @@ button.aibs-avatar {
     width: 34px;
 }
 
+/* Inverse, not tint. See --aibs-invert. */
+.path-mod-aibranchedscenario .aibs-iconbtn:hover,
+.path-mod-aibranchedscenario .aibs-iconbtn:focus-visible,
 .aibs-iconbtn:hover,
 .aibs-iconbtn:focus-visible {
-    border-color: var(--aibs-accent-border);
-    color: var(--aibs-accent) !important;
+    background: var(--aibs-invert) !important;
+    border-color: var(--aibs-invert);
+    color: var(--aibs-on-invert) !important;
 }
 
 .aibs-iconbtn .aibs-icon {
     height: 18px;
     width: 18px;
+}
+
+/* The mark inside an inverted control takes the control's colour. Stated explicitly
+   because an SVG that sets its own fill or stroke would otherwise keep it, which is how
+   an accent-blue arrow ended up on a dark grey disc. */
+.aibs-iconbtn:hover .aibs-icon,
+.aibs-iconbtn:focus-visible .aibs-icon,
+.aibs-audiobtn:hover:not(:disabled) .aibs-icon,
+.aibs-audiobtn:focus-visible:not(:disabled) .aibs-icon {
+    color: var(--aibs-on-invert) !important;
+    fill: none;
+    stroke: currentColor;
+}
+
+/* Two icons are drawn as filled shapes rather than strokes, so they need the fill. */
+.aibs-iconbtn:hover .aibs-icon path[fill="currentColor"],
+.aibs-audiobtn:hover:not(:disabled) .aibs-icon path[fill="currentColor"] {
+    fill: currentColor;
 }
 
 /* In fullscreen the plugin owns the whole viewport: no theme header above it, and no
@@ -2959,7 +3021,84 @@ button.aibs-avatar {
    rule produced a three-hundred-pixel box with hidden overflow and nothing to scroll, so
    below that the slide goes back to being as tall as it needs to be and the page scrolls
    normally. */
+/* The bar was two stacked rows - a large title over a row of progress and readings - and
+   between them they took about a hundred and thirty pixels off the top of every screen, on
+   a page whose own banner has already said what the activity is. One row: the name at
+   reading size with its setting beside it, then the progress, then the readings, then the
+   controls. It wraps back to two rows when there is not the width for one. */
+@media (min-width: 900px) {
+    .path-mod-aibranchedscenario .aibs-topbar {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+    }
+
+    /* The masthead stops being a box and lets its two halves become items of the bar
+       itself, so the title and the controls can sit at opposite ends of one row with the
+       progress and the readings between them. */
+    .path-mod-aibranchedscenario .aibs-topbar .aibs-masthead-compact {
+        display: contents;
+    }
+
+    .path-mod-aibranchedscenario .aibs-topbar .aibs-masthead-text {
+        align-items: baseline;
+        display: flex;
+        flex: 0 1 auto;
+        gap: 10px;
+        min-width: 0;
+        order: 1;
+    }
+
+    .path-mod-aibranchedscenario .aibs-topbar .aibs-title {
+        font-size: var(--aibs-text-title);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .path-mod-aibranchedscenario .aibs-topbar .aibs-titlemeta {
+        flex: 0 1 auto;
+        margin: 0;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .path-mod-aibranchedscenario .aibs-topbar .aibs-statusbar {
+        flex: 1 1 auto;
+        justify-content: flex-end;
+        margin-top: 0;
+        order: 2;
+    }
+
+    .path-mod-aibranchedscenario .aibs-topbar .aibs-meters {
+        flex: 0 1 auto;
+    }
+
+    .path-mod-aibranchedscenario .aibs-topbar .aibs-masthead-side {
+        flex: none;
+        order: 3;
+    }
+}
+
 @media (min-width: 900px) and (min-height: 620px) {
+    /* Whether there is room for a frame is measured, not guessed: the player adds
+       aibs-no-frame when what is actually left of the screen, once the theme's header and
+       the course banner are taken off, is too little for a slide to be worth framing. The
+       media query above is only the coarse gate; this class is the real answer. */
+    .path-mod-aibranchedscenario .aibs-player.aibs-no-frame .aibs-slide,
+    .path-mod-aibranchedscenario .aibs-player.aibs-no-frame .aibs-consequence,
+    .path-mod-aibranchedscenario .aibs-player.aibs-no-frame .aibs-deckslide {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .path-mod-aibranchedscenario .aibs-player.aibs-no-frame .aibs-node-body {
+        height: auto !important;
+        overflow: visible !important;
+    }
+
     /* A slide is a fixed frame, not a box that shrinks to its contents. Every slide in a
        deck is the same size, fills the height between the banner and the fold, and is
        never scrolled - which is what makes moving through them feel like a deck rather
@@ -3061,10 +3200,14 @@ button.aibs-avatar {
        of what gets clipped. A verbose consequence used to push Continue out of the bottom
        of a hidden overflow, which leaves the learner with no way on at all: the prose is
        what gives, and the button stays. */
+    /* The same frame as a slide, not merely a ceiling. A consequence with two sentences in
+       it used to draw a short card and the page jumped as the learner moved on and back. */
     .path-mod-aibranchedscenario .aibs-consequence {
         display: flex;
         flex-direction: column;
         font-size: calc(1rem * var(--aibs-fit, 1));
+        height: var(--aibs-slide-max, 74vh);
+        justify-content: center;
         max-height: var(--aibs-slide-max, 74vh);
         overflow: hidden;
     }
@@ -3156,6 +3299,15 @@ button.aibs-avatar {
     gap: 14px;
     justify-content: center;
     margin-top: 18px;
+    transition: opacity .3s var(--aibs-ease);
+}
+
+/* While the slide is being read, the arrows step back rather than disappear: the learner
+   can see where the way on is and that it is not ready yet. They are not disabled - a
+   learner who does not want to listen can still press one - and they come back on their
+   own if the recording never finishes. */
+.aibs-deck-nav.aibs-is-waiting {
+    opacity: .35;
 }
 
 .aibs-deck-count {

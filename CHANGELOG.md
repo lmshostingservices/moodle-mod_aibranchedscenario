@@ -2,6 +2,107 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.20.0] - 2026-09-11
+
+The scrolling is fixed, and it was not what any of us thought it was.
+
+### Fixed — the reason the player scrolled at all
+
+- **A hidden slide was still being laid out, at full height, below the one on screen.**
+  `hidden` comes from the browser's own stylesheet, which loses to any author rule — and
+  every slide here is given a display of its own (the decision slide is a grid so the
+  picture can sit beside the text; the closing and debrief slides are flex columns). Each
+  of those quietly outranked `[hidden] { display: none }`. So an opening deck of five
+  principles was six slides tall, and nothing measured downstream could ever have found it,
+  because every element it measured was the right size. Measured on the real rendered
+  markup: 891px of overflow at 1920×945, of which 700 was one invisible slide.
+
+### Fixed — three more, each measured rather than reasoned about
+
+- **The sticky probe walked in fixed steps and stepped straight over the course banner.**
+  The stride was a sixteenth of half the viewport — about 30px on a 945px window — so after
+  claiming a 60px site bar the next sample landed at 89px, past the four-pixel gap test, and
+  the walk stopped without ever probing inside a banner running 60 to 187. It reported 60px
+  of pinned furniture where there were 187, which is why the player's bar parked itself
+  underneath the banner. It now walks from one band to the next, which cannot miss.
+- **The fold check measured the slide, not the player.** The slide is not the last thing on
+  the screen — the arrows, the card's margin and the player's padding sit below it — so a
+  slide that ended above the fold still left about eighty pixels of player below it, at
+  every window size tested.
+- **Whether there is room for a frame is now measured, not guessed.** It used to be a media
+  query — 900 wide, 620 tall — which cannot see the theme's header or the course banner. On
+  a 900×620 window under a 260px banner the query said yes and there were 180 pixels to work
+  with; the 300px floor then produced a frame taller than the space it was meant to fit, with
+  the overflow hidden and nothing to scroll. Eleven of forty-eight combinations failed this
+  way. The player now measures what is actually left and gives up the frame when there is
+  genuinely not enough screen, which lets the page scroll honestly instead of clipping.
+
+**Verified by measurement**, on the real rendered player in a real browser, across
+seventeen window sizes and three course-banner heights — fifty-one combinations: every one
+now sits entirely above the fold, none scroll.
+
+### Changed — the frame holds still
+
+- **It is capped, not maximised.** The frame used to take whatever was left of the window,
+  which on a tall screen cropped a 16:9 photograph into a letterbox on its side and left the
+  text floating in an enormous card. There is no need to use every pixel — anyone who wants
+  the whole screen has the fullscreen control for exactly that.
+- **It is measured once and then held.** Recomputing per screen made it slightly different
+  on a lesson slide, a decision and a consequence, so the card grew and shrank as the learner
+  moved through. The arrows are now reserved for even on screens that do not show them, and a
+  consequence takes the same frame as a slide rather than shrinking to its contents. Only a
+  resize releases it. Measured: identical on every screen at 1920×945, 1440×900 and 1366×768.
+
+### Changed — room given back to the content
+
+- **The gutter is gone.** The player sat inside up to forty pixels of its own background on
+  every side — eighty pixels of height handed to nothing. The card reaches the edges now and
+  its own border and shadow do the separating, which is what they were for.
+- **The bar is one row, not two.** A large title stacked over a row of progress and readings
+  took about ninety-six pixels off the top of every screen, on a page whose banner has
+  already said what the activity is. Title at reading size, then progress, then readings,
+  then controls, in one row that wraps back to two when the width is not there: 68px.
+
+### Fixed — narration
+
+- **The narrator reads the whole screen.** It read the situation and stopped, so a learner
+  listening rather than reading was never told the scene's name and never heard the question
+  being put to them. It now reads the title, the situation, the line to consider and the
+  question.
+- **And the consequence screen reads the lesson, not just the story.** "Why this mattered"
+  was on the page and not in the recording — the half that teaches.
+- **A clip that dies mid-stream no longer freezes the way forward.** Only `ended` was
+  listened for; a connection dropping fires `error`, and the Continue button stayed disabled
+  for ever with the control still claiming narration was on.
+- **Leaving a card stops the reading.** The stop came after two early exits, so moving to a
+  slide with no recording, or with narration muted, left the previous clip playing over it.
+- **The arrows wait for the reading, then come back on their own.** They fade rather than
+  disable, so a learner who does not want to listen can still press one, and a recording that
+  never finishes releases them after ninety seconds regardless.
+
+### Changed — every principle now teaches three things
+
+- A teaching slide carrying one sentence and half a screen of nothing was not a content
+  problem to be styled around: the example and the pitfall were optional, so the service left
+  them out. They are required now, and a definition without them is rejected with the
+  principle named. The narration reads them with the labels the slide shows, so they do not
+  run together into one paragraph for a listener.
+
+### Added — spelling that matches the language chosen
+
+- A teacher picks en-AU and gets "finalizing" and "organize" back. The prompt asks for the
+  chosen variety in as many words; asking is not getting. The draft review now names the
+  words that disagree with the language selected, so the teacher fixes them before a learner
+  reads them. It flags, it does not rewrite. "practice" and "license" are deliberately not on
+  the list: both are correct as nouns in British and Australian English, and a checker that
+  cannot tell a noun from a verb would flag the right spelling about as often as the wrong one.
+
+### Changed — hover
+
+- Every round control inverts rather than tints: the disc fills, the mark reverses out. A
+  tinted background with an accent-coloured icon put a second colour on screen competing with
+  whatever the scenario's own accent was, which is how a blue arrow ended up on a grey disc.
+
 ## [v1.19.0] - 2026-09-11
 
 A pass over the stylesheet and the look of the thing, after a full audit. No schema

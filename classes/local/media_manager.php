@@ -331,14 +331,27 @@ class media_manager {
         string $voice,
         int $index
     ): bool {
-        // The narrator reads the situation, and reads the spoken line too when nobody
-        // with a voice of their own says it. A line by a named character is its own clip
-        // in that character's voice, which is why a scenario no longer sounds like one
-        // person reading a play aloud.
-        $text = trim((string)$node['situation']);
+        // The narrator reads the whole screen, in the order a person reads it: the scene's
+        // title, the situation, the line to think about, and the question being put. It
+        // used to read the situation alone, which meant a learner listening rather than
+        // reading was never told what the scene was called and - worse - never heard the
+        // question they were being asked to answer. The options themselves are separate
+        // clips, so they are not repeated here.
+        //
+        // A line spoken by a named character is its own clip in that character's voice.
+        // The narrator only reads it when nobody with a voice of their own says it, which
+        // is why a scenario no longer sounds like one person reading a play aloud.
+        $parts = [
+            trim((string)($node['title'] ?? '')),
+            trim((string)$node['situation']),
+        ];
         if (!self::has_own_voice($node)) {
-            $text = trim($text . "\n\n" . (string)($node['facilitatorspeech'] ?? ''));
+            $parts[] = trim((string)($node['facilitatorspeech'] ?? ''));
         }
+        $parts[] = trim((string)($node['challenge'] ?? ''));
+        $text = trim(implode("\n\n", array_filter($parts, static function ($part) {
+            return $part !== '';
+        })));
         if ($text === '') {
             return false;
         }
@@ -383,12 +396,20 @@ class media_manager {
         string $voice,
         int $position
     ): bool {
-        $text = trim(
-            (string)($principle['title'] ?? '') . ". \n\n"
-            . (string)($principle['summary'] ?? '') . "\n\n"
-            . (string)($principle['example'] ?? '') . "\n\n"
-            . (string)($principle['pitfall'] ?? '')
-        );
+        // Read with the same labels the slide shows, or the example and the pitfall run
+        // together into one paragraph and a listener cannot tell which is which.
+        $parts = [(string)($principle['title'] ?? '') . '.', (string)($principle['summary'] ?? '')];
+        if (trim((string)($principle['example'] ?? '')) !== '') {
+            $parts[] = get_string('lesson:saythis', 'mod_aibranchedscenario') . '. '
+                . (string)$principle['example'];
+        }
+        if (trim((string)($principle['pitfall'] ?? '')) !== '') {
+            $parts[] = get_string('lesson:notthis', 'mod_aibranchedscenario') . '. '
+                . (string)$principle['pitfall'];
+        }
+        $text = trim(implode("\n\n", array_filter($parts, static function ($part) {
+            return trim($part, ". \n") !== '';
+        })));
         if (trim($text, ". \n") === '') {
             return false;
         }
@@ -460,9 +481,20 @@ class media_manager {
         string $voice,
         int $index
     ): bool {
-        // The consequence is the story; the feedback is the lesson drawn out of it and is
-        // read rather than heard, so only the story half is spoken.
-        $text = trim($choice['consequence'] ?? '');
+        // The consequence is the story and the feedback is the lesson drawn out of it, and
+        // both are read out. Speaking only the first half was a decision made on the page
+        // rather than for a listener: somebody with the narration on heard what happened
+        // and never heard why it mattered, which is the half that teaches. The feedback is
+        // introduced by the same words the screen puts above it, so the two do not run
+        // together into one paragraph.
+        $parts = [trim((string)($choice['consequence'] ?? ''))];
+        if (trim((string)($choice['feedback'] ?? '')) !== '') {
+            $parts[] = get_string('whythismattered', 'mod_aibranchedscenario') . '. '
+                . (string)$choice['feedback'];
+        }
+        $text = trim(implode("\n\n", array_filter($parts, static function ($part) {
+            return $part !== '';
+        })));
         if ($text === '') {
             return false;
         }
