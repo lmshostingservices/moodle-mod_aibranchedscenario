@@ -205,5 +205,11 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091103, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091104) {
+        // Release 1.8.0 changes no schema. It is the first release whose packaged files
+        // all agree on what version they belong to.
+        upgrade_mod_savepoint(true, 2026091104, 'aibranchedscenario');
+    }
+
     return true;
 }

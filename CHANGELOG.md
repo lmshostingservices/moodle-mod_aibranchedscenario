@@ -2,6 +2,36 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.8.0] - 2026-09-11
+
+The first release whose packaged files all agree on what version they belong to.
+
+### Fixed
+
+- **The README claimed release 1.0.0 for seven consecutive releases.** Nothing caught it,
+  because the version a person reads lives in a different file from the one Moodle reads,
+  and only the second was ever checked. It now states the release it ships with.
+
+### Added
+
+- **The suite now checks that the packaged files agree with each other.** The README's
+  stated release and numeric version must match `version.php`; the changelog must carry an
+  entry for this release *and* for the declared previous one; the upgrade path must reach
+  this numeric version; and the previous release must not be this release. The first run of
+  these checks failed, because this entry did not exist yet — which is the point of them.
+
+### Note
+
+- No functional change since v1.7.2. Everything below the surface is identical; this
+  release exists so that the archive, the documentation and the plugin's own metadata tell
+  the same story, which is what the release pipeline's documentation gate is asking for.
+
+### Testing
+
+684 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit: 45 tests, 283 assertions, passing
+on 5.2.2 with PHP 8.4. CodeSniffer clean. Behat still not executed — 5 scenarios and 69
+steps verified structurally only.
+
 ## [v1.7.2] - 2026-09-11
 
 **The PHPUnit suite had never been run.** It was written, committed and reported as
