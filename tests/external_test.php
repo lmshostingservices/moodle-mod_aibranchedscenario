@@ -151,7 +151,10 @@ final class external_test extends \externallib_advanced_testcase {
 
             $this->assertSame($seq, $result['seq']);
             $this->assertSame('positive', $result['signal']);
-            $this->assertStringNotContainsString('<script', $result['consequencehtml']);
+            $this->assertIsArray($result['consequenceparas']);
+            foreach ($result['consequenceparas'] as $paragraph) {
+                $this->assertIsString($paragraph);
+            }
 
             if ($result['finished']) {
                 break;

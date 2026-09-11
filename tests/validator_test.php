@@ -342,11 +342,30 @@ final class validator_test extends \advanced_testcase {
         $this->assertStringNotContainsString("\x07", $stored['situation']);
         $this->assertStringContainsString("\n", $stored['situation']);
 
-        // Rendered through the plugin's own output path it can only be text.
-        $rendered = \mod_aibranchedscenario\external\helper::paragraphs($stored['situation']);
+        // The helper splits the text into paragraphs and deliberately does not escape it.
+        // Escaping belongs at the point of output, not in the data, or a teacher who
+        // legitimately writes "10 < 20" would be shown "10 &lt; 20". So the paragraphs
+        // still carry the payload verbatim.
+        $paragraphs = \mod_aibranchedscenario\external\helper::paragraph_list($stored['situation']);
+        $this->assertStringContainsString('</script>', implode("\n", $paragraphs));
+
+        // What matters is that it can only ever reach a browser as text. Every template in
+        // this plugin uses escaping mustache tags, so rendering the paragraph the way the
+        // player renders it neutralises the payload.
+        $rendered = implode("\n", array_map('s', $paragraphs));
         $this->assertStringNotContainsString('<script', $rendered);
         $this->assertStringNotContainsString('</script>', $rendered);
         $this->assertStringContainsString('&lt;/script&gt;', $rendered);
+
+        // And no template may opt out of that escaping with a triple mustache, which is
+        // the one change that would turn the stored payload back into live markup.
+        foreach (glob(__DIR__ . '/../templates/*.mustache') as $template) {
+            $this->assertStringNotContainsString(
+                '{{{',
+                file_get_contents($template),
+                basename($template) . ' renders unescaped output'
+            );
+        }
     }
 
     /**

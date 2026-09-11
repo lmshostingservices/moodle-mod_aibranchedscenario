@@ -140,6 +140,88 @@ if ($ADMIN->fulltree) {
         $themeoptions
     ));
 
+    $languageoptions = [];
+    foreach (schema::languages() as $languageid) {
+        $languageoptions[$languageid] = get_string(
+            'language:' . strtolower(str_replace('-', '', $languageid)),
+            'mod_aibranchedscenario'
+        );
+    }
+    $settings->add(new admin_setting_configselect(
+        'mod_aibranchedscenario/defaultlanguage',
+        get_string('settings:defaultlanguage', 'mod_aibranchedscenario'),
+        '',
+        'en-AU',
+        $languageoptions
+    ));
+
+    $yesno = [0 => get_string('no'), 1 => get_string('yes')];
+    foreach (['showtimeline', 'showmetrics', 'showdebrief', 'enableimages', 'enableaudio'] as $toggle) {
+        $settings->add(new admin_setting_configselect(
+            'mod_aibranchedscenario/default' . $toggle,
+            get_string('settings:default' . $toggle, 'mod_aibranchedscenario'),
+            '',
+            1,
+            $yesno
+        ));
+    }
+
+    $attemptoptions = [0 => get_string('unlimited', 'mod_aibranchedscenario')];
+    for ($i = 1; $i <= 10; $i++) {
+        $attemptoptions[$i] = $i;
+    }
+    $settings->add(new admin_setting_configselect(
+        'mod_aibranchedscenario/defaultmaxattempts',
+        get_string('settings:defaultmaxattempts', 'mod_aibranchedscenario'),
+        '',
+        3,
+        $attemptoptions
+    ));
+
+    $settings->add(new admin_setting_configselect(
+        'mod_aibranchedscenario/defaultallowreplay',
+        get_string('settings:defaultallowreplay', 'mod_aibranchedscenario'),
+        '',
+        1,
+        $yesno
+    ));
+
+    $grademethodoptions = [];
+    foreach (schema::grademethods() as $method) {
+        $grademethodoptions[$method] = get_string('grademethod:' . $method, 'mod_aibranchedscenario');
+    }
+    $settings->add(new admin_setting_configselect(
+        'mod_aibranchedscenario/defaultgrademethod',
+        get_string('settings:defaultgrademethod', 'mod_aibranchedscenario'),
+        '',
+        'highest',
+        $grademethodoptions
+    ));
+
+    $settings->add(new admin_setting_configselect(
+        'mod_aibranchedscenario/defaultcompletionfinish',
+        get_string('settings:defaultcompletionfinish', 'mod_aibranchedscenario'),
+        '',
+        1,
+        $yesno
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_aibranchedscenario/defaultcompletionminscore',
+        get_string('settings:defaultcompletionminscore', 'mod_aibranchedscenario'),
+        get_string('settings:defaultcompletionminscoredesc', 'mod_aibranchedscenario'),
+        100,
+        PARAM_INT
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_aibranchedscenario/defaultgradepass',
+        get_string('settings:defaultgradepass', 'mod_aibranchedscenario'),
+        get_string('settings:defaultgradepassdesc', 'mod_aibranchedscenario'),
+        100,
+        PARAM_INT
+    ));
+
     $settings->add(new admin_setting_configtext(
         'mod_aibranchedscenario/jobretention',
         get_string('settings:jobretention', 'mod_aibranchedscenario'),

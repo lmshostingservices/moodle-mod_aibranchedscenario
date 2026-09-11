@@ -2,6 +2,208 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.7.2] - 2026-09-11
+
+**The PHPUnit suite had never been run.** It was written, committed and reported as
+"not run" for the life of the project, on the belief that the sandbox could not install
+it. That belief was stale. On its first execution it failed 10 of 45 tests, and one of
+those failures was a real defect in the permission code.
+
+### Fixed
+
+- **Every permission check in the external API was unreachable.** `helper::resolve()`
+  called `require_login()` before `external_api::validate_context()`. The latter resets the
+  page theme *before* it calls `require_login` itself, which is what makes it safe from a
+  web service; calling `require_login` first sets the page course against a theme that may
+  already be initialised, and Moodle answers with a coding exception. That exception was
+  thrown before `require_capability()` was ever reached — so the two tests asserting that a
+  student cannot publish or queue a generation were passing without testing anything. The
+  explicit call is removed; `validate_context()` performs the login check, as it is
+  designed to.
+- **The external API documented nine fields as "escaped paragraphs" that are not
+  escaped.** The values are plain text, escaped at render by Mustache, which is the correct
+  design — escaping in the data layer would show a teacher who writes "10 < 20" the string
+  "10 &lt; 20". But an integrator reading the published contract would reasonably have
+  inserted them with `innerHTML`. They are now documented as plain text, with escaping
+  named as the caller's responsibility.
+- Two tests referenced code that had been renamed out from under them —
+  `helper::paragraphs()` (now `paragraph_list()`, returning an array) and a
+  `consequencehtml` field (now `consequenceparas`). Nothing caught it because nothing ran.
+
+### Changed
+
+- The cross-site-scripting test now asserts at the layer that matters. It checks that the
+  stored payload survives verbatim, that rendering it the way the player renders it
+  neutralises the markup, and — newly — that no template in the plugin uses a triple
+  mustache, since that is the single change that would turn stored text back into live
+  markup.
+
+### Testing
+
+**PHPUnit: 45 tests, 283 assertions, all passing** on Moodle 5.2.2 with PHP 8.4. The five
+reported deprecations are `@covers` doc-comment annotations, which PHPUnit 11 would rather
+see as attributes; they are kept because Moodle 4.4 and 4.5 ship a PHPUnit that does not
+support the attribute form, and this plugin supports 4.4.
+
+**Behat: 5 scenarios, 69 steps, every step resolving to a definition.** The features cannot
+be executed here — the only ChromeDriver in the environment is major version 147 against a
+Chromium 141, and the Chrome for Testing download host is blocked — so they are verified
+structurally, not behaviourally. That gap is real and is recorded rather than papered over.
+
+675 harness checks on 4.4.12, 4.5.13 and 5.2.2, CodeSniffer clean, browser pass and 31 UI
+checks green on all three.
+
+## [v1.7.1] - 2026-09-11
+
+**Any scenario containing a beat could be saved and then refused on its way to learners.**
+Found by building a scenario by hand and trying to publish it, which is a thing nobody had
+done before today.
+
+### Fixed
+
+- **The validator could not validate its own output.** A beat's onward link is read from
+  the node, but was written only into the synthesised choice, so the normalised form no
+  longer carried it. Publishing re-validates the stored working copy — and the second pass
+  said every beat did not know what followed it, and everything after the first beat was
+  unreachable. A validated definition is now stable: validating it again returns exactly
+  what the first pass returned.
+- A beat whose link arrives only inside its choices, which is how the service sends them,
+  is normalised the same way, so the 1.6.4 mapper fix and this one agree.
+- The beat's continue label survives normalisation instead of reverting to "Continue".
+
+### Added
+
+- **A worked example ships with the plugin**, at `examples/scenario-active-listening.json`.
+  Paste it into the import box to get a complete, playable five-decision scenario without
+  spending a credit or waiting on the generator. It is a workplace active-listening
+  scenario, twelve nodes, three endings, and its skill deltas are set so that all three
+  endings are provably attainable: best path 87.5%, middle 62.5%, worst 25%.
+- The example is covered by the test suite, so it cannot rot: it must validate, validate
+  twice, raise no quality warnings, and offer one ending for each band.
+
+### Testing
+
+15 new checks. The round trip is asserted as an invariant rather than a special case —
+validate twice, compare, and require the second result to equal the first — because that is
+the property publishing depends on. The normalised beat is checked to keep its link, its
+label and its single player-facing choice.
+
+One of the new checks was skipped in silence on Moodle 5.2, where the code lives under
+`public/` and the harness had assumed it sat beside its own directory. The suite now
+resolves the path through `dirroot` and asserts the example is present, so a missing file
+fails rather than disappears. 675 checks pass on Moodle 4.4.12, 4.5.13 and 5.2.2,
+CodeSniffer clean.
+
+### Note
+
+- Existing working copies need no migration. A stored definition is re-validated on save
+  and on publish, which repairs it in place.
+
+## [v1.7.0] - 2026-09-11
+
+### Added
+
+- **Every activity default is now a site setting.** An administrator sets how new AI
+  Branched Scenario activities should start, once, under the plugin's settings, and every
+  activity created afterwards opens that way. Covered: accent theme, scenario language, the
+  progress rail, room dynamics and debrief toggles, scene images, narration, attempts
+  allowed, replay, grading method, whether the learner must finish, minimum decision
+  quality, and grade to pass.
+
+### Changed
+
+- **The shipped defaults now match how the plugin is actually used.** Scene images and
+  narration are on, attempts are 3 rather than unlimited, grading takes the highest attempt
+  rather than the last, the learner must finish the scenario, minimum decision quality is
+  100 and grade to pass is 100. Previously images and narration were off, attempts were
+  unlimited, grading took the last attempt, and neither completion rule was set.
+- The activity name still has no default, so a new activity opens with an empty title.
+
+### Note
+
+- **A minimum decision quality of 100 and a grade to pass of 100 mean only a faultless run
+  completes or passes the activity.** That is deliberate and is what these defaults ship
+  with, but it is strict enough that both settings carry an explanation saying so on the
+  settings page. Lower either one if completion should be reachable on a good but imperfect
+  attempt.
+- Existing activities are untouched. A default applies when an activity is created, never
+  afterwards.
+
+### Fixed
+
+- **A failed generation the service refunded was still spending the teacher's own daily
+  allowance.** The allowance counted every job, whatever became of it, so three scenario
+  generations the service failed and refunded cost sixty credits of a teacher's budget for
+  work nobody was billed for — and a teacher whose generations were all failing reached the
+  daily limit fastest of all. A failure the service reports as refunded no longer counts. A
+  generation the service completed and charged for still does, even when this plugin then
+  rejects the scenario, because those credits were spent whatever happened next.
+
+### Testing
+
+11 further checks for the allowance: a refunded service failure spends nothing, several in
+a row still spend nothing, a scenario charged for and rejected locally still counts, suggest
+and populate are weighted by their own tariff, and the figure shown to the teacher is the
+same one the gate enforces — checked at the boundary, where a refusal must report the spend
+the teacher can actually see.
+
+23 new checks for the defaults: every one of the thirteen settings falls back to its shipped value when the
+site has never saved one, and every one is registered on the settings page — verified by
+running the settings file and recording what it adds, rather than searching its source, so
+the five registered in a loop are covered like the rest. A saved site value wins over the
+shipped one. Zero is honoured rather than mistaken for unset, which matters because zero is
+a real answer for both attempts and every toggle. The activity name is confirmed to carry
+no default, every setting is confirmed to have a label, and the two strict settings are
+confirmed to explain what 100 means. 660 checks pass on Moodle 4.4.12, 4.5.13 and 5.2.2,
+CodeSniffer clean.
+
+## [v1.6.4] - 2026-09-11
+
+**This release fixes the fault that has been rejecting generated scenarios since the
+plugin was first pointed at the service, and it was this plugin's, not the generator's.**
+
+### Fixed
+
+- **A scene the service sent as `content` took the whole scenario down with it.** The
+  mapper turned every `content` node into a `beat`. A beat is validated on a node-level
+  `next` and its choices are discarded — but nothing on the wire carries that field, since
+  the service puts every onward link inside the choices. So the node arrived with nowhere
+  to go and was refused with "does not say what follows it". When the node it happened to
+  be was the first one, every other node became unreachable and the scenario was rejected
+  entirely. That is exactly the pair of errors recorded against the failed jobs on
+  10 September.
+
+  A beat now takes its onward link from a node-level `nextNodeId` where a service supplies
+  one, and otherwise from the choice it came from, along with that choice's text as its
+  continue label.
+- **A `content` node carrying real alternatives is now mapped as a decision.** Converting
+  it to a beat discarded its choices, so a branch the generator had written was silently
+  thrown away. A node with two or more alternatives is a decision whatever the service
+  called it.
+- A beat that genuinely has nowhere to go is still refused. The fix supplies a missing link
+  from the choices; it does not invent one.
+
+### Credit
+
+Found by the LMS Labs Replit agent while reviewing its own graph-validation work: it
+noticed the mapper converts `content` nodes to `beat` but may not supply the node-level
+`next`, and flagged it as worth checking independently. It was right, and it was the
+answer.
+
+### Testing
+
+12 new checks covering the original failure end to end: the wire shape that failed on
+10 September now validates, and neither "does not say what follows it" nor "cannot be
+reached" appears; an explicit node-level link wins over the borrowed one; a content node
+with alternatives becomes a decision with none of its choices lost; and a content node with
+no choices at all still has no link to borrow and is still refused. 602 checks pass on
+Moodle 4.4.12, 4.5.13 and 5.2.2, CodeSniffer clean.
+
+### Note
+
+- No stored scenario can be holding the bad shape: the scenarios affected were refused at
+  validation and never written. Nothing needs migrating.
+
 ## [v1.6.3] - 2026-09-10
 
 The graph validator asks whether a scenario holds together. It does not ask whether the

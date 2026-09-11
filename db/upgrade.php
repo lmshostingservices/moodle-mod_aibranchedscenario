@@ -179,5 +179,31 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091017, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091100) {
+        // Release 1.6.4 changes no schema. It corrects the mapping of the service's
+        // content nodes, which no stored scenario can be holding: the scenarios affected
+        // were refused at validation and never written.
+        upgrade_mod_savepoint(true, 2026091100, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091101) {
+        // Release 1.7.0 changes no schema. The activity defaults become site settings, and
+        // an unsaved setting falls back to the shipped value, so nothing needs seeding.
+        upgrade_mod_savepoint(true, 2026091101, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091102) {
+        // Release 1.7.1 changes no schema. A stored working copy containing a beat is
+        // repaired the next time it is validated, which happens on save and on publish,
+        // so nothing needs migrating here.
+        upgrade_mod_savepoint(true, 2026091102, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091103) {
+        // Release 1.7.2 changes no schema. It corrects the order of the permission check
+        // in the external API and the tests that were never reaching it.
+        upgrade_mod_savepoint(true, 2026091103, 'aibranchedscenario');
+    }
+
     return true;
 }

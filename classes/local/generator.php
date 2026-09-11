@@ -63,6 +63,47 @@ class generator {
     }
 
     /**
+     * The spend counted against a user's daily allowance in the last day.
+     *
+     * A call the service refused without charging must not be counted. Three scenario
+     * generations that the service failed and refunded were costing a teacher sixty
+     * credits of their own allowance for work nobody was billed for, which is how a
+     * teacher whose generations were all failing reached the daily limit fastest of all.
+     *
+     * A generation the service completed and charged for still counts, even when this
+     * plugin then rejected the scenario: the credits were spent whatever happened next.
+     * The two are told apart by the error recorded against the job, because the service
+     * reports its own refusal with a distinct identifier.
+     *
+     * @param int $userid User id.
+     * @return int Credits spent.
+     */
+    protected function spend_since(int $userid): int {
+        global $DB;
+
+        $tariff = schema::tariff();
+        $refunded = $DB->sql_like('errormsg', ':refunded', false, false);
+        $counts = $DB->get_records_sql(
+            'SELECT jobtype, COUNT(id) AS total
+               FROM {aibranchedscenario_jobs}
+              WHERE userid = :userid AND timecreated > :since
+                AND NOT (status = :errored AND ' . $refunded . ')
+           GROUP BY jobtype',
+            [
+                'userid'   => $userid,
+                'since'    => time() - DAYSECS,
+                'errored'  => self::JOB_ERROR,
+                'refunded' => 'error:servicefailed%',
+            ]
+        );
+        $spent = 0;
+        foreach ($counts as $row) {
+            $spent += (int)$row->total * (int)($tariff[$row->jobtype] ?? 1);
+        }
+        return $spent;
+    }
+
+    /**
      * Check the per-user daily generation quota and throw when it is exhausted.
      *
      * @param int $userid User id.
@@ -83,18 +124,7 @@ class generator {
         // of a button that spends about thirty credits in total. Each job is now
         // weighted by what the service charges for it.
         $tariff = schema::tariff();
-        $since = time() - DAYSECS;
-        $spent = 0;
-        $counts = $DB->get_records_sql(
-            'SELECT jobtype, COUNT(id) AS total
-               FROM {aibranchedscenario_jobs}
-              WHERE userid = :userid AND timecreated > :since
-           GROUP BY jobtype',
-            ['userid' => $userid, 'since' => $since]
-        );
-        foreach ($counts as $row) {
-            $spent += (int)$row->total * (int)($tariff[$row->jobtype] ?? 1);
-        }
+        $spent = $this->spend_since($userid);
 
         $cost = (int)($tariff[$operation] ?? 1);
         if ($spent + $cost > $quota) {
@@ -119,18 +149,7 @@ class generator {
             return ['quota' => 0, 'spent' => 0, 'remaining' => 0, 'limited' => false];
         }
 
-        $tariff = schema::tariff();
-        $spent = 0;
-        $counts = $DB->get_records_sql(
-            'SELECT jobtype, COUNT(id) AS total
-               FROM {aibranchedscenario_jobs}
-              WHERE userid = :userid AND timecreated > :since
-           GROUP BY jobtype',
-            ['userid' => $userid, 'since' => time() - DAYSECS]
-        );
-        foreach ($counts as $row) {
-            $spent += (int)$row->total * (int)($tariff[$row->jobtype] ?? 1);
-        }
+        $spent = $this->spend_since($userid);
 
         return [
             'quota'     => $quota,

@@ -161,6 +161,41 @@ class scenario_mapper {
                 $choices[] = self::choice_from_wire($choice, $index);
             }
         }
+
+        // A beat is validated on a node-level `next` and its choices are discarded, but
+        // nothing on the wire carries that field: the service puts every onward link in
+        // the choices. So every `content` node the service sent arrived as a beat with
+        // nowhere to go, failed with "does not say what follows it", and — because the
+        // node it happened to be was the first one — took the reachability of the whole
+        // scenario down with it. That is the failure seen on 10 September, and it was
+        // this plugin's doing rather than the generator's.
+        //
+        // A node the service called content but gave real alternatives to is a decision
+        // whatever it was labelled, so it is mapped as one rather than losing the
+        // branching. A genuine one-way beat keeps its single onward link.
+        if ($mapped === 'beat' && count($choices) >= schema::MIN_CHOICES) {
+            $out['type'] = 'decision';
+            $out['choices'] = $choices;
+            return $out;
+        }
+
+        if ($mapped === 'beat') {
+            $next = trim((string)($node['nextNodeId'] ?? ($node['next'] ?? '')));
+            if ($next === '' && isset($choices[0]['next'])) {
+                $next = (string)$choices[0]['next'];
+            }
+            $out['next'] = $next;
+            $label = trim((string)($node['continueLabel'] ?? ($node['continuelabel'] ?? '')));
+            if ($label === '' && isset($choices[0]['text'])) {
+                $label = (string)$choices[0]['text'];
+            }
+            if ($label !== '') {
+                $out['continuelabel'] = $label;
+            }
+            $out['choices'] = [];
+            return $out;
+        }
+
         $out['choices'] = $choices;
 
         return $out;

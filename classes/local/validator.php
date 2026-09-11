@@ -463,12 +463,29 @@ class validator {
         if ($type === 'beat') {
             // A beat is a narrative moment with exactly one way forward.
             $node['choices'] = [];
+
+            // The onward link is read from the node, but until now was written only into
+            // the synthesised choice, so a validated definition could not be validated
+            // again: every beat came back saying it did not know what followed it, and
+            // every node after the first beat became unreachable. That matters because
+            // publishing re-validates the stored working copy, so any scenario containing
+            // a beat could be saved and then refused on its way to learners. Keeping the
+            // node-level link and label in the normalised form makes the shape stable
+            // under repeated validation.
             $next = $this->identifier($raw['next'] ?? '');
+            if ($next === '' && isset($raw['choices'][0]['next'])) {
+                $next = $this->identifier($raw['choices'][0]['next']);
+            }
+            $label = $this->short($raw['continuelabel'] ?? '', 120)
+                ?: $this->short($raw['choices'][0]['text'] ?? '', 120);
+            $node['next'] = $next;
+            if ($label !== '') {
+                $node['continuelabel'] = $label;
+            }
             $node['choices'][] = [
                 'id'          => $id . '_go',
                 'letter'      => 'A',
-                'text'        => $this->short($raw['continuelabel'] ?? '', 120)
-                    ?: get_string('continue', 'mod_aibranchedscenario'),
+                'text'        => $label ?: get_string('continue', 'mod_aibranchedscenario'),
                 'signal'      => 'neutral',
                 'consequence' => '',
                 'feedback'    => '',

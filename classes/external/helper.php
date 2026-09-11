@@ -52,7 +52,12 @@ class helper {
         [$course, $cm] = get_course_and_cm_from_cmid($cmid, 'aibranchedscenario');
         $context = context_module::instance($cm->id);
 
-        require_login($course, false, $cm);
+        // The login check belongs inside validate_context, not beside it. That method
+        // resets the page theme before calling require_login itself, which is what makes
+        // it safe from a web service. Calling require_login first sets the page course
+        // against a theme that may already be initialised, and Moodle refuses that with a
+        // coding exception — thrown before the capability check below was ever reached,
+        // so every permission test in this plugin was passing without running.
         \core_external\external_api::validate_context($context);
         require_capability($capability, $context);
 
@@ -256,13 +261,13 @@ class helper {
             'title'         => new external_value(PARAM_TEXT, 'Short node title'),
             'stage'         => new external_value(PARAM_INT, 'Narrative stage number'),
             'situation'     => new external_value(PARAM_TEXT, 'Situation text'),
-            'situationparas' => self::paragraphs_structure('Situation rendered as escaped paragraphs'),
+            'situationparas' => self::paragraphs_structure('Situation rendered as plain text; escape before use as HTML'),
             'speech'        => new external_value(PARAM_TEXT, 'What a character says'),
             'challenge'     => new external_value(PARAM_TEXT, 'The direct question put to the learner'),
             'crisis'        => new external_value(PARAM_BOOL, 'Whether the crisis variant is showing'),
             'outcome'       => new external_value(PARAM_ALPHA, 'Outcome band for terminal nodes'),
             'summary'       => new external_value(PARAM_TEXT, 'Outcome summary text'),
-            'summaryparas'   => self::paragraphs_structure('Outcome summary as escaped paragraphs'),
+            'summaryparas'   => self::paragraphs_structure('Outcome summary as plain text; escape before use as HTML'),
             'imageurl'      => new external_value(PARAM_URL, 'Scene image URL, or empty'),
             'imagealt'      => new external_value(PARAM_TEXT, 'Scene image alternative text'),
             'audiourl'      => new external_value(PARAM_URL, 'Narration audio URL, or empty'),
@@ -517,7 +522,7 @@ class helper {
             'outcome'      => new external_value(PARAM_ALPHA, 'Outcome band reached'),
             'outcomelabel' => new external_value(PARAM_TEXT, 'Translated outcome band label'),
             'outcometitle' => new external_value(PARAM_TEXT, 'Title of the outcome node'),
-            'outcomeparas'  => self::paragraphs_structure('Outcome summary as escaped paragraphs'),
+            'outcomeparas'  => self::paragraphs_structure('Outcome summary as plain text; escape before use as HTML'),
             'score'        => new external_value(PARAM_FLOAT, 'Decision quality as a percentage'),
             'decisions'    => new external_value(PARAM_INT, 'Number of decisions taken'),
             'metrics'      => self::metrics_structure(),
@@ -536,9 +541,9 @@ class helper {
                     'choicetext'      => new external_value(PARAM_TEXT, 'What the learner chose'),
                     'signal'          => new external_value(PARAM_ALPHA, 'Signal type of the choice'),
                     'consequence'     => new external_value(PARAM_TEXT, 'What happened next'),
-                    'consequenceparas' => self::paragraphs_structure('Consequence as escaped paragraphs'),
+                    'consequenceparas' => self::paragraphs_structure('Consequence as plain text; escape before use as HTML'),
                     'feedback'        => new external_value(PARAM_TEXT, 'Instructional feedback'),
-                    'feedbackparas'    => self::paragraphs_structure('Feedback as escaped paragraphs'),
+                    'feedbackparas'    => self::paragraphs_structure('Feedback as plain text; escape before use as HTML'),
                     'principle'       => new external_value(PARAM_TEXT, 'Decision principle tested'),
                 ])
             ),
@@ -552,12 +557,12 @@ class helper {
                 new external_value(PARAM_TEXT, 'A behaviour to use in practice')
             ),
             'sourceconnection' => new external_value(PARAM_TEXT, 'How the lessons connect to the source content'),
-            'sourceconnectionparas' => self::paragraphs_structure('Source connection as escaped paragraphs'),
+            'sourceconnectionparas' => self::paragraphs_structure('Source connection as plain text; escape before use as HTML'),
             'takeaways'    => new external_multiple_structure(
                 new external_single_structure([
                     'heading'  => new external_value(PARAM_TEXT, 'Takeaway heading'),
                     'body'     => new external_value(PARAM_TEXT, 'Takeaway body'),
-                    'bodyparas' => self::paragraphs_structure('Takeaway body as escaped paragraphs'),
+                    'bodyparas' => self::paragraphs_structure('Takeaway body as plain text; escape before use as HTML'),
                 ])
             ),
         ]);

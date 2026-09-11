@@ -1,0 +1,492 @@
+{
+  "title": "The third interruption",
+  "subtitle": "Active listening when the room is moving too fast",
+  "role": "You are the team leader, responsible for making sure everyone in the room is actually heard.",
+  "setting": "Meeting room",
+  "language": "en-AU",
+  "tone": "neutral",
+  "complexity": "intermediate",
+  "hook": "Active listening is easy to agree with and hard to do at eleven minutes past the hour with a decision to make.\n\nOne of your team has stopped speaking in meetings. She has not complained, her work is good, and nobody else has noticed. What happens next is yours.",
+  "openingmetrics": {
+    "engagement": 50,
+    "trust": 50,
+    "tension": 30
+  },
+  "principles": [
+    {
+      "id": "p1",
+      "title": "Notice the withdrawal, not just the interruption",
+      "summary": "The moment that matters is when someone stops trying, and it is almost always quiet."
+    },
+    {
+      "id": "p2",
+      "title": "Describe behaviour, not character",
+      "summary": "A person can act on \"three times on Thursday\". Nobody can act on \"you're a poor listener\"."
+    },
+    {
+      "id": "p3",
+      "title": "A workaround is a decision",
+      "summary": "Accommodating a problem without naming its cost is how the accommodation becomes permanent."
+    }
+  ],
+  "startnode": "n1",
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "decision",
+      "title": "The third interruption",
+      "stage": 1,
+      "situation": "Thursday stand-up, eleven minutes in. Priya has started the same sentence three times. Each time, Dan has finished it for her — faster, louder, and not quite right.\n\nShe stops trying. She looks at her notes and says, \"It's fine, go on.\"\n\nThe room moves on. Nobody else appears to have noticed.",
+      "facilitatorspeech": "Right, so we're agreed on the Friday cutover?",
+      "challenge": "Priya has just withdrawn from the conversation. What do you do?",
+      "choices": [
+        {
+          "id": "n1_a",
+          "text": "Stop the room. \"Priya, you started to say something three times. I'd like to hear it.\"",
+          "consequence": "The room goes quiet in a way that is slightly uncomfortable. Priya hesitates, then says the cutover date collides with the audit. Dan opens his mouth and closes it again.",
+          "feedback": "You made the withdrawal visible without making anyone the villain. Naming what you observed — three attempts — is harder to dismiss than \"let Priya speak\".",
+          "signal": "positive",
+          "skills": {
+            "presence": 2,
+            "adaptability": 2,
+            "empathy": 2,
+            "clarity": 0
+          },
+          "principleid": "p1",
+          "effects": {
+            "engagement": 5,
+            "trust": 10,
+            "tension": -10
+          },
+          "next": "n2a"
+        },
+        {
+          "id": "n1_b",
+          "text": "Make a note to catch Priya afterwards, and let the meeting run.",
+          "consequence": "The meeting finishes on time. You catch Priya at her desk at four. She tells you about the audit collision, and adds that she'd mentioned it twice already.",
+          "feedback": "You did follow up, which matters. But the decision was made without her information, and the room learned that being talked over is survivable rather than something that gets corrected.",
+          "signal": "neutral",
+          "skills": {
+            "presence": 1,
+            "adaptability": 0,
+            "empathy": 1,
+            "clarity": 0
+          },
+          "principleid": "p1",
+          "effects": {
+            "engagement": 0,
+            "trust": 0,
+            "tension": 0
+          },
+          "next": "n2b"
+        },
+        {
+          "id": "n1_c",
+          "text": "Say \"let's keep it moving\" and confirm the Friday date.",
+          "consequence": "The stand-up ends four minutes early. On Friday the cutover runs into the audit window and is rolled back at 6pm.",
+          "feedback": "The information you needed was in the room and had tried to reach you three times. Speed here cost a weekend.",
+          "signal": "negative",
+          "skills": {
+            "presence": -1,
+            "adaptability": -1,
+            "empathy": -2,
+            "clarity": 0
+          },
+          "principleid": "p1",
+          "effects": {
+            "engagement": -5,
+            "trust": -10,
+            "tension": 15
+          },
+          "next": "n2b"
+        }
+      ]
+    },
+    {
+      "id": "n2a",
+      "type": "beat",
+      "title": "What Priya actually said",
+      "stage": 2,
+      "situation": "Priya lays it out in about ninety seconds: the cutover window overlaps the external audit, the auditors need read access to the same system, and she flagged it in the channel on Monday.\n\nDan says, \"I didn't see that.\" He isn't being defensive. He genuinely didn't.",
+      "facilitatorspeech": "I didn't see that. Sorry — go on.",
+      "challenge": "",
+      "next": "n3",
+      "continuelabel": "Let her finish"
+    },
+    {
+      "id": "n2b",
+      "type": "beat",
+      "title": "The pattern repeats",
+      "stage": 2,
+      "situation": "Two weeks later, same meeting, same shape. Priya contributes once at the start and then stops. When you ask her directly for a view, she says \"whatever the team thinks\".\n\nDan is not hostile. He is quick, and he fills silence. The gap between those two things has become a pattern nobody has named.",
+      "facilitatorspeech": "Whatever the team thinks is fine by me.",
+      "challenge": "",
+      "next": "n3",
+      "continuelabel": "Sit with that"
+    },
+    {
+      "id": "n3",
+      "type": "decision",
+      "title": "Dan, one to one",
+      "stage": 3,
+      "situation": "You've asked Dan for fifteen minutes. He arrives cheerful and slightly puzzled.\n\nHe is one of the most useful people on the team. He is also the reason one of the others has stopped speaking, and he has no idea.",
+      "facilitatorspeech": "What's up? Everything alright with the cutover?",
+      "challenge": "How do you open this?",
+      "choices": [
+        {
+          "id": "n3_a",
+          "text": "Describe what you saw, not what it meant. \"In Thursday's stand-up, Priya began three times and each time the sentence got finished for her.\"",
+          "consequence": "Dan sits back. \"Three times?\" He thinks about it. \"I do that. My wife says I do that.\" He asks what he should do instead, and means it.",
+          "feedback": "Observable behaviour is something a person can accept without having to defend their character. \"You talk over people\" invites an argument about whether that is true. \"Three times on Thursday\" does not.",
+          "signal": "positive",
+          "skills": {
+            "presence": 2,
+            "adaptability": 2,
+            "empathy": 2,
+            "clarity": 0
+          },
+          "principleid": "p2",
+          "effects": {
+            "engagement": 5,
+            "trust": 10,
+            "tension": -10
+          },
+          "next": "n4a"
+        },
+        {
+          "id": "n3_b",
+          "text": "Ask how he thinks the stand-ups are going.",
+          "consequence": "\"Good?\" he says. \"Bit long maybe.\" You end up steering the conversation round to interrupting anyway, but from further away, and he leaves not quite sure whether he was in trouble.",
+          "feedback": "The open question is a reasonable instinct and sometimes it works. Here it asked Dan to guess what you had already decided to tell him, which is a slower route to the same place and leaves the message blurred.",
+          "signal": "neutral",
+          "skills": {
+            "presence": 1,
+            "adaptability": 0,
+            "empathy": 1,
+            "clarity": 0
+          },
+          "principleid": "p2",
+          "effects": {
+            "engagement": 0,
+            "trust": 0,
+            "tension": 0
+          },
+          "next": "n4b"
+        },
+        {
+          "id": "n3_c",
+          "text": "Tell him he needs to be more aware of how he comes across.",
+          "consequence": "Dan agrees immediately and warmly, and nothing changes, because he has no idea which behaviour you are describing. At the next stand-up he interrupts Priya twice.",
+          "feedback": "Feedback that names a quality rather than an action cannot be acted on. He would have fixed it if he had known what \"it\" was.",
+          "signal": "negative",
+          "skills": {
+            "presence": -1,
+            "adaptability": -1,
+            "empathy": -2,
+            "clarity": 0
+          },
+          "principleid": "p2",
+          "effects": {
+            "engagement": -5,
+            "trust": -10,
+            "tension": 15
+          },
+          "next": "n4b"
+        }
+      ]
+    },
+    {
+      "id": "n4a",
+      "type": "beat",
+      "title": "He asks for the rule",
+      "stage": 4,
+      "situation": "\"Just tell me what to do,\" Dan says. \"I'm not going to notice in the moment. I never do.\"\n\nIt is a fair request. He is asking for a mechanism, not a lecture.",
+      "facilitatorspeech": "Just tell me what to do. I won't notice on my own.",
+      "next": "n5",
+      "continuelabel": "Think about what would actually work"
+    },
+    {
+      "id": "n4b",
+      "type": "beat",
+      "title": "Nothing changes on its own",
+      "stage": 4,
+      "situation": "The next stand-up runs exactly as the last one did. Whatever was said in that room, it did not survive contact with a live meeting and a tight agenda.\n\nPriya has started sending her points to you by message beforehand, so that they get made.",
+      "facilitatorspeech": "I'll just send it to you before, easier that way.",
+      "next": "n5",
+      "continuelabel": "Notice what she has started doing"
+    },
+    {
+      "id": "n5",
+      "type": "decision",
+      "title": "The workaround",
+      "stage": 5,
+      "situation": "Priya's messages are excellent. They arrive the night before, they are clear, and they mean the meeting runs smoothly.\n\nThey also mean she has stopped speaking in the room, and that the team now hears her points in your voice rather than hers.",
+      "facilitatorspeech": "It's honestly easier this way. I don't mind.",
+      "challenge": "She says she doesn't mind. Do you accept the workaround?",
+      "choices": [
+        {
+          "id": "n5_a",
+          "text": "Name the cost. \"It works, and I'll keep reading them. But the team is hearing your thinking in my voice, and that's a loss for you and for them.\"",
+          "consequence": "Priya is quiet for a moment. \"I hadn't thought about the second part.\" She agrees to try making one point herself each stand-up, and asks you not to rescue her if it goes badly.",
+          "feedback": "You took her stated preference seriously and still said the thing she hadn't considered. Accepting a workaround without naming its cost is how a temporary accommodation becomes permanent.",
+          "signal": "positive",
+          "skills": {
+            "presence": 2,
+            "adaptability": 2,
+            "empathy": 2,
+            "clarity": 0
+          },
+          "principleid": "p3",
+          "effects": {
+            "engagement": 5,
+            "trust": 10,
+            "tension": -10
+          },
+          "next": "n6"
+        },
+        {
+          "id": "n5_b",
+          "text": "Thank her and keep the arrangement, but resolve to keep an eye on it.",
+          "consequence": "The arrangement holds. Three months later she is still sending messages, and a new starter has quietly copied the habit.",
+          "feedback": "Nothing here is wrong, exactly. But \"keep an eye on it\" is not a mechanism, and the pattern had already shown it could outlast your attention.",
+          "signal": "neutral",
+          "skills": {
+            "presence": 1,
+            "adaptability": 0,
+            "empathy": 1,
+            "clarity": 0
+          },
+          "principleid": "p3",
+          "effects": {
+            "engagement": 0,
+            "trust": 0,
+            "tension": 0
+          },
+          "next": "n6"
+        },
+        {
+          "id": "n5_c",
+          "text": "Take her at her word. She said she doesn't mind.",
+          "consequence": "She doesn't raise it again. At her next review she asks about roles on other teams, and mentions she'd like somewhere she can \"contribute more directly\".",
+          "feedback": "Taking someone at their word sounds respectful. Here it meant accepting the first answer from a person who had already learned that the room does not hold space for her second one.",
+          "signal": "negative",
+          "skills": {
+            "presence": -1,
+            "adaptability": -1,
+            "empathy": -2,
+            "clarity": 0
+          },
+          "principleid": "p3",
+          "effects": {
+            "engagement": -5,
+            "trust": -10,
+            "tension": 15
+          },
+          "next": "n6"
+        }
+      ]
+    },
+    {
+      "id": "n6",
+      "type": "decision",
+      "title": "The mechanism",
+      "stage": 6,
+      "situation": "Whatever you do next has to survive a tight agenda, a loud colleague and your own attention on a bad week. It has to work when you are not thinking about it.",
+      "facilitatorspeech": "So how are we doing this?",
+      "challenge": "What do you put in place?",
+      "choices": [
+        {
+          "id": "n6_a",
+          "text": "Change the format: each person gets ninety uninterrupted seconds, in a fixed order, before any discussion.",
+          "consequence": "The first two stand-ups are stilted and everyone hates it. By the fourth, Dan is timing himself and Priya has stopped pre-writing. The format holds because it does not depend on anyone remembering to be considerate.",
+          "feedback": "A structural change survives a bad week. It also spreads the cost across everyone instead of asking one person to be braver and another to be quieter.",
+          "signal": "positive",
+          "skills": {
+            "presence": 2,
+            "adaptability": 2,
+            "empathy": 2,
+            "clarity": 0
+          },
+          "principleid": "p2",
+          "effects": {
+            "engagement": 5,
+            "trust": 10,
+            "tension": -10
+          },
+          "next": "n7"
+        },
+        {
+          "id": "n6_b",
+          "text": "Ask Dan to let Priya finish, and ask Priya to push back if he doesn't.",
+          "consequence": "It works when both of them remember. Dan remembers about half the time. Priya pushes back once, early, and not again.",
+          "feedback": "You asked two people to change behaviour in the moment, which is the hardest place to change it, and you put the harder half on the person with less room to spend.",
+          "signal": "neutral",
+          "skills": {
+            "presence": 1,
+            "adaptability": 0,
+            "empathy": 1,
+            "clarity": 0
+          },
+          "principleid": "p2",
+          "effects": {
+            "engagement": 0,
+            "trust": 0,
+            "tension": 0
+          },
+          "next": "n7"
+        },
+        {
+          "id": "n6_c",
+          "text": "Say you'll watch for it and step in when it happens.",
+          "consequence": "You step in twice in the first week, once in the third, and then a release slips and you stop noticing entirely.",
+          "feedback": "Your attention is the scarcest resource in the room and the first thing a busy week takes. A rule that depends on it is a rule that works until it matters.",
+          "signal": "negative",
+          "skills": {
+            "presence": -1,
+            "adaptability": -1,
+            "empathy": -2,
+            "clarity": 0
+          },
+          "principleid": "p2",
+          "effects": {
+            "engagement": -5,
+            "trust": -10,
+            "tension": 15
+          },
+          "next": "n7"
+        }
+      ]
+    },
+    {
+      "id": "n7",
+      "type": "decision",
+      "title": "Six weeks on",
+      "stage": 7,
+      "situation": "Priya raises a risk in the stand-up — unprompted, in the room, and she holds the floor while she explains it. Dan waits, then builds on it.\n\nAfterwards Priya asks you, not unkindly, why it took six weeks.",
+      "facilitatorspeech": "Why did that take six weeks?",
+      "challenge": "It is a real question and it deserves a real answer.",
+      "choices": [
+        {
+          "id": "n7_a",
+          "text": "\"Because I watched it happen for a while before I did anything, and that was mine to fix sooner.\"",
+          "consequence": "She nods. \"Alright.\" That is the whole conversation, and it is enough. She raises something else the following week without checking whether it is safe to.",
+          "feedback": "Naming your own delay without performing guilt about it is what makes the correction credible. She was not asking for an apology; she was asking whether you had seen it.",
+          "signal": "positive",
+          "skills": {
+            "presence": 2,
+            "adaptability": 2,
+            "empathy": 2,
+            "clarity": 0
+          },
+          "principleid": "p3",
+          "effects": {
+            "engagement": 5,
+            "trust": 10,
+            "tension": -10
+          },
+          "next": "__auto__"
+        },
+        {
+          "id": "n7_b",
+          "text": "\"These things take time to shift.\"",
+          "consequence": "She says \"sure\" and goes back to her desk. The format holds, and she keeps using it, but she does not ask you a question like that again.",
+          "feedback": "It is true and it is also the answer that costs you nothing. She had noticed something real and offered you the chance to confirm it.",
+          "signal": "neutral",
+          "skills": {
+            "presence": 1,
+            "adaptability": 0,
+            "empathy": 1,
+            "clarity": 0
+          },
+          "principleid": "p3",
+          "effects": {
+            "engagement": 0,
+            "trust": 0,
+            "tension": 0
+          },
+          "next": "__auto__"
+        },
+        {
+          "id": "n7_c",
+          "text": "\"Well, you could have said something earlier too.\"",
+          "consequence": "The conversation ends politely. Her points continue to arrive in the stand-up, correctly and briefly, and nothing else does.",
+          "feedback": "The person who stopped speaking is not the person best placed to fix a room that stopped listening. Returning the problem to her undoes most of six weeks.",
+          "signal": "negative",
+          "skills": {
+            "presence": -1,
+            "adaptability": -1,
+            "empathy": -2,
+            "clarity": 0
+          },
+          "principleid": "p3",
+          "effects": {
+            "engagement": -5,
+            "trust": -10,
+            "tension": 15
+          },
+          "next": "__auto__"
+        }
+      ]
+    },
+    {
+      "id": "end_strong",
+      "type": "outcome",
+      "title": "She speaks, and the room waits",
+      "stage": 8,
+      "outcome": "strong",
+      "situation": "Priya raises risks in the room now, and the team hears them in her voice. Dan is still fast, and has learned to leave a gap. Neither of those happened because someone tried harder; they happened because you changed what the meeting asked of them.",
+      "summary": "You named what you observed rather than what you concluded, you gave Dan something he could act on, you refused a workaround that was quietly costing Priya her voice, and you put in place a structure that did not depend on anybody remembering to be good."
+    },
+    {
+      "id": "end_mixed",
+      "type": "outcome",
+      "title": "Better, and fragile",
+      "stage": 8,
+      "outcome": "mixed",
+      "situation": "The stand-ups are better than they were. Priya contributes more than she did a month ago, though usually after you invite her, and Dan interrupts less when the agenda is light.\n\nIt holds while you are paying attention to it.",
+      "summary": "You saw the problem and acted on it, which is more than most do. What is missing is a mechanism: most of what improved depends on you noticing, on Dan remembering, or on Priya finding it worth the effort — and each of those is the first thing a busy fortnight takes back."
+    },
+    {
+      "id": "end_highrisk",
+      "type": "outcome",
+      "title": "The quietest person in the room",
+      "stage": 8,
+      "outcome": "highrisk",
+      "situation": "Priya's points reach the team through you, when they reach it at all. She is polite, productive and entirely disengaged from the meeting, and at her next review she asks what else is available.\n\nThe cutover incident is still in the retro document. Nobody connected it to the three unfinished sentences that preceded it.",
+      "summary": "The information the team needed was in the room and had tried to reach you three times. What follows from not hearing it is rarely a dramatic failure — it is a capable person who stops trying, a decision made without the one fact that mattered, and a resignation that reads as unrelated."
+    }
+  ],
+  "debrief": {
+    "whatmattered": [
+      "Naming the observable behaviour — three unfinished sentences — rather than the conclusion drawn from it.",
+      "Giving the interrupter something specific he could act on, since he was willing and simply unaware.",
+      "Refusing a workaround that worked for the meeting and cost the person her voice in it.",
+      "Choosing a change to the format over a change in everyone's good intentions."
+    ],
+    "criticaldecisions": [
+      "Whether to stop the meeting at the moment Priya withdrew, or catch her afterwards.",
+      "Whether to open with Dan on observation or on character.",
+      "Whether to accept the pre-written messages once they were working."
+    ],
+    "practice": [
+      "In your next meeting, count attempts rather than interruptions. Note who starts a sentence more than once.",
+      "Before giving feedback, write the sentence you plan to open with. If it names a quality rather than an action, rewrite it.",
+      "When someone offers you a workaround that makes your life easier, say out loud what it costs them before you accept it."
+    ],
+    "sourceconnection": "Demonstrating Active Listening Effectively — attending, withholding response, and checking understanding."
+  },
+  "takeaways": [
+    {
+      "heading": "Withdrawal is the signal",
+      "body": "Interruption is noisy and easy to spot. Someone deciding it is not worth finishing the sentence is silent, and is the thing that actually costs you."
+    },
+    {
+      "heading": "Observation beats interpretation",
+      "body": "\"You began three times\" can be accepted. \"You're not being heard\" has to be argued about first."
+    },
+    {
+      "heading": "Don't rely on remembering",
+      "body": "Any fix that depends on attention in the moment fails in the week you most need it. Change what the meeting asks of people instead."
+    }
+  ]
+}

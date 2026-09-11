@@ -61,7 +61,7 @@ class mod_aibranchedscenario_mod_form extends moodleform_mod {
             $themes[$theme] = get_string('theme:' . $theme, 'mod_aibranchedscenario');
         }
         $mform->addElement('select', 'theme', get_string('theme', 'mod_aibranchedscenario'), $themes);
-        $mform->setDefault('theme', get_config('mod_aibranchedscenario', 'defaulttheme') ?: 'slate');
+        $mform->setDefault('theme', self::default_for('theme', 'slate'));
         $mform->addHelpButton('theme', 'theme', 'mod_aibranchedscenario');
 
         $languages = [];
@@ -72,25 +72,25 @@ class mod_aibranchedscenario_mod_form extends moodleform_mod {
             );
         }
         $mform->addElement('select', 'scenariolang', get_string('scenariolang', 'mod_aibranchedscenario'), $languages);
-        $mform->setDefault('scenariolang', 'en-AU');
+        $mform->setDefault('scenariolang', self::default_for('language', 'en-AU'));
         $mform->addHelpButton('scenariolang', 'scenariolang', 'mod_aibranchedscenario');
 
         $mform->addElement('selectyesno', 'showtimeline', get_string('showtimeline', 'mod_aibranchedscenario'));
-        $mform->setDefault('showtimeline', 1);
+        $mform->setDefault('showtimeline', self::default_for('showtimeline', 1));
 
         $mform->addElement('selectyesno', 'showmetrics', get_string('showmetrics', 'mod_aibranchedscenario'));
-        $mform->setDefault('showmetrics', 1);
+        $mform->setDefault('showmetrics', self::default_for('showmetrics', 1));
         $mform->addHelpButton('showmetrics', 'showmetrics', 'mod_aibranchedscenario');
 
         $mform->addElement('selectyesno', 'showdebrief', get_string('showdebrief', 'mod_aibranchedscenario'));
-        $mform->setDefault('showdebrief', 1);
+        $mform->setDefault('showdebrief', self::default_for('showdebrief', 1));
 
         $mform->addElement('selectyesno', 'enableimages', get_string('enableimages', 'mod_aibranchedscenario'));
-        $mform->setDefault('enableimages', 0);
+        $mform->setDefault('enableimages', self::default_for('enableimages', 1));
         $mform->addHelpButton('enableimages', 'enableimages', 'mod_aibranchedscenario');
 
         $mform->addElement('selectyesno', 'enableaudio', get_string('enableaudio', 'mod_aibranchedscenario'));
-        $mform->setDefault('enableaudio', 0);
+        $mform->setDefault('enableaudio', self::default_for('enableaudio', 1));
         $mform->addHelpButton('enableaudio', 'enableaudio', 'mod_aibranchedscenario');
 
         $mform->addElement('header', 'attempts', get_string('attemptsettings', 'mod_aibranchedscenario'));
@@ -100,11 +100,11 @@ class mod_aibranchedscenario_mod_form extends moodleform_mod {
             $attemptoptions[$i] = $i;
         }
         $mform->addElement('select', 'maxattempts', get_string('maxattempts', 'mod_aibranchedscenario'), $attemptoptions);
-        $mform->setDefault('maxattempts', 0);
+        $mform->setDefault('maxattempts', self::default_for('maxattempts', 3));
         $mform->addHelpButton('maxattempts', 'maxattempts', 'mod_aibranchedscenario');
 
         $mform->addElement('selectyesno', 'allowreplay', get_string('allowreplay', 'mod_aibranchedscenario'));
-        $mform->setDefault('allowreplay', 1);
+        $mform->setDefault('allowreplay', self::default_for('allowreplay', 1));
         $mform->addHelpButton('allowreplay', 'allowreplay', 'mod_aibranchedscenario');
 
         $grademethods = [];
@@ -112,12 +112,39 @@ class mod_aibranchedscenario_mod_form extends moodleform_mod {
             $grademethods[$method] = get_string('grademethod:' . $method, 'mod_aibranchedscenario');
         }
         $mform->addElement('select', 'grademethod', get_string('grademethod', 'mod_aibranchedscenario'), $grademethods);
-        $mform->setDefault('grademethod', 'last');
+        $mform->setDefault('grademethod', self::default_for('grademethod', 'highest'));
         $mform->addHelpButton('grademethod', 'grademethod', 'mod_aibranchedscenario');
 
         $this->standard_grading_coursemodule_elements();
+
+        // Grade to pass is core's element, so its default can only be set once core has
+        // added it. A site that has never touched the setting gets the shipped value.
+        if ($mform->elementExists('gradepass')) {
+            $mform->setDefault('gradepass', self::default_for('gradepass', 100));
+        }
+
         $this->standard_coursemodule_elements();
         $this->add_action_buttons();
+    }
+
+    /**
+     * The site's configured default for one activity setting, or the shipped value.
+     *
+     * Every default a teacher sees in this form is a site setting, so an administrator can
+     * make new activities start the way their organisation wants them without anybody
+     * editing code. The second argument is what this plugin ships with, used until the
+     * setting is saved for the first time.
+     *
+     * Zero and '0' are legitimate saved values — unlimited attempts, a picker turned off —
+     * so the check is for an unset setting rather than for emptiness.
+     *
+     * @param string $name Setting name below the defaults prefix.
+     * @param mixed $shipped Value used when the site has never set one.
+     * @return mixed
+     */
+    protected static function default_for(string $name, $shipped) {
+        $value = get_config('mod_aibranchedscenario', 'default' . $name);
+        return ($value === false || $value === null || $value === '') ? $shipped : $value;
     }
 
     /**
@@ -134,6 +161,7 @@ class mod_aibranchedscenario_mod_form extends moodleform_mod {
             get_string('completiondetail:finish', 'mod_aibranchedscenario'),
             get_string('completionfinish', 'mod_aibranchedscenario')
         );
+        $mform->setDefault('completionfinish', self::default_for('completionfinish', 1));
 
         $mform->addElement(
             'text',
@@ -142,7 +170,7 @@ class mod_aibranchedscenario_mod_form extends moodleform_mod {
             ['size' => 4]
         );
         $mform->setType('completionminscore', PARAM_INT);
-        $mform->setDefault('completionminscore', 0);
+        $mform->setDefault('completionminscore', self::default_for('completionminscore', 100));
         $mform->hideIf('completionminscore', 'completionfinish', 'notchecked');
         $mform->addHelpButton('completionminscore', 'completionminscore', 'mod_aibranchedscenario');
 
