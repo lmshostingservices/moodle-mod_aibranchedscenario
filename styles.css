@@ -466,11 +466,14 @@
     opacity: .75;
 }
 
-/* A speaker drawn from two shapes, so there is no icon font to go missing. */
+/* One drawing per state. The previous icon was a small arc for sound and a small bar for
+   silence, both two pixels wide inside a 24px circle, which is why on and off looked
+   identical at a glance. */
 .aibs-audiobtn-icon {
     align-items: center;
     background: var(--aibs-accent-soft);
     border-radius: 999px;
+    color: var(--aibs-accent-strong);
     display: inline-flex;
     flex: none;
     height: 24px;
@@ -479,48 +482,25 @@
     width: 24px;
 }
 
-.aibs-audiobtn-icon::before {
-    border-bottom: 4px solid transparent;
-    border-right: 7px solid var(--aibs-accent-strong);
-    border-top: 4px solid transparent;
-    content: "";
-    height: 0;
-    margin-left: -3px;
-    width: 0;
+.aibs-audioicon {
+    display: none;
+    height: 16px;
+    width: 16px;
 }
 
-.aibs-audiobtn-wave {
-    border: 2px solid var(--aibs-accent-strong);
-    border-bottom-color: transparent;
-    border-left-color: transparent;
-    border-bottom-left-radius: 0;
-    border-radius: 999px;
-    border-top-color: transparent;
-    height: 12px;
-    margin-left: 1px;
-    width: 12px;
+.aibs-audiobtn[data-state="on"] .aibs-audioicon-on,
+.aibs-audiobtn[data-state="off"] .aibs-audioicon-off,
+.aibs-audiobtn[data-state="blocked"] .aibs-audioicon-blocked,
+.aibs-audiobtn[data-state="none"] .aibs-audioicon-none {
+    display: block;
 }
 
+/* Muted and unrecorded both mean silence, and both are things the learner is not being
+   asked to act on, so they step back to the quiet palette. */
 .aibs-audiobtn[data-state="off"] .aibs-audiobtn-icon,
 .aibs-audiobtn[data-state="none"] .aibs-audiobtn-icon {
     background: var(--aibs-surface-alt);
-}
-
-.aibs-audiobtn[data-state="off"] .aibs-audiobtn-icon::before,
-.aibs-audiobtn[data-state="none"] .aibs-audiobtn-icon::before {
-    border-right-color: var(--aibs-muted);
-}
-
-/* Muted and unrecorded both show a bar through the speaker, because both mean silence. */
-.aibs-audiobtn[data-state="off"] .aibs-audiobtn-wave,
-.aibs-audiobtn[data-state="none"] .aibs-audiobtn-wave {
-    background: var(--aibs-muted);
-    border: 0;
-    border-radius: 1px;
-    height: 13px;
-    margin-left: -6px;
-    transform: rotate(45deg);
-    width: 2px;
+    color: var(--aibs-muted);
 }
 
 /* Blocked is the one state that wants the eye: it is the only one the learner can fix. */
@@ -530,7 +510,7 @@
     color: var(--aibs-accent-strong);
 }
 
-.aibs-audiobtn[data-state="blocked"] .aibs-audiobtn-wave {
+.aibs-audiobtn[data-state="blocked"] .aibs-audiobtn-icon {
     animation: aibs-audiopulse 1.6s ease-in-out infinite;
 }
 
@@ -540,7 +520,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .aibs-audiobtn[data-state="blocked"] .aibs-audiobtn-wave {
+    .aibs-audiobtn[data-state="blocked"] .aibs-audiobtn-icon {
         animation: none;
     }
 }
@@ -2547,4 +2527,434 @@ button.aibs-avatar {
     font-variant-numeric: tabular-nums;
     font-weight: 650;
     white-space: nowrap;
+}
+
+/* ------------------------------------------- step one: what it is and what it costs */
+
+.aibs-benefits-title {
+    border-top: 1px solid var(--aibs-border);
+    margin-top: 28px;
+    padding-top: 22px;
+}
+
+.aibs-benefits {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    list-style: none;
+    margin: 16px 0 0;
+    padding: 0;
+}
+
+.aibs-benefit {
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius-sm);
+    display: grid;
+    gap: 6px;
+    padding: 18px;
+}
+
+.aibs-benefit-icon {
+    align-items: center;
+    background: var(--aibs-surface-alt);
+    border-radius: 10px;
+    color: var(--aibs-accent);
+    display: inline-flex;
+    height: 38px;
+    justify-content: center;
+    width: 38px;
+}
+
+.aibs-benefit-icon svg {
+    height: 22px;
+    width: 22px;
+}
+
+.aibs-benefit-title {
+    font-size: 1.02rem;
+    font-weight: 650;
+    margin-top: 4px;
+}
+
+.aibs-benefit-body {
+    color: var(--aibs-text);
+    line-height: 1.55;
+}
+
+/* The claim above is the promise; this is the mechanism that makes it true. */
+.aibs-benefit-proof {
+    border-top: 1px solid var(--aibs-border);
+    color: var(--aibs-muted);
+    font-size: .84rem;
+    margin-top: 6px;
+    padding-top: 10px;
+}
+
+.aibs-howto {
+    counter-reset: none;
+    display: grid;
+    gap: 10px;
+    list-style: none;
+    margin: 16px 0 0;
+    padding: 0;
+}
+
+.aibs-howto-step {
+    align-items: start;
+    background: var(--aibs-surface-alt);
+    border-radius: var(--aibs-radius-sm);
+    display: grid;
+    column-gap: 14px;
+    grid-template-columns: 32px minmax(0, 1fr);
+    padding: 14px 16px;
+}
+
+.aibs-howto-number {
+    align-items: center;
+    background: var(--aibs-accent);
+    border-radius: 999px;
+    color: #fff;
+    display: inline-flex;
+    font-size: .86rem;
+    font-weight: 700;
+    grid-row: span 2;
+    height: 30px;
+    justify-content: center;
+    width: 30px;
+}
+
+.aibs-howto-title {
+    font-weight: 650;
+}
+
+.aibs-howto-body {
+    color: var(--aibs-muted);
+    grid-column: 2;
+    line-height: 1.55;
+}
+
+.aibs-reading {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    list-style: none;
+    margin: 22px 0 0;
+    padding: 0;
+}
+
+.aibs-reading-item {
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius-sm);
+    display: grid;
+    gap: 4px;
+    padding: 14px 16px;
+}
+
+.aibs-reading-link {
+    align-items: center;
+    display: inline-flex;
+    font-weight: 650;
+    gap: 6px;
+}
+
+.aibs-reading-body {
+    color: var(--aibs-muted);
+    font-size: .86rem;
+    line-height: 1.5;
+}
+
+/* ------------------------------------------------------------- the sticky bar */
+
+/* The bar is as wide as the player, and the page behind it is wider, so a course banner
+   or a coloured header showed either side of it as the page scrolled under. The shadow
+   paints the same background out past both edges without changing the layout - but only
+   once the bar is actually stuck, because at rest that flat band squared off the player's
+   two top corners while the bottom two stayed round. */
+.aibs-topbar {
+    border-radius: var(--aibs-radius) var(--aibs-radius) 0 0;
+}
+
+.aibs-topbar.aibs-is-pinned {
+    border-radius: 0;
+    box-shadow: -100vw 0 0 var(--aibs-canvas), 100vw 0 0 var(--aibs-canvas);
+    clip-path: inset(0 -100vw 0 -100vw);
+}
+
+/* ------------------------------------------------------------ fill the screen */
+
+.aibs-iconbtn {
+    align-items: center;
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: 999px;
+    color: var(--aibs-text) !important;
+    cursor: pointer;
+    display: inline-flex;
+    height: 34px;
+    justify-content: center;
+    padding: 0;
+    width: 34px;
+}
+
+.aibs-iconbtn:hover,
+.aibs-iconbtn:focus-visible {
+    border-color: var(--aibs-accent-border);
+    color: var(--aibs-accent) !important;
+}
+
+.aibs-iconbtn .aibs-icon {
+    height: 18px;
+    width: 18px;
+}
+
+/* In fullscreen the plugin owns the whole viewport: no theme header above it, and no
+   page around it. The player becomes the page and keeps the slide's proportions rather
+   than stretching the picture to whatever shape the screen happens to be. */
+.aibs-player:fullscreen,
+.aibs-player:-webkit-full-screen {
+    background: var(--aibs-canvas);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: none;
+    overflow-y: auto;
+    padding: 0 clamp(18px, 4vw, 64px) 28px;
+    width: 100vw;
+}
+
+.aibs-player:fullscreen .aibs-topbar {
+    top: 0;
+}
+
+.aibs-player:fullscreen .aibs-slide {
+    margin-inline: auto;
+    max-width: min(1600px, 100%);
+}
+
+/* The scene keeps its 16:9 rather than filling an arbitrary screen shape, and the text
+   beside it grows with the picture instead of leaving a column of white. */
+@media (min-width: 900px) {
+    .aibs-player:fullscreen .aibs-slide .aibs-scene-img {
+        aspect-ratio: 16 / 9;
+        max-height: calc(100vh - 230px);
+        object-fit: cover;
+    }
+
+    .aibs-player:fullscreen .aibs-node-body {
+        padding: clamp(18px, 2vw, 34px);
+    }
+}
+
+.aibs-player:fullscreen .aibs-card {
+    box-shadow: none;
+}
+
+/* --------------------------------------------------- keeping a slide on one screen */
+
+/* The height is set by whichever column is taller, so a wordy scene made a slide that
+   scrolled - and the options, which are the point, went below the fold. The ceiling is
+   measured in the browser and handed down as --aibs-slide-max; the text column takes a
+   scrollbar of its own rather than pushing the page. */
+@media (min-width: 900px) {
+    .path-mod-aibranchedscenario .aibs-slide {
+        max-height: var(--aibs-slide-max, 74vh);
+        overflow: hidden;
+    }
+
+    /* Nothing scrolls. The type steps down until the screen fits, and the fullscreen
+       control is there for a scene that wants more room than the page has. */
+    .path-mod-aibranchedscenario .aibs-slide .aibs-node-body {
+        font-size: calc(1rem * var(--aibs-fit, 1));
+        max-height: 100%;
+        overflow: hidden;
+        padding: calc(clamp(16px, 1.6vw, 26px) * var(--aibs-fit, 1));
+    }
+
+    .path-mod-aibranchedscenario .aibs-slide .aibs-h3 {
+        font-size: calc(1.32rem * var(--aibs-fit, 1));
+    }
+
+    .path-mod-aibranchedscenario .aibs-slide .aibs-choices {
+        gap: calc(10px * var(--aibs-fit, 1));
+    }
+
+    .path-mod-aibranchedscenario .aibs-slide .aibs-choice {
+        padding: calc(14px * var(--aibs-fit, 1)) calc(16px * var(--aibs-fit, 1));
+    }
+
+    .path-mod-aibranchedscenario .aibs-slide .aibs-scene,
+    .path-mod-aibranchedscenario .aibs-slide .aibs-scene-img {
+        max-height: 100%;
+    }
+
+    /* Same ceiling in fullscreen: the picture keeps its shape and the screen gets
+       bigger, rather than the picture growing to whatever shape the screen is. */
+    .aibs-player:fullscreen .aibs-slide {
+        max-height: var(--aibs-slide-max, 80vh);
+    }
+}
+
+/* The consequence screen is held to the same ceiling, for the same reason. */
+@media (min-width: 900px) {
+    .path-mod-aibranchedscenario .aibs-consequence {
+        font-size: calc(1rem * var(--aibs-fit, 1));
+        max-height: var(--aibs-slide-max, 74vh);
+        overflow: hidden;
+    }
+}
+
+/* Narrow screens stack, so the picture takes a fixed slice and the text runs under it
+   rather than the two fighting for one screen. */
+@media (max-width: 899px) {
+    .path-mod-aibranchedscenario .aibs-slide .aibs-scene-img {
+        max-height: 38vh;
+    }
+}
+
+/* ---------------------------------------------------------------- the debrief deck */
+
+/* The debrief carries the outcome, four skill scores, every decision with its reasoning,
+   the lessons and the takeaways. On one page that is a scroll a learner abandons half way
+   through; one page at a time is the same material in pieces they actually read. */
+.aibs-deck-stage {
+    display: block;
+}
+
+.aibs-deckslide {
+    animation: aibs-deckin .28s var(--aibs-ease) both;
+}
+
+@keyframes aibs-deckin {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aibs-deckslide {
+        animation: none;
+    }
+}
+
+.aibs-deck-nav {
+    align-items: center;
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    margin-top: 18px;
+}
+
+.aibs-deck-count {
+    color: var(--aibs-muted);
+    font-size: .86rem;
+    font-variant-numeric: tabular-nums;
+    min-width: 72px;
+    text-align: center;
+}
+
+.aibs-iconbtn:disabled {
+    cursor: default;
+    opacity: .4;
+}
+
+.aibs-deckend .aibs-debrief-actions {
+    margin-top: 18px;
+}
+
+/* Printing is the one time the whole debrief should be on one page. */
+@media print {
+    .path-mod-aibranchedscenario .aibs-deckslide[hidden] {
+        display: block !important;
+    }
+
+    .path-mod-aibranchedscenario .aibs-deck-nav {
+        display: none;
+    }
+}
+
+/* ------------------------------------------------------- the opening lesson cards */
+
+/* A principle in a bulleted list is read and forgotten. Each one gets a screen, a picture
+   from the scenario itself, the words to actually use, and the plausible-sounding mistake
+   it prevents. The cards arrive in sequence rather than all at once, so the eye is led
+   down them in the order they should be read. */
+.aibs-lessoncard {
+    animation: aibs-cardin .42s var(--aibs-ease) both;
+    border-radius: var(--aibs-radius-sm);
+    margin-top: 12px;
+    padding: 14px 16px;
+    position: relative;
+    transition: box-shadow .2s var(--aibs-ease), transform .2s var(--aibs-ease);
+}
+
+.aibs-lessoncard-lead {
+    animation-delay: .04s;
+    background: none;
+    margin-top: 4px;
+    padding: 0;
+}
+
+.aibs-lessoncard-good {
+    animation-delay: .14s;
+    background: var(--aibs-surface-alt);
+    border-left: 3px solid var(--aibs-positive);
+}
+
+.aibs-lessoncard-bad {
+    animation-delay: .24s;
+    background: var(--aibs-surface-alt);
+    border-left: 3px solid var(--aibs-negative);
+}
+
+.aibs-lessoncard-good:hover,
+.aibs-lessoncard-bad:hover {
+    box-shadow: 0 10px 24px -14px rgba(17, 22, 31, .45);
+    transform: translateY(-2px);
+}
+
+.aibs-lessoncard-label {
+    align-items: center;
+    display: inline-flex;
+    font-size: .74rem;
+    font-weight: 700;
+    gap: 6px;
+    letter-spacing: .06em;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.aibs-lessoncard-good .aibs-lessoncard-label {
+    color: var(--aibs-positive);
+}
+
+.aibs-lessoncard-bad .aibs-lessoncard-label {
+    color: var(--aibs-negative);
+}
+
+.aibs-lessoncard-text {
+    font-style: italic;
+    line-height: 1.55;
+    margin: 0;
+}
+
+@keyframes aibs-cardin {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aibs-lessoncard {
+        animation: none;
+    }
+
+    .aibs-lessoncard-good:hover,
+    .aibs-lessoncard-bad:hover {
+        transform: none;
+    }
+}
+
+/* The opening lesson uses the same slide as a decision, so it keeps the same ceiling and
+   the same picture-left, text-right shape. */
+.aibs-brief .aibs-deckslide {
+    margin: 0;
 }

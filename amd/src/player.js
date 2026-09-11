@@ -93,7 +93,8 @@ class Player {
             'narration:tipon', 'narration:tipoff', 'narration:tipblocked', 'narration:tipnone',
             'stageprogress', 'attemptfinished',
             'deltaup', 'deltadown', 'deltareduced', 'deltaraised', 'deltasame',
-            'error:printblocked', 'listento',
+            'error:printblocked', 'listento', 'fullscreen:enter', 'fullscreen:exit',
+            'deckposition',
         ];
         const values = await getStrings(keys.map((key) => ({key, component: 'mod_aibranchedscenario'})));
         keys.forEach((key, index) => {
@@ -101,10 +102,22 @@ class Player {
         });
 
         this.syncStickyOffset();
+        this.watchPinned();
+        // The opening lesson is on the page before anything is asked of the server.
+        this.startDeck(this.root.querySelector('[data-region="brief"] [data-region="deck"]'));
         let resizeTimer = null;
         window.addEventListener('resize', () => {
             window.clearTimeout(resizeTimer);
             resizeTimer = window.setTimeout(() => this.syncStickyOffset(), 150);
+        });
+
+        // The theme's header is not on screen in fullscreen, so the sticky bar's offset
+        // has to be measured again in both directions.
+        ['fullscreenchange', 'webkitfullscreenchange'].forEach((name) => {
+            document.addEventListener(name, () => {
+                this.syncStickyOffset();
+                this.refreshFullscreenButton();
+            });
         });
 
         this.root.addEventListener('click', (event) => {
@@ -127,7 +140,8 @@ class Player {
      * @returns {void}
      */
     handle(action, element) {
-        if (this.busy && action !== 'mute' && action !== 'print' && action !== 'speak') {
+        if (this.busy && action !== 'mute' && action !== 'print' && action !== 'speak'
+                && action !== 'fullscreen') {
             return;
         }
         switch (action) {
@@ -151,6 +165,15 @@ class Player {
                 break;
             case 'speak':
                 this.playSpeech(element);
+                break;
+            case 'fullscreen':
+                this.toggleFullscreen();
+                break;
+            case 'deckprev':
+                this.stepDeck(element, -1);
+                break;
+            case 'decknext':
+                this.stepDeck(element, 1);
                 break;
             case 'print':
                 this.printDebrief();
@@ -310,6 +333,7 @@ class Player {
         await this.render(SELECTORS.node, 'mod_aibranchedscenario/node', context);
         this.hideRegion(SELECTORS.consequence);
         this.updateRail();
+        this.fitSlide();
         this.playAudio(node.audiourl, node.speechurl);
         this.focusRegion(SELECTORS.node);
     }
@@ -391,6 +415,7 @@ class Player {
 
         this.hideRegion(SELECTORS.node);
         await this.render(SELECTORS.consequence, 'mod_aibranchedscenario/consequence', context);
+        this.fitSlide();
         this.animateRings();
         // A costly screen and a well-judged one look alike for the second it takes to
         // start reading. The cue says which it is before a word has been read.
@@ -451,6 +476,8 @@ class Player {
             await this.render(SELECTORS.debrief, 'mod_aibranchedscenario/debriefhidden', {
                 allowreplay: this.root.dataset.replay !== '0',
             });
+            this.stopAudio();
+            this.playAudio('', '');
             this.setRailComplete();
             this.focusRegion(SELECTORS.debrief);
             return true;
@@ -468,14 +495,21 @@ class Player {
                 radar: response.radar.map((entry) => Object.assign({}, entry, {
                     percent: Math.round(entry.value * 100),
                 })),
-                journey: response.journey.map((entry) => Object.assign({}, entry, {
+                // The debrief is a deck rather than one long page, so the decisions are
+                // handed over a page at a time. Two to a page: one reads as a lot of
+                // clicking, three puts the last one under the fold again.
+                journeypages: this.chunk(response.journey.map((entry) => Object.assign({}, entry, {
                     signalclass: 'aibs-signal-' + entry.signal,
                     hasfeedback: entry.feedbackparas.length > 0,
-                })),
+                })), 2),
             });
             this.hideRegion(SELECTORS.node);
             this.hideRegion(SELECTORS.consequence);
             await this.render(SELECTORS.debrief, 'mod_aibranchedscenario/debrief', context);
+            // The debrief is read, not listened to: none of its slides carries audio, so
+            // starting the deck also puts the control into its "nothing here" state.
+            this.stopAudio();
+            this.startDeck(this.root.querySelector(SELECTORS.debrief + ' [data-region="deck"]'));
             this.animateSkillBars();
             this.setRailComplete();
             this.focusRegion(SELECTORS.debrief);
@@ -485,6 +519,105 @@ class Player {
             this.setBusy(false);
         }
         return true;
+    }
+
+    /**
+     * Split a list into pages of a given size.
+     *
+     * @param {Array} items The list.
+     * @param {Number} size How many to a page.
+     * @returns {Array} One entry per page, each with first, last and its items.
+     */
+    chunk(items, size) {
+        const pages = [];
+        for (let start = 0; start < items.length; start += size) {
+            const slice = items.slice(start, start + size);
+            pages.push({
+                first: start + 1,
+                last: start + slice.length,
+                decisions: slice,
+            });
+        }
+        return pages;
+    }
+
+    /**
+     * Start a deck on its first page.
+     *
+     * Two things in this plugin are decks: the opening lesson, which teaches the
+     * principles with a worked example before the scenario starts, and the debrief, which
+     * carries the outcome, the skills, every decision and the takeaways. Both were single
+     * pages long enough that a learner scrolled past the half of it that mattered.
+     *
+     * @param {HTMLElement} deck The deck container.
+     * @returns {void}
+     */
+    startDeck(deck) {
+        if (!deck) {
+            return;
+        }
+        this.showDeckSlide(deck, 0);
+    }
+
+    /**
+     * Move a deck forward or back from whichever control was pressed.
+     *
+     * @param {HTMLElement} element The control.
+     * @param {Number} direction 1 forwards, -1 back.
+     * @returns {void}
+     */
+    stepDeck(element, direction) {
+        const deck = element.closest('[data-region="deck"]');
+        if (!deck) {
+            return;
+        }
+        const current = parseInt(deck.dataset.slide, 10) || 0;
+        this.showDeckSlide(deck, current + direction);
+    }
+
+    /**
+     * Show one page of a deck.
+     *
+     * @param {HTMLElement} deck The deck container.
+     * @param {Number} index Zero based page number.
+     * @returns {void}
+     */
+    showDeckSlide(deck, index) {
+        const slides = deck.querySelectorAll('[data-region="deckslide"]');
+        if (!slides.length) {
+            return;
+        }
+        const wanted = Math.max(0, Math.min(slides.length - 1, index));
+        deck.dataset.slide = String(wanted);
+        slides.forEach((slide, position) => {
+            slide.hidden = position !== wanted;
+        });
+
+        const count = deck.querySelector('[data-region="deckcount"]');
+        if (count) {
+            count.textContent = this.strings.deckposition
+                .replace('{$a->current}', wanted + 1)
+                .replace('{$a->total}', slides.length);
+        }
+        const prev = deck.querySelector('[data-action="deckprev"]');
+        const next = deck.querySelector('[data-action="decknext"]');
+        if (prev) {
+            prev.disabled = wanted === 0;
+        }
+        if (next) {
+            next.disabled = wanted === slides.length - 1;
+        }
+
+        // A slide may carry its own narration - the opening lesson does, the debrief does
+        // not - and the control follows whichever it is.
+        this.playAudio(slides[wanted].dataset.audio || '', '');
+        this.fitSlide();
+        const heading = slides[wanted].querySelector('h3, h4, p');
+        if (heading) {
+            heading.setAttribute('tabindex', '-1');
+            heading.focus({preventScroll: true});
+        }
+        this.scrollBelowHeader(deck);
     }
 
     /**
@@ -558,6 +691,16 @@ class Player {
         bar.style.setProperty('--aibs-sticky-top', '0px');
         const offset = this.stickyOffset();
         bar.style.setProperty('--aibs-sticky-top', Math.round(offset) + 'px');
+
+        // A slide is only a slide if it fits on the screen. The text column used to set
+        // the height and the picture stretched to match, so a wordy scene pushed its own
+        // options below the fold - the thing the side-by-side layout existed to prevent.
+        // The ceiling is what is left of the viewport once the theme's header and this
+        // bar have taken their share, measured rather than guessed at.
+        const barheight = Math.round(bar.getBoundingClientRect().height);
+        const viewport = window.innerHeight || document.documentElement.clientHeight;
+        const available = Math.max(320, viewport - Math.round(offset) - barheight - 48);
+        this.root.style.setProperty('--aibs-slide-max', available + 'px');
     }
 
     /**
@@ -719,6 +862,64 @@ class Player {
             window.requestAnimationFrame(() => {
                 window.requestAnimationFrame(() => {
                     fill.style.width = target;
+                });
+            });
+        });
+    }
+
+    /**
+     * Track whether the bar is pinned, because it should not look pinned when it is not.
+     *
+     * The bar paints its background out past both edges so a course banner does not show
+     * either side of it while the page scrolls under. At rest that flat band ran across
+     * the top of the player and squared off its two top corners, which is what made them
+     * look wrong against the rounded ones at the bottom. The bleed is now only worn while
+     * the bar is actually stuck to the top.
+     *
+     * @returns {void}
+     */
+    watchPinned() {
+        const bar = this.root.querySelector('[data-region="topbar"]');
+        if (!bar) {
+            return;
+        }
+        const update = () => {
+            const top = bar.getBoundingClientRect().top;
+            const offset = parseFloat(
+                getComputedStyle(bar).getPropertyValue('--aibs-sticky-top')
+            ) || 0;
+            bar.classList.toggle('aibs-is-pinned', top <= offset + 1);
+        };
+        window.addEventListener('scroll', update, {passive: true});
+        update();
+    }
+
+    /**
+     * Shrink a screen until it fits, rather than letting it scroll.
+     *
+     * A slide that scrolls is not a slide: the options are the point of the screen and
+     * they were going below the fold on wordy scenes. Nothing here is allowed to scroll,
+     * so when the text does not fit the type steps down until it does. The floor is the
+     * smallest size still comfortable to read; past that the learner is better served by
+     * the fullscreen control than by six-point text.
+     *
+     * @returns {void}
+     */
+    fitSlide() {
+        const slides = this.root.querySelectorAll('.aibs-slide, .aibs-consequence');
+        slides.forEach((slide) => {
+            const body = slide.querySelector('.aibs-node-body') || slide;
+            slide.style.removeProperty('--aibs-fit');
+            // Two frames, so the browser has laid the new screen out before it is measured.
+            window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
+                    let scale = 1;
+                    let guard = 0;
+                    while (body.scrollHeight > body.clientHeight + 1 && scale > 0.74 && guard < 14) {
+                        scale -= 0.04;
+                        guard++;
+                        slide.style.setProperty('--aibs-fit', scale.toFixed(2));
+                    }
                 });
             });
         });
@@ -934,6 +1135,54 @@ class Player {
             button.disabled = false;
             button.classList.remove('aibs-is-waiting');
         });
+    }
+
+    /**
+     * Fill the screen with the scenario, or give the page back.
+     *
+     * @returns {void}
+     */
+    toggleFullscreen() {
+        const target = this.root;
+        const active = document.fullscreenElement || document.webkitFullscreenElement;
+        try {
+            if (active) {
+                const exit = document.exitFullscreen || document.webkitExitFullscreen;
+                if (exit) {
+                    exit.call(document);
+                }
+                return;
+            }
+            const request = target.requestFullscreen || target.webkitRequestFullscreen;
+            if (request) {
+                const started = request.call(target);
+                if (started && typeof started.catch === 'function') {
+                    // A browser that refuses is not an error worth interrupting a
+                    // scenario for; the control simply stays as it was.
+                    started.catch(() => this.refreshFullscreenButton());
+                }
+            }
+        } catch (e) {
+            this.refreshFullscreenButton();
+        }
+    }
+
+    /**
+     * Put the fullscreen control into the state it is actually in.
+     *
+     * @returns {void}
+     */
+    refreshFullscreenButton() {
+        const button = this.root.querySelector('[data-region="fullscreenbutton"]');
+        if (!button) {
+            return;
+        }
+        const active = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+        const label = this.strings[active ? 'fullscreen:exit' : 'fullscreen:enter'];
+        button.setAttribute('title', label);
+        button.setAttribute('aria-label', label);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        this.root.classList.toggle('aibs-is-fullscreen', active);
     }
 
     /**

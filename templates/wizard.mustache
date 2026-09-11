@@ -90,16 +90,18 @@
 
         <ol class="aibs-wizard-steps" data-region="steps">
             <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="1"
-                    aria-current="step">1. {{#str}} step:source, mod_aibranchedscenario {{/str}}</button></li>
+                    aria-current="step">1. {{#str}} step:how, mod_aibranchedscenario {{/str}}</button></li>
             <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="2">2.
-                    {{#str}} step:scene, mod_aibranchedscenario {{/str}}</button></li>
+                    {{#str}} step:source, mod_aibranchedscenario {{/str}}</button></li>
             <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="3">3.
-                    {{#str}} step:challenge, mod_aibranchedscenario {{/str}}</button></li>
+                    {{#str}} step:scene, mod_aibranchedscenario {{/str}}</button></li>
             <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="4">4.
-                    {{#str}} step:people, mod_aibranchedscenario {{/str}}</button></li>
+                    {{#str}} step:challenge, mod_aibranchedscenario {{/str}}</button></li>
             <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="5">5.
-                    {{#str}} step:design, mod_aibranchedscenario {{/str}}</button></li>
+                    {{#str}} step:people, mod_aibranchedscenario {{/str}}</button></li>
             <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="6">6.
+                    {{#str}} step:design, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="7">7.
                     {{#str}} step:build, mod_aibranchedscenario {{/str}}</button></li>
         </ol>
 
@@ -112,24 +114,131 @@
             <span class="aibs-loading-eta" data-region="loadingeta" hidden>{{generationeta}}</span>
         </div>
 
-        <section class="aibs-card aibs-pricing" data-region="pricing">
-            <div class="aibs-pricing-head">
-                <h3 class="aibs-h3">{{#str}} pricing:heading, mod_aibranchedscenario {{/str}}</h3>
-                <span class="aibs-pricing-now">{{pricing.amount}}</span>
+        <section class="aibs-card" data-region="step" data-step="1">
+            <h3 class="aibs-h3">{{#str}} step:how, mod_aibranchedscenario {{/str}}</h3>
+            <p class="aibs-step-lead">{{#str}} step:howlead, mod_aibranchedscenario {{/str}}</p>
+
+            <div class="aibs-pricing" data-region="pricing">
+                <div class="aibs-pricing-head">
+                    <h4 class="aibs-h4">{{#str}} pricing:heading, mod_aibranchedscenario {{/str}}</h4>
+                    <span class="aibs-pricing-now">{{pricing.amount}}</span>
+                </div>
+                <p class="aibs-pricing-lead">{{#str}} pricing:lead, mod_aibranchedscenario {{/str}}</p>
+                <ul class="aibs-pricing-list">
+                    {{#pricing.rows}}
+                        <li class="aibs-pricing-row {{#current}}aibs-is-current{{/current}}">
+                            <span class="aibs-pricing-label">{{label}}</span>
+                            <span class="aibs-pricing-amount">{{amount}}</span>
+                        </li>
+                    {{/pricing.rows}}
+                </ul>
+                <p class="aibs-fineprint">{{#str}} pricing:note, mod_aibranchedscenario {{/str}}</p>
             </div>
-            <p class="aibs-pricing-lead">{{#str}} pricing:lead, mod_aibranchedscenario {{/str}}</p>
-            <ul class="aibs-pricing-list">
-                {{#pricing.rows}}
-                    <li class="aibs-pricing-row {{#current}}aibs-is-current{{/current}}">
-                        <span class="aibs-pricing-label">{{label}}</span>
-                        <span class="aibs-pricing-amount">{{amount}}</span>
-                    </li>
-                {{/pricing.rows}}
+
+            <h4 class="aibs-h4 aibs-benefits-title">
+                {{#str}} benefits:heading, mod_aibranchedscenario {{/str}}</h4>
+            <p class="aibs-pricing-lead">{{#str}} benefits:lead, mod_aibranchedscenario {{/str}}</p>
+            <ul class="aibs-benefits">
+                <li class="aibs-benefit">
+                    <span class="aibs-benefit-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><path d="M7 4v6a4 4 0 0 0 4 4h6M17 4l3 3-3 3M17 10l3 4-3 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    <span class="aibs-benefit-title">
+                        {{#str}} benefit:decide, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-benefit-body">
+                        {{#str}} benefit:decidebody, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-benefit-proof">
+                        {{#str}} benefit:decideproof, mod_aibranchedscenario {{/str}}</span>
+                </li>
+                <li class="aibs-benefit">
+                    <span class="aibs-benefit-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><path d="M4 19h16M6 15l4-5 3.5 3L19 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    <span class="aibs-benefit-title">
+                        {{#str}} benefit:consequence, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-benefit-body">
+                        {{#str}} benefit:consequencebody, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-benefit-proof">
+                        {{#str}} benefit:consequenceproof, mod_aibranchedscenario {{/str}}</span>
+                </li>
+                <li class="aibs-benefit">
+                    <span class="aibs-benefit-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                    </span>
+                    <span class="aibs-benefit-title">
+                        {{#str}} benefit:voices, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-benefit-body">
+                        {{#str}} benefit:voicesbody, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-benefit-proof">
+                        {{#str}} benefit:voicesproof, mod_aibranchedscenario {{/str}}</span>
+                </li>
+                <li class="aibs-benefit">
+                    <span class="aibs-benefit-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><path d="M12 3 5 6v5.5c0 4.2 2.9 7.6 7 9.5 4.1-1.9 7-5.3 7-9.5V6Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+                    </span>
+                    <span class="aibs-benefit-title">
+                        {{#str}} benefit:safe, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-benefit-body">
+                        {{#str}} benefit:safebody, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-benefit-proof">
+                        {{#str}} benefit:safeproof, mod_aibranchedscenario {{/str}}</span>
+                </li>
+                <li class="aibs-benefit">
+                    <span class="aibs-benefit-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><path d="M9 4h6v3H9ZM7 5.5H5.5A1.5 1.5 0 0 0 4 7v12a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19V7a1.5 1.5 0 0 0-1.5-1.5H17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m8.6 13.4 2.2 2.2 4.6-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    <span class="aibs-benefit-title">
+                        {{#str}} benefit:evidence, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-benefit-body">
+                        {{#str}} benefit:evidencebody, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-benefit-proof">
+                        {{#str}} benefit:evidenceproof, mod_aibranchedscenario {{/str}}</span>
+                </li>
+                <li class="aibs-benefit">
+                    <span class="aibs-benefit-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.4V12l3.2 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    <span class="aibs-benefit-title">
+                        {{#str}} benefit:time, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-benefit-body">
+                        {{#str}} benefit:timebody, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-benefit-proof">
+                        {{#str}} benefit:timeproof, mod_aibranchedscenario {{/str}}</span>
+                </li>
             </ul>
-            <p class="aibs-fineprint">{{#str}} pricing:note, mod_aibranchedscenario {{/str}}</p>
+
+            <h4 class="aibs-h4 aibs-benefits-title">
+                {{#str}} howto:heading, mod_aibranchedscenario {{/str}}</h4>
+            <p class="aibs-pricing-lead">{{#str}} howto:lead, mod_aibranchedscenario {{/str}}</p>
+            <ol class="aibs-howto">
+                {{#howto}}
+                    <li class="aibs-howto-step">
+                        <span class="aibs-howto-number" aria-hidden="true">{{number}}</span>
+                        <span class="aibs-howto-title">{{title}}</span>
+                        <span class="aibs-howto-body">{{body}}</span>
+                    </li>
+                {{/howto}}
+            </ol>
+
+            <ul class="aibs-reading">
+                {{#reading}}
+                    <li class="aibs-reading-item">
+                        <a class="aibs-reading-link" href="{{url}}" target="_blank" rel="noopener noreferrer">
+                            {{title}}
+                            <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                                <path d="M8 4H4.6v11.4H16V12M11.4 4H16v4.6M16 4l-6.4 6.4" fill="none"
+                                      stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                                      stroke-linejoin="round"/>
+                            </svg>
+                        </a>
+                        <span class="aibs-reading-body">{{body}}</span>
+                    </li>
+                {{/reading}}
+            </ul>
         </section>
 
-        <section class="aibs-card" data-region="step" data-step="1">
+
+        <section class="aibs-card" data-region="step" data-step="2" hidden>
             <h3 class="aibs-h3">{{#str}} step:source, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:sourcelead, mod_aibranchedscenario {{/str}}</p>
 
@@ -208,7 +317,7 @@
             </div>
         </section>
 
-        <section class="aibs-card" data-region="step" data-step="2" hidden>
+        <section class="aibs-card" data-region="step" data-step="3" hidden>
             <h3 class="aibs-h3">{{#str}} step:scene, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:scenelead, mod_aibranchedscenario {{/str}}</p>
 
@@ -255,7 +364,7 @@
             </div>
         </section>
 
-        <section class="aibs-card" data-region="step" data-step="3" hidden>
+        <section class="aibs-card" data-region="step" data-step="4" hidden>
             <h3 class="aibs-h3">{{#str}} step:challenge, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:challengelead, mod_aibranchedscenario {{/str}}</p>
 
@@ -295,7 +404,7 @@
             </div>
         </section>
 
-        <section class="aibs-card" data-region="step" data-step="4" hidden>
+        <section class="aibs-card" data-region="step" data-step="5" hidden>
             <h3 class="aibs-h3">{{#str}} step:people, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:peoplelead, mod_aibranchedscenario {{/str}}</p>
 
@@ -338,7 +447,7 @@
             {{/characters}}
         </section>
 
-        <section class="aibs-card" data-region="step" data-step="5" hidden>
+        <section class="aibs-card" data-region="step" data-step="6" hidden>
             <h3 class="aibs-h3">{{#str}} step:design, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:designlead, mod_aibranchedscenario {{/str}}</p>
 
@@ -405,7 +514,7 @@
             {{/openingmetrics}}
         </section>
 
-        <section class="aibs-card" data-region="step" data-step="6" hidden>
+        <section class="aibs-card" data-region="step" data-step="7" hidden>
             <h3 class="aibs-h3">{{#str}} step:build, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:buildlead, mod_aibranchedscenario {{/str}}</p>
             <p class="aibs-field-hint">{{#str}} generateexplain, mod_aibranchedscenario {{/str}}</p>

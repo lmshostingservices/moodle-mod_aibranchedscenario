@@ -290,5 +290,24 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091115, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091116) {
+        // Release 1.13.0 changes no schema. The wizard gains a first step, so a bookmarked
+        // link carrying ?step=n now lands one step earlier than it used to.
+        upgrade_mod_savepoint(true, 2026091116, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091117) {
+        // Release 1.13.1 changes no schema: the debrief is paged rather than scrolled.
+        upgrade_mod_savepoint(true, 2026091117, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091118) {
+        // Release 1.14.0 changes no schema. Principles may now carry a worked example and
+        // the mistake it prevents, stored inside the existing definition JSON: a scenario
+        // published before this release simply has neither, and its opening lesson teaches
+        // the principle without the words to use until it is generated again.
+        upgrade_mod_savepoint(true, 2026091118, 'aibranchedscenario');
+    }
+
     return true;
 }

@@ -73,6 +73,9 @@ class scenario_mapper {
                 'id'      => (string)($principle['id'] ?? 'p' . ($index + 1)),
                 'title'   => (string)($principle['title'] ?? ''),
                 'summary' => (string)($principle['summary'] ?? ''),
+                // The service may send these under either name. Both are optional.
+                'example' => (string)($principle['example'] ?? ($principle['goodExample'] ?? '')),
+                'pitfall' => (string)($principle['pitfall'] ?? ($principle['commonMistake'] ?? '')),
             ];
         }
 

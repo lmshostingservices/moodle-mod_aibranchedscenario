@@ -101,6 +101,19 @@ class lmslabs_provider implements provider {
      * @return string
      */
     protected function host(): string {
+        return self::site_host();
+    }
+
+    /**
+     * The configured service host, validated, with no trailing slash.
+     *
+     * Static because the pages a teacher is pointed at - the documentation, the published
+     * prices, the voice samples - live on the same host as the API and are needed where
+     * there is no provider instance to hand.
+     *
+     * @return string
+     */
+    public static function site_host(): string {
         $host = trim((string)get_config('mod_aibranchedscenario', 'apihost'));
         if ($host === '') {
             $host = self::DEFAULT_HOST;
@@ -110,6 +123,16 @@ class lmslabs_provider implements provider {
             $host = self::DEFAULT_HOST;
         }
         return $host;
+    }
+
+    /**
+     * A link to one of the service's public pages.
+     *
+     * @param string $path Path beginning with a slash.
+     * @return string
+     */
+    public static function public_link(string $path): string {
+        return self::site_host() . '/' . ltrim($path, '/');
     }
 
     /**

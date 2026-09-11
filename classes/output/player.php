@@ -19,6 +19,8 @@ namespace mod_aibranchedscenario\output;
 use context_module;
 use mod_aibranchedscenario\local\attempt_manager;
 use mod_aibranchedscenario\local\scenario_manager;
+use mod_aibranchedscenario\external\helper;
+use mod_aibranchedscenario\local\media_manager;
 use mod_aibranchedscenario\local\schema;
 use stdClass;
 
@@ -58,6 +60,54 @@ class player implements \renderable, \templatable {
     }
 
     /**
+     * The opening lesson, one principle to a slide.
+     *
+     * A learner who is told the principles in a bulleted list has read them and learned
+     * nothing. Each one gets its own screen with the words to actually use and the
+     * plausible-sounding mistake it prevents, a picture from the scenario itself so the
+     * lesson is set where the story is, and its own narration.
+     *
+     * The pictures are the scenes already generated for the scenario, taken in order and
+     * cycled if there are more principles than scenes. Nothing extra is generated.
+     *
+     * @param array|null $definition Published definition.
+     * @param \stdClass|null $revision Published revision.
+     * @return array Template context.
+     */
+    protected function lesson_slides($definition, $revision): array {
+        if (!is_array($definition) || empty($definition['principles']) || !$revision) {
+            return [];
+        }
+        $media = new media_manager($this->context);
+        $scenes = array_values($media->urls_for_revision(
+            media_manager::AREA_REVISION_SCENE,
+            (int)$revision->revision
+        ));
+        $narration = $media->urls_for_revision(
+            media_manager::AREA_REVISION_NARRATION,
+            (int)$revision->revision
+        );
+
+        $slides = [];
+        foreach (array_values($definition['principles']) as $position => $principle) {
+            $image = $scenes ? (string)$scenes[$position % count($scenes)] : '';
+            $slides[] = [
+                'number'      => $position + 1,
+                'title'       => (string)$principle['title'],
+                'summaryparas' => helper::paragraph_list((string)($principle['summary'] ?? '')),
+                'example'     => (string)($principle['example'] ?? ''),
+                'hasexample'  => trim((string)($principle['example'] ?? '')) !== '',
+                'pitfall'     => (string)($principle['pitfall'] ?? ''),
+                'haspitfall'  => trim((string)($principle['pitfall'] ?? '')) !== '',
+                'imageurl'    => $image,
+                'hasimage'    => $image !== '',
+                'audiourl'    => (string)($narration['lesson_' . $principle['id']] ?? ''),
+            ];
+        }
+        return $slides;
+    }
+
+    /**
      * Export the data used by the template.
      *
      * @param \renderer_base $output The renderer.
@@ -66,6 +116,8 @@ class player implements \renderable, \templatable {
     public function export_for_template(\renderer_base $output): array {
         $revision = scenario_manager::get_current_revision($this->scenario);
         $definition = $revision ? json_decode($revision->scenariojson, true) : null;
+
+        $lessonslides = $this->lesson_slides($definition, $revision);
 
         $stages = [];
         $longest = 0;
@@ -130,6 +182,8 @@ class player implements \renderable, \templatable {
             'metrics'      => $metrics,
             'principles'   => is_array($definition) ? array_values($definition['principles']) : [],
             'hasprinciples' => is_array($definition) && !empty($definition['principles']),
+            'lessonslides' => $lessonslides,
+            'openingimage' => $lessonslides ? (string)$lessonslides[0]['imageurl'] : '',
         ];
     }
 }

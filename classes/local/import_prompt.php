@@ -156,6 +156,15 @@ class import_prompt {
                 . 'a poor choice. One or two sentences, in the same voice as the story, '
                 . 'not praise, not a lecture, and never addressed to the learner as a '
                 . 'student.',
+            '- Every principle carries an "example" and a "pitfall". The example is the '
+                . 'words a learner could actually say or do, written as a line of speech '
+                . 'or a concrete action - "So what I am hearing is the deadline is the '
+                . 'problem, not the guidelines. Have I got that right?" - never a '
+                . 'restatement of the principle. The pitfall is the plausible-sounding '
+                . 'version that does not work, and why it does not: "Asking \'does that '
+                . 'make sense?\', which invites a yes and tells you nothing." These are '
+                . 'taught before the scenario starts, so they are the difference between '
+                . 'a learner who knows the principle and one who can use it.',
             '- "challenge" must be a question addressed to the learner and must end in a '
                 . 'question mark: "What do you say to Jamie?", "How do you answer that?". '
                 . 'An instruction such as "Ensure Jamie understands the guidelines." is '

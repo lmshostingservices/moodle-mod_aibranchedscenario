@@ -226,7 +226,55 @@ class wizard implements \renderable, \templatable {
             'generationeta'  => self::eta_phrase(),
             'importprompt'   => \mod_aibranchedscenario\local\import_prompt::text((int)$source['decisions']),
             'pricing'        => self::pricing_card($this->scenario),
+            'howto'          => self::how_to_use(),
+            'reading'        => self::further_reading(),
         ];
+    }
+
+    /**
+     * The three pages a teacher asks for next, on the service's own site.
+     *
+     * Built from the configured API host rather than written out, so a site pointed at a
+     * staging service does not send its teachers to the live one.
+     *
+     * @return array Template context.
+     */
+    protected static function further_reading(): array {
+        $links = [
+            'docs'    => '/docs/ai-branched-scenario',
+            'pricing' => '/pricing',
+            'voices'  => '/voices',
+        ];
+        $out = [];
+        foreach ($links as $key => $path) {
+            $out[] = [
+                'url'   => \mod_aibranchedscenario\local\ai\lmslabs_provider::public_link($path),
+                'title' => get_string('reading:' . $key, 'mod_aibranchedscenario'),
+                'body'  => get_string('reading:' . $key . 'body', 'mod_aibranchedscenario'),
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * The order a teacher does this in, including the part everybody misses.
+     *
+     * Publishing does not show you the scenario: this page is the author's view, and the
+     * activity only becomes the thing a learner sees when you look at it as one. Teachers
+     * who did not know that concluded that publishing had done nothing.
+     *
+     * @return array Template context.
+     */
+    protected static function how_to_use(): array {
+        $steps = [];
+        foreach (['paste', 'shape', 'generate', 'review', 'publish', 'play'] as $index => $key) {
+            $steps[] = [
+                'number' => $index + 1,
+                'title'  => get_string('howto:' . $key, 'mod_aibranchedscenario'),
+                'body'   => get_string('howto:' . $key . 'body', 'mod_aibranchedscenario'),
+            ];
+        }
+        return $steps;
     }
 
     /**

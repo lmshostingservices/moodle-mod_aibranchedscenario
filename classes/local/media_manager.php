@@ -46,6 +46,9 @@ class media_manager {
     /** @var string Published narration audio, item id is the revision number. */
     const AREA_REVISION_NARRATION = 'revisionnarration';
 
+    /** @var int Item ids for the opening lesson start here, clear of the node indexes. */
+    const PRINCIPLE_ITEMID_BASE = 900;
+
     /** @var int Largest media file accepted from the provider, in bytes. */
     const MAX_FILE_BYTES = 12582912;
 
@@ -190,6 +193,25 @@ class media_manager {
         $style = $source['imagestyle'] ?? 'cinematic';
         $voice = self::configured_voice('narrator');
         $counts = $blank;
+
+        // The opening lesson is taught before the scenario starts, and is narrated for
+        // the same reason every other screen is: a learner who is listening rather than
+        // skim-reading arrives at the first decision knowing what they are being asked to
+        // do. The principles are few - never more than eight - so this is a small bill.
+        if ($wantsaudio) {
+            foreach ($definition['principles'] as $position => $principle) {
+                $counts['narrationswanted']++;
+                if ($this->generate_principle_narration(
+                    $provider,
+                    $principle,
+                    $scenario->scenariolang,
+                    $voice,
+                    $position
+                )) {
+                    $counts['narrations']++;
+                }
+            }
+        }
 
         $index = 0;
         foreach ($definition['nodes'] as $node) {
@@ -341,6 +363,50 @@ class media_manager {
         }
         $gender = (string)($node['speakergender'] ?? '');
         return $gender === 'male' || $gender === 'female';
+    }
+
+    /**
+     * Generate and store the narration for one slide of the opening lesson.
+     *
+     * @param provider $provider Generation provider.
+     * @param array $principle Normalised principle.
+     * @param string $language BCP-47 language code.
+     * @param string $voice Voice identifier.
+     * @param int $position Zero based position, used as the file item id.
+     * @return bool True when audio was stored.
+     */
+    public function generate_principle_narration(
+        provider $provider,
+        array $principle,
+        string $language,
+        string $voice,
+        int $position
+    ): bool {
+        $text = trim(
+            (string)($principle['title'] ?? '') . ". \n\n"
+            . (string)($principle['summary'] ?? '') . "\n\n"
+            . (string)($principle['example'] ?? '') . "\n\n"
+            . (string)($principle['pitfall'] ?? '')
+        );
+        if (trim($text, ". \n") === '') {
+            return false;
+        }
+        try {
+            $result = $provider->generate_speech(\core_text::substr($text, 0, 4500), $voice, $language);
+            // Each clip needs its own item id: storing a file clears whatever else shares
+            // its item id, so a shared one would leave only the last principle recorded.
+            $this->store(
+                self::AREA_NARRATION,
+                self::PRINCIPLE_ITEMID_BASE + $position,
+                'lesson_' . $principle['id'],
+                $result['data'],
+                $result['mimetype']
+            );
+            return true;
+        } catch (generation_exception $e) {
+            debugging('Opening lesson narration skipped: ' . $e->errorcode, DEBUG_DEVELOPER);
+            return false;
+        }
     }
 
     /**

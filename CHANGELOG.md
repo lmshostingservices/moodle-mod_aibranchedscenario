@@ -2,6 +2,99 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.14.0] - 2026-09-11
+
+### Added
+
+- **The opening page is a lesson, not a list.** What a learner used to get was the
+  principles as bullet points above a Begin button - read in four seconds, remembered for
+  none of them. It is now a deck in the same shape as the scenario itself: a picture on the
+  left, the teaching on the right, one principle to a slide, with the situation first and a
+  closing slide carrying the start button.
+- **Worked examples.** Each principle can now carry the words a learner could actually say
+  or do, and the plausible-sounding version that does not work. Both are shown as their own
+  cards - "Sounds like this" and "Not this" - because being told a principle and being
+  shown how it sounds are different things. The authoring prompt now requires both.
+- **The opening lesson is narrated**, one clip per principle. Never more than eight, so it
+  is a small addition to the speech bill.
+- **The pictures are the scenario's own.** Scene images already generated are reused in
+  order, cycled if there are more principles than scenes. Nothing extra is generated.
+- **The cards arrive in sequence and lift under the pointer.** Both stop for a learner who
+  has asked for reduced motion.
+
+### Note
+
+- A scenario published before this release has no examples and no lesson narration. The
+  lesson still runs, teaching each principle from its summary; generating the scenario
+  again fills in the rest.
+
+996 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
+## [v1.13.1] - 2026-09-11
+
+### Changed
+
+- **The debrief is a deck rather than one long page.** It carries the outcome, four skill
+  scores, every decision with its consequence and reasoning, the lessons, the practice
+  notes and the takeaway cards - which on a single page is a scroll a learner abandons
+  half way through. It is now one page at a time with arrows and a position count:
+  outcome, skills, the decisions two to a page, what mattered, how to apply it, the
+  takeaways, and a closing page carrying Try again and Print. Printing still puts the
+  whole thing on the page.
+- **The debrief is not narrated.** It is read rather than listened to, so reaching it stops
+  whatever the last screen was playing and puts the narration control into its "nothing
+  here" state instead of leaving it claiming to be playing.
+
+976 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
+## [v1.13.0] - 2026-09-11
+
+### Added
+
+- **A first step that answers "what is this and what does it cost" before asking for
+  anything.** The cost card has moved off every page of the wizard and into step one,
+  alongside six cards on what a scenario does to a learner that a document cannot - each
+  claim with the mechanism under it rather than an adjective - and a six-step guide to
+  building one. The sixth step is the one people were missing: publishing does not change
+  the authoring page, and the scenario has to be opened in student view to be seen as a
+  learner sees it.
+- **Links to the documentation, the published prices and the voice samples**, built from
+  the configured service host so a site pointed at staging does not send its teachers to
+  the live site.
+- **A fill-the-screen button** in the player's top right, with the sticky bar and the slide
+  ceiling both re-measured on the way in and out.
+
+### Fixed
+
+- **The slide was taller than the screen.** Whichever column was longer set the height, so
+  a wordy scene pushed its own options below the fold - exactly what the side-by-side
+  layout existed to prevent. The available height is now measured in the browser and
+  handed to the layout, the picture keeps to it, and the text column takes a scrollbar of
+  its own rather than pushing the page.
+- **The sticky bar let the page show either side of it.** It is only as wide as the player,
+  and a course banner behind it was visible in the margins as content scrolled under. The
+  bar now paints its background out past both edges.
+
+- **A slide could still scroll.** Now nothing on a scene scrolls at all: the screen is held
+  to the height between the course banner and the fold, and when the text does not fit the
+  type steps down until it does, stopping before it becomes unreadable. A scene that wants
+  more room than the page has is what the fullscreen control is for.
+- **The player's top corners squared off while the bottom two stayed round.** The sticky
+  bar paints its background past both edges so a course banner does not show either side of
+  it, and that flat band was being worn at rest as well as when pinned. It is only worn
+  while the bar is actually stuck.
+- **The narration control looked the same on and off.** Sound was a two-pixel arc and
+  silence a two-pixel bar, in the same 24px circle. Each of the four states now has its own
+  drawing: a speaker with waves, a speaker with a cross, a play mark, and a speaker with a
+  dash for a screen that has no recording.
+
+### Changed
+
+- The wizard has seven steps rather than six. A bookmarked `?step=n` link lands one step
+  earlier than it used to.
+
+959 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
 ## [v1.12.3] - 2026-09-11
 
 ### Changed

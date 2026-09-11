@@ -58,6 +58,8 @@
     * metrics array Opening dynamics
     * hasprinciples bool Whether decision principles are shown
     * principles array Decision principles drawn from the source content
+    * lessonslides array The opening lesson, one principle to a slide
+    * openingimage string Scene image used on the opening slide, or empty
 
     Example context (json):
     {
@@ -103,16 +105,51 @@
                 <div class="aibs-masthead-side">
                     {{#enableaudio}}
                         <button type="button" class="aibs-audiobtn" data-action="mute"
-                                data-region="mutebutton" aria-pressed="true"
+                                data-region="mutebutton" aria-pressed="true" data-state="on"
                                 title="{{#str}} narration:tipon, mod_aibranchedscenario {{/str}}"
                                 aria-label="{{#str}} narration:tipon, mod_aibranchedscenario {{/str}}">
                             <span class="aibs-audiobtn-icon" aria-hidden="true">
-                                <span class="aibs-audiobtn-wave"></span>
+                                <svg class="aibs-icon aibs-audioicon aibs-audioicon-on" viewBox="0 0 20 20"
+                                     focusable="false">
+                                    <path d="M4 8h2.4L10 4.8v10.4L6.4 12H4Z" fill="currentColor"/>
+                                    <path d="M12.6 7.4a3.6 3.6 0 0 1 0 5.2M14.8 5.2a6.8 6.8 0 0 1 0 9.6"
+                                          fill="none" stroke="currentColor" stroke-width="1.6"
+                                          stroke-linecap="round"/>
+                                </svg>
+                                <svg class="aibs-icon aibs-audioicon aibs-audioicon-off" viewBox="0 0 20 20"
+                                     focusable="false">
+                                    <path d="M4 8h2.4L10 4.8v10.4L6.4 12H4Z" fill="currentColor"/>
+                                    <path d="m13 7.6 4 4.8M17 7.6l-4 4.8" fill="none" stroke="currentColor"
+                                          stroke-width="1.7" stroke-linecap="round"/>
+                                </svg>
+                                <svg class="aibs-icon aibs-audioicon aibs-audioicon-blocked" viewBox="0 0 20 20"
+                                     focusable="false">
+                                    <circle cx="10" cy="10" r="7.6" fill="none" stroke="currentColor"
+                                            stroke-width="1.6"/>
+                                    <path d="M8.4 6.8 13.4 10l-5 3.2Z" fill="currentColor"/>
+                                </svg>
+                                <svg class="aibs-icon aibs-audioicon aibs-audioicon-none" viewBox="0 0 20 20"
+                                     focusable="false">
+                                    <path d="M4 8h2.4L10 4.8v10.4L6.4 12H4Z" fill="currentColor"/>
+                                    <path d="M12.6 10h4.4" fill="none" stroke="currentColor"
+                                          stroke-width="1.7" stroke-linecap="round"/>
+                                </svg>
                             </span>
                             <span class="aibs-audiobtn-text" data-region="mutelabel">
                                 {{#str}} narration:on, mod_aibranchedscenario {{/str}}</span>
                         </button>
                     {{/enableaudio}}
+                    <button type="button" class="aibs-iconbtn" data-action="fullscreen"
+                            data-region="fullscreenbutton"
+                            title="{{#str}} fullscreen:enter, mod_aibranchedscenario {{/str}}"
+                            aria-label="{{#str}} fullscreen:enter, mod_aibranchedscenario {{/str}}">
+                        <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"
+                             data-region="fullscreenicon">
+                            <path d="M3.4 7.4V3.4h4M16.6 7.4V3.4h-4M3.4 12.6v4h4M16.6 12.6v4h-4"
+                                  fill="none" stroke="currentColor" stroke-width="1.7"
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
                 </div>
             </header>
 
@@ -204,23 +241,78 @@
 
         <div class="aibs-stage">
 
-            <section class="aibs-card aibs-brief" data-region="brief">
-                {{#role}}<p class="aibs-role">{{role}}</p>{{/role}}
-                <div class="aibs-prose">{{#hookparas}}<p>{{.}}</p>{{/hookparas}}</div>
+            <section class="aibs-brief" data-region="brief">
 
-                {{#hasprinciples}}
-                    <div class="aibs-principles">
-                        <h3 class="aibs-h3">{{#str}} whatthistests, mod_aibranchedscenario {{/str}}</h3>
-                        <ul class="aibs-principle-list">
-                            {{#principles}}
-                                <li class="aibs-principle">
-                                    <span class="aibs-principle-title">{{title}}</span>
-                                    {{#summary}}<span class="aibs-principle-summary">{{summary}}</span>{{/summary}}
-                                </li>
-                            {{/principles}}
-                        </ul>
-                    </div>
-                {{/hasprinciples}}
+                <div class="aibs-deck" data-region="deck" data-slide="0">
+                    <div class="aibs-deck-stage">
+
+                        <article class="aibs-card aibs-deckslide aibs-slide" data-region="deckslide">
+                            {{#openingimage}}
+                                <div class="aibs-scene">
+                                    <img src="{{openingimage}}" alt="" class="aibs-scene-img" loading="lazy">
+                                </div>
+                            {{/openingimage}}
+                            <div class="aibs-node-body">
+                                <span class="aibs-chip">{{#str}} lesson:situation, mod_aibranchedscenario {{/str}}</span>
+                                <h3 class="aibs-h3">{{#scenariotitle}}{{scenariotitle}}{{/scenariotitle}}{{^scenariotitle}}{{title}}{{/scenariotitle}}</h3>
+                                {{#role}}<p class="aibs-role">{{role}}</p>{{/role}}
+                                <div class="aibs-prose">{{#hookparas}}<p>{{.}}</p>{{/hookparas}}</div>
+                            </div>
+                        </article>
+
+                        {{#lessonslides}}
+                            <article class="aibs-card aibs-deckslide aibs-slide" data-region="deckslide"
+                                     data-audio="{{audiourl}}" hidden>
+                                {{#hasimage}}
+                                    <div class="aibs-scene">
+                                        <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
+                                    </div>
+                                {{/hasimage}}
+                                <div class="aibs-node-body">
+                                    <span class="aibs-chip">
+                                        {{#str}} lesson:number, mod_aibranchedscenario, {{number}} {{/str}}</span>
+                                    <h3 class="aibs-h3">{{title}}</h3>
+                                    <div class="aibs-prose aibs-lessoncard aibs-lessoncard-lead">
+                                        {{#summaryparas}}<p>{{.}}</p>{{/summaryparas}}</div>
+                                    {{#hasexample}}
+                                        <div class="aibs-lessoncard aibs-lessoncard-good">
+                                            <span class="aibs-lessoncard-label">
+                                                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true"
+                                                     focusable="false">
+                                                    <circle cx="10" cy="10" r="7.4" fill="none"
+                                                            stroke="currentColor" stroke-width="1.6"/>
+                                                    <path d="M6.6 10.2 9 12.6l4.4-5" fill="none"
+                                                          stroke="currentColor" stroke-width="1.7"
+                                                          stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                                {{#str}} lesson:saythis, mod_aibranchedscenario {{/str}}</span>
+                                            <p class="aibs-lessoncard-text">{{example}}</p>
+                                        </div>
+                                    {{/hasexample}}
+                                    {{#haspitfall}}
+                                        <div class="aibs-lessoncard aibs-lessoncard-bad">
+                                            <span class="aibs-lessoncard-label">
+                                                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true"
+                                                     focusable="false">
+                                                    <path d="M10 2.6 18.4 17H1.6L10 2.6Z" fill="none"
+                                                          stroke="currentColor" stroke-width="1.6"
+                                                          stroke-linejoin="round"/>
+                                                    <path d="M10 7.6v4.2" stroke="currentColor"
+                                                          stroke-width="1.7" stroke-linecap="round"/>
+                                                    <circle cx="10" cy="14.4" r="0.95" fill="currentColor"/>
+                                                </svg>
+                                                {{#str}} lesson:notthis, mod_aibranchedscenario {{/str}}</span>
+                                            <p class="aibs-lessoncard-text">{{pitfall}}</p>
+                                        </div>
+                                    {{/haspitfall}}
+                                </div>
+                            </article>
+                        {{/lessonslides}}
+
+                        <article class="aibs-card aibs-deckslide aibs-deckend" data-region="deckslide" hidden>
+                            <h3 class="aibs-h3">{{#str}} lesson:ready, mod_aibranchedscenario {{/str}}</h3>
+                            <p class="aibs-step-lead">{{#str}} lesson:readylead, mod_aibranchedscenario {{/str}}</p>
+
 
                 <div class="aibs-brief-actions">
                     {{#canattempt}}
@@ -271,7 +363,31 @@
                         {{#str}} attemptsremaining, mod_aibranchedscenario, {{attemptsleft}} {{/str}}
                     </p>
                 {{/maxattempts}}
-            </section>
+                    </article>
+
+                    </div>
+
+                    <nav class="aibs-deck-nav" aria-label="{{#str}} lesson:pages, mod_aibranchedscenario {{/str}}">
+                        <button type="button" class="aibs-iconbtn" data-action="deckprev"
+                                title="{{#str}} deckprev, mod_aibranchedscenario {{/str}}"
+                                aria-label="{{#str}} deckprev, mod_aibranchedscenario {{/str}}">
+                            <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                                <path d="M16 10H5m4.4-4.6L4.8 10l4.6 4.6" fill="none" stroke="currentColor"
+                                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <span class="aibs-deck-count" data-region="deckcount" aria-live="polite"></span>
+                        <button type="button" class="aibs-iconbtn" data-action="decknext"
+                                title="{{#str}} decknext, mod_aibranchedscenario {{/str}}"
+                                aria-label="{{#str}} decknext, mod_aibranchedscenario {{/str}}">
+                            <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                                <path d="M4 10h11m-4.4-4.6L15.2 10l-4.6 4.6" fill="none" stroke="currentColor"
+                                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </nav>
+                </div>
+</section>
 
             <section class="aibs-region" data-region="node" aria-live="polite" hidden></section>
             <section class="aibs-region" data-region="consequence" aria-live="polite" hidden></section>

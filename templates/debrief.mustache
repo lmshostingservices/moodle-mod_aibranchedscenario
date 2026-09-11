@@ -25,6 +25,11 @@
     Data attributes required for JS:
     * data-action="replay"
     * data-action="print"
+    * data-action="deckprev"
+    * data-action="decknext"
+    * data-region="deck"
+    * data-region="deckslide"
+    * data-region="deckcount"
 
     Context variables required for this template:
     * outcome string Outcome band reached
@@ -35,7 +40,7 @@
     * score float Decision quality as a percentage
     * decisions int Number of decisions taken
     * radar array Skill values, each with label, percent and raw
-    * journey array The decision journey
+    * journeypages array The decision journey, chunked one page at a time
     * whatmattered array Lessons demonstrated
     * criticaldecisions array Decisions that changed the outcome
     * practice array Behaviours to use in practice
@@ -57,7 +62,7 @@
         "score": 62.5,
         "decisions": 5,
         "radar": [{"skill": "clarity", "label": "Clarity", "percent": 70, "raw": 3}],
-        "journey": [{"seq": 1, "nodetitle": "The fault nobody logged", "choicetext": "Log it now", "signal": "positive", "signalclass": "aibs-signal-positive", "consequenceparas": ["Sam agrees."], "feedbackparas": ["Good call."], "hasfeedback": true, "principle": "Report faults early"}],
+        "journeypages": [{"first": 1, "last": 1, "decisions": [{"seq": 1, "nodetitle": "The fault nobody logged", "choicetext": "Log it now", "signal": "positive", "signalclass": "aibs-signal-positive", "consequenceparas": ["Sam agrees."], "feedbackparas": ["Good call."], "hasfeedback": true, "principle": "Report faults early"}]}],
         "whatmattered": ["Faults are logged the moment they are seen."],
         "criticaldecisions": ["Choosing to log the fault rather than fix it quietly."],
         "practice": ["Log it, then fix it."],
@@ -70,106 +75,143 @@
         "allowreplay": true
     }
 }}
-<div class="aibs-debrief aibs-enter">
+<div class="aibs-debrief aibs-deck aibs-enter" data-region="deck">
 
-    <section class="aibs-card aibs-outcome {{outcomeclass}}">
-        <div class="aibs-outcome-head">
-            <span class="aibs-outcome-badge">{{outcomelabel}}</span>
-            <div class="aibs-score" role="img" aria-label="{{#str}} decisionqualityscore, mod_aibranchedscenario, {{score}} {{/str}}">
-                <span class="aibs-score-value">{{score}}</span>
-                <span class="aibs-score-unit">%</span>
+    <div class="aibs-deck-stage">
+
+        <section class="aibs-card aibs-deckslide aibs-outcome {{outcomeclass}}" data-region="deckslide">
+            <div class="aibs-outcome-head">
+                <span class="aibs-outcome-badge">{{outcomelabel}}</span>
+                <div class="aibs-score" role="img"
+                     aria-label="{{#str}} decisionqualityscore, mod_aibranchedscenario, {{score}} {{/str}}">
+                    <span class="aibs-score-value">{{score}}</span>
+                    <span class="aibs-score-unit">%</span>
+                </div>
             </div>
-        </div>
-        {{#outcometitle}}<h3 class="aibs-h3">{{outcometitle}}</h3>{{/outcometitle}}
-        <div class="aibs-prose aibs-prose-lead">{{#outcomeparas}}<p>{{.}}</p>{{/outcomeparas}}</div>
-        <p class="aibs-fineprint">{{#str}} decisionstaken, mod_aibranchedscenario, {{decisions}} {{/str}}</p>
-    </section>
+            {{#outcometitle}}<h3 class="aibs-h3">{{outcometitle}}</h3>{{/outcometitle}}
+            <div class="aibs-prose aibs-prose-lead">{{#outcomeparas}}<p>{{.}}</p>{{/outcomeparas}}</div>
+            <p class="aibs-fineprint">{{#str}} decisionstaken, mod_aibranchedscenario, {{decisions}} {{/str}}</p>
+        </section>
 
-    <section class="aibs-card aibs-skills">
-        <h3 class="aibs-h3">{{#str}} howyouhandledit, mod_aibranchedscenario {{/str}}</h3>
-        <ul class="aibs-skill-list">
-            {{#radar}}
-                <li class="aibs-skill">
-                    <span class="aibs-skill-label">{{label}}</span>
-                    <span class="aibs-skill-track">
-                        <span class="aibs-skill-fill" style="width: {{percent}}%"></span>
-                    </span>
-                    <span class="aibs-skill-value">{{percent}}%</span>
-                </li>
-            {{/radar}}
-        </ul>
-    </section>
-
-    <section class="aibs-card aibs-journey">
-        <h3 class="aibs-h3">{{#str}} yourdecisions, mod_aibranchedscenario {{/str}}</h3>
-        <ol class="aibs-journey-list">
-            {{#journey}}
-                <li class="aibs-journey-item {{signalclass}}">
-                    <div class="aibs-journey-head">
-                        <span class="aibs-journey-seq">{{seq}}</span>
-                        <span class="aibs-journey-title">{{nodetitle}}</span>
-                    </div>
-                    <p class="aibs-journey-choice">{{choicetext}}</p>
-                    <div class="aibs-prose aibs-prose-small">{{#consequenceparas}}<p>{{.}}</p>{{/consequenceparas}}</div>
-                    {{#hasfeedback}}
-                        <div class="aibs-journey-feedback">
-                            <span class="aibs-journey-feedback-label">
-                                {{#str}} whythismattered, mod_aibranchedscenario {{/str}}</span>
-                            <div class="aibs-prose aibs-prose-small">
-                                {{#feedbackparas}}<p>{{.}}</p>{{/feedbackparas}}</div>
-                        </div>
-                    {{/hasfeedback}}
-                    {{#principle}}<p class="aibs-journey-principle">{{principle}}</p>{{/principle}}
-                </li>
-            {{/journey}}
-        </ol>
-    </section>
-
-    <section class="aibs-card aibs-lessons">
-        <h3 class="aibs-h3">{{#str}} whatmattered, mod_aibranchedscenario {{/str}}</h3>
-        <ul class="aibs-lesson-list">
-            {{#whatmattered}}<li class="aibs-lesson">{{.}}</li>{{/whatmattered}}
-        </ul>
-
-        {{#hascritical}}
-            <h4 class="aibs-h4">{{#str}} decisionsthatchanged, mod_aibranchedscenario {{/str}}</h4>
-            <ul class="aibs-lesson-list">
-                {{#criticaldecisions}}<li class="aibs-lesson">{{.}}</li>{{/criticaldecisions}}
+        <section class="aibs-card aibs-deckslide aibs-skills" data-region="deckslide" hidden>
+            <h3 class="aibs-h3">{{#str}} howyouhandledit, mod_aibranchedscenario {{/str}}</h3>
+            <ul class="aibs-skill-list">
+                {{#radar}}
+                    <li class="aibs-skill">
+                        <span class="aibs-skill-label">{{label}}</span>
+                        <span class="aibs-skill-track">
+                            <span class="aibs-skill-fill" style="width: {{percent}}%"></span>
+                        </span>
+                        <span class="aibs-skill-value">{{percent}}%</span>
+                    </li>
+                {{/radar}}
             </ul>
-        {{/hascritical}}
+        </section>
+
+        {{#journeypages}}
+            <section class="aibs-card aibs-deckslide aibs-journey" data-region="deckslide" hidden>
+                <h3 class="aibs-h3">{{#str}} yourdecisions, mod_aibranchedscenario {{/str}}</h3>
+                <ol class="aibs-journey-list">
+                    {{#decisions}}
+                        <li class="aibs-journey-item {{signalclass}}">
+                            <div class="aibs-journey-head">
+                                <span class="aibs-journey-seq">{{seq}}</span>
+                                <span class="aibs-journey-title">{{nodetitle}}</span>
+                            </div>
+                            <p class="aibs-journey-choice">{{choicetext}}</p>
+                            <div class="aibs-prose aibs-prose-small">
+                                {{#consequenceparas}}<p>{{.}}</p>{{/consequenceparas}}</div>
+                            {{#hasfeedback}}
+                                <div class="aibs-journey-feedback">
+                                    <span class="aibs-journey-feedback-label">
+                                        {{#str}} whythismattered, mod_aibranchedscenario {{/str}}</span>
+                                    <div class="aibs-prose aibs-prose-small">
+                                        {{#feedbackparas}}<p>{{.}}</p>{{/feedbackparas}}</div>
+                                </div>
+                            {{/hasfeedback}}
+                            {{#principle}}<p class="aibs-journey-principle">{{principle}}</p>{{/principle}}
+                        </li>
+                    {{/decisions}}
+                </ol>
+            </section>
+        {{/journeypages}}
+
+        <section class="aibs-card aibs-deckslide aibs-lessons" data-region="deckslide" hidden>
+            <h3 class="aibs-h3">{{#str}} whatmattered, mod_aibranchedscenario {{/str}}</h3>
+            <ul class="aibs-lesson-list">
+                {{#whatmattered}}<li class="aibs-lesson">{{.}}</li>{{/whatmattered}}
+            </ul>
+
+            {{#hascritical}}
+                <h4 class="aibs-h4">{{#str}} decisionsthatchanged, mod_aibranchedscenario {{/str}}</h4>
+                <ul class="aibs-lesson-list">
+                    {{#criticaldecisions}}<li class="aibs-lesson">{{.}}</li>{{/criticaldecisions}}
+                </ul>
+            {{/hascritical}}
+        </section>
 
         {{#haspractice}}
-            <h4 class="aibs-h4">{{#str}} applyitinpractice, mod_aibranchedscenario {{/str}}</h4>
-            <ul class="aibs-lesson-list">
-                {{#practice}}<li class="aibs-lesson">{{.}}</li>{{/practice}}
-            </ul>
+            <section class="aibs-card aibs-deckslide aibs-lessons" data-region="deckslide" hidden>
+                <h3 class="aibs-h3">{{#str}} applyitinpractice, mod_aibranchedscenario {{/str}}</h3>
+                <ul class="aibs-lesson-list">
+                    {{#practice}}<li class="aibs-lesson">{{.}}</li>{{/practice}}
+                </ul>
+
+                {{#hassourceconnection}}
+                    <h4 class="aibs-h4">{{#str}} sourceconnection, mod_aibranchedscenario {{/str}}</h4>
+                    <div class="aibs-prose">{{#sourceconnectionparas}}<p>{{.}}</p>{{/sourceconnectionparas}}</div>
+                {{/hassourceconnection}}
+            </section>
         {{/haspractice}}
 
-        {{#hassourceconnection}}
-            <h4 class="aibs-h4">{{#str}} sourceconnection, mod_aibranchedscenario {{/str}}</h4>
-            <div class="aibs-prose">{{#sourceconnectionparas}}<p>{{.}}</p>{{/sourceconnectionparas}}</div>
-        {{/hassourceconnection}}
-    </section>
+        {{#hastakeaways}}
+            <section class="aibs-card aibs-deckslide" data-region="deckslide" hidden>
+                <h3 class="aibs-h3">{{#str}} takeaways, mod_aibranchedscenario {{/str}}</h3>
+                <div class="aibs-takeaways">
+                    {{#takeaways}}
+                        <article class="aibs-takeaway">
+                            <h4 class="aibs-h4">{{heading}}</h4>
+                            <div class="aibs-prose aibs-prose-small">{{#bodyparas}}<p>{{.}}</p>{{/bodyparas}}</div>
+                        </article>
+                    {{/takeaways}}
+                </div>
+            </section>
+        {{/hastakeaways}}
 
-    {{#hastakeaways}}
-        <section class="aibs-takeaways">
-            {{#takeaways}}
-                <article class="aibs-card aibs-takeaway">
-                    <h4 class="aibs-h4">{{heading}}</h4>
-                    <div class="aibs-prose aibs-prose-small">{{#bodyparas}}<p>{{.}}</p>{{/bodyparas}}</div>
-                </article>
-            {{/takeaways}}
+        <section class="aibs-card aibs-deckslide aibs-deckend" data-region="deckslide" hidden>
+            <h3 class="aibs-h3">{{#str}} debriefend, mod_aibranchedscenario {{/str}}</h3>
+            <p class="aibs-step-lead">{{#str}} debriefendlead, mod_aibranchedscenario {{/str}}</p>
+            <div class="aibs-debrief-actions">
+                {{#allowreplay}}
+                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="replay">
+                        {{#str}} tryagain, mod_aibranchedscenario {{/str}}
+                    </button>
+                {{/allowreplay}}
+                <button type="button" class="aibs-btn aibs-btn-ghost" data-action="print">
+                    {{#str}} printdebrief, mod_aibranchedscenario {{/str}}
+                </button>
+            </div>
         </section>
-    {{/hastakeaways}}
 
-    <div class="aibs-debrief-actions">
-        {{#allowreplay}}
-            <button type="button" class="aibs-btn aibs-btn-secondary" data-action="replay">
-                {{#str}} tryagain, mod_aibranchedscenario {{/str}}
-            </button>
-        {{/allowreplay}}
-        <button type="button" class="aibs-btn aibs-btn-ghost" data-action="print">
-            {{#str}} printdebrief, mod_aibranchedscenario {{/str}}
-        </button>
     </div>
+
+    <nav class="aibs-deck-nav" aria-label="{{#str}} debriefpages, mod_aibranchedscenario {{/str}}">
+        <button type="button" class="aibs-iconbtn" data-action="deckprev"
+                title="{{#str}} deckprev, mod_aibranchedscenario {{/str}}"
+                aria-label="{{#str}} deckprev, mod_aibranchedscenario {{/str}}">
+            <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                <path d="M16 10H5m4.4-4.6L4.8 10l4.6 4.6" fill="none" stroke="currentColor"
+                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <span class="aibs-deck-count" data-region="deckcount" aria-live="polite"></span>
+        <button type="button" class="aibs-iconbtn" data-action="decknext"
+                title="{{#str}} decknext, mod_aibranchedscenario {{/str}}"
+                aria-label="{{#str}} decknext, mod_aibranchedscenario {{/str}}">
+            <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                <path d="M4 10h11m-4.4-4.6L15.2 10l-4.6 4.6" fill="none" stroke="currentColor"
+                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+    </nav>
 </div>

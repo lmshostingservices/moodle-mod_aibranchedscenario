@@ -386,6 +386,12 @@ class validator {
                 'id'      => $id,
                 'title'   => $title,
                 'summary' => $this->text($item['summary'] ?? '', 800),
+                // A principle stated is a principle forgotten. These are the words a
+                // learner can actually use, and the ones that sound reasonable and are
+                // not. Both are optional: a scenario written before they existed still
+                // validates and simply teaches less at the start.
+                'example' => $this->text($item['example'] ?? '', 600),
+                'pitfall' => $this->text($item['pitfall'] ?? '', 600),
             ];
         }
         return $out;
