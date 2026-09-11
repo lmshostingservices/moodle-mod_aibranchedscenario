@@ -41,6 +41,7 @@ $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($context);
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading(format_string($moduleinstance->name));
+// No Moodle heading here: the review template carries its own masthead with the same
+// name, and printing both gave the page two titles.
 echo $OUTPUT->render(new draft_review($moduleinstance, $cm, $context));
 echo $OUTPUT->footer();

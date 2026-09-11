@@ -41,15 +41,6 @@ class generator {
     /** @var string Job failed. */
     const JOB_ERROR = 'error';
 
-    /** @var int Fallback lower bound, in seconds, before a site has any history. */
-    const ESTIMATE_FLOOR = 120;
-
-    /** @var int Fallback upper bound, in seconds, before a site has any history. */
-    const ESTIMATE_CEILING = 300;
-
-    /** @var int Successful runs needed before the site's own timings are trusted. */
-    const ESTIMATE_MIN_SAMPLES = 3;
-
     /** @var provider The generation provider. */
     protected $provider;
 
@@ -69,57 +60,6 @@ class generator {
      */
     public function get_provider(): provider {
         return $this->provider;
-    }
-
-    /**
-     * How long a scenario generation is likely to take on this site.
-     *
-     * Taken from what actually happened here rather than from a number written into the
-     * code: the duration of every successful run is recorded, so a site on slow hardware
-     * or long source content is told the truth about itself. A quoted range that a site
-     * routinely overshoots is worse than no range at all, because the teacher concludes
-     * the thing has hung.
-     *
-     * The range is the fastest and slowest of the recent successful runs, with the single
-     * fastest and slowest discarded once there are enough samples to afford it, so one
-     * freak run does not widen the quote for everybody. Until a site has enough history,
-     * the shipped fallback is used.
-     *
-     * @param string $operation Operation name.
-     * @return array Keys: low, high (seconds), measured (bool).
-     */
-    public function estimate(string $operation = provider::OP_SCENARIO): array {
-        global $DB;
-
-        $durations = $DB->get_fieldset_select(
-            'aibranchedscenario_jobs',
-            'durationms',
-            'jobtype = :jobtype AND status = :status AND durationms > 0',
-            ['jobtype' => $operation, 'status' => self::JOB_READY]
-        );
-        $durations = array_map('intval', (array)$durations);
-        sort($durations);
-
-        // More than a handful and the extremes are worth trimming; fewer and every sample
-        // is needed. Below the threshold the site has not earned an opinion yet.
-        if (count($durations) >= self::ESTIMATE_MIN_SAMPLES) {
-            if (count($durations) >= 5) {
-                array_shift($durations);
-                array_pop($durations);
-            }
-            $low = (int)round(reset($durations) / 1000);
-            $high = (int)round(end($durations) / 1000);
-            if ($high < $low) {
-                $high = $low;
-            }
-            return ['low' => max(1, $low), 'high' => max(1, $high), 'measured' => true];
-        }
-
-        return [
-            'low'      => self::ESTIMATE_FLOOR,
-            'high'     => self::ESTIMATE_CEILING,
-            'measured' => false,
-        ];
     }
 
     /**

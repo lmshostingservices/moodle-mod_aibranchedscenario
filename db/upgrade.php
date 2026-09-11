@@ -278,8 +278,9 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         // is charged, and how much of a scenario is narrated. Both are LMS Labs decisions.
         // Any values a site set are removed rather than left behind to confuse an
         // administrator reading the config table.
-        foreach (['pricebase', 'priceimages', 'pricevoice', 'creditrate', 'pricecurrency',
-                'narrationscope'] as $gone) {
+        $gonesettings = ['pricebase', 'priceimages', 'pricevoice', 'creditrate',
+            'pricecurrency', 'narrationscope'];
+        foreach ($gonesettings as $gone) {
             unset_config($gone, 'mod_aibranchedscenario');
         }
         upgrade_mod_savepoint(true, 2026091114, 'aibranchedscenario');
@@ -333,6 +334,50 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         // Release 1.15.2 changes no schema: the prompt now asks for the spoken line and
         // its speaker, which the player has been rendering since 1.10.0.
         upgrade_mod_savepoint(true, 2026091122, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091123) {
+        // Release 1.15.3 changes no schema: the generation wait is stated plainly rather
+        // than measured from the wrong half of the job.
+        upgrade_mod_savepoint(true, 2026091123, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091124) {
+        // Release 1.16.0 changes no schema: the opening lesson is laid out as a fixed
+        // slide frame rather than a card that shrinks to its contents.
+        upgrade_mod_savepoint(true, 2026091124, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091125) {
+        // Release 1.16.1 changes no schema: the sticky bar measures the whole stack of
+        // pinned furniture above it rather than only what covers the very top edge.
+        upgrade_mod_savepoint(true, 2026091125, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091126) {
+        // Release 1.17.0 changes no schema: the player page no longer scrolls in the
+        // learner's view once everything on it fits.
+        upgrade_mod_savepoint(true, 2026091126, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091127) {
+        // Release 1.18.0 changes no schema: a design-system pass over the stylesheet.
+        upgrade_mod_savepoint(true, 2026091127, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091128) {
+        // Release 1.18.1 changes no schema: the narrow and touch layouts.
+        upgrade_mod_savepoint(true, 2026091128, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091129) {
+        // Release 1.18.2 changes no schema: the metric legend moved into the top bar.
+        upgrade_mod_savepoint(true, 2026091129, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091130) {
+        // Release 1.19.0 changes no schema: the design-system pass and the dark palette.
+        upgrade_mod_savepoint(true, 2026091130, 'aibranchedscenario');
     }
 
     return true;

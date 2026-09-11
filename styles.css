@@ -53,6 +53,22 @@
     --aibs-negative-soft: #fdeceb;
     --aibs-neutral: #475467;
     --aibs-neutral-soft: #eef1f5;
+    /* The third traffic-light tone. Its two siblings were tokens and this one was a
+       literal in the middle of them. */
+    --aibs-warn: #b45309;
+    /* Status borders. The same soft red was written out four times, and the soft green
+       was a copy of one theme's accent border, so the "strong" badge matched the emerald
+       theme and clashed with the other five. */
+    --aibs-positive-border: #b7ead7;
+    --aibs-negative-border: #f6c9c5;
+    --aibs-negative-strong: #7a1710;
+    /* Text on an accent fill. Eight hard-coded whites, three of them !important. */
+    --aibs-on-accent: #fff;
+    /* Sitting on a photograph rather than on the interface. This one does NOT flip with
+       the scheme: the backdrop is the picture either way, and a dark ring on a dark photo
+       disappears. It is a token so that it reads as deliberate rather than as a white
+       somebody forgot. */
+    --aibs-on-photo: #fff;
     --aibs-accent: #4f46e5;
     --aibs-accent-strong: #3730a3;
     --aibs-accent-soft: #eef0fe;
@@ -62,8 +78,149 @@
     --aibs-shadow-sm: 0 1px 2px rgba(16, 24, 40, .05);
     --aibs-shadow: 0 1px 3px rgba(16, 24, 40, .07), 0 8px 24px -12px rgba(16, 24, 40, .16);
     --aibs-shadow-lg: 0 2px 6px rgba(16, 24, 40, .06), 0 24px 48px -20px rgba(16, 24, 40, .28);
+    /* The fourth step: a card that has lifted under the pointer. It was written out once
+       as a bespoke rgba on the lesson cards, which meant the one hover in the product that
+       is meant to feel physical used an elevation curve found nowhere else. */
+    --aibs-shadow-hover: 0 10px 24px -14px rgba(16, 24, 40, .45);
+    /* Two sizes for secondary text, not five. .82/.84/.85/.86/.88rem were all doing the
+       same job in twenty-six declarations. */
+    /* The uppercase micro-label: an eyebrow, a meter caption, a card label. .72/.74/.76
+       were three sizes doing one job. */
+    --aibs-text-micro: .75rem;
+    --aibs-text-meta: .8125rem;
+    --aibs-text-small: .875rem;
+    /* The other half of the scale. Below this line the file used to hold .92, .95, 1.02,
+       1.04, 1.05, 1.06, 1.16, 1.18, 1.7, 1.9 and 2.3rem - eleven sizes, several of them
+       a hundredth of a rem apart, which is a difference no eye can see and no rule can
+       justify. The ramp is one step of roughly a pixel at reading sizes, where a step has
+       to be small to stay legible, and opens up at display sizes where it does not. */
+    --aibs-text-sub: .9375rem;
+    --aibs-text-body: 1rem;
+    --aibs-text-lead: 1.0625rem;
+    --aibs-text-title: 1.1875rem;
+    --aibs-text-head: 1.5rem;
+    --aibs-text-stat: 1.75rem;
+    --aibs-text-display: 2.25rem;
+    /* One weight for a label. 650 and 700 are indistinguishable on a static font stack,
+       which is what Moodle's default theme ships, so half the hierarchy was invisible. */
+    --aibs-weight-label: 600;
+    --aibs-weight-strong: 700;
+    /* Three leadings, for the three jobs text does here: a heading that has to hold
+       together as one shape, a compact run of interface text, and a paragraph someone
+       actually reads. The file previously held 1.16, 1.18, 1.2, 1.45, 1.5, 1.52, 1.55
+       and 1.6 - eight, for three jobs. */
+    --aibs-leading-tight: 1.18;
+    --aibs-leading-snug: 1.45;
+    --aibs-leading-body: 1.55;
     --aibs-ease: cubic-bezier(.2, .7, .3, 1);
 }
+
+/* -------------------------------------------------------------------- dark */
+
+/* There was no dark mode, which on a dark Moodle theme left the activity as a white slab
+   in a dark page - the one thing that reads as "this was not built for us".
+
+   The hard part of a dark mode is not the palette, it is knowing when to use it. Asking
+   `prefers-color-scheme` alone is wrong both ways round: a light Moodle theme on a machine
+   set to dark would get a dark activity in a light page, and a theme with its own dark
+   toggle would get nothing. So the decision is not made here. The player measures the page
+   it has actually been dropped into - the real background colour behind it - and sets
+   data-aibs-scheme on itself to match. This block is only what "dark" then means.
+
+   Without JavaScript nothing sets the attribute and the light palette stands, which is the
+   behaviour that shipped before. */
+.aibs-player[data-aibs-scheme="dark"],
+.aibs-wizard[data-aibs-scheme="dark"],
+.aibs-toasts[data-aibs-scheme="dark"],
+.aibs-toasts[data-aibs-scheme="dark"] .aibs-toast {
+    --aibs-canvas: #11141a;
+    --aibs-surface: #1a1f28;
+    --aibs-surface-alt: #232a36;
+    --aibs-border: #333c4b;
+    --aibs-border-soft: #29303c;
+    --aibs-text: #eef1f6;
+    --aibs-muted: #a7b1c1;
+    --aibs-positive: #34d399;
+    --aibs-positive-soft: #10281f;
+    --aibs-positive-border: #1e5340;
+    --aibs-negative: #f87171;
+    --aibs-negative-soft: #2b1614;
+    --aibs-negative-border: #5e2521;
+    --aibs-negative-strong: #fca5a5;
+    --aibs-neutral: #94a3b8;
+    --aibs-neutral-soft: #1f2732;
+    --aibs-warn: #fbbf24;
+    --aibs-on-accent: #0b0e13;
+    /* A shadow is the absence of light, so on a dark ground it has almost no work to do and
+       the light palette's soft greys turn into grey haze. These are near-black and tighter. */
+    --aibs-shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+    --aibs-shadow: 0 1px 3px rgba(0, 0, 0, .5), 0 8px 24px -12px rgba(0, 0, 0, .7);
+    --aibs-shadow-lg: 0 2px 6px rgba(0, 0, 0, .5), 0 24px 48px -20px rgba(0, 0, 0, .8);
+    --aibs-shadow-hover: 0 10px 24px -14px rgba(0, 0, 0, .9);
+}
+
+/* The six accents again. A hue that reads as confident on white is muddy on near-black, so
+   each one is lifted; the soft fill becomes a dark tint of the accent rather than a pastel,
+   and the border a mid tone that can still be seen against both. */
+.aibs-player[data-aibs-scheme="dark"].aibs-theme-indigo,
+.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-indigo {
+    --aibs-accent: #818cf8;
+    --aibs-accent-strong: #a5b4fc;
+    --aibs-accent-soft: #1e2140;
+    --aibs-accent-border: #3f4680;
+}
+
+.aibs-player[data-aibs-scheme="dark"].aibs-theme-slate,
+.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-slate {
+    --aibs-accent: #60a5fa;
+    --aibs-accent-strong: #93c5fd;
+    --aibs-accent-soft: #16233b;
+    --aibs-accent-border: #2f4c78;
+}
+
+.aibs-player[data-aibs-scheme="dark"].aibs-theme-emerald,
+.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-emerald {
+    --aibs-accent: #34d399;
+    --aibs-accent-strong: #6ee7b7;
+    --aibs-accent-soft: #10281f;
+    --aibs-accent-border: #1e5340;
+}
+
+.aibs-player[data-aibs-scheme="dark"].aibs-theme-ocean,
+.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-ocean {
+    --aibs-accent: #22d3ee;
+    --aibs-accent-strong: #67e8f9;
+    --aibs-accent-soft: #10262d;
+    --aibs-accent-border: #1d4f5c;
+}
+
+.aibs-player[data-aibs-scheme="dark"].aibs-theme-amber,
+.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-amber {
+    --aibs-accent: #fbbf24;
+    --aibs-accent-strong: #fcd34d;
+    --aibs-accent-soft: #2c2109;
+    --aibs-accent-border: #5f4514;
+}
+
+.aibs-player[data-aibs-scheme="dark"].aibs-theme-violet,
+.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-violet {
+    --aibs-accent: #a78bfa;
+    --aibs-accent-strong: #c4b5fd;
+    --aibs-accent-soft: #241b3d;
+    --aibs-accent-border: #4a3a7a;
+}
+
+/* A photograph is lit for a white page. Dropping it a little keeps it from being the only
+   bright rectangle in a dark frame, and it comes back to full strength under the pointer. */
+.aibs-player[data-aibs-scheme="dark"] .aibs-scene-img {
+    filter: brightness(.92);
+}
+
+/* Spacing is a two-pixel grid: 2, 4, 6, 8, 10, 12, 14, 16, 18, 22 and the clamp() pairs
+   built from them. It is not tokenised, deliberately - a named step would have to be
+   spelled var(--aibs-space-3) in ninety places to say what 12px already says, and the
+   grid is the part that matters. What did matter was the handful of values sitting off
+   it (3, 5, 9, 11, 15px), which are now snapped onto it. Keep new values even. */
 
 .aibs-theme-indigo {
     --aibs-accent: #4f46e5;
@@ -83,7 +240,7 @@
     --aibs-accent: #059669;
     --aibs-accent-strong: #047857;
     --aibs-accent-soft: #e7f6f0;
-    --aibs-accent-border: #b4e3d0;
+    --aibs-accent-border: var(--aibs-positive-border);
 }
 
 .aibs-theme-ocean {
@@ -115,8 +272,8 @@
     border: 1px solid var(--aibs-border);
     border-radius: calc(var(--aibs-radius) + 6px);
     color: var(--aibs-text);
-    font-size: 1rem;
-    line-height: 1.6;
+    font-size: var(--aibs-text-body);
+    line-height: var(--aibs-leading-body);
     margin: 0 auto;
     max-width: 1180px;
     min-width: 0;
@@ -173,20 +330,20 @@
     color: var(--aibs-muted);
     display: flex;
     flex-wrap: wrap;
-    font-size: .82rem;
+    font-size: var(--aibs-text-meta);
     gap: 4px 10px;
     margin: 2px 0 0;
 }
 
 .aibs-titlemeta-setting {
-    font-weight: 650;
+    font-weight: var(--aibs-weight-label);
     letter-spacing: .06em;
     text-transform: uppercase;
 }
 
 .aibs-titlemeta-setting + .aibs-titlemeta-sub::before {
     content: "\00B7";
-    margin-right: 10px;
+    margin-inline-end: 10px;
 }
 
 .aibs-masthead-text {
@@ -196,8 +353,8 @@
 
 .aibs-eyebrow {
     color: var(--aibs-muted);
-    font-size: .78rem;
-    font-weight: 600;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-label);
     letter-spacing: .08em;
     margin: 0 0 6px;
     text-transform: uppercase;
@@ -206,15 +363,15 @@
 .aibs-title {
     color: var(--aibs-text);
     font-size: clamp(1.45rem, 1.1rem + 1.4vw, 2.1rem);
-    font-weight: 700;
+    font-weight: var(--aibs-weight-strong);
     letter-spacing: -.02em;
-    line-height: 1.18;
+    line-height: var(--aibs-leading-tight);
     margin: 0;
 }
 
 .aibs-subtitle {
     color: var(--aibs-muted);
-    font-size: 1.02rem;
+    font-size: var(--aibs-text-lead);
     margin: 8px 0 0;
     max-width: 62ch;
 }
@@ -299,14 +456,14 @@
 
 .aibs-rail-label {
     color: var(--aibs-muted);
-    font-size: .72rem;
+    font-size: var(--aibs-text-micro);
     font-variant-numeric: tabular-nums;
 }
 
 .aibs-rail-status {
     color: var(--aibs-muted);
-    font-size: .8rem;
-    font-weight: 600;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-label);
 }
 
 /* ------------------------------------------------------- continue (a beat) */
@@ -378,19 +535,19 @@
 .aibs-meter-label {
     color: var(--aibs-muted);
     flex: none;
-    font-size: .72rem;
-    font-weight: 650;
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-label);
     letter-spacing: .03em;
     text-transform: uppercase;
 }
 
 .aibs-meter-value {
     flex: none;
-    font-size: .85rem;
+    font-size: var(--aibs-text-small);
     font-variant-numeric: tabular-nums;
-    font-weight: 700;
+    font-weight: var(--aibs-weight-strong);
     min-width: 2ch;
-    text-align: right;
+    text-align: end;
 }
 
 .aibs-meter-track {
@@ -423,7 +580,7 @@
    drops below the status on a narrow screen rather than squeezing it. */
 .aibs-loading-eta {
     color: var(--aibs-muted);
-    font-size: .84rem;
+    font-size: var(--aibs-text-small);
     opacity: .9;
 }
 
@@ -445,8 +602,8 @@
     color: var(--aibs-text);
     cursor: pointer;
     display: inline-flex;
-    font-size: .82rem;
-    font-weight: 600;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-label);
     gap: 8px;
     padding: 6px 14px 6px 8px;
     transition: background-color .18s var(--aibs-ease), border-color .18s var(--aibs-ease),
@@ -532,6 +689,24 @@
    document where nobody is looking. Not scoped to .aibs- ancestry like the rest of this
    file, because the element is a sibling of the page content; the class prefix is what
    keeps it from reaching anything else. */
+/* The toast lives on the body, outside .aibs-player, so it cannot inherit the palette.
+   It carries its own copy of the tokens it needs rather than eight literals. */
+.aibs-toasts,
+.aibs-toast {
+    --aibs-canvas: #f5f6f8;
+    --aibs-surface: #fff;
+    --aibs-border: #e0e4ea;
+    --aibs-text: #171a20;
+    --aibs-muted: #5b6373;
+    --aibs-positive: #047857;
+    --aibs-negative: #b42318;
+    --aibs-negative-border: #f6c9c5;
+    --aibs-neutral: #475467;
+    --aibs-on-accent: #fff;
+    --aibs-radius-sm: 10px;
+    --aibs-shadow-lg: 0 2px 6px rgba(16, 24, 40, .06), 0 24px 48px -20px rgba(16, 24, 40, .28);
+}
+
 .aibs-toasts {
     bottom: 20px;
     display: flex;
@@ -548,16 +723,16 @@
 
 .aibs-toast {
     align-items: flex-start;
-    background: #fff;
-    border: 1px solid #e0e4ea;
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(16, 24, 40, .06), 0 16px 40px -16px rgba(16, 24, 40, .35);
-    color: #171a20;
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius-sm);
+    box-shadow: var(--aibs-shadow-lg);
+    color: var(--aibs-text);
     cursor: pointer;
     display: flex;
-    font-size: .92rem;
+    font-size: var(--aibs-text-sub);
     gap: 10px;
-    line-height: 1.45;
+    line-height: var(--aibs-leading-snug);
     opacity: 0;
     padding: 12px 16px;
     pointer-events: auto;
@@ -588,9 +763,9 @@
 }
 
 .aibs-toast-icon::before {
-    color: #fff;
-    font-size: .72rem;
-    font-weight: 700;
+    color: var(--aibs-on-accent);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-strong);
     left: 50%;
     line-height: 1;
     position: absolute;
@@ -599,7 +774,7 @@
 }
 
 .aibs-toast-success .aibs-toast-icon {
-    background: #047857;
+    background: var(--aibs-positive);
 }
 
 .aibs-toast-success .aibs-toast-icon::before {
@@ -607,7 +782,7 @@
 }
 
 .aibs-toast-info .aibs-toast-icon {
-    background: #475467;
+    background: var(--aibs-neutral);
 }
 
 .aibs-toast-info .aibs-toast-icon::before {
@@ -616,7 +791,7 @@
 }
 
 .aibs-toast-error .aibs-toast-icon {
-    background: #b42318;
+    background: var(--aibs-negative);
 }
 
 .aibs-toast-error .aibs-toast-icon::before {
@@ -624,7 +799,7 @@
 }
 
 .aibs-toast-error {
-    border-color: #f6c9c5;
+    border-color: var(--aibs-negative-border);
 }
 
 .aibs-toast-text {
@@ -650,25 +825,40 @@
 
 /* ------------------------------------------------------------------ legend */
 
-/* An explanation the learner opens once and then never needs again, so it sits
-   closed by default and takes no vertical space until it is wanted. It is styled
-   as a quiet affordance rather than a callout: the meters are the subject, this is
-   a footnote to them. */
+/* An explanation the learner opens once and then never needs again. It used to sit
+   on its own row under the top bar, where a closed one-line disclosure still cost a
+   whole band of vertical space on every scene. It now rides at the end of the meters
+   themselves as a bare question mark, and opens over the scene rather than pushing
+   it down, so the closed state costs nothing at all. */
 .aibs-legend {
-    margin: 0 0 18px;
+    flex: none;
+    margin: 0;
+    position: relative;
+}
+
+.aibs-sr-only {
+    border: 0;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
 }
 
 .aibs-legend-summary {
     align-items: center;
-    border-radius: var(--aibs-radius-sm);
+    border-radius: 999px;
     color: var(--aibs-muted);
     cursor: pointer;
     display: inline-flex;
-    font-size: .82rem;
-    font-weight: 600;
-    gap: 7px;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-label);
+    gap: 0;
     list-style: none;
-    padding: 5px 9px 5px 7px;
+    padding: 4px;
     transition: color .18s var(--aibs-ease), background-color .18s var(--aibs-ease);
 }
 
@@ -692,29 +882,47 @@
     color: var(--aibs-accent-strong);
     display: inline-flex;
     flex: none;
-    font-size: .68rem;
-    font-weight: 700;
-    height: 16px;
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-strong);
+    height: 19px;
     justify-content: center;
-    width: 16px;
+    transition: background-color .18s var(--aibs-ease), color .18s var(--aibs-ease);
+    width: 19px;
+}
+
+.aibs-legend[open] .aibs-legend-icon,
+.aibs-legend-summary:hover .aibs-legend-icon,
+.aibs-legend-summary:focus-visible .aibs-legend-icon {
+    background: var(--aibs-accent);
+    color: var(--aibs-on-accent);
 }
 
 .aibs-legend-icon::before {
     content: "?";
 }
 
+/* Opens as a panel over the scene. It is anchored to the right so it cannot run off
+   the edge of a narrow viewport, and capped in height so a small screen scrolls the
+   panel rather than the page. */
 .aibs-legend-body {
     background: var(--aibs-surface);
     border: 1px solid var(--aibs-border);
     border-radius: var(--aibs-radius);
-    box-shadow: var(--aibs-shadow-sm);
+    box-shadow: var(--aibs-shadow);
     margin-top: 8px;
+    max-height: min(60vh, 420px);
+    overflow-y: auto;
     padding: 18px;
+    position: absolute;
+    inset-inline-end: 0;
+    top: 100%;
+    width: min(520px, calc(100vw - 32px));
+    z-index: 30;
 }
 
 .aibs-legend-lead {
     color: var(--aibs-text);
-    font-size: .92rem;
+    font-size: var(--aibs-text-sub);
     margin: 0 0 16px;
 }
 
@@ -732,28 +940,28 @@
 .aibs-legend-name {
     color: var(--aibs-text);
     display: block;
-    font-size: .8rem;
-    font-weight: 700;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-strong);
     letter-spacing: .03em;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
     text-transform: uppercase;
 }
 
 .aibs-legend-desc {
     color: var(--aibs-text);
-    font-size: .88rem;
+    font-size: var(--aibs-text-small);
     margin: 0 0 10px;
 }
 
 .aibs-legend-move {
     color: var(--aibs-muted);
-    font-size: .82rem;
-    line-height: 1.45;
+    font-size: var(--aibs-text-meta);
+    line-height: var(--aibs-leading-snug);
     margin: 0 0 4px;
 }
 
 .aibs-legend-move span {
-    font-weight: 650;
+    font-weight: var(--aibs-weight-label);
 }
 
 .aibs-legend-up span {
@@ -767,7 +975,7 @@
 .aibs-legend-note {
     border-top: 1px solid var(--aibs-border-soft);
     color: var(--aibs-muted);
-    font-size: .85rem;
+    font-size: var(--aibs-text-small);
     margin: 14px 0 0;
     padding-top: 12px;
 }
@@ -782,8 +990,8 @@
 
 .aibs-step-lead {
     color: var(--aibs-muted);
-    font-size: .92rem;
-    line-height: 1.5;
+    font-size: var(--aibs-text-sub);
+    line-height: var(--aibs-leading-snug);
     margin: -4px 0 20px;
     max-width: 62ch;
 }
@@ -806,8 +1014,8 @@
 
 .aibs-h3 {
     color: var(--aibs-text);
-    font-size: 1.16rem;
-    font-weight: 700;
+    font-size: var(--aibs-text-title);
+    font-weight: var(--aibs-weight-strong);
     letter-spacing: -.01em;
     margin: 0 0 12px;
 }
@@ -816,8 +1024,8 @@
     align-items: center;
     color: var(--aibs-text);
     display: flex;
-    font-size: .95rem;
-    font-weight: 700;
+    font-size: var(--aibs-text-sub);
+    font-weight: var(--aibs-weight-strong);
     gap: 8px;
     margin: 20px 0 8px;
 }
@@ -835,12 +1043,12 @@
 }
 
 .aibs-prose-lead p {
-    font-size: 1.06rem;
+    font-size: var(--aibs-text-lead);
 }
 
 .aibs-prose-small p {
     color: var(--aibs-muted);
-    font-size: .92rem;
+    font-size: var(--aibs-text-sub);
 }
 
 .aibs-role {
@@ -848,7 +1056,7 @@
     border: 1px solid var(--aibs-accent-border);
     border-radius: var(--aibs-radius-sm);
     color: var(--aibs-accent-strong);
-    font-weight: 600;
+    font-weight: var(--aibs-weight-label);
     margin: 0 0 16px;
     padding: 10px 14px;
 }
@@ -860,42 +1068,8 @@
 
 .aibs-fineprint {
     color: var(--aibs-muted);
-    font-size: .85rem;
+    font-size: var(--aibs-text-small);
     margin: 14px 0 0;
-}
-
-/* -------------------------------------------------------------- principles */
-
-.aibs-principles {
-    border-top: 1px solid var(--aibs-border-soft);
-    margin-top: 20px;
-    padding-top: 18px;
-}
-
-.aibs-principle-list {
-    display: grid;
-    gap: 10px;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.aibs-principle {
-    background: var(--aibs-surface-alt);
-    border-radius: var(--aibs-radius-sm);
-    padding: 12px 14px;
-}
-
-.aibs-principle-title {
-    display: block;
-    font-weight: 650;
-}
-
-.aibs-principle-summary {
-    color: var(--aibs-muted);
-    display: block;
-    font-size: .92rem;
-    margin-top: 4px;
 }
 
 /* ------------------------------------------------------------------ chips */
@@ -907,8 +1081,8 @@
     border-radius: 999px;
     color: var(--aibs-accent-strong);
     display: inline-flex;
-    font-size: .76rem;
-    font-weight: 650;
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-label);
     gap: 6px;
     letter-spacing: .02em;
     padding: 4px 11px;
@@ -922,7 +1096,7 @@
 
 .aibs-chip-alert {
     background: var(--aibs-negative-soft);
-    border-color: #f6c9c5;
+    border-color: var(--aibs-negative-border);
     color: var(--aibs-negative);
 }
 
@@ -938,15 +1112,19 @@
     padding: 0;
 }
 
+/* The decision screen is the one screen that has to hold everything at once: picture,
+   situation, the question, and every option. Each of the paddings below was set for a
+   page you could scroll. On a fixed frame they compete with the options, which are the
+   only part the learner actually has to reach, so the whole screen is drawn tighter. */
 .aibs-node-body {
-    padding: clamp(18px, 2.2vw, 30px);
+    padding: clamp(16px, 1.6vw, 22px);
 }
 
 .aibs-node-head {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
 }
 
 .aibs-scene {
@@ -956,6 +1134,10 @@
     position: relative;
 }
 
+/* The fade is driven from JavaScript on the image's own load event, not from a CSS
+   animation on the element, because an animation would run when the element was created
+   and a slow photograph would finish fading before it had arrived. Without JavaScript the
+   class is never added, so the rule below leaves the picture visible. */
 .aibs-scene-img {
     aspect-ratio: 16 / 9;
     display: block;
@@ -964,14 +1146,23 @@
     width: 100%;
 }
 
+.aibs-scene-img[data-faded="1"] {
+    opacity: 0;
+    transition: opacity .28s var(--aibs-ease);
+}
+
+.aibs-scene-img[data-faded="1"].aibs-is-loaded {
+    opacity: 1;
+}
+
 .aibs-speech {
     background: var(--aibs-surface-alt);
-    border-left: 3px solid var(--aibs-accent);
+    border-inline-start: 3px solid var(--aibs-accent);
     border-radius: 0 var(--aibs-radius-sm) var(--aibs-radius-sm) 0;
     display: flex;
     gap: 12px;
-    margin: 18px 0;
-    padding: 14px 16px;
+    margin: 12px 0;
+    padding: 12px 14px;
 }
 
 .aibs-speech-icon {
@@ -982,15 +1173,15 @@
 }
 
 .aibs-speech-text {
-    font-size: 1.04rem;
+    font-size: var(--aibs-text-lead);
     font-style: italic;
     margin: 0;
 }
 
 .aibs-challenge {
-    font-size: 1.08rem;
-    font-weight: 650;
-    margin: 20px 0 14px;
+    font-size: var(--aibs-text-lead);
+    font-weight: var(--aibs-weight-label);
+    margin: 12px 0 10px;
 }
 
 /* An author's challenge line is often an instruction rather than a question. Sitting in
@@ -998,7 +1189,7 @@
    supplies the question itself, that line steps back to being context. */
 .aibs-challenge-context {
     color: var(--aibs-muted);
-    font-size: 1rem;
+    font-size: var(--aibs-text-body);
     font-weight: 500;
     margin-bottom: 4px;
 }
@@ -1012,7 +1203,7 @@
 .aibs-choices {
     border: 0;
     display: grid;
-    gap: 10px;
+    gap: 8px;
     margin: 0;
     min-width: 0;
     padding: 0;
@@ -1028,8 +1219,8 @@
     display: flex;
     font: inherit;
     gap: 14px;
-    padding: 16px 18px;
-    text-align: left;
+    padding: 12px 16px;
+    text-align: start;
     transition: border-color .2s var(--aibs-ease), box-shadow .2s var(--aibs-ease),
         transform .2s var(--aibs-ease), background-color .2s var(--aibs-ease);
     width: 100%;
@@ -1085,7 +1276,6 @@
 .path-mod-aibranchedscenario .aibs-choice:active:not(:disabled),
 .aibs-choice:active:not(:disabled) {
     color: var(--aibs-text) !important;
-    transform: translateY(0);
 }
 
 /* Choosing disables every option, and a site theme's own rule for a disabled button
@@ -1122,12 +1312,12 @@
 .aibs-choice-letter {
     align-items: center;
     background: var(--aibs-surface-alt);
-    border-radius: 8px;
+    border-radius: var(--aibs-radius-sm);
     color: var(--aibs-muted);
     display: flex;
     flex: 0 0 auto;
-    font-size: .88rem;
-    font-weight: 700;
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-strong);
     height: 30px;
     justify-content: center;
     transition: background-color .2s var(--aibs-ease), color .2s var(--aibs-ease);
@@ -1137,7 +1327,7 @@
 .aibs-choice:hover:not(:disabled) .aibs-choice-letter,
 .aibs-choice.aibs-is-chosen .aibs-choice-letter {
     background: var(--aibs-accent);
-    color: #fff;
+    color: var(--aibs-on-accent);
 }
 
 .aibs-choice-text {
@@ -1162,6 +1352,18 @@
     transform: translateX(0);
 }
 
+/* A transform has no logical form, and an arrow glyph does not mirror itself. Under a
+   right-to-left language "forward" is the other way, so both are turned round: the arrow
+   slides in from the trailing edge, and the shape is flipped to point at it. */
+[dir="rtl"] .aibs-choice-arrow {
+    transform: translateX(6px) scaleX(-1);
+}
+
+[dir="rtl"] .aibs-choice:hover:not(:disabled) .aibs-choice-arrow,
+[dir="rtl"] .aibs-choice:focus-visible .aibs-choice-arrow {
+    transform: translateX(0) scaleX(-1);
+}
+
 /* ------------------------------------------------------------- consequence */
 
 .aibs-consequence-head {
@@ -1176,11 +1378,11 @@
     align-items: center;
     border-radius: 999px;
     display: inline-flex;
-    font-size: .78rem;
-    font-weight: 700;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-strong);
     gap: 6px;
     letter-spacing: .03em;
-    padding: 5px 12px;
+    padding: 6px 12px;
     text-transform: uppercase;
 }
 
@@ -1200,7 +1402,7 @@
 }
 
 .aibs-consequence {
-    border-left: 4px solid var(--aibs-neutral);
+    border-inline-start: 4px solid var(--aibs-neutral);
 }
 
 .aibs-consequence.aibs-signal-positive {
@@ -1209,64 +1411,6 @@
 
 .aibs-consequence.aibs-signal-negative {
     border-left-color: var(--aibs-negative);
-}
-
-.aibs-delta-row {
-    align-items: center;
-    border-top: 1px solid var(--aibs-border-soft);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    justify-content: space-between;
-    padding: 9px 0;
-}
-
-.aibs-delta-label {
-    color: var(--aibs-muted);
-    font-size: .88rem;
-    font-weight: 600;
-}
-
-.aibs-delta-values {
-    align-items: center;
-    display: flex;
-    font-variant-numeric: tabular-nums;
-    gap: 8px;
-}
-
-.aibs-delta-before {
-    color: var(--aibs-muted);
-}
-
-.aibs-delta-arrow {
-    color: var(--aibs-border);
-}
-
-.aibs-delta-after {
-    font-weight: 700;
-}
-
-.aibs-delta-after.aibs-up {
-    color: var(--aibs-positive);
-}
-
-.aibs-delta-after.aibs-down {
-    color: var(--aibs-negative);
-}
-
-.aibs-delta-change {
-    color: var(--aibs-muted);
-    font-size: .82rem;
-}
-
-/* The change reads as a direction of benefit rather than a sign: tension falling is a
-   gain, so it is green like a rise in the other two. */
-.aibs-delta-change.aibs-up {
-    color: var(--aibs-positive);
-}
-
-.aibs-delta-change.aibs-down {
-    color: var(--aibs-negative);
 }
 
 .aibs-feedback {
@@ -1294,14 +1438,14 @@
 .aibs-btn {
     align-items: center;
     border: 1px solid transparent;
-    border-radius: 10px;
+    border-radius: var(--aibs-radius-sm);
     cursor: pointer;
     display: inline-flex;
     font: inherit;
-    font-weight: 650;
+    font-weight: var(--aibs-weight-label);
     gap: 8px;
     justify-content: center;
-    line-height: 1.2;
+    line-height: var(--aibs-leading-tight);
     min-height: 44px;
     padding: 11px 20px;
     transition: background-color .2s var(--aibs-ease), border-color .2s var(--aibs-ease),
@@ -1316,8 +1460,8 @@
 .path-mod-aibranchedscenario .aibs-btn-primary,
 .aibs-btn-primary {
     background: var(--aibs-accent);
-    box-shadow: 0 1px 2px rgba(16, 24, 40, .1);
-    color: #fff;
+    box-shadow: var(--aibs-shadow-sm);
+    color: var(--aibs-on-accent);
 }
 
 /* Every interactive state restates its own colour, and is scoped to the activity's
@@ -1331,7 +1475,7 @@
 .aibs-btn-primary:hover {
     background: var(--aibs-accent-strong) !important;
     box-shadow: var(--aibs-shadow-lg);
-    color: #fff !important;
+    color: var(--aibs-on-accent) !important;
     transform: translateY(-1px);
 }
 
@@ -1372,6 +1516,30 @@
     transform: none;
 }
 
+/* Pressing had no state of its own. A button under the pointer lifted 1px, and pressing it
+   kept it lifted, so the one moment the interface is meant to answer a finger with is the
+   moment it did nothing. It now takes the press: down past the resting line and very
+   slightly smaller, fast enough to read as contact rather than as animation. */
+.path-mod-aibranchedscenario .aibs-btn:active:not(:disabled),
+.aibs-btn:active:not(:disabled) {
+    transform: translateY(1px) scale(.985);
+    transition-duration: .08s;
+}
+
+.path-mod-aibranchedscenario .aibs-choice:active:not(:disabled),
+.aibs-choice:active:not(:disabled) {
+    transform: translateY(1px) scale(.995);
+    transition-duration: .08s;
+}
+
+.path-mod-aibranchedscenario .aibs-iconbtn:active:not(:disabled),
+.aibs-iconbtn:active:not(:disabled),
+.path-mod-aibranchedscenario .aibs-option:active:not(:disabled),
+.aibs-option:active:not(:disabled) {
+    transform: scale(.94);
+    transition-duration: .08s;
+}
+
 /* ---------------------------------------------------------------- debrief */
 
 .aibs-outcome-head {
@@ -1388,8 +1556,8 @@
     border: 1px solid var(--aibs-accent-border);
     border-radius: 999px;
     color: var(--aibs-accent-strong);
-    font-size: .8rem;
-    font-weight: 700;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-strong);
     letter-spacing: .04em;
     padding: 6px 14px;
     text-transform: uppercase;
@@ -1397,14 +1565,23 @@
 
 .aibs-outcome-strong .aibs-outcome-badge {
     background: var(--aibs-positive-soft);
-    border-color: #b4e3d0;
+    border-color: var(--aibs-positive-border);
     color: var(--aibs-positive);
 }
 
 .aibs-outcome-highrisk .aibs-outcome-badge {
     background: var(--aibs-negative-soft);
-    border-color: #f6c9c5;
+    border-color: var(--aibs-negative-border);
     color: var(--aibs-negative);
+}
+
+/* Mixed is the commonest ending of the three - it is the fallback band and the default
+   whenever an outcome word is not recognised - and it was the only one with no badge of
+   its own, falling through to the accent colours and reading as a third brand tone. */
+.aibs-outcome-mixed .aibs-outcome-badge {
+    background: var(--aibs-neutral-soft);
+    border-color: var(--aibs-border);
+    color: var(--aibs-neutral);
 }
 
 .aibs-score {
@@ -1416,14 +1593,14 @@
 }
 
 .aibs-score-value {
-    font-size: 2.3rem;
-    font-weight: 750;
+    font-size: var(--aibs-text-display);
+    font-weight: var(--aibs-weight-strong);
     letter-spacing: -.03em;
 }
 
 .aibs-score-unit {
-    font-size: 1.05rem;
-    font-weight: 650;
+    font-size: var(--aibs-text-lead);
+    font-weight: var(--aibs-weight-label);
 }
 
 .aibs-skill-list {
@@ -1443,8 +1620,8 @@
 
 .aibs-skill-label {
     color: var(--aibs-muted);
-    font-size: .88rem;
-    font-weight: 600;
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-label);
 }
 
 .aibs-skill-track {
@@ -1466,7 +1643,7 @@
 
 .aibs-skill-value {
     font-variant-numeric: tabular-nums;
-    font-weight: 700;
+    font-weight: var(--aibs-weight-strong);
 }
 
 .aibs-journey-list {
@@ -1480,7 +1657,7 @@
 
 .aibs-journey-item {
     background: var(--aibs-surface-alt);
-    border-left: 3px solid var(--aibs-neutral);
+    border-inline-start: 3px solid var(--aibs-neutral);
     border-radius: 0 var(--aibs-radius-sm) var(--aibs-radius-sm) 0;
     padding: 14px 16px;
 }
@@ -1507,8 +1684,8 @@
     border-radius: 999px;
     display: flex;
     flex: 0 0 auto;
-    font-size: .78rem;
-    font-weight: 700;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-strong);
     height: 26px;
     justify-content: center;
     width: 26px;
@@ -1516,20 +1693,20 @@
 
 .aibs-journey-title {
     color: var(--aibs-muted);
-    font-size: .84rem;
-    font-weight: 650;
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-label);
     letter-spacing: .02em;
     text-transform: uppercase;
 }
 
 .aibs-journey-choice {
-    font-weight: 650;
+    font-weight: var(--aibs-weight-label);
     margin: 0 0 6px;
 }
 
 .aibs-journey-principle {
     color: var(--aibs-accent-strong);
-    font-size: .85rem;
+    font-size: var(--aibs-text-small);
     margin: 8px 0 0;
 }
 
@@ -1542,7 +1719,7 @@
 }
 
 .aibs-lesson {
-    padding-left: 24px;
+    padding-inline-start: 24px;
     position: relative;
 }
 
@@ -1551,7 +1728,7 @@
     border-radius: 999px;
     content: "";
     height: 7px;
-    left: 6px;
+    inset-inline-start: 6px;
     position: absolute;
     top: .62em;
     width: 7px;
@@ -1591,7 +1768,7 @@
 }
 
 .aibs-loading-text {
-    font-weight: 600;
+    font-weight: var(--aibs-weight-label);
 }
 
 .aibs-loading[hidden] {
@@ -1610,9 +1787,9 @@
 
 .aibs-error {
     background: var(--aibs-negative-soft);
-    border: 1px solid #f6c9c5;
+    border: 1px solid var(--aibs-negative-border);
     border-radius: var(--aibs-radius-sm);
-    color: #7a271a;
+    color: var(--aibs-negative-strong);
     margin-bottom: 18px;
     padding: 14px 16px;
 }
@@ -1703,10 +1880,10 @@
     cursor: pointer;
     display: inline-flex;
     font: inherit;
-    font-size: .86rem;
-    font-weight: 650;
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-label);
     gap: 8px;
-    padding: 8px 15px;
+    padding: 8px 16px;
     transition: background-color .2s var(--aibs-ease), border-color .2s var(--aibs-ease),
         color .2s var(--aibs-ease), transform .2s var(--aibs-ease);
 }
@@ -1727,7 +1904,7 @@
 .path-mod-aibranchedscenario .aibs-wizard-step[aria-current="step"]:hover,
 .aibs-wizard-step[aria-current="step"]:hover {
     background: var(--aibs-accent-strong) !important;
-    color: #fff !important;
+    color: var(--aibs-on-accent) !important;
 }
 
 .path-mod-aibranchedscenario .aibs-wizard-step.aibs-is-complete:hover,
@@ -1738,7 +1915,7 @@
 .aibs-wizard-step[aria-current="step"] {
     background: var(--aibs-accent);
     border-color: var(--aibs-accent);
-    color: #fff;
+    color: var(--aibs-on-accent);
 }
 
 .aibs-wizard-step.aibs-is-complete {
@@ -1752,14 +1929,14 @@
 
 .aibs-field-label {
     display: block;
-    font-weight: 650;
+    font-weight: var(--aibs-weight-label);
     margin-bottom: 6px;
 }
 
 .aibs-field-hint {
     color: var(--aibs-muted);
     display: block;
-    font-size: .86rem;
+    font-size: var(--aibs-text-small);
     margin-bottom: 8px;
 }
 
@@ -1774,13 +1951,13 @@
     font: inherit;
     max-width: 100%;
     min-height: 44px;
-    padding: 11px 14px;
+    padding: 12px 14px;
     transition: border-color .2s var(--aibs-ease), box-shadow .2s var(--aibs-ease);
     width: 100%;
 }
 
 .aibs-textarea {
-    line-height: 1.55;
+    line-height: var(--aibs-leading-body);
     min-height: 120px;
     resize: vertical;
 }
@@ -1811,10 +1988,10 @@
     color: var(--aibs-text);
     cursor: pointer;
     font: inherit;
-    font-size: .92rem;
+    font-size: var(--aibs-text-sub);
     min-height: 44px;
-    padding: 11px 14px;
-    text-align: left;
+    padding: 12px 14px;
+    text-align: start;
     transition: background-color .2s var(--aibs-ease), border-color .2s var(--aibs-ease),
         transform .2s var(--aibs-ease);
 }
@@ -1837,22 +2014,8 @@
     background: var(--aibs-accent-soft);
     border-color: var(--aibs-accent);
     color: var(--aibs-accent-strong);
-    font-weight: 650;
-}
-
-.aibs-swatches {
-    display: flex;
-    gap: 5px;
-}
-
-.aibs-swatch {
-    border-radius: 4px;
-    display: block;
-    height: 14px;
-    width: 14px;
-}
-
-.aibs-wizard-actions {
+    font-weight: var(--aibs-weight-label);
+}.aibs-wizard-actions {
     border-top: 1px solid var(--aibs-border-soft);
     display: flex;
     flex-wrap: wrap;
@@ -1892,26 +2055,47 @@
 
 .aibs-stat-value {
     display: block;
-    font-size: 1.7rem;
+    font-size: var(--aibs-text-stat);
     font-variant-numeric: tabular-nums;
-    font-weight: 750;
+    font-weight: var(--aibs-weight-strong);
     letter-spacing: -.02em;
 }
 
 .aibs-stat-label {
     color: var(--aibs-muted);
-    font-size: .84rem;
+    font-size: var(--aibs-text-small);
+}
+
+/* Moodle's generaltable inside the product's own card. The table keeps the theme's own
+   look - a teacher reads it alongside the quiz and assignment reports and it should not
+   be a different table - but it gets the card's surface and the same rounded edge as
+   everything else, and it takes its own horizontal scroll on a narrow screen rather than
+   widening the page. */
+.aibs-tablewrap {
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius);
+    box-shadow: var(--aibs-shadow-sm);
+    overflow-x: auto;
+    padding: 6px 8px;
+}
+
+.aibs-tablewrap .generaltable {
+    margin: 0;
 }
 
 /* ------------------------------------------------------------ small screens */
 
-@media (max-width: 720px) {
+/* Below this the picture sits above the text rather than beside it. Everything that has
+   to change with that - the padding, the way a choice stacks, the rail label - changes at
+   the same width, so there is no band that gets half of each layout. */
+@media (max-width: 899px) {
     .aibs-shell {
         padding: 16px;
     }
 
     .aibs-card {
-        border-radius: 14px;
+        border-radius: var(--aibs-radius);
         padding: 18px;
     }
 
@@ -1938,7 +2122,7 @@
     }
 
     .aibs-score-value {
-        font-size: 1.9rem;
+        font-size: var(--aibs-text-stat);
     }
 
     .aibs-outcome-head {
@@ -1962,9 +2146,8 @@
 @media (max-width: 420px) {
     .aibs-player,
     .aibs-wizard {
-        border-left: 0;
+        border-inline: 0;
         border-radius: 0;
-        border-right: 0;
     }
 
     .aibs-btn {
@@ -1981,10 +2164,34 @@
         transition-duration: .01ms !important;
     }
 
+    /* Every lift, not three of them. With the transition already down to nothing, a
+       transform that survives snaps a pixel instead of easing, which is the jitter this
+       setting exists to remove. */
     .aibs-choice:hover:not(:disabled),
+    .aibs-btn:hover,
     .aibs-btn-primary:hover,
-    .aibs-takeaway:hover {
+    .aibs-takeaway:hover,
+    .aibs-wizard-step:hover,
+    .aibs-option:hover,
+    .aibs-lessoncard-good:hover,
+    .aibs-lessoncard-bad:hover,
+    button.aibs-avatar:hover,
+    button.aibs-avatar:focus-visible {
         transform: none;
+    }
+
+    .aibs-choice:hover .aibs-choice-arrow {
+        transform: none;
+    }
+
+    /* The spinner is the only sign that a generation taking minutes is still running.
+       The blanket rule above does not stop it, it freezes it at whatever angle it had
+       reached - a stalled-looking wheel, which is worse than either honest answer. It
+       keeps turning, slowly. */
+    .aibs-player .aibs-spinner,
+    .aibs-wizard .aibs-spinner {
+        animation-duration: 2.4s !important;
+        animation-iteration-count: infinite !important;
     }
 }
 
@@ -2008,13 +2215,13 @@
     }
 
     .path-mod-aibranchedscenario .aibs-player {
-        background: #fff;
+        background: var(--aibs-surface, #fff);
         border: 0;
         max-width: none;
     }
 
     .path-mod-aibranchedscenario .aibs-card {
-        border: 1px solid #ccc;
+        border: 1px solid var(--aibs-border, #ccc);
         box-shadow: none;
         break-inside: avoid;
         page-break-inside: avoid;
@@ -2039,7 +2246,7 @@
 .aibs-disclosure-summary {
     color: var(--aibs-text);
     cursor: pointer;
-    font-weight: 650;
+    font-weight: var(--aibs-weight-label);
     list-style: none;
     padding: 14px 16px;
 }
@@ -2051,8 +2258,8 @@
 .aibs-disclosure-summary::before {
     content: "+";
     display: inline-block;
-    font-weight: 700;
-    margin-right: 10px;
+    font-weight: var(--aibs-weight-strong);
+    margin-inline-end: 10px;
     width: 1ch;
 }
 
@@ -2078,7 +2285,7 @@
 .aibs-promptsource {
     background: var(--aibs-surface-alt);
     border-radius: var(--aibs-radius-sm);
-    font-size: .82rem;
+    font-size: var(--aibs-text-meta);
     max-height: 320px;
     overflow: auto;
     padding: 12px;
@@ -2094,16 +2301,16 @@
 /* The debrief's per-decision feedback. It was fetched, prepared and then not rendered,
    which left the journey showing what happened but never why it mattered. */
 .aibs-journey-feedback {
-    border-left: 3px solid var(--aibs-accent-border);
+    border-inline-start: 3px solid var(--aibs-accent-border);
     margin-top: 10px;
-    padding-left: 12px;
+    padding-inline-start: 12px;
 }
 
 .aibs-journey-feedback-label {
     color: var(--aibs-muted);
     display: block;
-    font-size: .78rem;
-    font-weight: 650;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-label);
     letter-spacing: .04em;
     margin-bottom: 4px;
     text-transform: uppercase;
@@ -2127,8 +2334,8 @@
     background: var(--aibs-surface-alt);
     border-radius: 999px;
     color: var(--aibs-muted);
-    font-size: .78rem;
-    font-weight: 650;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-label);
     padding: 4px 12px;
 }
 
@@ -2140,10 +2347,10 @@
 }
 
 .aibs-review-speech {
-    border-left: 3px solid var(--aibs-accent-border);
+    border-inline-start: 3px solid var(--aibs-accent-border);
     font-style: italic;
     margin: 12px 0;
-    padding-left: 12px;
+    padding-inline-start: 12px;
 }
 
 .aibs-review-crisis {
@@ -2156,7 +2363,7 @@
 /* Advisory only. This panel never means the draft cannot be published, so it is
    deliberately not styled as an error: a neutral rule rather than a red one. */
 .aibs-review-quality {
-    border-left: 4px solid var(--aibs-neutral);
+    border-inline-start: 4px solid var(--aibs-neutral);
 }
 
 .aibs-quality-list {
@@ -2175,21 +2382,21 @@
 
 .aibs-quality-item strong {
     color: var(--aibs-text);
-    margin-right: 4px;
+    margin-inline-end: 4px;
 }
 
 .aibs-review-label {
     color: var(--aibs-muted);
     display: block;
-    font-size: .78rem;
-    font-weight: 650;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-label);
     letter-spacing: .04em;
     margin-bottom: 4px;
     text-transform: uppercase;
 }
 
 .aibs-review-challenge {
-    font-weight: 650;
+    font-weight: var(--aibs-weight-label);
     margin: 14px 0 6px;
 }
 
@@ -2204,7 +2411,7 @@
 .aibs-review-choice {
     background: var(--aibs-surface);
     border: 1px solid var(--aibs-border);
-    border-left: 4px solid var(--aibs-border);
+    border-inline-start: 4px solid var(--aibs-border);
     border-radius: var(--aibs-radius-sm);
     padding: 14px 16px;
 }
@@ -2222,7 +2429,7 @@
 }
 
 .aibs-review-choice-text {
-    font-weight: 650;
+    font-weight: var(--aibs-weight-label);
     margin: 0 0 8px;
 }
 
@@ -2230,7 +2437,7 @@
     color: var(--aibs-muted);
     display: flex;
     flex-wrap: wrap;
-    font-size: .82rem;
+    font-size: var(--aibs-text-meta);
     gap: 14px;
     margin: 0 0 10px;
 }
@@ -2253,6 +2460,10 @@
 /* A decision used to be a picture with the text under it, so on a laptop the options
    were below the fold and the learner scrolled to find out what they were choosing
    between. Side by side, the picture and the decision are on screen together. */
+/* The picture and the text side by side. Everything about how they fill that frame is
+   declared once, further down, with the slide's height - it used to be split across two
+   blocks at this same breakpoint, where the second silently overwrote the first and an
+   edit to this one appeared to do nothing. */
 @media (min-width: 900px) {
     .path-mod-aibranchedscenario .aibs-slide {
         align-items: stretch;
@@ -2261,20 +2472,8 @@
     }
 
     .path-mod-aibranchedscenario .aibs-slide .aibs-scene {
-        border-radius: var(--aibs-radius) 0 0 var(--aibs-radius);
-        height: 100%;
-    }
-
-    .path-mod-aibranchedscenario .aibs-slide .aibs-scene-img {
-        aspect-ratio: auto;
-        height: 100%;
-        min-height: 100%;
-    }
-
-    .path-mod-aibranchedscenario .aibs-slide .aibs-node-body {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        border-start-start-radius: var(--aibs-radius);
+        border-end-start-radius: var(--aibs-radius);
     }
 }
 
@@ -2284,10 +2483,10 @@
     background: rgba(17, 22, 31, .62);
     border-radius: 999px;
     bottom: 12px;
-    color: #fff;
+    color: var(--aibs-on-accent);
     display: flex;
     gap: 8px;
-    left: 12px;
+    inset-inline-start: 12px;
     padding: 6px 14px 6px 6px;
     position: absolute;
     max-width: calc(100% - 24px);
@@ -2296,9 +2495,9 @@
 .aibs-avatar {
     align-items: center;
     background: var(--aibs-accent);
-    border: 2px solid rgba(255, 255, 255, .85);
+    border: 2px solid var(--aibs-on-photo);
     border-radius: 999px;
-    color: #fff !important;
+    color: var(--aibs-on-accent) !important;
     display: inline-flex;
     flex: none;
     height: 42px;
@@ -2313,20 +2512,20 @@ button.aibs-avatar {
 }
 
 .aibs-avatar-initial {
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: var(--aibs-text-body);
+    font-weight: var(--aibs-weight-strong);
     line-height: 1;
 }
 
 .aibs-avatar-play {
     bottom: -3px;
     background: var(--aibs-accent);
-    border: 2px solid #fff;
+    border: 2px solid var(--aibs-on-photo);
     border-radius: 999px;
     height: 18px;
     padding: 1px;
     position: absolute;
-    right: -5px;
+    inset-inline-end: -4px;
     width: 18px;
 }
 
@@ -2354,20 +2553,20 @@ button.aibs-avatar {
 }
 
 .aibs-speaker-name {
-    font-size: .86rem;
-    font-weight: 650;
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-label);
     white-space: nowrap;
 }
 
 .aibs-speaker-hint {
-    font-size: .78rem;
+    font-size: var(--aibs-text-meta);
     opacity: .85;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 600px) {
     .aibs-speaker-hint {
         display: none;
     }
@@ -2435,8 +2634,8 @@ button.aibs-avatar {
 }
 
 .aibs-ring-value {
-    font-size: 1.18rem;
-    font-weight: 700;
+    font-size: var(--aibs-text-title);
+    font-weight: var(--aibs-weight-strong);
     left: 0;
     position: absolute;
     right: 0;
@@ -2445,13 +2644,13 @@ button.aibs-avatar {
 }
 
 .aibs-ring-label {
-    font-size: .84rem;
-    font-weight: 600;
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-label);
     margin-top: 6px;
 }
 
 .aibs-ring-change {
-    font-size: .78rem;
+    font-size: var(--aibs-text-meta);
     color: var(--aibs-muted);
 }
 
@@ -2462,7 +2661,7 @@ button.aibs-avatar {
 }
 
 .aibs-ring.aibs-tone-warn {
-    color: #b26a00;
+    color: var(--aibs-warn);
 }
 
 .aibs-ring.aibs-tone-bad {
@@ -2493,8 +2692,8 @@ button.aibs-avatar {
 
 .aibs-pricing-now {
     color: var(--aibs-accent);
-    font-size: 1.5rem;
-    font-weight: 700;
+    font-size: var(--aibs-text-head);
+    font-weight: var(--aibs-weight-strong);
 }
 
 .aibs-pricing-list {
@@ -2511,7 +2710,7 @@ button.aibs-avatar {
     border-radius: var(--aibs-radius-sm);
     display: flex;
     gap: 10px;
-    padding: 9px 12px;
+    padding: 8px 12px;
 }
 
 .aibs-pricing-row.aibs-is-current {
@@ -2525,7 +2724,7 @@ button.aibs-avatar {
 
 .aibs-pricing-amount {
     font-variant-numeric: tabular-nums;
-    font-weight: 650;
+    font-weight: var(--aibs-weight-label);
     white-space: nowrap;
 }
 
@@ -2558,7 +2757,7 @@ button.aibs-avatar {
 .aibs-benefit-icon {
     align-items: center;
     background: var(--aibs-surface-alt);
-    border-radius: 10px;
+    border-radius: var(--aibs-radius-sm);
     color: var(--aibs-accent);
     display: inline-flex;
     height: 38px;
@@ -2572,21 +2771,21 @@ button.aibs-avatar {
 }
 
 .aibs-benefit-title {
-    font-size: 1.02rem;
-    font-weight: 650;
+    font-size: var(--aibs-text-lead);
+    font-weight: var(--aibs-weight-label);
     margin-top: 4px;
 }
 
 .aibs-benefit-body {
     color: var(--aibs-text);
-    line-height: 1.55;
+    line-height: var(--aibs-leading-body);
 }
 
 /* The claim above is the promise; this is the mechanism that makes it true. */
 .aibs-benefit-proof {
     border-top: 1px solid var(--aibs-border);
     color: var(--aibs-muted);
-    font-size: .84rem;
+    font-size: var(--aibs-text-small);
     margin-top: 6px;
     padding-top: 10px;
 }
@@ -2614,10 +2813,10 @@ button.aibs-avatar {
     align-items: center;
     background: var(--aibs-accent);
     border-radius: 999px;
-    color: #fff;
+    color: var(--aibs-on-accent);
     display: inline-flex;
-    font-size: .86rem;
-    font-weight: 700;
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-strong);
     grid-row: span 2;
     height: 30px;
     justify-content: center;
@@ -2625,13 +2824,13 @@ button.aibs-avatar {
 }
 
 .aibs-howto-title {
-    font-weight: 650;
+    font-weight: var(--aibs-weight-label);
 }
 
 .aibs-howto-body {
     color: var(--aibs-muted);
     grid-column: 2;
-    line-height: 1.55;
+    line-height: var(--aibs-leading-body);
 }
 
 .aibs-reading {
@@ -2654,14 +2853,14 @@ button.aibs-avatar {
 .aibs-reading-link {
     align-items: center;
     display: inline-flex;
-    font-weight: 650;
+    font-weight: var(--aibs-weight-label);
     gap: 6px;
 }
 
 .aibs-reading-body {
     color: var(--aibs-muted);
-    font-size: .86rem;
-    line-height: 1.5;
+    font-size: var(--aibs-text-small);
+    line-height: var(--aibs-leading-snug);
 }
 
 /* ------------------------------------------------------------- the sticky bar */
@@ -2756,31 +2955,92 @@ button.aibs-avatar {
    scrolled - and the options, which are the point, went below the fold. The ceiling is
    measured in the browser and handed down as --aibs-slide-max; the text column takes a
    scrollbar of its own rather than pushing the page. */
-@media (min-width: 900px) {
+/* The fixed frame needs height as well as width. On a short landscape screen the same
+   rule produced a three-hundred-pixel box with hidden overflow and nothing to scroll, so
+   below that the slide goes back to being as tall as it needs to be and the page scrolls
+   normally. */
+@media (min-width: 900px) and (min-height: 620px) {
+    /* A slide is a fixed frame, not a box that shrinks to its contents. Every slide in a
+       deck is the same size, fills the height between the banner and the fold, and is
+       never scrolled - which is what makes moving through them feel like a deck rather
+       than like a page that happens to have arrows. */
     .path-mod-aibranchedscenario .aibs-slide {
+        height: var(--aibs-slide-max, 74vh);
         max-height: var(--aibs-slide-max, 74vh);
         overflow: hidden;
     }
 
     /* Nothing scrolls. The type steps down until the screen fits, and the fullscreen
-       control is there for a scene that wants more room than the page has. */
+       control is there for a scene that wants more room than the page has. The text is
+       centred in its half rather than pinned to the top, because a short paragraph at the
+       top of a tall column reads as a mistake. */
     .path-mod-aibranchedscenario .aibs-slide .aibs-node-body {
-        font-size: calc(1rem * var(--aibs-fit, 1));
-        max-height: 100%;
+        display: flex;
+        flex-direction: column;
+        font-size: calc(clamp(1rem, .42vw + .86rem, 1.14rem) * var(--aibs-fit, 1));
+        gap: calc(clamp(8px, .8vh, 13px) * var(--aibs-fit, 1));
+        height: 100%;
+        justify-content: center;
         overflow: hidden;
-        padding: calc(clamp(16px, 1.6vw, 26px) * var(--aibs-fit, 1));
+        padding: calc(clamp(18px, 1.6vw, 30px) * var(--aibs-fit, 1));
+    }
+
+    /* A chip in a flex column stretches the full width unless it is told not to. */
+    .path-mod-aibranchedscenario .aibs-slide .aibs-node-body > .aibs-chip,
+    .path-mod-aibranchedscenario .aibs-slide .aibs-node-head {
+        align-self: flex-start;
+        flex: none;
     }
 
     .path-mod-aibranchedscenario .aibs-slide .aibs-h3 {
-        font-size: calc(1.32rem * var(--aibs-fit, 1));
+        font-size: calc(clamp(1.45rem, 1.5vw + .7rem, 2.05rem) * var(--aibs-fit, 1));
+        line-height: var(--aibs-leading-tight);
+        margin: 0;
+    }
+
+    .path-mod-aibranchedscenario .aibs-slide .aibs-prose {
+        line-height: var(--aibs-leading-body);
+        margin: 0;
+        max-width: 62ch;
+    }
+
+    .path-mod-aibranchedscenario .aibs-slide .aibs-prose p {
+        margin: 0 0 .55em;
+    }
+
+    .path-mod-aibranchedscenario .aibs-slide .aibs-prose p:last-child {
+        margin-bottom: 0;
+    }
+
+    /* The picture fills its half of the frame rather than sitting in a letterbox. */
+    .path-mod-aibranchedscenario .aibs-slide .aibs-scene {
+        height: 100%;
+    }
+
+    .path-mod-aibranchedscenario .aibs-slide .aibs-scene-img {
+        aspect-ratio: auto;
+        height: 100%;
+        object-fit: cover;
+        width: 100%;
     }
 
     .path-mod-aibranchedscenario .aibs-slide .aibs-choices {
-        gap: calc(10px * var(--aibs-fit, 1));
+        gap: calc(8px * var(--aibs-fit, 1));
     }
 
     .path-mod-aibranchedscenario .aibs-slide .aibs-choice {
-        padding: calc(14px * var(--aibs-fit, 1)) calc(16px * var(--aibs-fit, 1));
+        padding: calc(10px * var(--aibs-fit, 1)) calc(16px * var(--aibs-fit, 1));
+    }
+
+    /* The spoken line and the question are the two blocks between the situation and the
+       options, and both were spaced for a page rather than for a frame. */
+    .path-mod-aibranchedscenario .aibs-slide .aibs-speech {
+        margin: 0;
+        padding: calc(10px * var(--aibs-fit, 1)) calc(12px * var(--aibs-fit, 1));
+    }
+
+    .path-mod-aibranchedscenario .aibs-slide .aibs-challenge {
+        margin: 0;
     }
 
     .path-mod-aibranchedscenario .aibs-slide .aibs-scene,
@@ -2796,11 +3056,65 @@ button.aibs-avatar {
 }
 
 /* The consequence screen is held to the same ceiling, for the same reason. */
-@media (min-width: 900px) {
+@media (min-width: 900px) and (min-height: 620px) {
+    /* The consequence card is held to the same frame, but the way forward is never part
+       of what gets clipped. A verbose consequence used to push Continue out of the bottom
+       of a hidden overflow, which leaves the learner with no way on at all: the prose is
+       what gives, and the button stays. */
     .path-mod-aibranchedscenario .aibs-consequence {
+        display: flex;
+        flex-direction: column;
         font-size: calc(1rem * var(--aibs-fit, 1));
         max-height: var(--aibs-slide-max, 74vh);
         overflow: hidden;
+    }
+
+    .path-mod-aibranchedscenario .aibs-consequence .aibs-prose,
+    .path-mod-aibranchedscenario .aibs-consequence .aibs-feedback {
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .path-mod-aibranchedscenario .aibs-consequence .aibs-consequence-actions,
+    .path-mod-aibranchedscenario .aibs-consequence .aibs-rings {
+        flex: none;
+    }
+
+    /* Every slide in the opening deck is the same frame, including the ones with no
+       picture, so moving through them does not resize the page under the reader. The
+       debrief is the same deck with the same arrows, and it was the one that was not
+       held to the frame: identical markup, identical controls, one of them scrolling.
+       Its slides carry more text than the opening deck's, so they take an inner scroll
+       rather than clipping - the frame is what has to be consistent, not the overflow. */
+    .path-mod-aibranchedscenario .aibs-brief .aibs-deckslide,
+    .path-mod-aibranchedscenario .aibs-debrief .aibs-deckslide {
+        height: var(--aibs-slide-max, 74vh);
+        overflow: hidden;
+    }
+
+    .path-mod-aibranchedscenario .aibs-debrief .aibs-deckslide {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow-y: auto;
+    }
+
+    .path-mod-aibranchedscenario .aibs-brief .aibs-deckend {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: clamp(24px, 3vw, 56px);
+    }
+
+    /* The deck's controls sit under the frame, not inside it. */
+    .path-mod-aibranchedscenario .aibs-deck {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .path-mod-aibranchedscenario .aibs-deck-stage {
+        flex: 1 1 auto;
+        min-height: 0;
     }
 }
 
@@ -2846,7 +3160,7 @@ button.aibs-avatar {
 
 .aibs-deck-count {
     color: var(--aibs-muted);
-    font-size: .86rem;
+    font-size: var(--aibs-text-small);
     font-variant-numeric: tabular-nums;
     min-width: 72px;
     text-align: center;
@@ -2897,26 +3211,26 @@ button.aibs-avatar {
 .aibs-lessoncard-good {
     animation-delay: .14s;
     background: var(--aibs-surface-alt);
-    border-left: 3px solid var(--aibs-positive);
+    border-inline-start: 3px solid var(--aibs-positive);
 }
 
 .aibs-lessoncard-bad {
     animation-delay: .24s;
     background: var(--aibs-surface-alt);
-    border-left: 3px solid var(--aibs-negative);
+    border-inline-start: 3px solid var(--aibs-negative);
 }
 
 .aibs-lessoncard-good:hover,
 .aibs-lessoncard-bad:hover {
-    box-shadow: 0 10px 24px -14px rgba(17, 22, 31, .45);
+    box-shadow: var(--aibs-shadow-hover);
     transform: translateY(-2px);
 }
 
 .aibs-lessoncard-label {
     align-items: center;
     display: inline-flex;
-    font-size: .74rem;
-    font-weight: 700;
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-strong);
     gap: 6px;
     letter-spacing: .06em;
     margin-bottom: 6px;
@@ -2933,7 +3247,7 @@ button.aibs-avatar {
 
 .aibs-lessoncard-text {
     font-style: italic;
-    line-height: 1.55;
+    line-height: var(--aibs-leading-body);
     margin: 0;
 }
 
@@ -2957,4 +3271,156 @@ button.aibs-avatar {
    the same picture-left, text-right shape. */
 .aibs-brief .aibs-deckslide {
     margin: 0;
+}
+
+/* ------------------------------------------------------- nothing left to scroll to */
+
+/* The scenario is a player, not a document. Everything is sized to fit between the course
+   banner and the fold, and this is what stops a learner scrolling to look for options that
+   are already on the screen. Taken only when the player genuinely ends inside the
+   viewport, and only above the breakpoint where the side-by-side slide applies - a narrow
+   screen stacks and is meant to scroll. */
+html.aibs-noscroll,
+body.aibs-noscroll {
+    overflow: hidden !important;
+}
+
+/* ------------------------------------------- text that must not break its container */
+
+/* Every string below is written by the generator, so its length is not something this
+   plugin gets to assume. A speaker called "Dr Amara Okonkwo-Ferreira" used to run off the
+   side of the scene image; a principle sentence in a chip stretched a pill wider than the
+   card it sat in; and a long metric label pushed the meters out of the sticky bar, which
+   is on screen for the whole attempt. */
+.aibs-speaker-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.aibs-meter-label {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.aibs-chip {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.aibs-pricing-label,
+.aibs-journey-title,
+.aibs-review-choice-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* A title with no spaces in it - a URL, a hyphenless compound - overflowed the masthead
+   and was then clipped by the slide frame. */
+.aibs-title,
+.aibs-h3,
+.aibs-h4,
+.aibs-choice-text,
+.aibs-prose {
+    overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------- keyboard focus, everywhere */
+
+/* An audit found five focusable controls with no focus style of their own: the avatar on
+   the scene, every step of the wizard, every option toggle, the disclosure summary and the
+   links out to the documentation. A site theme that zeroes `button:focus` - which Boost
+   and most of its children do - then leaves a keyboard user with no idea where they are.
+   One ring, the same ring the choice buttons and the primary buttons already use. */
+.aibs-avatar:focus-visible,
+.aibs-wizard-step:focus-visible,
+.aibs-option:focus-visible,
+.aibs-disclosure-summary:focus-visible,
+.aibs-reading-link:focus-visible,
+.aibs-iconbtn:focus-visible,
+.aibs-audiobtn:focus-visible {
+    outline: 2px solid var(--aibs-accent);
+    outline-offset: 2px;
+}
+
+/* Hover feedback on the one control that is sitting on a photograph, where a theme has
+   nothing useful to fall back on. */
+button.aibs-avatar:hover,
+button.aibs-avatar:focus-visible {
+    background: var(--aibs-accent-strong);
+    transform: scale(1.06);
+}
+
+.aibs-reading-link:hover,
+.aibs-reading-link:focus-visible {
+    text-decoration: underline;
+}
+
+/* Disabled controls restate their colour rather than relying on opacity alone, for the
+   same reason every other state in this file does: a theme's own `button:disabled` is
+   more specific than a class. */
+.aibs-btn:disabled,
+.aibs-iconbtn:disabled {
+    background: var(--aibs-surface-alt) !important;
+    border-color: var(--aibs-border) !important;
+    box-shadow: none !important;
+    color: var(--aibs-muted) !important;
+}
+
+/* Pressed and hovered looked identical on an option toggle, so a keyboard user could not
+   tell which of the two states they were looking at. */
+.aibs-option[aria-pressed="true"] {
+    border-color: var(--aibs-accent);
+    box-shadow: inset 0 0 0 1px var(--aibs-accent);
+}
+
+/* ------------------------------------------------------------------- touch */
+
+/* A finger is not a pointer. Apple and Google both put the floor at 44 CSS pixels, and
+   the round controls in the top bar and on the scene were drawn at 34 and 42 for a mouse.
+   Only on a touch screen, so the desktop chrome stays compact. */
+@media (pointer: coarse) {
+    .aibs-iconbtn {
+        height: 44px;
+        width: 44px;
+    }
+
+    .aibs-avatar {
+        height: 48px;
+        width: 48px;
+    }
+
+    .aibs-audiobtn {
+        min-height: 44px;
+    }
+
+    .aibs-legend-summary,
+    .aibs-disclosure-summary {
+        min-height: 44px;
+    }
+
+    /* The metric legend is a bare question mark now, so it needs the width as well as
+       the height or it is a 22px target in a 44px row. */
+    .aibs-legend-summary {
+        justify-content: center;
+        min-width: 44px;
+    }
+
+    /* The deck arrows are the only way through a lesson on a phone, so they are given
+       room to be hit rather than aimed at. */
+    .aibs-deck-nav {
+        gap: 22px;
+    }
+}
+
+/* iOS reports a viewport height that changes as its toolbars slide away, so a slide sized
+   against `vh` jumps as the page settles. The height actually used comes from JavaScript
+   measuring the real viewport; this is only the fallback, and it uses the small viewport
+   unit where the browser has one. */
+@supports (height: 100svh) {
+    .path-mod-aibranchedscenario .aibs-slide {
+        max-height: var(--aibs-slide-max, 74svh);
+    }
 }

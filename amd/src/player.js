@@ -29,6 +29,7 @@ import Ajax from 'core/ajax';
 import Templates from 'core/templates';
 import {get_strings as getStrings} from 'core/str';
 import Notification from 'core/notification';
+import * as Scheme from 'mod_aibranchedscenario/scheme';
 
 const SELECTORS = {
     root: '[data-region="player"]',
@@ -108,7 +109,10 @@ class Player {
         let resizeTimer = null;
         window.addEventListener('resize', () => {
             window.clearTimeout(resizeTimer);
-            resizeTimer = window.setTimeout(() => this.syncStickyOffset(), 150);
+            resizeTimer = window.setTimeout(() => {
+                this.syncStickyOffset();
+                this.fitSlide();
+            }, 150);
         });
 
         // The theme's header is not on screen in fullscreen, so the sticky bar's offset
@@ -211,7 +215,11 @@ class Player {
         }
         region.textContent = (error && error.message) ? error.message : this.strings['error:generic'];
         region.hidden = false;
-        region.scrollIntoView({behavior: 'smooth', block: 'center'});
+        // Smooth scrolling started from script ignores the CSS that turns motion off, so
+        // the preference is read here as well.
+        const reduced = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        region.scrollIntoView({behavior: reduced ? 'auto' : 'smooth', block: 'center'});
     }
 
     /**
@@ -699,8 +707,46 @@ class Player {
         // bar have taken their share, measured rather than guessed at.
         const barheight = Math.round(bar.getBoundingClientRect().height);
         const viewport = window.innerHeight || document.documentElement.clientHeight;
-        const available = Math.max(320, viewport - Math.round(offset) - barheight - 48);
-        this.root.style.setProperty('--aibs-slide-max', available + 'px');
+
+        // Everything else inside the player has to come off the total too, or the frame is
+        // sized for space that is already spoken for and the page scrolls by exactly that
+        // much. A flat allowance was guessing: the deck's arrows and the card's own
+        // padding are between ninety and a hundred and fifty pixels depending on the
+        // screen. They are measured instead. Heights do not move with the scroll position,
+        // so this is right whether the page is at the top or not. The metric legend is not
+        // in this list: it lives inside the bar now and opens over the scene, so the bar's
+        // own height already accounts for it and measuring it again would double count.
+        let chrome = this.outerHeight(bar, true) - barheight;
+        ['.aibs-deck-nav'].forEach((selector) => {
+            const element = this.root.querySelector(selector);
+            if (element && element.offsetParent !== null) {
+                chrome += this.outerHeight(element, false);
+            }
+        });
+        const rootstyle = window.getComputedStyle(this.root);
+        chrome += parseFloat(rootstyle.paddingBottom) || 0;
+
+        const available = Math.max(300, viewport - Math.round(offset) - barheight - chrome - 12);
+        this.root.style.setProperty('--aibs-slide-max', Math.round(available) + 'px');
+    }
+
+    /**
+     * An element's height including the margins that push things away from it.
+     *
+     * @param {HTMLElement} element The element.
+     * @param {Boolean} marginsonly Return only the margins, not the box itself.
+     * @returns {Number} Height in pixels.
+     */
+    outerHeight(element, marginsonly) {
+        if (!element) {
+            return 0;
+        }
+        const style = window.getComputedStyle(element);
+        const margins = (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0);
+        if (marginsonly) {
+            return margins;
+        }
+        return element.getBoundingClientRect().height + margins;
     }
 
     /**
@@ -716,40 +762,57 @@ class Player {
      * @returns {Number} Height in pixels to stay clear of.
      */
     stickyOffset() {
-        let offset = 0;
         const width = window.innerWidth || document.documentElement.clientWidth;
-        // Several points across the edge, because a header may be split into pieces or
-        // sit to one side.
-        const probes = [width * 0.5, width * 0.15, width * 0.85];
-        probes.forEach((x) => {
-            let found;
-            try {
-                found = document.elementsFromPoint(Math.round(x), 2) || [];
-            } catch (e) {
-                found = [];
-            }
-            found.forEach((element) => {
-                if (!element || element === document.body || element === document.documentElement) {
-                    return;
-                }
-                if (this.root.contains(element)) {
-                    return;
-                }
-                const position = window.getComputedStyle(element).position;
-                if (position !== 'fixed' && position !== 'sticky') {
-                    return;
-                }
-                const rect = element.getBoundingClientRect();
-                if (rect.top <= 2 && rect.bottom > offset) {
-                    offset = rect.bottom;
-                }
-                return;
-            });
-        });
+        const height = window.innerHeight || 800;
         // A full height overlay would otherwise push the scene off the bottom of the
-        // screen, so nothing is allowed to claim more than a third of it.
-        const ceiling = (window.innerHeight || 800) / 3;
-        return Math.min(offset, ceiling);
+        // screen, so nothing is allowed to claim more than half of it.
+        const ceiling = height / 2;
+
+        // Pinned furniture stacks. A theme's navbar takes the first sixty pixels and a
+        // course format's banner sits under it, pinned to the bottom of the navbar rather
+        // than to the top of the window - the AI course format's hero is sticky from y 61
+        // to y 181 on an activity page. Probing only the very top edge found the navbar,
+        // missed the banner entirely, and parked this plugin's own bar underneath it.
+        //
+        // So the strip is walked downwards instead: anything fixed or sticky that touches
+        // the band already claimed extends it, and the walk stops at the first gap.
+        let band = 0;
+        const steps = 16;
+        for (let step = 0; step <= steps; step++) {
+            const y = Math.round((ceiling / steps) * step);
+            if (y > band + 4) {
+                // A gap: everything below this is page content, not pinned furniture.
+                break;
+            }
+            [width * 0.5, width * 0.15, width * 0.85].forEach((x) => {
+                let found;
+                try {
+                    found = document.elementsFromPoint(Math.round(x), Math.max(1, y)) || [];
+                } catch (e) {
+                    found = [];
+                }
+                found.forEach((element) => {
+                    if (!element || element === document.body || element === document.documentElement) {
+                        return;
+                    }
+                    if (this.root.contains(element)) {
+                        return;
+                    }
+                    const position = window.getComputedStyle(element).position;
+                    if (position !== 'fixed' && position !== 'sticky') {
+                        return;
+                    }
+                    const rect = element.getBoundingClientRect();
+                    // Only furniture that reaches what is already claimed can extend it,
+                    // so a pinned button halfway down the page is not mistaken for a
+                    // header.
+                    if (rect.top <= band + 4 && rect.bottom > band) {
+                        band = rect.bottom;
+                    }
+                });
+            });
+        }
+        return Math.min(band, ceiling);
     }
 
     /**
@@ -906,13 +969,26 @@ class Player {
      * @returns {void}
      */
     fitSlide() {
-        const slides = this.root.querySelectorAll('.aibs-slide, .aibs-consequence');
+        this.fadeScenes();
+        // What else is on the screen changes from one screen to the next - the arrows are
+        // on a deck and not on a decision, the top bar grows a line when it wraps - so the
+        // space available is worked out again each time rather than once at load.
+        this.syncStickyOffset();
+        const slides = this.root.querySelectorAll('.aibs-slide, .aibs-consequence, .aibs-deckslide');
         slides.forEach((slide) => {
             const body = slide.querySelector('.aibs-node-body') || slide;
             slide.style.removeProperty('--aibs-fit');
             // Two frames, so the browser has laid the new screen out before it is measured.
             window.requestAnimationFrame(() => {
                 window.requestAnimationFrame(() => {
+                    // The frame was sized from measurements of everything around it. Anything
+                    // those measurements missed - a theme that adds a bar of its own, a browser
+                    // that reports a viewport it does not really give you, a bar that wrapped
+                    // onto a second line after the fact - shows up as the slide's own bottom
+                    // edge sitting past the fold. That is visible after layout, so the frame is
+                    // corrected against where the slide actually ended up before the text is
+                    // scaled to it.
+                    this.trimToFold(slide);
                     let scale = 1;
                     let guard = 0;
                     while (body.scrollHeight > body.clientHeight + 1 && scale > 0.74 && guard < 14) {
@@ -920,9 +996,66 @@ class Player {
                         guard++;
                         slide.style.setProperty('--aibs-fit', scale.toFixed(2));
                     }
+                    this.lockPageScroll();
                 });
             });
         });
+    }
+
+    /**
+     * Let a scene photograph arrive rather than appear.
+     *
+     * The picture is half the screen, and it was snapping in the instant it decoded -
+     * fully formed, at full strength, with no relationship to the text that came in
+     * beside it on a curve. It now fades over a quarter of a second. Images already in
+     * the cache are marked loaded straight away, so a revisit does not re-fade.
+     *
+     * @returns {void}
+     */
+    fadeScenes() {
+        this.root.querySelectorAll('.aibs-scene-img').forEach((img) => {
+            if (img.dataset.faded === '1') {
+                return;
+            }
+            img.dataset.faded = '1';
+            if (img.complete && img.naturalWidth > 0) {
+                img.classList.add('aibs-is-loaded');
+                return;
+            }
+            const done = () => img.classList.add('aibs-is-loaded');
+            img.addEventListener('load', done, {once: true});
+            // A picture that never arrives must not leave a permanently invisible box
+            // where the learner expects one.
+            img.addEventListener('error', done, {once: true});
+        });
+    }
+
+    /**
+     * Pull the slide frame back up if the slide ended up past the bottom of the screen.
+     *
+     * Sizing the frame from the chrome around it is arithmetic, and arithmetic can be
+     * wrong about a page it has not seen. Where the slide actually is cannot be wrong,
+     * so the last word goes to the measurement rather than to the sum.
+     *
+     * @param {HTMLElement} slide The slide on screen.
+     * @returns {void}
+     */
+    trimToFold(slide) {
+        if (!slide || slide.offsetParent === null) {
+            return;
+        }
+        const viewport = window.innerHeight || document.documentElement.clientHeight;
+        const rect = slide.getBoundingClientRect();
+        const overflow = Math.round(rect.bottom - viewport);
+        if (overflow <= 0) {
+            return;
+        }
+        const declared = parseInt(
+            window.getComputedStyle(this.root).getPropertyValue('--aibs-slide-max'), 10);
+        const base = isNaN(declared) ? Math.round(rect.height) : declared;
+        // Eight pixels of daylight, so a rounded edge is not flush with the fold.
+        this.root.style.setProperty(
+            '--aibs-slide-max', Math.max(300, base - overflow - 8) + 'px');
     }
 
     /**
@@ -933,7 +1066,12 @@ class Player {
     animateRings() {
         const reduced = window.matchMedia
             && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        this.root.querySelectorAll('.aibs-ring-fill').forEach((ring) => {
+        // Everything else in the player that arrives as a set arrives one after another -
+        // the choices, the lesson cards. The three rings were the exception, all starting
+        // on the same frame, which reads as a machine reporting rather than as a result
+        // landing. Eighty milliseconds apart is the same interval the choices use.
+        const stagger = reduced ? 0 : 80;
+        this.root.querySelectorAll('.aibs-ring-fill').forEach((ring, index) => {
             const to = ring.dataset.dash;
             if (reduced) {
                 ring.style.strokeDasharray = to;
@@ -941,23 +1079,30 @@ class Player {
             }
             ring.style.strokeDasharray = ring.dataset.startdash || '0 175.93';
             ring.classList.add('aibs-is-animated');
-            window.requestAnimationFrame(() => {
+            window.setTimeout(() => {
                 window.requestAnimationFrame(() => {
-                    ring.style.strokeDasharray = to;
+                    window.requestAnimationFrame(() => {
+                        ring.style.strokeDasharray = to;
+                    });
                 });
-            });
+            }, index * stagger);
         });
 
-        this.root.querySelectorAll('.aibs-ring-value').forEach((value) => {
+        this.root.querySelectorAll('.aibs-ring-value').forEach((value, index) => {
             const from = parseInt(value.dataset.from, 10);
             const to = parseInt(value.dataset.to, 10);
             if (isNaN(from) || isNaN(to) || reduced || from === to) {
                 value.textContent = isNaN(to) ? value.textContent : String(to);
                 return;
             }
-            const started = window.performance ? window.performance.now() : Date.now();
+            const delay = index * stagger;
+            const started = (window.performance ? window.performance.now() : Date.now()) + delay;
             const duration = 900;
             const step = (now) => {
+                if (now < started) {
+                    window.requestAnimationFrame(step);
+                    return;
+                }
                 const elapsed = Math.min(1, (now - started) / duration);
                 // Ease out, so the number settles rather than stopping dead.
                 const eased = 1 - Math.pow(1 - elapsed, 3);
@@ -967,6 +1112,36 @@ class Player {
                 }
             };
             window.requestAnimationFrame(step);
+        });
+    }
+
+    /**
+     * Stop the page scrolling, once there is nothing below the fold to scroll to.
+     *
+     * The scenario is a player, not a document: a learner should never be scrolling to
+     * find the options, and a page that can scroll invites them to. Everything is sized to
+     * fit, and this closes the gap between "fits" and "cannot be moved".
+     *
+     * Two guards, because a locked page with something unreachable on it is far worse than
+     * a page that scrolls. The lock is only taken above the layout breakpoint, where the
+     * side-by-side slide applies - a narrow screen stacks the picture above the text and is
+     * meant to scroll - and only while the player actually ends inside the viewport. If a
+     * short window or an unusually tall theme header pushes it past the bottom, the lock is
+     * handed straight back.
+     *
+     * @returns {void}
+     */
+    lockPageScroll() {
+        const viewport = window.innerHeight || document.documentElement.clientHeight || 0;
+        const wide = (window.innerWidth || document.documentElement.clientWidth || 0) >= 900;
+        // Where the player ends measured from the top of the document, which is what a
+        // page scrolled back to the top would show.
+        const bottom = this.root.getBoundingClientRect().bottom + (window.scrollY || 0);
+        const fits = bottom <= viewport + 24;
+        const lock = wide && fits;
+        ['aibs-noscroll'].forEach((name) => {
+            document.documentElement.classList.toggle(name, lock);
+            document.body.classList.toggle(name, lock);
         });
     }
 
@@ -1305,6 +1480,9 @@ export const init = (cmid) => {
         return Promise.resolve(false);
     }
     root.dataset.initialised = '1';
+    // Before anything is drawn, so the first paint is already the right colour for the
+    // page rather than a white flash that corrects itself.
+    Scheme.watch(root);
     const player = new Player(root);
     return player.init();
 };

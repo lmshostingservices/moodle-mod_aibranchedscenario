@@ -201,13 +201,14 @@ class media_manager {
         if ($wantsaudio) {
             foreach ($definition['principles'] as $position => $principle) {
                 $counts['narrationswanted']++;
-                if ($this->generate_principle_narration(
+                $narrated = $this->generate_principle_narration(
                     $provider,
                     $principle,
                     $scenario->scenariolang,
                     $voice,
                     $position
-                )) {
+                );
+                if ($narrated) {
                     $counts['narrations']++;
                 }
             }

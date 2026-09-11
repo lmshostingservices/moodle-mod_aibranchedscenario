@@ -181,63 +181,64 @@
                             </div>
                         {{/metrics}}
                     </div>
+
+                    <details class="aibs-legend">
+                        <summary class="aibs-legend-summary"
+                                 title="{{#str}} metrics:explain, mod_aibranchedscenario {{/str}}"
+                                 aria-label="{{#str}} metrics:explain, mod_aibranchedscenario {{/str}}">
+                            <span class="aibs-legend-icon" aria-hidden="true"></span>
+                            <span class="aibs-sr-only">
+                                {{#str}} metrics:explain, mod_aibranchedscenario {{/str}}</span>
+                        </summary>
+                        <div class="aibs-legend-body">
+                            <p class="aibs-legend-lead">{{#str}} metrics:lead, mod_aibranchedscenario {{/str}}</p>
+                            <div class="aibs-legend-grid">
+                                <div class="aibs-legend-item" data-metric="engagement">
+                                    <span class="aibs-legend-name">
+                                        {{#str}} metric:engagement, mod_aibranchedscenario {{/str}}</span>
+                                    <p class="aibs-legend-desc">
+                                        {{#str}} metric:engagementdesc, mod_aibranchedscenario {{/str}}</p>
+                                    <p class="aibs-legend-move aibs-legend-up">
+                                        <span>{{#str}} metrics:up, mod_aibranchedscenario {{/str}}</span>
+                                        {{#str}} metric:engagementup, mod_aibranchedscenario {{/str}}</p>
+                                    <p class="aibs-legend-move aibs-legend-down">
+                                        <span>{{#str}} metrics:down, mod_aibranchedscenario {{/str}}</span>
+                                        {{#str}} metric:engagementdown, mod_aibranchedscenario {{/str}}</p>
+                                </div>
+                                <div class="aibs-legend-item" data-metric="trust">
+                                    <span class="aibs-legend-name">
+                                        {{#str}} metric:trust, mod_aibranchedscenario {{/str}}</span>
+                                    <p class="aibs-legend-desc">
+                                        {{#str}} metric:trustdesc, mod_aibranchedscenario {{/str}}</p>
+                                    <p class="aibs-legend-move aibs-legend-up">
+                                        <span>{{#str}} metrics:up, mod_aibranchedscenario {{/str}}</span>
+                                        {{#str}} metric:trustup, mod_aibranchedscenario {{/str}}</p>
+                                    <p class="aibs-legend-move aibs-legend-down">
+                                        <span>{{#str}} metrics:down, mod_aibranchedscenario {{/str}}</span>
+                                        {{#str}} metric:trustdown, mod_aibranchedscenario {{/str}}</p>
+                                </div>
+                                <div class="aibs-legend-item" data-metric="tension">
+                                    <span class="aibs-legend-name">
+                                        {{#str}} metric:tension, mod_aibranchedscenario {{/str}}</span>
+                                    <p class="aibs-legend-desc">
+                                        {{#str}} metric:tensiondesc, mod_aibranchedscenario {{/str}}</p>
+                                    <p class="aibs-legend-move aibs-legend-up">
+                                        <span>{{#str}} metrics:up, mod_aibranchedscenario {{/str}}</span>
+                                        {{#str}} metric:tensionup, mod_aibranchedscenario {{/str}}</p>
+                                    <p class="aibs-legend-move aibs-legend-down">
+                                        <span>{{#str}} metrics:down, mod_aibranchedscenario {{/str}}</span>
+                                        {{#str}} metric:tensiondown, mod_aibranchedscenario {{/str}}</p>
+                                </div>
+                            </div>
+                            <p class="aibs-legend-note">
+                                {{#str}} metrics:noright, mod_aibranchedscenario {{/str}}</p>
+                            <p class="aibs-legend-note">
+                                {{#str}} metrics:gradedby, mod_aibranchedscenario {{/str}}</p>
+                        </div>
+                    </details>
                 {{/showmetrics}}
             </div>
         </div>
-
-        {{#showmetrics}}
-            <details class="aibs-legend">
-                <summary class="aibs-legend-summary">
-                    <span class="aibs-legend-icon" aria-hidden="true"></span>
-                    {{#str}} metrics:explain, mod_aibranchedscenario {{/str}}
-                </summary>
-                <div class="aibs-legend-body">
-                    <p class="aibs-legend-lead">{{#str}} metrics:lead, mod_aibranchedscenario {{/str}}</p>
-                    <div class="aibs-legend-grid">
-                        <div class="aibs-legend-item" data-metric="engagement">
-                            <span class="aibs-legend-name">
-                                {{#str}} metric:engagement, mod_aibranchedscenario {{/str}}</span>
-                            <p class="aibs-legend-desc">
-                                {{#str}} metric:engagementdesc, mod_aibranchedscenario {{/str}}</p>
-                            <p class="aibs-legend-move aibs-legend-up">
-                                <span>{{#str}} metrics:up, mod_aibranchedscenario {{/str}}</span>
-                                {{#str}} metric:engagementup, mod_aibranchedscenario {{/str}}</p>
-                            <p class="aibs-legend-move aibs-legend-down">
-                                <span>{{#str}} metrics:down, mod_aibranchedscenario {{/str}}</span>
-                                {{#str}} metric:engagementdown, mod_aibranchedscenario {{/str}}</p>
-                        </div>
-                        <div class="aibs-legend-item" data-metric="trust">
-                            <span class="aibs-legend-name">
-                                {{#str}} metric:trust, mod_aibranchedscenario {{/str}}</span>
-                            <p class="aibs-legend-desc">
-                                {{#str}} metric:trustdesc, mod_aibranchedscenario {{/str}}</p>
-                            <p class="aibs-legend-move aibs-legend-up">
-                                <span>{{#str}} metrics:up, mod_aibranchedscenario {{/str}}</span>
-                                {{#str}} metric:trustup, mod_aibranchedscenario {{/str}}</p>
-                            <p class="aibs-legend-move aibs-legend-down">
-                                <span>{{#str}} metrics:down, mod_aibranchedscenario {{/str}}</span>
-                                {{#str}} metric:trustdown, mod_aibranchedscenario {{/str}}</p>
-                        </div>
-                        <div class="aibs-legend-item" data-metric="tension">
-                            <span class="aibs-legend-name">
-                                {{#str}} metric:tension, mod_aibranchedscenario {{/str}}</span>
-                            <p class="aibs-legend-desc">
-                                {{#str}} metric:tensiondesc, mod_aibranchedscenario {{/str}}</p>
-                            <p class="aibs-legend-move aibs-legend-up">
-                                <span>{{#str}} metrics:up, mod_aibranchedscenario {{/str}}</span>
-                                {{#str}} metric:tensionup, mod_aibranchedscenario {{/str}}</p>
-                            <p class="aibs-legend-move aibs-legend-down">
-                                <span>{{#str}} metrics:down, mod_aibranchedscenario {{/str}}</span>
-                                {{#str}} metric:tensiondown, mod_aibranchedscenario {{/str}}</p>
-                        </div>
-                    </div>
-                    <p class="aibs-legend-note">
-                        {{#str}} metrics:noright, mod_aibranchedscenario {{/str}}</p>
-                    <p class="aibs-legend-note">
-                        {{#str}} metrics:gradedby, mod_aibranchedscenario {{/str}}</p>
-                </div>
-            </details>
-        {{/showmetrics}}
 
         <div class="aibs-stage">
 

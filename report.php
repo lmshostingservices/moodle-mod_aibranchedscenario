@@ -152,7 +152,18 @@ if ($viewid) {
 }
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading(format_string($moduleinstance->name));
+
+// The report used to open with a bare Moodle heading and an unshelled row of numbers,
+// so a teacher coming straight from the wizard landed on what looked like a different,
+// older plugin. It now sits in the same shell, under the same masthead, as every other
+// screen in the activity.
+echo html_writer::start_div('aibs-wizard aibs-theme-' . s($moduleinstance->theme ?: 'indigo'));
+echo html_writer::start_tag('header', ['class' => 'aibs-masthead aibs-masthead-compact']);
+echo html_writer::start_div('aibs-masthead-text');
+echo html_writer::tag('p', get_string('report:eyebrow', 'mod_aibranchedscenario'), ['class' => 'aibs-eyebrow']);
+echo html_writer::tag('h2', format_string($moduleinstance->name), ['class' => 'aibs-title']);
+echo html_writer::end_div();
+echo html_writer::end_tag('header');
 
 $total = $DB->count_records('aibranchedscenario_attempts', ['scenarioid' => $moduleinstance->id]);
 $finished = $DB->count_records('aibranchedscenario_attempts', [
@@ -189,6 +200,7 @@ echo html_writer::div($summary, 'aibs-report-summary');
 
 if (!$total) {
     echo $OUTPUT->notification(get_string('noattemptsyet', 'mod_aibranchedscenario'), 'info');
+    echo html_writer::end_div();
     echo $OUTPUT->footer();
     exit;
 }
@@ -241,6 +253,7 @@ foreach ($recordset as $record) {
 }
 $recordset->close();
 
-echo html_writer::table($table);
+echo html_writer::div(html_writer::table($table), 'aibs-tablewrap');
 echo $OUTPUT->paging_bar($total, $page, $perpage, $baseurl);
+echo html_writer::end_div();
 echo $OUTPUT->footer();

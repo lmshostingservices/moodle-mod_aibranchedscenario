@@ -25,6 +25,7 @@ import Ajax from 'core/ajax';
 import {get_strings as getStrings, get_string as getString} from 'core/str';
 import Notification from 'core/notification';
 import Toast from 'mod_aibranchedscenario/toast';
+import * as Scheme from 'mod_aibranchedscenario/scheme';
 import ModalSaveCancel from 'core/modal_save_cancel';
 import ModalEvents from 'core/modal_events';
 
@@ -1159,6 +1160,7 @@ export const init = (cmid) => {
         return Promise.resolve(false);
     }
     root.dataset.initialised = '1';
+    Scheme.watch(root);
     const wizard = new Wizard(root);
     return wizard.init();
 };

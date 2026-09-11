@@ -18,7 +18,6 @@ namespace mod_aibranchedscenario\output;
 
 use context_module;
 use mod_aibranchedscenario\local\ai\credentials;
-use mod_aibranchedscenario\local\generator;
 use mod_aibranchedscenario\local\scenario_manager;
 use mod_aibranchedscenario\local\schema;
 use mod_aibranchedscenario\local\source_normaliser;
@@ -223,7 +222,7 @@ class wizard implements \renderable, \templatable {
                 'atmosphere' => source_normaliser::blank()['atmosphere'],
             ],
             'maxsourcechars' => $maxsourcechars,
-            'generationeta'  => self::eta_phrase(),
+            'generationeta'  => get_string('generationeta', 'mod_aibranchedscenario'),
             'importprompt'   => \mod_aibranchedscenario\local\import_prompt::text((int)$source['decisions']),
             'pricing'        => self::pricing_card($this->scenario),
             'howto'          => self::how_to_use(),
@@ -308,46 +307,5 @@ class wizard implements \renderable, \templatable {
             'credits'  => $current['total'],
             'currency' => $current['currency'],
         ];
-    }
-
-    /**
-     * A sentence telling the teacher how long a generation usually takes here.
-     *
-     * Generation runs for minutes, not seconds, and a progress message with no sense of
-     * scale is how a teacher concludes it has hung and presses the button again. The
-     * range comes from this site's own completed runs where it has enough of them, and
-     * says so, because "on this site" is what makes the number believable.
-     *
-     * @return string
-     */
-    protected static function eta_phrase(): string {
-        $estimate = (new generator())->estimate();
-        $range = (object)[
-            'low'  => self::eta_amount($estimate['low']),
-            'high' => self::eta_amount($estimate['high']),
-        ];
-        $phrase = get_string('eta:range', 'mod_aibranchedscenario', $range);
-        return get_string(
-            $estimate['measured'] ? 'generationeta' : 'generationetadefault',
-            'mod_aibranchedscenario',
-            $phrase
-        );
-    }
-
-    /**
-     * Render a duration the way a person would say it.
-     *
-     * @param int $seconds Duration in seconds.
-     * @return string
-     */
-    protected static function eta_amount(int $seconds): string {
-        if ($seconds < 90) {
-            return get_string('eta:seconds', 'mod_aibranchedscenario', (int)(round($seconds / 5) * 5));
-        }
-        $minutes = (int)round($seconds / 60);
-        if ($minutes <= 1) {
-            return get_string('eta:minute', 'mod_aibranchedscenario');
-        }
-        return get_string('eta:minutes', 'mod_aibranchedscenario', $minutes);
     }
 }

@@ -31,6 +31,8 @@
  * @license    https://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 
+import * as Scheme from 'mod_aibranchedscenario/scheme';
+
 /** @var {Number} How long a message stays before it withdraws, in milliseconds. */
 const LIFETIME = 4200;
 
@@ -61,6 +63,9 @@ const container = () => {
     }
     region = document.createElement('div');
     region.className = 'aibs-toasts';
+    // Toasts are appended to the body, outside the player, so they carry their own copy
+    // of the palette and need their own reading of the page.
+    Scheme.apply(region);
     // Polite, because a confirmation must not interrupt what a screen reader is saying;
     // the role makes it an announcement rather than a piece of the page.
     region.setAttribute('role', 'status');

@@ -2,6 +2,328 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.19.0] - 2026-09-11
+
+A pass over the stylesheet and the look of the thing, after a full audit. No schema
+changes, no behaviour changes beyond what is listed here.
+
+### Fixed — four design tokens were dead and nobody could see it
+
+- `--aibs-warn`, `--aibs-positive-border`, `--aibs-negative-border` and
+  `--aibs-negative-strong` were each defined as themselves — `--aibs-warn: var(--aibs-warn)`.
+  A custom property that references itself is a cycle, which the spec resolves to nothing
+  at all, everywhere it is used. So the amber ring on the debrief was never amber (the
+  three-way traffic light was really two-way), the strong and high-risk outcome badges had
+  no border, the emerald theme's accent border was missing, the crisis chip had no edge,
+  and the error banner lost both its red border and its red text. Left over from a refactor
+  that named the tokens and never filled in the values.
+
+### Changed — the system is now a system
+
+- **Eleven font sizes became seven.** The file held .92, .95, 1.02, 1.04, 1.05, 1.06, 1.16,
+  1.18, 1.7, 1.9 and 2.3rem — several of them a hundredth of a rem apart, which is a
+  difference no eye can see and no rule can justify. There is now one named ramp from
+  micro to display, and not a single bare rem literal left in a `font-size`.
+- **Eight line heights became three**, one for each job text does here: a heading that has
+  to hold together as one shape, a compact run of interface text, and a paragraph someone
+  reads.
+- **Font weights go through the two weight tokens**, not through twenty-six literal 600s
+  and 700s sitting beside them.
+- **Every elevation comes from the shadow scale.** Two bespoke shadows — the button's
+  resting state and the lesson card's hover — are gone; the second became the fourth step
+  of the scale, since a card lifting under the pointer is a real elevation and deserved a
+  name.
+- **The spacing grid is stated and enforced.** Spacing here is a two-pixel grid; five
+  values were sitting off it (3, 5, 9, 11, 15px) and have been snapped on. It is
+  deliberately not tokenised: `var(--aibs-space-3)` in ninety places says nothing that
+  `12px` does not.
+- A stray `8px` radius on the choice letter, the only fourth value in a three-value scale.
+
+### Added — dark mode
+
+- The activity was a white slab on a dark Moodle theme. It now has a full dark palette:
+  base surfaces, all six accent themes, and the toasts, which live outside the player and
+  carry their own copy.
+- **The decision is not made by `prefers-color-scheme`.** That would be wrong in both
+  directions — a light theme on a machine set to dark would get a dark activity in a light
+  page, and a commercial theme with its own dark toggle would get nothing, because the
+  operating system was never asked. Instead the player measures the page it was dropped
+  into: the first ancestor that actually paints a background, and how light that colour is.
+  A dark page gets the dark palette whatever made it dark. A theme that toggles at runtime
+  is picked up too, because the observer watches the attributes those toggles change.
+- Every text pair in the dark palette was measured rather than eyeballed: the lowest is
+  5.5:1, against a 4.5:1 requirement.
+- White that sits on a photograph — the avatar's ring and the play badge — is now a token
+  of its own and deliberately does *not* flip, because the backdrop is the picture either
+  way and a dark ring on a dark photo disappears.
+
+### Added — right-to-left
+
+- Every accent bar was `border-left`, alignment was physical, and the speaker plate and
+  play badge were pinned with `left` and `right`. On an Arabic or Hebrew site the grid
+  mirrors correctly, which made it worse: every bar and badge ended up on the wrong side
+  of a correctly mirrored layout, and the scene's rounded corners were rounded on the
+  outside edge and square against the text. All now logical properties, with an explicit
+  RTL rule for the two things that have no logical form — the arrow's transform and the
+  arrow glyph itself, which is flipped to point the way the language runs.
+
+### Fixed — consistency
+
+- **The report page is now inside the product.** It opened on a bare Moodle heading with an
+  unshelled row of numbers, so a teacher coming from the wizard landed on what looked like
+  a different, older plugin. Same shell, same masthead, and the attempts table is carded
+  and takes its own horizontal scroll rather than widening the page.
+- **The review page had two titles** — Moodle's heading and the template's own masthead,
+  both printing the activity name.
+- **The debrief deck was the one deck not held to the frame.** Identical markup and
+  identical arrows to the opening deck, and one of them scrolled. It now takes the same
+  frame; because its slides carry more text, they scroll inside it rather than clipping.
+
+### Fixed — feel
+
+- **Pressing had no state of its own.** A button under the pointer lifted a pixel, and
+  pressing it kept it lifted — so the one moment the interface exists to answer a finger
+  with was the moment it did nothing. Buttons, choices and icon buttons now take the press.
+- **The three rings arrived on the same frame** while everything else in the product that
+  arrives as a set — the choices, the lesson cards — arrives one after another. They are
+  now eighty milliseconds apart, the same interval the choices use.
+- **Scene photographs snapped in** at full strength the instant they decoded. They now fade
+  over a quarter of a second, driven from the image's own load event rather than from a CSS
+  animation that would have finished before a slow picture arrived. An image that never
+  arrives does not leave an invisible box.
+
+## [v1.18.2] - 2026-09-11
+
+### Changed — the screen got a band of its space back
+
+- **"What these mean" no longer has a row of its own.** A closed one-line disclosure sitting
+  under the top bar cost a whole band of every scene to say nothing. The question mark now
+  rides at the end of the three readings it explains, and the panel opens over the scene
+  instead of pushing it down — so closed, it costs nothing at all. The words are still there
+  for a screen reader, and on a touch screen the mark gets a full 44px target.
+
+### Fixed
+
+- **The slide is now checked against the fold, not just sized for it.** The frame was worked
+  out by measuring the chrome around it, which is arithmetic about a page the plugin has not
+  seen — a theme bar it did not know about, or a top bar that wrapped onto a second line
+  after the sum was done, and the bottom of the slide lands below the fold. After layout the
+  slide's own bottom edge is compared with the bottom of the screen and the frame is pulled
+  up by the difference before the text is scaled to it.
+- The fit calculation no longer counts the legend twice, now that it sits inside the bar
+  whose height already includes it.
+
+## [v1.18.1] - 2026-09-11
+
+### Fixed — narrow screens and touch
+
+- **Tablet portrait got half of each layout.** The picture stops sitting beside the text
+  below 900px, but the padding, the way a choice stacks and the rail label only changed
+  below 720px — so everything between 721 and 899px, which is where an iPad in portrait
+  sits, got the stacked layout with desktop spacing. One breakpoint now, at 899px.
+- **The fixed slide frame needed height as well as width.** It was gated on width alone, so
+  a short landscape screen produced a three-hundred-pixel box with hidden overflow and no
+  way to reach what it cut off. Below 620px of viewport height the slide goes back to being
+  as tall as it needs to be and the page scrolls normally.
+- **Touch targets were drawn for a mouse.** The round controls in the top bar were 34px and
+  the avatar on the scene 42px, against a 44px floor on both major platforms. On a touch
+  screen they are 44 and 48, and the deck arrows are given room between them. Desktop
+  chrome stays compact.
+- **Two orphan breakpoints became one.** 560px hid the speaker hint and 600px moved the
+  toasts, and neither lined up with anything else.
+- **iOS moves its toolbars, which moves `vh` under a fixed frame.** The height in use comes
+  from JavaScript measuring the real viewport, but the CSS fallback now uses the small
+  viewport unit where the browser has one, so the frame does not jump as the page settles.
+
+### Note
+
+- The page-scroll lock was already refused below 900px and whenever the player does not fit,
+  so a phone has never been locked. That is now covered by a test rather than by intent.
+
+1115 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
+## [v1.18.0] - 2026-09-11
+
+A full design and accessibility audit of the stylesheet, and the fixes that came out of it.
+Three independent passes over 3,043 lines of CSS and every template.
+
+### Fixed — defects
+
+- **The commonest ending had no badge.** `mixed` is the fallback band and the default
+  whenever an outcome word is not recognised, and it was the only one of the three with no
+  style of its own: it fell through to the accent colours and read as a third brand tone
+  beside the green and the red. It now has the neutral palette its siblings implied.
+- **A verbose consequence could clip the way forward.** The card is held to the slide's
+  frame with hidden overflow, so a long consequence pushed Continue out of the bottom and
+  left the learner with no way on at all. The prose is what gives now; the rings and the
+  button never move.
+- **Five focusable controls had no focus style.** The avatar on the scene, every step of
+  the wizard, every option toggle, the disclosure summary and the links out to the
+  documentation. Moodle's own themes zero `button:focus`, so a keyboard user had nothing at
+  all on the wizard's entire navigation. All five take the same ring the choice buttons
+  already used — an outline, not a colour change, which fails for anyone who cannot
+  distinguish the two colours.
+- **Pressed and hovered looked identical** on an option toggle: both painted the same soft
+  accent background, so there was no way to tell a hovered option from a chosen one.
+- **The avatar had no hover state at all** — the one control sitting on a photograph, where
+  a theme has nothing useful to fall back on.
+- **Disabled buttons faded but did not restate their colour**, so a theme's own
+  `button:disabled` won. The rest of the file already knew this; two rules did not.
+- **Generated text could break its container.** A speaker called "Dr Amara
+  Okonkwo-Ferreira" ran off the side of the scene image; a principle sentence in a chip
+  stretched a pill wider than its card; a long metric label pushed the meters out of the
+  sticky bar, which is on screen for the whole attempt; and a title with no spaces in it
+  overflowed the masthead. None of those lengths is this plugin's to assume.
+- **Reduced motion was half-applied.** Three hover lifts were dropped and four were not,
+  and with the transition already at nothing those four snapped a pixel instead of easing —
+  the jitter the setting exists to remove. The spinner was worse: the blanket rule froze it
+  at whatever angle it had reached, so a generation running for minutes showed a stalled
+  wheel. It keeps turning, slowly. And a scroll started from script ignores CSS entirely,
+  so the preference is now read in the code as well.
+
+### Fixed — consistency
+
+- **Thirty-odd colour literals are now tokens**, including a soft red written out four
+  times, a soft green that was one theme's accent border (so the "strong" badge matched
+  the emerald theme and clashed with the other five), eight hard-coded whites — three of
+  them `!important` — and an amber that was the only untokenised colour in a set of three.
+  The toast, which lives on the body and cannot inherit the palette, now carries its own
+  copy rather than eight literals.
+- **Five sizes of secondary text became two**, and three sizes of uppercase micro-label
+  became one. Twenty-six declarations were spread across `.82`, `.84`, `.85`, `.86` and
+  `.88rem` for the same job.
+- **Two label weights became one.** 650 and 700 are indistinguishable on a static font
+  stack, which is what Moodle's default theme ships — so half the hierarchy was invisible
+  at runtime.
+- **Hard-coded radii became tokens**, including a card that changed its corner radius at
+  one breakpoint while the card beside it did not.
+- **A dead `min-width: 900px` block** whose every declaration was overwritten 500 lines
+  later has been collapsed, so an edit there no longer appears to do nothing.
+
+### Removed
+
+- Nineteen dead rules for markup that no longer exists: the delta rows replaced by the
+  progress rings in v1.10.0, the principle list replaced by the opening lesson in v1.14.0,
+  and the swatches, which were never rendered at all.
+
+### Testing
+
+40 new checks covering every finding above, including a sweep that fails on any colour
+literal outside the palette. 1101 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit
+passing. CodeSniffer clean.
+
+### Note
+
+- **There is no dark mode**, and no `color-scheme` is declared. On a dark Moodle theme the
+  activity is a light slab. Hoisting the literals onto tokens was the prerequisite; the
+  palette itself is a deliberate next step rather than something to ship unseen.
+- Breakpoints remain fragmented at 420, 560, 600, 720, 899 and 900. The 721–899px band —
+  tablet portrait — gets the stacked layout with desktop padding. Worth one pass.
+
+## [v1.17.0] - 2026-09-11
+
+### Fixed
+
+**The page could still scroll, and the frame was sized against a guess.** The space for a
+slide was worked out as the viewport less the theme's header and this plugin's own bar,
+less a flat 48 pixels for everything else. Everything else is the legend, the deck's
+arrows and the card's own padding — between ninety and a hundred and fifty pixels
+depending on the screen — so the frame was sized for space that was already spoken for and
+the page scrolled by exactly the difference.
+
+- Every one of those is now **measured**, margins included, rather than allowed for. Heights
+  do not move with the scroll position, so it is right whether the page is at the top or not.
+- The space is **worked out again on every screen** rather than once at load, because what
+  else is on the screen changes: the legend is on a scene and not on a debrief, the arrows
+  are on a deck and not on a decision.
+
+### Added
+
+- **The page is locked against scrolling in the learner's view.** A scenario is a player,
+  not a document: a learner should never be scrolling to look for options that are already
+  on the screen. Two guards, because a locked page with something unreachable on it is far
+  worse than a page that scrolls — the lock is taken only above the breakpoint where the
+  side-by-side slide applies, since a narrow screen stacks and is meant to scroll, and only
+  while the player genuinely ends inside the viewport. A short window or an unusually tall
+  header hands it straight back. It is reconsidered after every screen and on every resize.
+
+1061 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
+## [v1.16.1] - 2026-09-11
+
+### Fixed
+
+**The plugin's bar was parked underneath the course banner, and the slide height was
+measured against the wrong number.** Pinned furniture stacks: a theme's navbar takes the
+first sixty pixels or so, and a course format's banner is pinned to the bottom of the
+navbar rather than to the top of the window. Measured against format_aicourse 2.3.3, whose
+hero is `position: sticky` and runs from y 61 to y 181 on an activity page, this plugin
+was probing only the very top edge — so it found the navbar, never saw the banner at all,
+and both the sticky bar and the slide ceiling were 120 pixels out.
+
+The strip is now walked downwards from the top: anything fixed or sticky that touches the
+band already claimed extends it, and the walk stops at the first gap, so a pinned button
+halfway down the page is not mistaken for a header. A pinned stack may now claim half the
+viewport rather than a third, because a navbar and a banner together exceed a third on a
+laptop.
+
+1049 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
+### Note
+
+- Below 992px the AI course format un-pins its banner, and it un-pins under
+  `prefers-reduced-motion` as well. The walk measures what is actually painted, so both
+  cases are handled without knowing anything about that format in particular.
+
+## [v1.16.0] - 2026-09-11
+
+### Fixed
+
+**The opening lesson was not laid out as a slide.** The ceiling added in v1.13.0 was a
+maximum, not a height, so each card shrank to fit its own contents: a slide a third the
+height of the space it had been given, a picture in a letterbox, three lines of text pinned
+to the top-left of a tall empty column, and the page still scrolling underneath it.
+
+- A slide is now a **fixed frame**. Every slide in the deck is the same height — the space
+  between the course banner and the fold — so moving through them does not resize the page
+  under the reader. That includes the slides with no picture.
+- The **picture fills its half** of the frame instead of sitting in a letterbox with white
+  space above and below it.
+- The **text is centred in its half** rather than pinned to the top, with room to breathe
+  between the label, the heading and the prose.
+- **The type scales with the frame**: the heading from 1.45rem to 2.05rem and the body from
+  1rem to 1.14rem, with the prose held to a 62-character measure so a wide screen does not
+  produce lines nobody can track.
+- A **chip no longer stretches** the width of the column. In a flex column it had been
+  filling the whole row, which is why the label looked like a banner.
+- **Every kind of slide is fitted**, not only the scenes: the opening slide, the lesson
+  slides and the closing slide all step their type down if they would otherwise overflow.
+
+### Changed
+
+- "What good looks like 1" is now "Principle 1". It was a label describing nothing.
+
+1043 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
+## [v1.15.3] - 2026-09-11
+
+### Fixed
+
+- **"Usually takes 20 seconds to 30 seconds on this site" was untrue.** The range was
+  measured from real runs, but from the wrong half of the job: only the scenario call is
+  timed, and the pictures and the narration are generated afterwards by a scheduled task.
+  A teacher was quoted half a minute and then waited several. A quoted number a site
+  routinely overshoots is worse than no number, because the teacher concludes the thing has
+  hung and presses the button again. It now says **"Can take up to 5 minutes to
+  generate."** — one sentence, an upper bound, no arithmetic.
+
+### Removed
+
+- `generator::estimate()`, its three constants and the four strings that phrased the range.
+  Nothing else used them.
+
+1036 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
 ## [v1.15.2] - 2026-09-11
 
 ### Fixed
