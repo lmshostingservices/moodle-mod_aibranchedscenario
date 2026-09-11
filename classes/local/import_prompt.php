@@ -60,22 +60,32 @@ class import_prompt {
             'ONE DECISION NODE, WRITTEN OUT',
             '',
             'This shows the register and the spread of choices. Do not reuse its people, '
-                . 'its place or its wording.',
+                . 'its place or its wording. It is abbreviated: every choice in your own '
+                . 'document also needs "principleid", "effects", "skills" and "next", as '
+                . 'the shape above shows. A choice with no "skills" scores zero for all '
+                . 'four, which makes the decision count for nothing.',
             '',
             self::worked_node(),
             '',
             'THE RULES',
             '',
+            '- A quotation mark inside a value must be written as \\" or the string ends there '
+                . 'and the whole document is rejected. This is the single most common way a '
+                . 'pasted scenario fails, because examples and spoken lines are full of '
+                . 'quoted speech. Write "example": "\\"Have I got that right?\\"" or use no '
+                . 'quotation marks at all. The same applies to every "consequence", '
+                . '"facilitatorspeech" and "feedback".',
             '- "version" is 1. "startnode" must be the id of a decision node.',
             '- There must be exactly ' . $decisions . ' nodes of type "decision", numbered in '
                 . '"stage" from 1 upwards, plus between two and four nodes of type "outcome".',
             '- Every decision node needs between two and four choices. Every choice\'s "next" '
                 . 'must be the id of another node, or "__auto__" to let the activity pick the '
                 . 'next stage.',
-            '- Every outcome node needs an "outcome" of one of: '
-                . implode(', ', schema::outcomes()) . '. Use "highrisk" for the ending '
-                . 'where the consequence actually lands. Any other word is silently '
-                . 'turned into "mixed", which mislabels the ending for the learner.',
+            '- Emit exactly one outcome node for each of: ' . implode(', ', schema::outcomes())
+                . '. Use "highrisk" for the ending where the consequence actually lands. A '
+                . 'band with no ending of its own does not fail: the learner who earned it '
+                . 'is silently shown somebody else\'s ending instead. Any word outside that '
+                . 'list is turned into "mixed", which mislabels the ending the same way.',
             '- "language" is one of: ' . implode(', ', schema::languages())
                 . '. Choose the one matching the source content.',
             '- "signal" on a choice is one of: positive, neutral, negative.',
@@ -86,6 +96,16 @@ class import_prompt {
                 . 'to 20. These change the mood of the scenario and do not affect the grade.',
             '- "openingmetrics" carries the same three, each from 0 to 100.',
             '- "principleid" on a choice must match the "id" of one of the principles.',
+            '- Most decision nodes should carry "facilitatorspeech": the one line somebody '
+                . 'says out loud at that moment, in their own words. It is shown to the '
+                . 'learner as speech and is the most concrete thing on the screen. Put the '
+                . 'speaker\'s given name in "speaker", spelled exactly as it appears in '
+                . '"facilitator" or "characters": the activity reads that line in a voice '
+                . 'matching the gender recorded for them, and shows their face to click. A '
+                . 'name that is not in the cast is not an error - the narrator reads the '
+                . 'line instead - it is a missed opportunity.',
+            '- Every principle carries an "id", a "title", a "summary", an "example" and a '
+                . '"pitfall". All five are shown to the learner before the scenario starts.',
             '- "tone" is one of: ' . $tones . '. "complexity" is one of: ' . $complexities . '.',
             '- No choice may be obviously correct on its face. Each should be what a reasonable '
                 . 'person would do given a different reading of the situation.',
@@ -156,12 +176,6 @@ class import_prompt {
                 . 'a poor choice. One or two sentences, in the same voice as the story, '
                 . 'not praise, not a lecture, and never addressed to the learner as a '
                 . 'student.',
-            '- A quotation mark inside a value must be written as \\" or the string ends there '
-                . 'and the whole document is rejected. This is the single most common way a '
-                . 'pasted scenario fails, because examples and spoken lines are full of '
-                . 'quoted speech. Write "example": "\\"Have I got that right?\\"" or use no '
-                . 'quotation marks at all. The same applies to every "consequence", '
-                . '"facilitatorspeech" and "feedback".',
             '- Every principle carries an "example" and a "pitfall". The example is the '
                 . 'words a learner could actually say or do, written as a line of speech '
                 . 'or a concrete action - "So what I am hearing is the deadline is the '
@@ -261,7 +275,10 @@ class import_prompt {
                 'gender' => 'male', 'appearance' => 'For illustration only',
             ]],
             'principles' => [[
-                'id' => 'p1', 'title' => 'Something a person does', 'summary' => 'Why it matters here',
+                'id' => 'p1', 'title' => 'Something a person does',
+                'summary' => 'Why it matters here',
+                'example' => 'The words a learner could actually say, in quotation marks',
+                'pitfall' => 'The plausible version that does not work, and why',
             ]],
             'openingmetrics' => ['engagement' => 55, 'trust' => 50, 'tension' => 30],
             'hook'      => 'The first two or three sentences the learner reads',
@@ -270,6 +287,8 @@ class import_prompt {
                 [
                     'id' => 'n1', 'type' => 'decision', 'stage' => 1, 'title' => 'Scene title',
                     'situation' => 'What is happening, in second person',
+                    'facilitatorspeech' => 'The line one person says out loud, in quotation marks',
+                    'speaker' => 'Given name',
                     'challenge' => 'The question put to the learner',
                     'imageprompt' => 'The scene for an illustrator',
                     'imagealt' => 'The same scene described for a screen reader',
@@ -279,12 +298,31 @@ class import_prompt {
                         'feedback' => 'What this told us', 'principleid' => 'p1',
                         'effects' => ['engagement' => 5, 'trust' => 10, 'tension' => -10],
                         'skills' => ['presence' => 2, 'adaptability' => 0, 'empathy' => 1, 'clarity' => 2],
+                        'tags' => ['gathers-information'],
                         'next' => '__auto__',
                     ]],
+                    'crisisvariant' => [
+                        'situation' => 'The same moment with the tension already high',
+                        'facilitatorspeech' => 'What they say when it has gone that far',
+                        'challenge' => 'The question put to the learner now',
+                    ],
                 ],
                 [
                     'id' => 'end_strong', 'type' => 'outcome', 'outcome' => 'strong',
-                    'title' => 'How it ends', 'situation' => 'The closing scene',
+                    'title' => 'How it ends when it goes well',
+                    'situation' => 'The closing scene',
+                    'summary' => 'What their decisions came to',
+                ],
+                [
+                    'id' => 'end_mixed', 'type' => 'outcome', 'outcome' => 'mixed',
+                    'title' => 'How it ends when it half works',
+                    'situation' => 'The closing scene',
+                    'summary' => 'What their decisions came to',
+                ],
+                [
+                    'id' => 'end_highrisk', 'type' => 'outcome', 'outcome' => 'highrisk',
+                    'title' => 'How it ends when the consequence lands',
+                    'situation' => 'The closing scene',
                     'summary' => 'What their decisions came to',
                 ],
             ],

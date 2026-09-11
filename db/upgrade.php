@@ -323,5 +323,17 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091120, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091121) {
+        // Release 1.15.1 changes no schema: the authoring prompt now describes the
+        // document this plugin actually accepts.
+        upgrade_mod_savepoint(true, 2026091121, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091122) {
+        // Release 1.15.2 changes no schema: the prompt now asks for the spoken line and
+        // its speaker, which the player has been rendering since 1.10.0.
+        upgrade_mod_savepoint(true, 2026091122, 'aibranchedscenario');
+    }
+
     return true;
 }

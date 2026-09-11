@@ -2,6 +2,65 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.15.2] - 2026-09-11
+
+### Fixed
+
+Two fields the player renders were missing from the prompt entirely, found by comparing
+what the prompt teaches against what the validator keeps rather than by reading it.
+
+- **"facilitatorspeech" was not in the shape.** It is the one line somebody says out loud
+  on a scene, shown to the learner as speech, and the most concrete thing on the screen. It
+  appeared in the rules only inside a crisis variant, so a scenario written to this prompt
+  had spoken lines only on the one or two crisis scenes and none anywhere else.
+- **"speaker" was in neither the shape nor the rules.** It names who says that line, and it
+  is what gives a character their own voice and puts their face on the picture to click.
+  Without it every line is read by the narrator — which is the feature added in v1.10.0
+  working exactly as designed on input that never arrives.
+
+### Testing
+
+The audit is now a test rather than a one-off: the prompt's shape is filled in, validated,
+and its key set compared with the normalised document in both directions. Nothing the
+prompt teaches may be silently discarded, and every field the shape omits must be one the
+plugin derives for itself, named explicitly. A new field on either side fails the check
+until both are updated.
+
+1042 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
+### Note
+
+- `bottleneck` on a node is accepted, stored and read by nothing. It is not asked for in
+  the prompt, which is correct while that remains true.
+
+## [v1.15.1] - 2026-09-11
+
+### Fixed
+
+The authoring prompt asked for fields its own worked shape did not show, which is how an
+assistant comes back with a document missing them.
+
+- **The shape now shows a principle's "example" and "pitfall".** The rules demanded both
+  and the skeleton showed neither, so an assistant copying the shape produced principles
+  with no worked example — and the opening lesson had nothing to teach from.
+- **The shape now shows "crisisvariant" and "tags"**, both of which were rules-only.
+- **The rule about quotation marks is now the first rule**, rather than the last line of
+  the writing advice. It is the single most common reason a pasted document is refused, so
+  it belongs where an assistant reads it first.
+- **The rules now require one ending per band**, and say what a missing one does: the
+  learner who earned that band is silently shown somebody else's ending. "Between two and
+  four outcome nodes" permitted exactly that.
+- **The abbreviated worked node now says what it leaves out.** It omits "principleid",
+  "effects", "skills" and "next" to show the writing register, and an assistant copying it
+  produced choices with no skill values — which score zero, making the decision count for
+  nothing.
+
+### Testing
+
+17 new checks. The prompt's own shape is now parsed out of the prompt, filled in, and run
+through the validator, so a rule and the shape it describes cannot drift apart again.
+1037 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
 ## [v1.15.0] - 2026-09-11
 
 Three separate faults, each of which rejected a pasted scenario whole.
