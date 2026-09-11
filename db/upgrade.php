@@ -309,5 +309,11 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091118, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091119) {
+        // Release 1.14.1 changes no schema: the import box repairs a document whose only
+        // fault is unescaped quotation marks inside its values.
+        upgrade_mod_savepoint(true, 2026091119, 'aibranchedscenario');
+    }
+
     return true;
 }

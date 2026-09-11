@@ -58,9 +58,17 @@ class validator {
         if (strlen($json) > schema::MAX_SCENARIO_BYTES) {
             throw new validation_exception([get_string('error:scenariotoolarge', 'mod_aibranchedscenario')]);
         }
-        $decoded = json_decode(self::unwrap_json($json), true);
+        $document = self::unwrap_json($json);
+        $decoded = json_decode($document, true);
         if (!is_array($decoded)) {
-            throw new validation_exception([get_string('error:notjson', 'mod_aibranchedscenario')]);
+            // Assistants quote speech inside a JSON string without escaping the quotation
+            // marks - "example": ""Have I got that right?"" - which is the single most
+            // common reason a pasted scenario will not decode. It is repairable without
+            // guessing at meaning, so it is repaired rather than refused.
+            $decoded = json_decode(self::escape_inner_quotes($document), true);
+        }
+        if (!is_array($decoded)) {
+            throw new validation_exception([self::json_problem($document)]);
         }
         return self::validate($decoded);
     }
@@ -98,6 +106,88 @@ class validator {
         }
 
         return $trimmed;
+    }
+
+    /**
+     * Escape quotation marks that appear inside a JSON string value.
+     *
+     * A quotation mark inside a string is only ever a closing quote when the next thing
+     * that matters is a comma, a colon, a closing brace or bracket, or the end of the
+     * document. Anything else and it is a quote the writer meant to be part of the text,
+     * which is exactly what an assistant produces when it writes a line of speech into an
+     * example. Those are escaped; everything else is left alone.
+     *
+     * This runs only after a decode has already failed, so a well-formed document is
+     * never touched by it.
+     *
+     * @param string $json The document as pasted.
+     * @return string The document with content quotes escaped.
+     */
+    protected static function escape_inner_quotes(string $json): string {
+        $out = '';
+        $instring = false;
+        $length = strlen($json);
+        for ($i = 0; $i < $length; $i++) {
+            $char = $json[$i];
+            if ($char === '\\' && $instring) {
+                // An escape sequence passes through whole, so \" is never re-read as a
+                // quotation mark.
+                $out .= $char . ($json[$i + 1] ?? '');
+                $i++;
+                continue;
+            }
+            if ($char !== '"') {
+                $out .= $char;
+                continue;
+            }
+            if (!$instring) {
+                $instring = true;
+                $out .= $char;
+                continue;
+            }
+            // In a string and looking at a quotation mark: closing, or content?
+            $next = '';
+            for ($j = $i + 1; $j < $length; $j++) {
+                if (!ctype_space($json[$j])) {
+                    $next = $json[$j];
+                    break;
+                }
+            }
+            if ($next === '' || strpos(',:}]', $next) !== false) {
+                $instring = false;
+                $out .= $char;
+                continue;
+            }
+            $out .= '\\"';
+        }
+        return $out;
+    }
+
+    /**
+     * Say what is wrong with a document that will not decode.
+     *
+     * "The scenario definition was not valid JSON" tells a teacher nothing they can act
+     * on in a document of several hundred lines. The line that broke it is named, and
+     * quoted back, so they can see what to change. The text quoted is their own pasted
+     * content and goes only to them.
+     *
+     * @param string $document The document as pasted.
+     * @return string A message naming the line, where one can be found.
+     */
+    protected static function json_problem(string $document): string {
+        $lines = preg_split('/\n/', $document) ?: [];
+        foreach ($lines as $number => $line) {
+            // An unbalanced number of unescaped quotation marks on one line is what an
+            // unescaped quote inside a value looks like from the outside.
+            $stripped = preg_replace('/\\\\./', '', $line);
+            if (substr_count((string)$stripped, '"') % 2 === 1) {
+                return get_string('error:notjsonline', 'mod_aibranchedscenario', (object)[
+                    'line' => $number + 1,
+                    'text' => \core_text::substr(trim($line), 0, 160),
+                ]);
+            }
+        }
+        return get_string('error:notjson', 'mod_aibranchedscenario');
     }
 
     /**

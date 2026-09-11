@@ -2,6 +2,26 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.14.1] - 2026-09-11
+
+### Fixed
+
+- **"The scenario definition was not valid JSON" on a document that was almost fine.** An
+  assistant writing a line of speech into a value produces `"example": ""Have I got that
+  right?""`, and an unescaped quotation mark ends the string early and takes the whole
+  document with it. It is now repaired on import: after a decode fails, a quotation mark
+  inside a string is escaped unless the next thing that matters is a comma, a colon, a
+  closing brace or bracket, or the end of the document. A well-formed document never
+  reaches that code and is never touched by it. The quoted speech is kept, quotation marks
+  and all.
+- **And when it cannot be repaired, the message says where to look.** "Not valid JSON" is
+  nothing to act on in eight hundred lines. The first line with an unbalanced number of
+  quotation marks is named and quoted back.
+- The authoring prompt now warns about this directly, since examples and spoken lines are
+  exactly where it happens, and shows the escaped form.
+
+1007 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
 ## [v1.14.0] - 2026-09-11
 
 ### Added

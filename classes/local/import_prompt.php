@@ -156,6 +156,12 @@ class import_prompt {
                 . 'a poor choice. One or two sentences, in the same voice as the story, '
                 . 'not praise, not a lecture, and never addressed to the learner as a '
                 . 'student.',
+            '- A quotation mark inside a value must be written as \\" or the string ends there '
+                . 'and the whole document is rejected. This is the single most common way a '
+                . 'pasted scenario fails, because examples and spoken lines are full of '
+                . 'quoted speech. Write "example": "\\"Have I got that right?\\"" or use no '
+                . 'quotation marks at all. The same applies to every "consequence", '
+                . '"facilitatorspeech" and "feedback".',
             '- Every principle carries an "example" and a "pitfall". The example is the '
                 . 'words a learner could actually say or do, written as a line of speech '
                 . 'or a concrete action - "So what I am hearing is the deadline is the '

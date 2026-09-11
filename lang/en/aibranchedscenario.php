@@ -562,6 +562,7 @@ $string['error:notpublished'] = 'This scenario has not been published.';
 $string['error:revisionunreadable'] = 'The published revision could not be read.';
 $string['error:scenariotoolarge'] = 'The scenario is larger than this plugin will store.';
 $string['error:notjson'] = 'The scenario definition was not valid JSON.';
+$string['error:notjsonline'] = 'The scenario definition was not valid JSON. Line {$a->line} looks wrong: {$a->text} — a quotation mark inside a value has to be written as \\" or the line ends early.';
 $string['error:invalidscenario'] = 'The scenario definition is not valid: {$a}';
 $string['error:missingtitle'] = 'The scenario has no title.';
 $string['error:missinghook'] = 'The scenario has no opening situation.';
