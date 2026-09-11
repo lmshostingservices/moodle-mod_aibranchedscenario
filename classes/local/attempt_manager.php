@@ -374,7 +374,7 @@ class attempt_manager {
             $state['decisions'] = (int)($state['decisions'] ?? 0) + 1;
         }
 
-        $nextid = $this->resolve_target($choice['next'], $attempt, $state);
+        $nextid = $this->resolve_target($choice['next'], $attempt, $state, $node);
         $state['visited'][] = $nextid;
         $state['visited'] = array_values(array_unique($state['visited']));
 
@@ -473,10 +473,27 @@ class attempt_manager {
      * @param array $state Decoded attempt state.
      * @return string Node id.
      */
-    protected function resolve_target(string $target, stdClass $attempt, array $state): string {
+    protected function resolve_target(
+        string $target,
+        stdClass $attempt,
+        array $state,
+        ?array $from = null
+    ): string {
         if ($target !== schema::auto_target() && isset($this->nodes[$target])) {
             return $target;
         }
+
+        // The automatic target means "wherever this scenario goes next", and for a scene
+        // in the middle of the story that is the next stage, not the ending. Resolving it
+        // straight to an ending sent a learner from decision one to the debrief and left
+        // every scene after it unreachable - which is what an author writing "auto" on
+        // every choice actually got. Only when nothing follows, as on the closing beat,
+        // does it mean the ending this learner has earned.
+        $onward = self::next_stage_node($this->definition['nodes'] ?? [], $from);
+        if ($onward !== '') {
+            return $onward;
+        }
+
         $band = $this->score_band($this->calculate_score($attempt, $state));
         $fallback = '';
         foreach ($this->definition['nodes'] as $node) {
@@ -492,6 +509,40 @@ class attempt_manager {
             throw new moodle_exception('error:nooutcomenode', 'mod_aibranchedscenario');
         }
         return $fallback;
+    }
+
+    /**
+     * The node that follows this one by stage, if the scenario has one.
+     *
+     * Shared with the validator so that what is reachable and what is actually reached
+     * cannot drift apart: the lowest stage number above this node's, and the first node
+     * at it that is not an ending.
+     *
+     * @param array $nodes All nodes, in document order.
+     * @param array|null $from The node being left, or null.
+     * @return string A node id, or an empty string when nothing follows.
+     */
+    public static function next_stage_node(array $nodes, ?array $from): string {
+        if (!$from) {
+            return '';
+        }
+        $stage = (int)($from['stage'] ?? 0);
+        $best = null;
+        $bestid = '';
+        foreach ($nodes as $node) {
+            if ($node['type'] === 'outcome' || $node['id'] === $from['id']) {
+                continue;
+            }
+            $candidate = (int)($node['stage'] ?? 0);
+            if ($candidate <= $stage) {
+                continue;
+            }
+            if ($best === null || $candidate < $best) {
+                $best = $candidate;
+                $bestid = $node['id'];
+            }
+        }
+        return $bestid;
     }
 
     /**

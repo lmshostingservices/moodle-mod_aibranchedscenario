@@ -111,11 +111,16 @@ class validator {
     /**
      * Escape quotation marks that appear inside a JSON string value.
      *
-     * A quotation mark inside a string is only ever a closing quote when the next thing
-     * that matters is a comma, a colon, a closing brace or bracket, or the end of the
-     * document. Anything else and it is a quote the writer meant to be part of the text,
-     * which is exactly what an assistant produces when it writes a line of speech into an
-     * example. Those are escaped; everything else is left alone.
+     * An assistant writing a line of speech into a value produces text like
+     *   "pitfall": "Finishing with "Great, we're all agreed then", which invites ..."
+     * and every one of those inner quotation marks ends the string early, taking the
+     * whole document with it.
+     *
+     * A quotation mark can only be a closing one when what follows it is something JSON
+     * allows after a value or a key: a colon, a closing brace or bracket, the end of the
+     * document, or a comma followed by the start of another value or key. A comma
+     * followed by an ordinary word - which is what "agreed then", which invites looks
+     * like - is prose, so that quote is content and is escaped.
      *
      * This runs only after a decode has already failed, so a well-formed document is
      * never touched by it.
@@ -145,15 +150,7 @@ class validator {
                 $out .= $char;
                 continue;
             }
-            // In a string and looking at a quotation mark: closing, or content?
-            $next = '';
-            for ($j = $i + 1; $j < $length; $j++) {
-                if (!ctype_space($json[$j])) {
-                    $next = $json[$j];
-                    break;
-                }
-            }
-            if ($next === '' || strpos(',:}]', $next) !== false) {
+            if (self::closes_string($json, $i)) {
                 $instring = false;
                 $out .= $char;
                 continue;
@@ -161,6 +158,51 @@ class validator {
             $out .= '\\"';
         }
         return $out;
+    }
+
+    /**
+     * Whether the quotation mark at this position ends the string it is inside.
+     *
+     * @param string $json The whole document.
+     * @param int $position Offset of the quotation mark.
+     * @return bool
+     */
+    protected static function closes_string(string $json, int $position): bool {
+        $next = self::next_meaningful($json, $position + 1);
+        if ($next === null) {
+            // Nothing but whitespace to the end of the document.
+            return true;
+        }
+        if ($next[0] === ':' || $next[0] === '}' || $next[0] === ']') {
+            return true;
+        }
+        if ($next[0] !== ',') {
+            return false;
+        }
+        // A comma only ends a value when another value or key follows it. Anything else
+        // is a comma inside a sentence, and the quote before it is part of the text.
+        $after = self::next_meaningful($json, $next[1] + 1);
+        if ($after === null) {
+            return true;
+        }
+        return strpos('"{[-0123456789tfn', $after[0]) !== false;
+    }
+
+    /**
+     * The next character that is not whitespace, with its offset.
+     *
+     * @param string $json The whole document.
+     * @param int $from Offset to start from.
+     * @return array|null [character, offset], or null at the end of the document.
+     */
+    protected static function next_meaningful(string $json, int $from): ?array {
+        $length = strlen($json);
+        for ($i = $from; $i < $length; $i++) {
+            if (!ctype_space($json[$i])) {
+                return [$json[$i], $i];
+            }
+        }
+        return null;
     }
 
     /**
@@ -280,7 +322,14 @@ class validator {
      * @return string A node id, the auto target, or '' when neither.
      */
     protected function link($value): string {
-        if (is_string($value) && trim($value) === schema::auto_target()) {
+        if (!is_string($value)) {
+            return '';
+        }
+        // "auto" is what an assistant writes when it has been told the activity can pick
+        // the next stage, and it is not a node id, so the whole scenario was rejected as
+        // unreachable. The two spellings mean the same thing and both are accepted.
+        $trimmed = strtolower(trim($value));
+        if ($trimmed === schema::auto_target() || $trimmed === 'auto') {
             return schema::auto_target();
         }
         return $this->identifier($value);
@@ -849,6 +898,14 @@ class validator {
             $reachable[$current] = true;
             foreach ($nodes[$current]['choices'] as $choice) {
                 if ($choice['next'] === schema::auto_target()) {
+                    // The automatic target is the next stage where there is one, and the
+                    // earned ending where there is not, so both are reachable through it.
+                    // Counting only the endings made every scene after an "auto" choice
+                    // unreachable and rejected the scenario whole.
+                    $onward = attempt_manager::next_stage_node($scenario['nodes'], $nodes[$current]);
+                    if ($onward !== '') {
+                        $stack[] = $onward;
+                    }
                     foreach ($outcomes as $outcome) {
                         $stack[] = $outcome['id'];
                     }
@@ -930,17 +987,24 @@ class validator {
         // Longest number of decisions on any path. The path set is carried explicitly
         // rather than memoised, so a graph that still contains a cycle cannot cache a
         // truncated answer and report it as the real longest path.
-        $depth = function (string $id, array $seen) use (&$depth, $nodes) {
+        $depth = function (string $id, array $seen) use (&$depth, $nodes, $scenario) {
             if (isset($seen[$id]) || !isset($nodes[$id]) || count($seen) > schema::MAX_NODES) {
                 return 0;
             }
             $seen[$id] = true;
             $best = 0;
             foreach ($nodes[$id]['choices'] as $choice) {
-                if ($choice['next'] === schema::auto_target() || !isset($nodes[$choice['next']])) {
+                $target = $choice['next'];
+                if ($target === schema::auto_target()) {
+                    // Following the automatic link forward is what keeps the progress rail
+                    // honest: counting it as the end made a scenario whose choices all say
+                    // "auto" report a longest path of one decision.
+                    $target = attempt_manager::next_stage_node($scenario['nodes'], $nodes[$id]);
+                }
+                if ($target === '' || !isset($nodes[$target])) {
                     continue;
                 }
-                $best = max($best, $depth($choice['next'], $seen));
+                $best = max($best, $depth($target, $seen));
             }
             return $best + ($nodes[$id]['type'] === 'decision' ? 1 : 0);
         };

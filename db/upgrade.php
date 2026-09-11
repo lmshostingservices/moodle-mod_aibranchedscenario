@@ -315,5 +315,13 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091119, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091120) {
+        // Release 1.15.0 changes no schema, but it does change what the automatic target
+        // does: a choice pointing at it now goes to the next stage where there is one,
+        // rather than straight to an ending. A published scenario using it mid-story
+        // therefore plays further than it did before, which is what its author intended.
+        upgrade_mod_savepoint(true, 2026091120, 'aibranchedscenario');
+    }
+
     return true;
 }

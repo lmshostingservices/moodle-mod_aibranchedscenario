@@ -2,6 +2,37 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.15.0] - 2026-09-11
+
+Three separate faults, each of which rejected a pasted scenario whole.
+
+### Fixed
+
+- **The quote repair did not cover the commonest case.** v1.14.1 escaped a quotation mark
+  unless a comma followed it — but `"Great, we're all agreed then", which invites` is
+  prose, and that comma is inside the sentence. A quotation mark is now treated as closing
+  only when what follows it is something JSON actually allows there: a colon, a closing
+  brace or bracket, the end of the document, or a comma followed by the start of another
+  value or key. A comma followed by an ordinary word is prose, and that quote is content.
+- **`"auto"` was not recognised.** An assistant told the activity can pick the next stage
+  writes `"next": "auto"`, which is not a node id, so every scene after it was unreachable
+  and the scenario was refused. Both spellings are accepted.
+- **And the automatic target went to the wrong place.** It resolved straight to the ending
+  the learner had earned, so a scenario whose choices all say "auto" — exactly what the
+  authoring prompt asks for — sent the learner from decision one to the debrief, and the
+  validator refused it because every later scene was unreachable. It now means the next
+  stage where there is one, and the earned ending where there is not. The closing beat,
+  which has nothing after it, behaves exactly as before. The progress rail and the
+  reachability check both follow the same rule, so what is reachable and what is actually
+  reached cannot drift apart.
+
+### Testing
+
+13 new checks built from the document that failed, including every hostile construct in
+it — a doubled quote around a whole example, a quote before a comma mid-sentence, a quote
+inside a choice's own text and inside a situation — plus the five-stage "auto" chain.
+1020 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
 ## [v1.14.1] - 2026-09-11
 
 ### Fixed
