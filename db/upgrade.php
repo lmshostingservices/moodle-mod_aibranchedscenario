@@ -273,5 +273,22 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091113, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091114) {
+        // Release 1.12.2 removes six settings a site should never have been given: what it
+        // is charged, and how much of a scenario is narrated. Both are LMS Labs decisions.
+        // Any values a site set are removed rather than left behind to confuse an
+        // administrator reading the config table.
+        foreach (['pricebase', 'priceimages', 'pricevoice', 'creditrate', 'pricecurrency',
+                'narrationscope'] as $gone) {
+            unset_config($gone, 'mod_aibranchedscenario');
+        }
+        upgrade_mod_savepoint(true, 2026091114, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091115) {
+        // Release 1.12.3 changes no schema: the cost card drops a badge.
+        upgrade_mod_savepoint(true, 2026091115, 'aibranchedscenario');
+    }
+
     return true;
 }

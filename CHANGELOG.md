@@ -2,6 +2,32 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.12.3] - 2026-09-11
+
+### Changed
+
+- The cost card no longer puts a "Your settings" badge on the row that applies. The row is
+  already picked out, and the same figure is already in the heading; a third marker on the
+  same line was noise.
+
+920 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
+## [v1.12.2] - 2026-09-11
+
+### Removed
+
+- **Six settings a site should never have had.** A customer's Moodle does not get to set
+  what that customer is charged, and it does not get to decide how much of a scenario is
+  narrated. Price, the credits-to-currency rate, the currency and the narration scope are
+  all LMS Labs decisions and are now fixed in the plugin: 100 credits ($10 USD) for a
+  scenario, 150 ($15) with images or narration, 200 ($20) with both. Any values a site had
+  already set are removed on upgrade rather than left in the config table.
+- Consequence screens are now always narrated. The setting that turned them off existed to
+  save money, and money is not the site's to save; the saving that stays is the one that
+  costs nothing, which is not recording a beat's "continue to the next decision point".
+
+918 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit passing. CodeSniffer clean.
+
 ## [v1.12.1] - 2026-09-11
 
 ### Fixed

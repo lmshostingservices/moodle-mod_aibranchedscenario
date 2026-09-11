@@ -230,12 +230,11 @@ class media_manager {
                 // Each branch is narrated separately because which one is heard is not
                 // known until the learner chooses. Choice ids are unique across the
                 // definition, so they sit in the same area as the node clips.
-                // Two economies here, both of them free. A single-choice beat's
-                // consequence is filler - "Continue to the next decision point" - and is
-                // never worth a clip. And a site can turn consequence narration off
-                // altogether, which is most of the speech in a scenario.
-                $narrateconsequences = get_config('mod_aibranchedscenario', 'narrationscope') === 'full';
-                $branches = ($narrateconsequences && count($node['choices']) > 1) ? $node['choices'] : [];
+                // A single-choice beat's consequence is filler - "Continue to the next
+                // decision point" - and is never worth a clip. Every branch of a real
+                // decision is recorded, because the consequence screen is half of what a
+                // learner reads and silence there reads as the narration being broken.
+                $branches = count($node['choices']) > 1 ? $node['choices'] : [];
                 foreach ($branches as $choice) {
                     $counts['narrationswanted']++;
                     if (

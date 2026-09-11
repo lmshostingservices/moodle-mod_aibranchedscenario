@@ -310,46 +310,26 @@ class schema {
     /**
      * What a teacher is charged for one generated scenario, in credits.
      *
-     * Set by the product owner, not derived from the service tariff above: the tariff is
-     * what each operation costs this plugin to run, and this is the published price of the
-     * finished thing. The three parts add up to the four prices that were set — scenario
-     * alone, scenario with pictures, scenario with narration, and both.
+     * Fixed, and deliberately not a site setting. This is what LMS Labs charges for the
+     * finished thing, and a site that installs the plugin does not get to decide what it
+     * is billed any more than it gets to decide the tariff above. It is held here, rather
+     * than fetched, so the wizard can quote a price with the service unreachable; if the
+     * published price changes, it changes here and ships as a release.
      *
-     * The price is quoted in credits, because credits are what a teacher's balance is
-     * held in and what is actually deducted. The cash equivalent is shown beside it so
-     * nobody has to do the conversion in their head, and the rate that converts one to the
-     * other is a setting, as are all three parts: a partner reselling this does not
-     * necessarily sell it at the same price or in the same currency.
+     * The three parts add up to the four prices a teacher sees: the scenario alone, with
+     * pictures, with narration, and with both.
      *
      * @return array Keys: base, images, voice, rate, currency.
      */
     public static function pricing(): array {
-        $number = static function (string $name, float $fallback): float {
-            $value = get_config('mod_aibranchedscenario', $name);
-            if ($value === false || $value === '' || !is_numeric($value) || (float)$value <= 0) {
-                return $fallback;
-            }
-            return round((float)$value, 2);
-        };
-        $credits = static function (string $name, int $fallback) {
-            $value = get_config('mod_aibranchedscenario', $name);
-            if ($value === false || $value === '' || !is_numeric($value) || (int)$value < 0) {
-                return $fallback;
-            }
-            return (int)$value;
-        };
-        $currency = (string)get_config('mod_aibranchedscenario', 'pricecurrency');
-        if (!preg_match('/^[A-Z]{3}$/', $currency)) {
-            $currency = 'USD';
-        }
         return [
-            'base'     => $credits('pricebase', 100),
-            'images'   => $credits('priceimages', 50),
-            'voice'    => $credits('pricevoice', 50),
-            // Credits to one unit of the currency. Ten credits to the dollar puts a
-            // scenario with pictures and narration at 200 credits, which is $20.
-            'rate'     => $number('creditrate', 10.0),
-            'currency' => $currency,
+            'base'     => 100,
+            'images'   => 50,
+            'voice'    => 50,
+            // Credits to one unit of the currency. Ten to the dollar puts a scenario with
+            // pictures and narration at 200 credits, which is $20.
+            'rate'     => 10.0,
+            'currency' => 'USD',
         ];
     }
 

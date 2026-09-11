@@ -122,50 +122,6 @@ if ($ADMIN->fulltree) {
         1
     ));
 
-    $settings->add(new admin_setting_heading(
-        'mod_aibranchedscenario/pricingheading',
-        get_string('settings:pricingheading', 'mod_aibranchedscenario'),
-        get_string('settings:pricingheadingdesc', 'mod_aibranchedscenario')
-    ));
-
-    foreach (['base' => '100', 'images' => '50', 'voice' => '50'] as $part => $default) {
-        $settings->add(new admin_setting_configtext(
-            'mod_aibranchedscenario/price' . $part,
-            get_string('settings:price' . $part, 'mod_aibranchedscenario'),
-            get_string('settings:price' . $part . 'desc', 'mod_aibranchedscenario'),
-            $default,
-            PARAM_INT
-        ));
-    }
-
-    $settings->add(new admin_setting_configtext(
-        'mod_aibranchedscenario/creditrate',
-        get_string('settings:creditrate', 'mod_aibranchedscenario'),
-        get_string('settings:creditratedesc', 'mod_aibranchedscenario'),
-        '10',
-        PARAM_FLOAT
-    ));
-
-    $settings->add(new admin_setting_configtext(
-        'mod_aibranchedscenario/pricecurrency',
-        get_string('settings:pricecurrency', 'mod_aibranchedscenario'),
-        get_string('settings:pricecurrencydesc', 'mod_aibranchedscenario'),
-        'USD',
-        PARAM_ALPHA,
-        4
-    ));
-
-    $settings->add(new admin_setting_configselect(
-        'mod_aibranchedscenario/narrationscope',
-        get_string('settings:narrationscope', 'mod_aibranchedscenario'),
-        get_string('settings:narrationscopedesc', 'mod_aibranchedscenario'),
-        'scenes',
-        [
-            'scenes' => get_string('narrationscope:scenes', 'mod_aibranchedscenario'),
-            'full'   => get_string('narrationscope:full', 'mod_aibranchedscenario'),
-        ]
-    ));
-
     // Three voices, so a scenario does not sound like one person reading a play. The
     // narrator reads the situation; a character's own line is spoken in the voice that
     // matches the gender recorded for them, and falls back to the narrator when the

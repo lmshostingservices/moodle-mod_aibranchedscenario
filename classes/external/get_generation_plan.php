@@ -76,13 +76,7 @@ class get_generation_plan extends external_api {
         // node that is not an ending, one for each named character's line, and one for
         // each branch of a decision when consequence narration is on. Beats are not
         // counted: their single "continue" consequence is filler and is never recorded.
-        $narrations = 0;
-        if ($wantsaudio) {
-            $narrations = ($scenes - 3) + $decisions;
-            if (get_config('mod_aibranchedscenario', 'narrationscope') === 'full') {
-                $narrations += $decisions * 3;
-            }
-        }
+        $narrations = $wantsaudio ? (($scenes - 3) + $decisions + ($decisions * 3)) : 0;
         // What the run costs this site to produce, which is not what the teacher pays and
         // is not shown to them. It is kept because the daily allowance is a budget of
         // service operations rather than of sales.
