@@ -2,6 +2,49 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.8.1] - 2026-09-11
+
+**A generated scenario reached the plugin for the first time, and the plugin rejected it.**
+Reported live as *"Node n10 does not say what follows it."*
+
+### Fixed
+
+- **A narrative beat could not lead to the ending the learner had earned.** A decision's
+  choices have always been allowed to target `__auto__`, the automatic outcome. A beat's
+  onward link was not: it went straight through the identifier filter, which requires a
+  leading letter or digit, so `__auto__` was reduced to an empty string and the beat was
+  reported as having no successor. Every ending behind it then became unreachable, which is
+  why one node's link took the whole scenario down.
+
+  This is precisely the shape a server-built topology produces for its last scene — a
+  closing beat that hands the learner to whichever ending they earned — so the first
+  scenario the rebuilt generator managed to produce ran straight into it.
+- **Both kinds of link now go through one helper.** A beat and a choice can no longer
+  disagree about whether the automatic target is a legal destination, which is the
+  disagreement that caused this.
+
+### Testing
+
+11 new checks, reproducing the reported failure from the wire format the service actually
+sends: the mapper carries the auto target onto the beat, the beat validates, it is not
+reported as having no successor, the endings behind it are reachable, the normalised form
+keeps the target on both the node and its player-facing choice, and the whole thing
+validates twice.
+
+The boundaries are checked too, because widening a filter is how things get let in by
+accident: a decision choice may still target the earned ending; a node may **not** take
+`__auto__` as its own id; and a link that is merely malformed is still refused. One of the
+new checks asserts that `__auto__` would not survive the identifier filter on its own, so
+the test stops being meaningful loudly rather than silently if that ever changes.
+
+695 checks on Moodle 4.4.12, 4.5.13 and 5.2.2. PHPUnit 45 tests / 283 assertions passing.
+CodeSniffer clean.
+
+### Note
+
+- Nothing to migrate. A working copy rejected before this release was never stored; generate
+  or import again on 1.8.1.
+
 ## [v1.8.0] - 2026-09-11
 
 The first release whose packaged files all agree on what version they belong to.

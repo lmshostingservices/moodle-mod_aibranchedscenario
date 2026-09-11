@@ -211,5 +211,12 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091104, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091105) {
+        // Release 1.8.1 changes no schema. A stored scenario is re-validated on save and
+        // on publish, so a working copy rejected before this release simply has to be
+        // generated or imported again; there is nothing to migrate.
+        upgrade_mod_savepoint(true, 2026091105, 'aibranchedscenario');
+    }
+
     return true;
 }

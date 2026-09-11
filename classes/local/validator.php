@@ -184,6 +184,19 @@ class validator {
     }
 
     /**
+     * Normalise a node link, which may be a node id or the automatic outcome target.
+     *
+     * @param mixed $value Raw link.
+     * @return string A node id, the auto target, or '' when neither.
+     */
+    protected function link($value): string {
+        if (is_string($value) && trim($value) === schema::auto_target()) {
+            return schema::auto_target();
+        }
+        return $this->identifier($value);
+    }
+
+    /**
      * Clamp an integer into a range.
      *
      * @param mixed $value Raw value.
@@ -472,9 +485,18 @@ class validator {
             // a beat could be saved and then refused on its way to learners. Keeping the
             // node-level link and label in the normalised form makes the shape stable
             // under repeated validation.
-            $next = $this->identifier($raw['next'] ?? '');
+            //
+            // The onward link may also be the automatic target, meaning "the ending this
+            // learner has earned". A decision's choices have always been allowed to point
+            // there; a beat's link was not, because it went straight through the
+            // identifier filter, which requires a leading letter or digit and so turned
+            // `__auto__` into nothing at all. A narrative beat that simply carries the
+            // learner to their ending — the shape a server-built topology naturally
+            // produces for the last scene — was therefore rejected as having no successor,
+            // taking every ending's reachability with it.
+            $next = $this->link($raw['next'] ?? '');
             if ($next === '' && isset($raw['choices'][0]['next'])) {
-                $next = $this->identifier($raw['choices'][0]['next']);
+                $next = $this->link($raw['choices'][0]['next']);
             }
             $label = $this->short($raw['continuelabel'] ?? '', 120)
                 ?: $this->short($raw['choices'][0]['text'] ?? '', 120);
@@ -529,15 +551,12 @@ class validator {
                 $principleid = '';
             }
 
-            $next = $rawchoice['next'] ?? '';
-            if ($next === schema::auto_target()) {
-                $nextid = schema::auto_target();
-            } else {
-                $nextid = $this->identifier($next);
-                if ($nextid === '') {
-                    $a = (object)['node' => $id, 'letter' => $letters[$position]];
-                    $this->fail(get_string('error:choicenonext', 'mod_aibranchedscenario', $a));
-                }
+            // One helper for both kinds of link, so a beat and a choice can never again
+            // disagree about whether the automatic target is a legal destination.
+            $nextid = $this->link($rawchoice['next'] ?? '');
+            if ($nextid === '') {
+                $a = (object)['node' => $id, 'letter' => $letters[$position]];
+                $this->fail(get_string('error:choicenonext', 'mod_aibranchedscenario', $a));
             }
 
             $node['choices'][] = [
