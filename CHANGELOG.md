@@ -2,6 +2,34 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.31.0] - 2026-09-12
+
+### Changed — the settings page explains itself
+
+Twelve settings had no description at all: the page showed a name, the component key, and
+nothing else, so an administrator met "Default \"good from\" threshold" with no way to find
+out what it set. Every setting now carries Moodle's help icon, with the explanation behind
+it rather than as an inline paragraph - a page of twenty-six inline descriptions is a wall
+of text nobody reads, and core appends a help icon to a setting name in exactly this way on
+the media players page. Thirty of the thirty-four entries have one; the four without are the
+three section headings, which keep a lead paragraph, and the connection status, which
+renders a live report.
+
+Several names were ours rather than plain English. "Default \"good from\" threshold" is
+**Green band starts at**, "Default \"a problem below\" threshold" is **Red band below**, and
+"Hear each screen out by default" is **Require narration to finish before continuing**.
+"Defaults" is **Defaults for new activities**, and "Limits" is **Limits and permissions**,
+each now saying whether a teacher can override what is set there.
+
+### Fixed — the upgrade step order
+
+The 1.30.0 upgrade step was written above the step before it rather than below. `$oldversion`
+is read once and does not change as the steps run, so both matched: the later step moved the
+stored version forward and the earlier one then tried to set it back, which Moodle refuses
+with "Cannot downgrade". The install died half way through. Steps are ordered, and the
+harness now checks that they ascend, that each closes with a savepoint for its own version,
+and that the last one matches `version.php`.
+
 ## [v1.30.0] - 2026-09-12
 
 ### Changed — every figure counts to its value

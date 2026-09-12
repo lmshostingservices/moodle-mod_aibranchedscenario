@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Plugin administration settings.
+ * Site administration settings.
  *
  * @package    mod_aibranchedscenario
  * @copyright  2026 LMS Hosting Services
@@ -28,6 +28,28 @@ use mod_aibranchedscenario\local\ai\lmslabs_provider;
 use mod_aibranchedscenario\local\schema;
 
 if ($ADMIN->fulltree) {
+    global $OUTPUT;
+
+    // A setting's name, with Moodle's help icon beside it.
+    //
+    // Moodle gives an admin setting an inline description rather than the question mark a
+    // teacher gets on an activity form, and a page of twenty-six inline paragraphs is a
+    // wall of text nobody reads. Core appends a help icon to a setting name in exactly
+    // this way on the media players page, so the control is the standard one and the
+    // explanation is a click away rather than always on screen.
+    //
+    // The icon is added only where the help string exists, so a setting whose help has
+    // not been written renders as a plain name rather than as a broken link.
+    $label = function (string $key) use ($OUTPUT): string {
+        $name = get_string('settings:' . $key, 'mod_aibranchedscenario');
+        $helpkey = 'settings:' . $key . '_help';
+        if (get_string_manager()->string_exists($helpkey, 'mod_aibranchedscenario')) {
+            $icon = $OUTPUT->help_icon('settings:' . $key, 'mod_aibranchedscenario');
+            $name .= '&nbsp;' . $icon;
+        }
+        return $name;
+    };
+
     $settings->add(new admin_setting_heading(
         'mod_aibranchedscenario/connectionheading',
         get_string('settings:connectionheading', 'mod_aibranchedscenario'),
@@ -36,52 +58,52 @@ if ($ADMIN->fulltree) {
 
     $settings->add(new admin_setting_description(
         'mod_aibranchedscenario/connectionstatus',
-        get_string('settings:status', 'mod_aibranchedscenario'),
+        $label('status'),
         \mod_aibranchedscenario\local\ai\status_report::render()
     ));
 
     $settings->add(new admin_setting_configcheckbox(
         'mod_aibranchedscenario/preferlocalcredentials',
-        get_string('settings:preferlocal', 'mod_aibranchedscenario'),
-        get_string('settings:preferlocaldesc', 'mod_aibranchedscenario'),
+        $label('preferlocal'),
+        '',
         0
     ));
 
     $settings->add(new admin_setting_configtext(
         'mod_aibranchedscenario/centralcomponent',
-        get_string('settings:centralcomponent', 'mod_aibranchedscenario'),
-        get_string('settings:centralcomponentdesc', 'mod_aibranchedscenario'),
+        $label('centralcomponent'),
+        '',
         'local_aiconfig',
         PARAM_ALPHANUMEXT
     ));
 
     $settings->add(new admin_setting_configtext(
         'mod_aibranchedscenario/siteid',
-        get_string('settings:siteid', 'mod_aibranchedscenario'),
-        get_string('settings:siteiddesc', 'mod_aibranchedscenario'),
+        $label('siteid'),
+        '',
         '',
         PARAM_TEXT
     ));
 
     $settings->add(new admin_setting_configpasswordunmask(
         'mod_aibranchedscenario/apikey',
-        get_string('settings:apikey', 'mod_aibranchedscenario'),
-        get_string('settings:apikeydesc', 'mod_aibranchedscenario'),
+        $label('apikey'),
+        '',
         ''
     ));
 
     $settings->add(new admin_setting_configtext(
         'mod_aibranchedscenario/apihost',
-        get_string('settings:apihost', 'mod_aibranchedscenario'),
-        get_string('settings:apihostdesc', 'mod_aibranchedscenario'),
+        $label('apihost'),
+        '',
         lmslabs_provider::DEFAULT_HOST,
         PARAM_URL
     ));
 
     $settings->add(new admin_setting_configduration(
         'mod_aibranchedscenario/requesttimeout',
-        get_string('settings:requesttimeout', 'mod_aibranchedscenario'),
-        get_string('settings:requesttimeoutdesc', 'mod_aibranchedscenario'),
+        $label('requesttimeout'),
+        '',
         180,
         1
     ));
@@ -89,36 +111,36 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_heading(
         'mod_aibranchedscenario/limitsheading',
         get_string('settings:limitsheading', 'mod_aibranchedscenario'),
-        ''
+        get_string('settings:limitsheadingdesc', 'mod_aibranchedscenario')
     ));
 
     $settings->add(new admin_setting_configtext(
         'mod_aibranchedscenario/maxsourcechars',
-        get_string('settings:maxsourcechars', 'mod_aibranchedscenario'),
-        get_string('settings:maxsourcecharsdesc', 'mod_aibranchedscenario'),
+        $label('maxsourcechars'),
+        '',
         schema::MAX_SOURCE_CHARS,
         PARAM_INT
     ));
 
     $settings->add(new admin_setting_configtext(
         'mod_aibranchedscenario/dailyquota',
-        get_string('settings:dailyquota', 'mod_aibranchedscenario'),
-        get_string('settings:dailyquotadesc', 'mod_aibranchedscenario'),
+        $label('dailyquota'),
+        '',
         400,
         PARAM_INT
     ));
 
     $settings->add(new admin_setting_configcheckbox(
         'mod_aibranchedscenario/allowimages',
-        get_string('settings:allowimages', 'mod_aibranchedscenario'),
-        get_string('settings:allowimagesdesc', 'mod_aibranchedscenario'),
+        $label('allowimages'),
+        '',
         1
     ));
 
     $settings->add(new admin_setting_configcheckbox(
         'mod_aibranchedscenario/allowaudio',
-        get_string('settings:allowaudio', 'mod_aibranchedscenario'),
-        get_string('settings:allowaudiodesc', 'mod_aibranchedscenario'),
+        $label('allowaudio'),
+        '',
         1
     ));
 
@@ -133,8 +155,8 @@ if ($ADMIN->fulltree) {
     foreach (['narrator' => 'Aoede', 'male' => 'Puck', 'female' => 'Kore'] as $role => $default) {
         $settings->add(new admin_setting_configselect(
             'mod_aibranchedscenario/' . $role . 'voice',
-            get_string('settings:' . $role . 'voice', 'mod_aibranchedscenario'),
-            get_string('settings:' . $role . 'voicedesc', 'mod_aibranchedscenario'),
+            $label($role . 'voice'),
+            '',
             $default,
             $voiceoptions
         ));
@@ -143,7 +165,7 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_heading(
         'mod_aibranchedscenario/defaultsheading',
         get_string('settings:defaultsheading', 'mod_aibranchedscenario'),
-        ''
+        get_string('settings:defaultsheadingdesc', 'mod_aibranchedscenario')
     ));
 
     $themeoptions = [];
@@ -152,7 +174,7 @@ if ($ADMIN->fulltree) {
     }
     $settings->add(new admin_setting_configselect(
         'mod_aibranchedscenario/defaulttheme',
-        get_string('settings:defaulttheme', 'mod_aibranchedscenario'),
+        $label('defaulttheme'),
         '',
         'slate',
         $themeoptions
@@ -167,7 +189,7 @@ if ($ADMIN->fulltree) {
     }
     $settings->add(new admin_setting_configselect(
         'mod_aibranchedscenario/defaultlanguage',
-        get_string('settings:defaultlanguage', 'mod_aibranchedscenario'),
+        $label('defaultlanguage'),
         '',
         'en-AU',
         $languageoptions
@@ -188,7 +210,7 @@ if ($ADMIN->fulltree) {
     foreach ($toggles as $toggle => $starts) {
         $settings->add(new admin_setting_configselect(
             'mod_aibranchedscenario/default' . $toggle,
-            get_string('settings:default' . $toggle, 'mod_aibranchedscenario'),
+            $label('default' . $toggle),
             '',
             $starts,
             $yesno
@@ -199,7 +221,7 @@ if ($ADMIN->fulltree) {
     foreach (['bandgreen' => 67, 'bandred' => 34] as $band => $starts) {
         $settings->add(new admin_setting_configtext(
             'mod_aibranchedscenario/default' . $band,
-            get_string('settings:default' . $band, 'mod_aibranchedscenario'),
+            $label('default' . $band),
             '',
             $starts,
             PARAM_INT,
@@ -213,7 +235,7 @@ if ($ADMIN->fulltree) {
     }
     $settings->add(new admin_setting_configselect(
         'mod_aibranchedscenario/defaultmaxattempts',
-        get_string('settings:defaultmaxattempts', 'mod_aibranchedscenario'),
+        $label('defaultmaxattempts'),
         '',
         3,
         $attemptoptions
@@ -221,7 +243,7 @@ if ($ADMIN->fulltree) {
 
     $settings->add(new admin_setting_configselect(
         'mod_aibranchedscenario/defaultallowreplay',
-        get_string('settings:defaultallowreplay', 'mod_aibranchedscenario'),
+        $label('defaultallowreplay'),
         '',
         1,
         $yesno
@@ -233,7 +255,7 @@ if ($ADMIN->fulltree) {
     }
     $settings->add(new admin_setting_configselect(
         'mod_aibranchedscenario/defaultgrademethod',
-        get_string('settings:defaultgrademethod', 'mod_aibranchedscenario'),
+        $label('defaultgrademethod'),
         '',
         'highest',
         $grademethodoptions
@@ -241,7 +263,7 @@ if ($ADMIN->fulltree) {
 
     $settings->add(new admin_setting_configselect(
         'mod_aibranchedscenario/defaultcompletionfinish',
-        get_string('settings:defaultcompletionfinish', 'mod_aibranchedscenario'),
+        $label('defaultcompletionfinish'),
         '',
         1,
         $yesno
@@ -249,24 +271,24 @@ if ($ADMIN->fulltree) {
 
     $settings->add(new admin_setting_configtext(
         'mod_aibranchedscenario/defaultcompletionminscore',
-        get_string('settings:defaultcompletionminscore', 'mod_aibranchedscenario'),
-        get_string('settings:defaultcompletionminscoredesc', 'mod_aibranchedscenario'),
+        $label('defaultcompletionminscore'),
+        '',
         100,
         PARAM_INT
     ));
 
     $settings->add(new admin_setting_configtext(
         'mod_aibranchedscenario/defaultgradepass',
-        get_string('settings:defaultgradepass', 'mod_aibranchedscenario'),
-        get_string('settings:defaultgradepassdesc', 'mod_aibranchedscenario'),
+        $label('defaultgradepass'),
+        '',
         100,
         PARAM_INT
     ));
 
     $settings->add(new admin_setting_configtext(
         'mod_aibranchedscenario/jobretention',
-        get_string('settings:jobretention', 'mod_aibranchedscenario'),
-        get_string('settings:jobretentiondesc', 'mod_aibranchedscenario'),
+        $label('jobretention'),
+        '',
         30,
         PARAM_INT
     ));

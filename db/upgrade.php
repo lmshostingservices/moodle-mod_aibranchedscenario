@@ -458,17 +458,28 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091138, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091239) {
+        // Release 1.27.0 changes no schema: every figure counts to its value, the rings
+        // are drawn thin, hover lifts instead of repainting, and a slide without a
+        // picture stops reserving the column for one.
+        upgrade_mod_savepoint(true, 2026091239, 'aibranchedscenario');
+    }
+
+    // Ascending, always. $oldversion is read once and never changes as the steps run, so
+    // a block placed out of order still matches after a later block has already moved the
+    // stored version past it - and its savepoint then tries to set the version backwards,
+    // which Moodle refuses with "Cannot downgrade". A new step goes at the bottom.
     if ($oldversion < 2026091240) {
         // Release 1.30.0 changes no schema. The work it carries is the look-and-feel
         // programme that 1.27.0 was built for and never released under.
         upgrade_mod_savepoint(true, 2026091240, 'aibranchedscenario');
     }
 
-    if ($oldversion < 2026091239) {
-        // Release 1.27.0 changes no schema: every figure counts to its value, the rings
-        // are drawn thin, hover lifts instead of repainting, and a slide without a
-        // picture stops reserving the column for one.
-        upgrade_mod_savepoint(true, 2026091239, 'aibranchedscenario');
+    if ($oldversion < 2026091241) {
+        // Release 1.31.0 changes no schema. The settings page gains a help icon and a
+        // written explanation on every setting, and several settings are renamed; a site
+        // that installed 1.30.0 needs this bump to pick the new strings up.
+        upgrade_mod_savepoint(true, 2026091241, 'aibranchedscenario');
     }
 
     return true;
