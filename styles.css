@@ -55,7 +55,9 @@
     --aibs-neutral-soft: #eef1f5;
     /* The third traffic-light tone. Its two siblings were tokens and this one was a
        literal in the middle of them. */
-    --aibs-warn: #b45309;
+    --aibs-warn: #a16207;
+    --aibs-warn-soft: #fdf6e3;
+    --aibs-warn-border: #ecd9a4;
     /* Status borders. The same soft red was written out four times, and the soft green
        was a copy of one theme's accent border, so the "strong" badge matched the emerald
        theme and clashed with the other five. */
@@ -156,6 +158,8 @@
     --aibs-neutral: #94a3b8;
     --aibs-neutral-soft: #1f2732;
     --aibs-warn: #fbbf24;
+    --aibs-warn-soft: #2a2110;
+    --aibs-warn-border: #5c4a1c;
     --aibs-on-accent: #0b0e13;
     --aibs-invert: #cbd5e1;
     --aibs-on-invert: #11141a;
@@ -288,15 +292,23 @@
     width: 100%;
 }
 
-/* No gutter. The player used to sit inside forty pixels of its own background colour on
-   every side, which on a fixed frame is forty pixels taken straight off the slide and given
-   to nothing. The card now reaches the player's edges and the card's own border and shadow
-   do the separating, which is what they were for. */
+/* The gutter used to be up to forty pixels on every side, which on a fixed frame is height
+   taken straight off the slide and given to nothing. What was left after removing it was
+   worse than either: ten pixels above the card and none anywhere else, so the card sat
+   hard against three edges. The padding now lives on the stage, where it is one value and
+   therefore even on all four sides by construction. */
 .aibs-shell {
     box-sizing: border-box;
     display: block;
     padding: 0;
     width: 100%;
+}
+
+/* The wizard is a document, not a fixed frame - it has no stage to carry the inset, so it
+   carries its own. Removing the shell's padding for the player's sake took the wizard's
+   breathing room with it and left its first and last elements against the card edge. */
+.aibs-wizard .aibs-shell {
+    padding: clamp(18px, 2.2vw, 32px);
 }
 
 .aibs-player *,
@@ -508,7 +520,7 @@
 .aibs-topbar {
     background: var(--aibs-canvas);
     border-bottom: 1px solid var(--aibs-border);
-    margin: 0 0 10px;
+    margin: 0;
     padding: 8px clamp(14px, 1.6vw, 22px);
     position: sticky;
     top: var(--aibs-sticky-top, 0px);
@@ -529,7 +541,7 @@
     display: flex;
     flex: 1 1 320px;
     flex-wrap: wrap;
-    gap: 8px 18px;
+    gap: 8px 22px;
     margin: 0;
     min-width: 0;
 }
@@ -537,11 +549,17 @@
 /* Each reading is one line: name, bar, number. The three used to be full cards stacked
    under the progress rail, which cost about 120px of the top of every scene to show
    three two-digit numbers. */
+/* A dial rather than a bar. Three horizontal bars each needed a run of track wide enough
+   to read a proportion off, which at three of them was most of the width of the bar and
+   left the readings competing with the title for room. A ring says the same proportion in
+   the space of its own diameter, and the number lives inside it rather than beside it. */
+/* Dial then figure. The gap inside a reading has to stay clearly smaller than the gap
+   between two readings, or the row reads as six loose things rather than three pairs. */
 .aibs-meter {
     align-items: center;
     display: flex;
-    flex: 1 1 150px;
-    gap: 8px;
+    flex: none;
+    gap: 7px;
     min-width: 0;
 }
 
@@ -554,39 +572,114 @@
     text-transform: uppercase;
 }
 
+/* The mark that replaced the reading's name. Three words - engagement, trust, tension -
+   took more of the bar than the three readings did. The name is on the control as hover
+   text, in the legend in full, and spoken to a screen reader; the mark is what is drawn.
+
+   It sits inside the ring. Beside it, it was a loose mark floating between two dials with
+   nothing tying it to either, and the ring was a number in a circle. Inside, the ring is
+   that reading's dial and the arc around the mark is how that reading stands. */
+.aibs-meter-mark {
+    align-items: center;
+    color: var(--aibs-muted);
+    display: inline-flex;
+    height: 18px;
+    inset: 0;
+    justify-content: center;
+    margin: auto;
+    position: absolute;
+    width: 18px;
+}
+
+.aibs-meter-mark .aibs-icon {
+    height: 18px;
+    width: 18px;
+}
+
+/* Out of the ring and beside it, where it has the room to be read. Inside the ring it was
+   held to whatever fitted in a 34px circle around it. */
 .aibs-meter-value {
-    flex: none;
     font-size: var(--aibs-text-small);
     font-variant-numeric: tabular-nums;
     font-weight: var(--aibs-weight-strong);
+    line-height: 1;
     min-width: 2ch;
-    text-align: end;
+    text-align: start;
 }
 
-.aibs-meter-track {
-    background: var(--aibs-surface-alt);
+/* One count, not two. A row of numbered dots said "decision 3 of 5" in pictures while the
+   deck said "5 of 7" in words underneath it, and the two were counting different things.
+   This is the only progress indicator now: it says where the learner is in whatever they
+   are currently looking at, in the same place on every screen. */
+.aibs-position {
+    align-items: baseline;
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
     border-radius: 999px;
-    flex: 1 1 auto;
-    height: 5px;
-    min-width: 36px;
-    overflow: hidden;
+    color: var(--aibs-muted);
+    display: inline-flex;
+    flex: none;
+    font-size: var(--aibs-text-micro);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--aibs-weight-label);
+    gap: 4px;
+    letter-spacing: .03em;
+    margin: 0;
+    padding: 5px 12px;
+    text-transform: uppercase;
+    white-space: nowrap;
 }
 
-.aibs-meter-fill {
-    background: var(--aibs-accent);
-    border-radius: 999px;
+.aibs-position:empty {
+    display: none;
+}
+
+/* The number the learner is on carries the weight; the total is context behind it. */
+.aibs-position-now {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-strong);
+}
+
+.aibs-position-of {
+    opacity: .75;
+}
+
+.aibs-meter-dial {
+    display: inline-flex;
+    flex: none;
+    height: 34px;
+    place-items: center;
+    position: relative;
+    width: 34px;
+}
+
+.aibs-meter-ring {
     height: 100%;
-    transition: width .7s var(--aibs-ease), background-color .4s var(--aibs-ease);
-    width: 0;
+    /* Twelve o'clock, not three. */
+    transform: rotate(-90deg);
+    width: 100%;
 }
 
-.aibs-meter.aibs-is-rising .aibs-meter-value {
-    color: var(--aibs-positive);
+.aibs-meter-ringtrack {
+    fill: none;
+    opacity: .5;
+    stroke: var(--aibs-border);
+    stroke-width: 2;
 }
 
-.aibs-meter.aibs-is-falling .aibs-meter-value {
-    color: var(--aibs-negative);
+.aibs-meter-ringfill {
+    fill: none;
+    stroke: var(--aibs-accent);
+    stroke-linecap: round;
+    stroke-width: 2;
+    transition: stroke-dasharray .9s var(--aibs-ease), stroke .4s var(--aibs-ease);
 }
+
+/* A reading in the bar is coloured by where it stands, not by which way it last moved.
+   Both used to be written onto the same ring, so a trust of 12 that had risen by two showed
+   green - "improving" beating "nearly gone". Which way it moved is said on the consequence
+   screen, by an arrow, at the moment it happens; the bar says where things are. */
 
 /* The estimate sits beside the status line, quieter than it, because it is context
    rather than news. It appears only for the operations that run for minutes, and it
@@ -607,6 +700,9 @@
    mistaken for a label. It is now unmistakably pressable, states what it will do on
    hover, and says out loud when there is nothing to play or when the browser has
    refused to start it. */
+/* A round mark, matching the fullscreen control it sits beside. It used to be a pill with
+   the word "Narration" in it, which said nothing the four icons do not already say - the
+   control draws a different mark for on, off, blocked and nothing-to-play. */
 .aibs-audiobtn {
     align-items: center;
     background: var(--aibs-surface);
@@ -615,21 +711,21 @@
     color: var(--aibs-text);
     cursor: pointer;
     display: inline-flex;
-    font-size: var(--aibs-text-meta);
-    font-weight: var(--aibs-weight-label);
-    gap: 8px;
-    padding: 6px 14px 6px 8px;
+    gap: 0;
+    height: 34px;
+    justify-content: center;
+    padding: 0;
     transition: background-color .18s var(--aibs-ease), border-color .18s var(--aibs-ease),
         color .18s var(--aibs-ease);
+    width: 34px;
 }
 
 .path-mod-aibranchedscenario .aibs-audiobtn:hover:not(:disabled),
 .path-mod-aibranchedscenario .aibs-audiobtn:focus-visible:not(:disabled),
 .aibs-audiobtn:hover:not(:disabled),
 .aibs-audiobtn:focus-visible:not(:disabled) {
-    background: var(--aibs-invert) !important;
-    border-color: var(--aibs-invert);
-    color: var(--aibs-on-invert) !important;
+    border-color: var(--aibs-accent-border);
+    transform: translateY(-1px);
 }
 
 .aibs-audiobtn:disabled {
@@ -643,15 +739,14 @@
    identical at a glance. */
 .aibs-audiobtn-icon {
     align-items: center;
-    background: var(--aibs-accent-soft);
     border-radius: 999px;
-    color: var(--aibs-accent-strong);
+    color: inherit;
     display: inline-flex;
     flex: none;
-    height: 24px;
+    height: 18px;
     justify-content: center;
     position: relative;
-    width: 24px;
+    width: 18px;
 }
 
 .aibs-audioicon {
@@ -1194,8 +1289,8 @@
 
 .aibs-speech {
     background: var(--aibs-surface-alt);
-    border-inline-start: 3px solid var(--aibs-accent);
-    border-radius: 0 var(--aibs-radius-sm) var(--aibs-radius-sm) 0;
+    border: 1px solid var(--aibs-accent-border);
+    border-radius: var(--aibs-radius-sm);
     display: flex;
     gap: 12px;
     margin: 12px 0;
@@ -1283,10 +1378,12 @@
    (0,1,1) and outranks the `.aibs-choice` rule above at (0,1,0), so in the hover
    state the resting colour stopped applying and the text turned white against the
    pale hover background. Every interactive state below restates its own colour. */
+/* The card lifts and its edge picks up the accent. It does not fill: a tinted wash under
+   the cursor made every option look chosen for as long as the pointer was over it. */
 .path-mod-aibranchedscenario .aibs-choice:hover:not(:disabled),
 .aibs-choice:hover:not(:disabled) {
-    background: var(--aibs-accent-soft) !important;
-    border-color: var(--aibs-accent-border);
+    background: var(--aibs-surface) !important;
+    border-color: var(--aibs-accent);
     box-shadow: var(--aibs-shadow-lg);
     color: var(--aibs-text) !important;
     transform: translateY(-2px);
@@ -1438,23 +1535,36 @@
     color: var(--aibs-neutral);
 }
 
-.aibs-consequence {
-    border-inline-start: 4px solid var(--aibs-neutral);
-}
-
+/* A card that carries a signal is outlined in it, thinly, on every edge. A stripe down one
+   side sits against the card's own border on the other three and reads as a defect rather
+   than as information; an outline is the card being that colour, which is what was meant.
+   The soft tokens, not the strong ones: this is a tint on an edge, not a warning. */
 .aibs-consequence.aibs-signal-positive {
-    border-left-color: var(--aibs-positive);
+    border-color: var(--aibs-positive-border);
 }
 
 .aibs-consequence.aibs-signal-negative {
-    border-left-color: var(--aibs-negative);
+    border-color: var(--aibs-negative-border);
 }
 
+/* The point the decision was testing, in the same banded language as the outcome badge -
+   amber, because this is the thing to note rather than a result. It was a flat grey panel
+   indistinguishable from every other grey panel on the screen. */
 .aibs-feedback {
-    background: var(--aibs-surface-alt);
+    background: var(--aibs-warn-soft);
+    border: 1px solid var(--aibs-warn-border);
     border-radius: var(--aibs-radius-sm);
     margin-top: 18px;
     padding: 14px 16px;
+}
+
+/* The label wears the band, so the panel is not a tinted box with a grey title on it. */
+.aibs-feedback .aibs-h4,
+.aibs-journey-feedback-label {
+    align-items: center;
+    color: var(--aibs-warn);
+    display: flex;
+    gap: 7px;
 }
 
 .aibs-feedback .aibs-h4 {
@@ -1506,11 +1616,15 @@
    ship something like `button:hover { color: #fff }`, which is more specific than a
    bare class selector for the hover state; leaving colour out of these rules is what
    produced white text on a light grey button under a custom theme. */
+/* The accent is restated so a theme cannot repaint it, but it is restated as the same
+   accent the button rests on. Hover is the lift and the deeper shadow - the button does
+   not darken, because a primary action that changes colour under the cursor reads as a
+   different button. */
 .path-mod-aibranchedscenario .aibs-btn-primary:hover,
 .path-mod-aibranchedscenario .aibs-btn-primary:focus,
 .path-mod-aibranchedscenario .aibs-btn-primary:active,
 .aibs-btn-primary:hover {
-    background: var(--aibs-accent-strong) !important;
+    background: var(--aibs-accent) !important;
     box-shadow: var(--aibs-shadow-lg);
     color: var(--aibs-on-accent) !important;
     transform: translateY(-1px);
@@ -1527,8 +1641,9 @@
 .path-mod-aibranchedscenario .aibs-btn-secondary:focus,
 .path-mod-aibranchedscenario .aibs-btn-secondary:active,
 .aibs-btn-secondary:hover {
-    background: var(--aibs-surface-alt) !important;
+    background: var(--aibs-surface) !important;
     border-color: var(--aibs-accent-border);
+    box-shadow: var(--aibs-shadow-sm);
     color: var(--aibs-text) !important;
     transform: translateY(-1px);
 }
@@ -1621,12 +1736,28 @@
     color: var(--aibs-neutral);
 }
 
+/* The grade takes the band of the outcome it belongs to. It was accent blue on every
+   run, so a strong outcome announced itself with a green badge and then reported its
+   figure in the brand colour - the one number on the screen the learner is actually
+   waiting for, and the only banded thing in the player that was not banded. */
 .aibs-score {
     align-items: baseline;
-    color: var(--aibs-accent-strong);
+    color: var(--aibs-neutral);
     display: flex;
     font-variant-numeric: tabular-nums;
     gap: 2px;
+}
+
+.aibs-outcome-strong .aibs-score {
+    color: var(--aibs-positive);
+}
+
+.aibs-outcome-mixed .aibs-score {
+    color: var(--aibs-warn);
+}
+
+.aibs-outcome-highrisk .aibs-score {
+    color: var(--aibs-negative);
 }
 
 .aibs-score-value {
@@ -1642,17 +1773,24 @@
 
 .aibs-skill-list {
     display: grid;
-    gap: 12px;
+    gap: 18px;
     list-style: none;
     margin: 0;
     padding: 0;
 }
 
+/* A shaded row each, like every other list in the debrief. Four bars with their labels
+   and descriptions loose on the card read as one block of text with lines through it;
+   carded, each skill is one thing you can look at. */
 .aibs-skill {
     align-items: center;
+    background: var(--aibs-surface-alt);
+    border: 1px solid var(--aibs-border-soft);
+    border-radius: var(--aibs-radius-sm);
     display: grid;
-    gap: 12px;
+    gap: 6px 12px;
     grid-template-columns: minmax(88px, 130px) 1fr auto;
+    padding: 12px 14px;
 }
 
 .aibs-skill-label {
@@ -1665,12 +1803,12 @@
     background: var(--aibs-surface-alt);
     border-radius: 999px;
     display: block;
-    height: 10px;
+    height: 6px;
     overflow: hidden;
 }
 
 .aibs-skill-fill {
-    background: linear-gradient(90deg, var(--aibs-accent-border), var(--aibs-accent));
+    background: var(--aibs-accent);
     border-radius: 999px;
     display: block;
     height: 100%;
@@ -1681,6 +1819,8 @@
 .aibs-skill-value {
     font-variant-numeric: tabular-nums;
     font-weight: var(--aibs-weight-strong);
+    min-width: 4ch;
+    text-align: end;
 }
 
 .aibs-journey-list {
@@ -1692,19 +1832,23 @@
     padding: 0;
 }
 
+/* Same surface, same radius, same lift as every other card in the debrief. Only the
+   outline differs, and it differs because it carries the band - whether the decision
+   helped or cost. These were the one set of cards with no hover at all. */
 .aibs-journey-item {
     background: var(--aibs-surface-alt);
-    border-inline-start: 3px solid var(--aibs-neutral);
-    border-radius: 0 var(--aibs-radius-sm) var(--aibs-radius-sm) 0;
+    border: 1px solid var(--aibs-border-soft);
+    border-radius: var(--aibs-radius-sm);
     padding: 14px 16px;
+    transition: box-shadow .2s var(--aibs-ease), transform .2s var(--aibs-ease);
 }
 
 .aibs-journey-item.aibs-signal-positive {
-    border-left-color: var(--aibs-positive);
+    border-color: var(--aibs-positive-border);
 }
 
 .aibs-journey-item.aibs-signal-negative {
-    border-left-color: var(--aibs-negative);
+    border-color: var(--aibs-negative-border);
 }
 
 .aibs-journey-head {
@@ -1742,50 +1886,138 @@
 }
 
 .aibs-journey-principle {
-    color: var(--aibs-accent-strong);
-    font-size: var(--aibs-text-small);
-    margin: 8px 0 0;
+    align-items: baseline;
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border-soft);
+    border-radius: 999px;
+    color: var(--aibs-muted);
+    display: inline-flex;
+    flex-wrap: wrap;
+    font-size: var(--aibs-text-meta);
+    gap: 6px;
+    margin: 10px 0 0;
+    padding: 5px 12px;
 }
 
+/* These were bullet points: a dot, a line of text, and nothing else on the screen. They
+   are the lessons the run actually produced, so they are cards like everything else the
+   debrief hands the learner - marked, laid out across the column, and lifting under the
+   pointer the same way the takeaways do. */
 .aibs-lesson-list {
     display: grid;
-    gap: 8px;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr);
     list-style: none;
     margin: 0;
     padding: 0;
 }
 
+/* The line takes the same grey every other card body takes. These rows were the one
+   place a card's text sat in the near-black heading colour, because the text is a direct
+   child of the row and inherited it rather than coming through .aibs-prose like the
+   takeaway, journey and skill bodies do. */
 .aibs-lesson {
-    padding-inline-start: 24px;
-    position: relative;
+    color: var(--aibs-muted);
 }
 
-.aibs-lesson::before {
-    background: var(--aibs-accent);
-    border-radius: 999px;
-    content: "";
-    height: 7px;
-    inset-inline-start: 6px;
-    position: absolute;
-    top: .62em;
-    width: 7px;
-}
-
-.aibs-takeaways {
+/* A row, not a tile: the number on the left and the line beside it, full width. Stacked
+   above its text the number cost a line of height on every card and the list read as a
+   column of small boxes rather than as a list. The disc centres against the whole row -
+   on a two-line row, aligning it to the first line left it sitting high. */
+.aibs-lesson {
+    align-items: center;
+    background: var(--aibs-surface-alt);
+    border: 1px solid var(--aibs-border-soft);
+    border-radius: var(--aibs-radius-sm);
     display: grid;
-    gap: 14px;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    margin-bottom: 18px;
-}
-
-.aibs-takeaway {
-    margin-bottom: 0;
+    gap: 0 12px;
+    grid-template-columns: 24px minmax(0, 1fr);
+    padding: 13px 16px;
     transition: box-shadow .2s var(--aibs-ease), transform .2s var(--aibs-ease);
 }
 
+
+
+/* The same numbered disc the takeaways wear, so a list of points is drawn one way across
+   the whole debrief. Each list counts from one. */
+.aibs-lesson-mark {
+    align-items: center;
+    background: var(--aibs-accent);
+    border-radius: 999px;
+    color: var(--aibs-on-accent);
+    display: flex;
+    flex: none;
+    font-size: var(--aibs-text-meta);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--aibs-weight-strong);
+    height: 24px;
+    justify-content: center;
+    width: 24px;
+}
+
+/* The card lifts and deepens its shadow, and nothing else changes: no colour, no border,
+   nothing that moves inside it. A dangling selector left over from an earlier edit had
+   this rule reading `.aibs-lesson:hover, .aibs-takeaways`, so hovering a lesson card
+   applied the takeaways grid to it - the card turned into a grid container under the
+   pointer, which is the weird behaviour, and the intended hover never existed at all. */
+.aibs-journey-item:hover,
+.aibs-lesson:hover,
 .aibs-takeaway:hover {
     box-shadow: var(--aibs-shadow-lg);
-    transform: translateY(-3px);
+    transform: translateY(-2px);
+}
+
+/* One across. The text half of a slide is around 480px, so two cards in it were about
+   190px each - narrow enough that a three-word heading wrapped and every card became a
+   column of two-word lines. One card to a row reads at every width, and it is the same
+   answer on a phone, so there is no breakpoint to get wrong. */
+.aibs-takeaways {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr);
+    margin-bottom: 0;
+}
+
+/* A takeaway is a card and has to look like one. It carried only a hover transition, so
+   at rest it was unpadded text on the page background that grew a shadow when the pointer
+   crossed it. Giving it the plain surface was not enough either: white cards on a white
+   slide are white on white, and only the hairline border said a card was there at all. It
+   sits on the tinted surface, like every other panel the player draws on a card. */
+.aibs-takeaway {
+    background: var(--aibs-surface-alt);
+    border: 1px solid var(--aibs-border-soft);
+    border-radius: var(--aibs-radius-sm);
+    /* Number and heading on one line, with the body under the heading rather than under
+       the number. The disc sat on its own row above the title, which cost a line of
+       height and left the title looking unlabelled. */
+    align-items: center;
+    display: grid;
+    gap: 6px 10px;
+    grid-template-columns: 24px minmax(0, 1fr);
+    margin-bottom: 0;
+    padding: 14px 16px;
+    transition: box-shadow .2s var(--aibs-ease), transform .2s var(--aibs-ease);
+}
+
+.aibs-takeaway > .aibs-prose {
+    grid-column: 2;
+}
+
+/* A numbered disc. The bookmark that stood here was the same on every card, so it marked
+   nothing; the number says how many takeaways there are and which one is being read. */
+.aibs-takeaway-mark {
+    align-items: center;
+    background: var(--aibs-accent);
+    border-radius: 999px;
+    color: var(--aibs-on-accent);
+    display: flex;
+    flex: none;
+    font-size: var(--aibs-text-meta);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--aibs-weight-strong);
+    height: 24px;
+    justify-content: center;
+    width: 24px;
 }
 
 .aibs-takeaway .aibs-h4 {
@@ -1926,14 +2158,13 @@
 }
 
 /* A theme that paints a dark grey hover background on every button turned these into
-   blue-on-charcoal. A state that leaves the background to the theme is as broken as one
-   that leaves the colour to it, so both are restated here. */
-/* Inverse, like every other control. See --aibs-invert. */
+   blue-on-charcoal, so the background is restated here rather than left to the theme -
+   but it is restated as the step's own resting surface, not as a dark fill. Hover is the
+   lift and the border; nothing changes colour. */
 .path-mod-aibranchedscenario .aibs-wizard-step:hover,
 .aibs-wizard-step:hover {
-    background: var(--aibs-invert) !important;
-    border-color: var(--aibs-invert);
-    color: var(--aibs-on-invert) !important;
+    background: var(--aibs-surface) !important;
+    border-color: var(--aibs-accent-border);
     transform: translateY(-1px);
 }
 
@@ -2042,12 +2273,14 @@
     transform: translateY(-1px);
 }
 
-/* A chosen option is accent-coloured, and hovering it must keep that. */
+/* A chosen option is accent-coloured, and hovering it must keep exactly that - the point
+   of the hover is that it lifts, not that it changes what it is. */
 .path-mod-aibranchedscenario .aibs-option[aria-pressed="true"]:hover,
 .aibs-option[aria-pressed="true"]:hover {
-    background: var(--aibs-invert) !important;
-    border-color: var(--aibs-invert);
-    color: var(--aibs-on-invert) !important;
+    background: var(--aibs-accent-soft) !important;
+    border-color: var(--aibs-accent);
+    color: var(--aibs-accent-strong) !important;
+    transform: translateY(-1px);
 }
 
 .aibs-option[aria-pressed="true"] {
@@ -2339,16 +2572,22 @@
 }
 
 /* The debrief's per-decision feedback. It was fetched, prepared and then not rendered,
-   which left the journey showing what happened but never why it mattered. */
+   which left the journey showing what happened but never why it mattered.
+   Outlined on every edge, like everything else here: a coloured rule down one side of a
+   box that has a border on the other three reads as damage, not emphasis. */
+/* This was a left-hand rule with the text tucked in beside it. When the rules came off
+   and every panel went to a thin outline on all four edges, the padding stayed on the one
+   side it had always been on - so the text sat hard against the top, right and bottom of
+   its own border. Even padding, and a radius to match every other panel. */
 .aibs-journey-feedback {
-    border-inline-start: 3px solid var(--aibs-accent-border);
+    background: var(--aibs-warn-soft);
+    border: 1px solid var(--aibs-warn-border);
+    border-radius: var(--aibs-radius-sm);
     margin-top: 10px;
-    padding-inline-start: 12px;
+    padding: 10px 12px;
 }
 
 .aibs-journey-feedback-label {
-    color: var(--aibs-muted);
-    display: block;
     font-size: var(--aibs-text-meta);
     font-weight: var(--aibs-weight-label);
     letter-spacing: .04em;
@@ -2386,8 +2625,9 @@
     max-width: 100%;
 }
 
+/* Same leftover as the journey feedback above. */
 .aibs-review-speech {
-    border-inline-start: 3px solid var(--aibs-accent-border);
+    border: 1px solid var(--aibs-accent-border);
     font-style: italic;
     margin: 12px 0;
     padding-inline-start: 12px;
@@ -2401,10 +2641,7 @@
 }
 
 /* Advisory only. This panel never means the draft cannot be published, so it is
-   deliberately not styled as an error: a neutral rule rather than a red one. */
-.aibs-review-quality {
-    border-inline-start: 4px solid var(--aibs-neutral);
-}
+   deliberately not styled as an error. */
 
 .aibs-quality-list {
     list-style: none;
@@ -2451,21 +2688,16 @@
 .aibs-review-choice {
     background: var(--aibs-surface);
     border: 1px solid var(--aibs-border);
-    border-inline-start: 4px solid var(--aibs-border);
     border-radius: var(--aibs-radius-sm);
     padding: 14px 16px;
 }
 
 .aibs-review-choice.aibs-signal-positive {
-    border-left-color: var(--aibs-positive);
+    border-color: var(--aibs-positive-border);
 }
 
 .aibs-review-choice.aibs-signal-negative {
-    border-left-color: var(--aibs-negative);
-}
-
-.aibs-review-choice.aibs-signal-neutral {
-    border-left-color: var(--aibs-neutral);
+    border-color: var(--aibs-negative-border);
 }
 
 .aibs-review-choice-text {
@@ -2504,22 +2736,43 @@
    declared once, further down, with the slide's height - it used to be split across two
    blocks at this same breakpoint, where the second silently overwrote the first and an
    edit to this one appeared to do nothing. */
+/* Both selectors, deliberately. This was the one rule in the file that named only the
+   body class, and it is the rule that decides whether a slide is a picture beside text or
+   a picture above it. Anywhere the body class is not present - a render outside Moodle, a
+   theme that does not add it, the slide lifted into a dialog - every deck slide fell back
+   to `display: block` and the scene stretched the full width of the card, which is exactly
+   what "why am i still seeing full width images" was looking at. */
 @media (min-width: 900px) {
-    .path-mod-aibranchedscenario .aibs-slide {
+    .path-mod-aibranchedscenario .aibs-slide,
+    .aibs-slide {
         align-items: stretch;
         display: grid;
         grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
     }
 
-    .path-mod-aibranchedscenario .aibs-slide .aibs-scene {
+    /* No picture, one column. The two-column track was applied to every slide, so a slide
+       with nothing to put in the picture column still reserved it: the body sat in the
+       5fr track and its centred text was centred inside the left 45% of the card, which
+       reads as left-aligned. A slide without a scene is a statement on a card and uses
+       the whole width. */
+    .path-mod-aibranchedscenario .aibs-slide.aibs-noscene,
+    .aibs-slide.aibs-noscene {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .path-mod-aibranchedscenario .aibs-slide .aibs-scene,
+    .aibs-slide .aibs-scene {
         border-start-start-radius: var(--aibs-radius);
         border-end-start-radius: var(--aibs-radius);
     }
 }
 
 /* Who is speaking, sitting on the picture they are in. */
+/* Nothing in here is allowed to set the card's width: on a 320px screen the fixed avatar
+   made this row wider than the scene it sits on, and the page scrolled sideways. */
 .aibs-speaker {
     align-items: center;
+    min-width: 0;
     background: rgba(17, 22, 31, .62);
     border-radius: 999px;
     bottom: 12px;
@@ -2540,11 +2793,13 @@
     color: var(--aibs-on-accent) !important;
     display: inline-flex;
     flex: none;
-    height: 42px;
+    /* Shrinks with the screen rather than holding a fixed 42px that a narrow phone
+       cannot fit alongside the name beside it. */
+    height: clamp(34px, 9vw, 42px);
     justify-content: center;
     padding: 0;
     position: relative;
-    width: 42px;
+    width: clamp(34px, 9vw, 42px);
 }
 
 button.aibs-avatar {
@@ -2649,7 +2904,10 @@ button.aibs-avatar {
     width: 72px;
 }
 
-.aibs-ring-dial svg {
+/* The direct child only. This turns the ring so its arc starts at twelve o'clock rather
+   than at three - and as a descendant selector it also caught the mark now sitting inside
+   the dial, sizing it to 72px and turning it on its side. */
+.aibs-ring-dial > svg {
     height: 72px;
     transform: rotate(-90deg);
     width: 72px;
@@ -2658,7 +2916,7 @@ button.aibs-avatar {
 .aibs-ring-track {
     fill: none;
     stroke: var(--aibs-border);
-    stroke-width: 7;
+    stroke-width: 3;
     opacity: .55;
 }
 
@@ -2666,32 +2924,95 @@ button.aibs-avatar {
     fill: none;
     stroke: currentColor;
     stroke-linecap: round;
-    stroke-width: 7;
+    stroke-width: 3;
 }
 
 .aibs-ring-fill.aibs-is-animated {
     transition: stroke-dasharray .9s var(--aibs-ease);
 }
 
+/* Dial then figure, the same pair as the readings in the bar. */
+.aibs-ring-readout {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
 .aibs-ring-value {
     font-size: var(--aibs-text-title);
+    font-variant-numeric: tabular-nums;
     font-weight: var(--aibs-weight-strong);
-    left: 0;
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    line-height: 1;
+    min-width: 2ch;
+    text-align: start;
 }
 
+/* The name of the reading. It takes the colour of the band from the ring it sits in, so
+   the three readings on a consequence are coloured the same way, by the same thresholds,
+   as the three in the bar above them. */
 .aibs-ring-label {
+    display: block;
     font-size: var(--aibs-text-small);
     font-weight: var(--aibs-weight-label);
-    margin-top: 6px;
+    margin-top: 8px;
+    text-align: center;
 }
 
+/* Centred in the dial, like the mark in the bar. */
+.aibs-ring-mark {
+    align-items: center;
+    display: inline-flex;
+    height: 26px;
+    inset: 0;
+    justify-content: center;
+    margin: auto;
+    position: absolute;
+    width: 26px;
+}
+
+.aibs-ring-mark .aibs-icon {
+    height: 26px;
+    width: 26px;
+}
+
+/* An arrow and a number, not the words "up" and "down". The direction is what an arrow is
+   for; the colour beside it says whether that direction was the good one, which is not the
+   same question on tension. */
 .aibs-ring-change {
-    font-size: var(--aibs-text-meta);
+    align-items: center;
     color: var(--aibs-muted);
+    display: inline-flex;
+    font-size: var(--aibs-text-small);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--aibs-weight-strong);
+    gap: 1px;
+    justify-content: center;
+    line-height: 1;
+}
+
+.aibs-ring-arrow {
+    align-items: center;
+    display: inline-flex;
+    height: 16px;
+    width: 16px;
+}
+
+.aibs-ring-arrow .aibs-icon {
+    height: 16px;
+    width: 16px;
+}
+
+/* The colour says whether the move was a gain, which is not the same as which way the
+   arrow points: falling tension is an arrow down and a good result. These two classes
+   were being written onto the element and had no styles at all, so every change was
+   the same grey whatever it meant. */
+.aibs-ring-change.aibs-up {
+    color: var(--aibs-positive);
+}
+
+.aibs-ring-change.aibs-down {
+    color: var(--aibs-negative);
 }
 
 /* Traffic light on where the room now stands. The ring colours itself; the number in
@@ -2708,8 +3029,22 @@ button.aibs-avatar {
     color: var(--aibs-negative);
 }
 
+/* The word stays in text colour - a row of three green words is shouting - and the mark
+   beside it carries the band. One coloured element per reading, not two. */
 .aibs-ring .aibs-ring-label {
     color: var(--aibs-text);
+}
+
+.aibs-ring.aibs-tone-good .aibs-ring-mark {
+    color: var(--aibs-positive);
+}
+
+.aibs-ring.aibs-tone-warn .aibs-ring-mark {
+    color: var(--aibs-warn);
+}
+
+.aibs-ring.aibs-tone-bad .aibs-ring-mark {
+    color: var(--aibs-negative);
 }
 
 /* ------------------------------------------------------------------ pricing */
@@ -2776,6 +3111,11 @@ button.aibs-avatar {
     padding-top: 22px;
 }
 
+/* Six cards, three and three. `auto-fit` packed as many across as would fit, which on a
+   wide screen was four - so the last row held two cards stretched over the width of four
+   and the block read as though it had been cut off. Three is the widest this ever goes:
+   six divides into it evenly, and a three-up card is wide enough to hold its sentence
+   without the title wrapping. */
 .aibs-benefits {
     display: grid;
     gap: 14px;
@@ -2783,6 +3123,13 @@ button.aibs-avatar {
     list-style: none;
     margin: 16px 0 0;
     padding: 0;
+}
+
+@media (min-width: 820px) {
+    .path-mod-aibranchedscenario .aibs-benefits,
+    .aibs-benefits {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 .aibs-benefit {
@@ -2892,6 +3239,7 @@ button.aibs-avatar {
 
 .aibs-reading-link {
     align-items: center;
+    min-height: 44px;
     display: inline-flex;
     font-weight: var(--aibs-weight-label);
     gap: 6px;
@@ -2936,14 +3284,67 @@ button.aibs-avatar {
     width: 34px;
 }
 
-/* Inverse, not tint. See --aibs-invert. */
+/* A finger is not a pointer. Every round control in the player is a 34px disc, which is
+   comfortable with a mouse and too small to hit on a phone - the narration toggle, the
+   fullscreen control, the deck arrows and the print control are all this size. Where the
+   pointer is coarse they grow to the 44px that a touch target is meant to be; the mark
+   inside stays the size it was, so only the hit area changes. */
+@media (pointer: coarse) {
+    .path-mod-aibranchedscenario .aibs-iconbtn,
+    .aibs-iconbtn {
+        height: 44px;
+        width: 44px;
+    }
+
+    /* The arrows sit on the slide's edges and are positioned against their own size. */
+    .path-mod-aibranchedscenario .aibs-deck-nav .aibs-iconbtn,
+    .aibs-deck-nav .aibs-iconbtn {
+        height: 44px;
+        width: 44px;
+    }
+
+    /* The teacher's wizard steps are wide but only forty pixels tall. */
+    .path-mod-aibranchedscenario .aibs-wizard-step,
+    .aibs-wizard-step {
+        min-height: 44px;
+    }
+}
+
+
+/* A control that is switched on is filled, so its mark reverses out - the same inverse as
+   hover, held rather than momentary. Without this the icon kept its resting colour and sat
+   accent-blue on a dark grey disc. */
+.path-mod-aibranchedscenario .aibs-iconbtn[aria-pressed="true"],
+.aibs-iconbtn[aria-pressed="true"],
+.path-mod-aibranchedscenario .aibs-iconbtn.aibs-is-on,
+.aibs-iconbtn.aibs-is-on {
+    background: var(--aibs-invert) !important;
+    border-color: var(--aibs-invert);
+    color: var(--aibs-on-invert) !important;
+}
+
+.aibs-iconbtn[aria-pressed="true"] .aibs-icon,
+.aibs-iconbtn.aibs-is-on .aibs-icon {
+    color: var(--aibs-on-invert) !important;
+}
+
+/* Hovering lifts; it does not repaint. Filling a control on hover meant the pointer moving
+   across the bar dragged a dark block around with it, and on a control that is already
+   filled because it is switched on there was nothing left to say. The rise is the feedback;
+   the border firming up is the rest of it. Held states still fill - being on is a state, not
+   a gesture - and that is the one place the colour changes. */
 .path-mod-aibranchedscenario .aibs-iconbtn:hover,
 .path-mod-aibranchedscenario .aibs-iconbtn:focus-visible,
 .aibs-iconbtn:hover,
 .aibs-iconbtn:focus-visible {
-    background: var(--aibs-invert) !important;
-    border-color: var(--aibs-invert);
-    color: var(--aibs-on-invert) !important;
+    border-color: var(--aibs-accent-border);
+    transform: translateY(-1px);
+}
+
+/* The deck arrows are centred with a transform, so theirs composes with the lift. */
+.aibs-deck-nav .aibs-iconbtn:hover,
+.aibs-deck-nav .aibs-iconbtn:focus-visible {
+    transform: translateY(calc(-50% - 1px));
 }
 
 .aibs-iconbtn .aibs-icon {
@@ -2951,22 +3352,20 @@ button.aibs-avatar {
     width: 18px;
 }
 
-/* The mark inside an inverted control takes the control's colour. Stated explicitly
-   because an SVG that sets its own fill or stroke would otherwise keep it, which is how
-   an accent-blue arrow ended up on a dark grey disc. */
-.aibs-iconbtn:hover .aibs-icon,
-.aibs-iconbtn:focus-visible .aibs-icon,
-.aibs-audiobtn:hover:not(:disabled) .aibs-icon,
-.aibs-audiobtn:focus-visible:not(:disabled) .aibs-icon {
+/* The mark inside a control that IS filled - because it is switched on - reverses out of
+   the fill. Stated explicitly because an SVG that sets its own fill or stroke would keep
+   it, which is how an accent-blue arrow ended up on a dark grey disc. */
+.aibs-iconbtn[aria-pressed="true"] .aibs-icon,
+.aibs-iconbtn.aibs-is-on .aibs-icon {
     color: var(--aibs-on-invert) !important;
-    fill: none;
-    stroke: currentColor;
 }
 
-/* Two icons are drawn as filled shapes rather than strokes, so they need the fill. */
-.aibs-iconbtn:hover .aibs-icon path[fill="currentColor"],
-.aibs-audiobtn:hover:not(:disabled) .aibs-icon path[fill="currentColor"] {
-    fill: currentColor;
+/* The chip behind the narration mark used to carry its own accent colour, so when the disc
+   filled the mark inside it stayed blue. A mark takes the colour of the control it is in. */
+.aibs-iconbtn[aria-pressed="true"] .aibs-audiobtn-icon,
+.aibs-iconbtn.aibs-is-on .aibs-audiobtn-icon {
+    background: transparent;
+    color: var(--aibs-on-invert) !important;
 }
 
 /* In fullscreen the plugin owns the whole viewport: no theme header above it, and no
@@ -2979,8 +3378,13 @@ button.aibs-avatar {
     flex-direction: column;
     height: 100vh;
     max-width: none;
-    overflow-y: auto;
-    padding: 0 clamp(18px, 4vw, 64px) 28px;
+    /* Nothing scrolls here either: the frame is measured against the whole screen, so
+       there is nothing below the fold to reach. */
+    overflow: hidden;
+    /* The stage carries the inset, the same one value as everywhere else, so the card is
+       centred in the screen rather than pushed off it by a padding that only applied to
+       three sides. */
+    padding: 0;
     width: 100vw;
 }
 
@@ -2997,8 +3401,9 @@ button.aibs-avatar {
    beside it grows with the picture instead of leaving a column of white. */
 @media (min-width: 900px) {
     .aibs-player:fullscreen .aibs-slide .aibs-scene-img {
-        aspect-ratio: 16 / 9;
-        max-height: calc(100vh - 230px);
+        aspect-ratio: auto;
+        height: 100%;
+        max-height: 100%;
         object-fit: cover;
     }
 
@@ -3131,6 +3536,20 @@ button.aibs-avatar {
         flex: none;
     }
 
+    .path-mod-aibranchedscenario .aibs-slide .aibs-h4 {
+        font-size: calc(clamp(1.02rem, .3vw + .92rem, 1.2rem) * var(--aibs-fit, 1));
+    }
+
+    /* A sub-heading that follows a list is starting a second section on the same card,
+       so it gets a rule and real space above it. Without them it was a bold line adrift
+       between two groups of cards and the card looked like it had two titles. */
+    .path-mod-aibranchedscenario .aibs-debrief .aibs-lesson-list + .aibs-h4,
+    .aibs-debrief .aibs-lesson-list + .aibs-h4 {
+        border-top: 1px solid var(--aibs-border-soft);
+        margin-top: 6px;
+        padding-top: 16px;
+    }
+
     .path-mod-aibranchedscenario .aibs-slide .aibs-h3 {
         font-size: calc(clamp(1.45rem, 1.5vw + .7rem, 2.05rem) * var(--aibs-fit, 1));
         line-height: var(--aibs-leading-tight);
@@ -3187,9 +3606,10 @@ button.aibs-avatar {
         max-height: 100%;
     }
 
-    /* Same ceiling in fullscreen: the picture keeps its shape and the screen gets
-       bigger, rather than the picture growing to whatever shape the screen is. */
+    /* In fullscreen the frame is measured against the whole screen, so the slide follows
+       it up rather than being held to the smaller on-page ceiling. */
     .aibs-player:fullscreen .aibs-slide {
+        height: var(--aibs-slide-max, 80vh);
         max-height: var(--aibs-slide-max, 80vh);
     }
 }
@@ -3203,11 +3623,8 @@ button.aibs-avatar {
     /* The same frame as a slide, not merely a ceiling. A consequence with two sentences in
        it used to draw a short card and the page jumped as the learner moved on and back. */
     .path-mod-aibranchedscenario .aibs-consequence {
-        display: flex;
-        flex-direction: column;
         font-size: calc(1rem * var(--aibs-fit, 1));
         height: var(--aibs-slide-max, 74vh);
-        justify-content: center;
         max-height: var(--aibs-slide-max, 74vh);
         overflow: hidden;
     }
@@ -3235,28 +3652,45 @@ button.aibs-avatar {
         overflow: hidden;
     }
 
-    .path-mod-aibranchedscenario .aibs-debrief .aibs-deckslide {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+    /* A debrief page is a slide like any other, so the column behaviour lives in its text
+       half. Its pages carry more than a scene does, so that half scrolls inside the frame
+       rather than clipping - the frame is what has to stay the same, not the overflow. */
+    /* A title needs more room above a set of cards than it does above a paragraph. */
+    .path-mod-aibranchedscenario .aibs-debrief .aibs-h3,
+    .aibs-debrief .aibs-h3 {
+        margin-bottom: 8px;
+    }
+
+    .path-mod-aibranchedscenario .aibs-debrief .aibs-deckslide .aibs-node-body {
+        /* Top-aligned, unlike the rest of the player. Each debrief page centring its own
+           contents meant the heading sat at a different height on every one of the six, so
+           paging through made the whole column jump up and down. They share one baseline
+           now, and a short page is simply short. */
+        justify-content: flex-start;
         overflow-y: auto;
     }
 
-    .path-mod-aibranchedscenario .aibs-brief .aibs-deckend {
+    /* The way in is a statement card and centres - but only when it has nothing to put
+       in the picture column. With a scene it is a slide like every other slide, picture
+       on the left and words on the right; the flex column was overriding the grid and
+       putting its picture across the full width of the card, which is the one screen in
+       the opening deck that did not match the rest. */
+    .path-mod-aibranchedscenario .aibs-brief .aibs-deckend.aibs-noscene,
+    .aibs-brief .aibs-deckend.aibs-noscene {
         display: flex;
         flex-direction: column;
         justify-content: center;
         padding: clamp(24px, 3vw, 56px);
     }
 
-    /* The deck's controls sit under the frame, not inside it. */
+    /* The arrows are inside the deck now, on its edges, so the deck is what they are
+       positioned against and the stage is inset far enough to leave them room. */
     .path-mod-aibranchedscenario .aibs-deck {
-        display: flex;
-        flex-direction: column;
+        display: block;
+        position: relative;
     }
 
     .path-mod-aibranchedscenario .aibs-deck-stage {
-        flex: 1 1 auto;
         min-height: 0;
     }
 }
@@ -3269,13 +3703,448 @@ button.aibs-avatar {
     }
 }
 
+/* --------------------------------------------------- the three bands */
+
+/* Green, amber and red, against thresholds the teacher sets on the activity. One pair of
+   numbers colours every figure the learner is shown - the readings in the bar, the rings on
+   a consequence, and the four skill bars that are the grade - so a scenario cannot call a
+   value good in one place and middling in another. Tension is turned the right way up
+   before it is banded, because a low tension is a good one. */
+.aibs-tone-good {
+    color: var(--aibs-positive);
+}
+
+.aibs-tone-warn {
+    color: var(--aibs-warn);
+}
+
+.aibs-tone-bad {
+    color: var(--aibs-negative);
+}
+
+/* A reading in the bar: the ring, the number inside it and the mark beside it all take the
+   band's colour, so the whole reading reads as one thing. */
+.aibs-meter.aibs-tone-good .aibs-meter-ringfill {
+    stroke: var(--aibs-positive);
+}
+
+.aibs-meter.aibs-tone-warn .aibs-meter-ringfill {
+    stroke: var(--aibs-warn);
+}
+
+.aibs-meter.aibs-tone-bad .aibs-meter-ringfill {
+    stroke: var(--aibs-negative);
+}
+
+.aibs-meter.aibs-tone-good .aibs-meter-value,
+.aibs-meter.aibs-tone-good .aibs-meter-mark {
+    color: var(--aibs-positive);
+}
+
+.aibs-meter.aibs-tone-warn .aibs-meter-value,
+.aibs-meter.aibs-tone-warn .aibs-meter-mark {
+    color: var(--aibs-warn);
+}
+
+.aibs-meter.aibs-tone-bad .aibs-meter-value,
+.aibs-meter.aibs-tone-bad .aibs-meter-mark {
+    color: var(--aibs-negative);
+}
+
+/* The grade. These four were the only numbers in the product with no colour on them at
+   all, on the one screen where the learner is being judged. */
+/* The card wears its own band: a thin outline on all four edges and a tint of the same
+   colour, so a strong skill is a green card and a middling one an amber card. The tint is
+   the palest step in each band, so four coloured cards in a column stay quiet enough to
+   read - the colour is the first thing you see, the words are still the thing you read. */
+.aibs-skill.aibs-tone-good {
+    background: var(--aibs-positive-soft);
+    border-color: var(--aibs-positive-border);
+}
+
+.aibs-skill.aibs-tone-warn {
+    background: var(--aibs-warn-soft);
+    border-color: var(--aibs-warn-border);
+}
+
+.aibs-skill.aibs-tone-bad {
+    background: var(--aibs-negative-soft);
+    border-color: var(--aibs-negative-border);
+}
+
+/* The track a bar runs in has to stay visible against a tinted card. */
+.aibs-skill.aibs-tone-good .aibs-skill-track,
+.aibs-skill.aibs-tone-warn .aibs-skill-track,
+.aibs-skill.aibs-tone-bad .aibs-skill-track {
+    background: var(--aibs-surface);
+}
+
+.aibs-skill.aibs-tone-good .aibs-skill-fill {
+    background: var(--aibs-positive);
+}
+
+.aibs-skill.aibs-tone-warn .aibs-skill-fill {
+    background: var(--aibs-warn);
+}
+
+.aibs-skill.aibs-tone-bad .aibs-skill-fill {
+    background: var(--aibs-negative);
+}
+
+.aibs-skill.aibs-tone-good .aibs-skill-value {
+    color: var(--aibs-positive);
+}
+
+.aibs-skill.aibs-tone-warn .aibs-skill-value {
+    color: var(--aibs-warn);
+}
+
+.aibs-skill.aibs-tone-bad .aibs-skill-value {
+    color: var(--aibs-negative);
+}
+
+/* ------------------------------------------------------- looking back */
+
+/* Read only, deliberately. Letting a learner step back and choose again would let them undo
+   a consequence, and a score that can be undone measures nothing. This lets them see what
+   they decided without letting them rewrite it. */
+.aibs-history {
+    flex: none;
+    position: relative;
+}
+
+.aibs-history[hidden] {
+    display: none !important;
+}
+
+.aibs-history-summary {
+    border-radius: 999px;
+    color: var(--aibs-muted);
+    cursor: pointer;
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-label);
+    letter-spacing: .03em;
+    list-style: none;
+    padding: 5px 12px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.aibs-history-summary::-webkit-details-marker {
+    display: none;
+}
+
+.aibs-history-summary:hover,
+.aibs-history-summary:focus-visible {
+    background: var(--aibs-invert);
+    color: var(--aibs-on-invert);
+}
+
+.aibs-history-body {
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius);
+    box-shadow: var(--aibs-shadow);
+    inset-inline-end: 0;
+    margin-top: 8px;
+    max-height: min(60vh, 420px);
+    overflow-y: auto;
+    padding: 16px;
+    position: absolute;
+    text-align: start;
+    top: 100%;
+    width: min(420px, calc(100vw - 32px));
+    z-index: 30;
+}
+
+.aibs-history-note {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-meta);
+    margin: 0 0 12px;
+}
+
+.aibs-history-list {
+    display: grid;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.aibs-history-item {
+    border: 1px solid var(--aibs-border-soft);
+    border-radius: var(--aibs-radius-sm);
+    display: grid;
+    gap: 2px;
+    padding: 8px 10px;
+}
+
+.aibs-history-item.aibs-signal-positive {
+    border-color: var(--aibs-positive-border);
+}
+
+.aibs-history-item.aibs-signal-negative {
+    border-color: var(--aibs-negative-border);
+}
+
+.aibs-history-title {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-label);
+    letter-spacing: .03em;
+    text-transform: uppercase;
+}
+
+.aibs-history-choice {
+    font-size: var(--aibs-text-small);
+}
+
+/* --------------------------------------------- saying what a number means */
+
+/* The score is the one figure the whole debrief is about, and the only thing that said so
+   was an aria-label. */
+.aibs-score {
+    align-items: flex-end;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    line-height: 1;
+}
+
+.aibs-score-figure {
+    align-items: baseline;
+    display: flex;
+    gap: 2px;
+}
+
+.aibs-score-label {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-label);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+/* What each of the four graded skills actually measures, under its own bar. */
+.aibs-skill-desc {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-meta);
+    grid-column: 1 / -1;
+    line-height: var(--aibs-leading-snug);
+    margin-top: 2px;
+    text-align: start;
+}
+
+/* A chip that was a bare phrase and could have been a tag, a quote or a category. */
+.aibs-chip-lead {
+    font-weight: var(--aibs-weight-strong);
+    margin-inline-end: 4px;
+    opacity: .8;
+}
+
+/* The ring's colour said where a reading stands; this says it in words too. */
+.aibs-ring-standing {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-label);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+/* ------------------------------------------------ one rule for where things sit */
+
+/* One shape, on every screen.
+
+   There used to be two: a slide with a picture beside its text, and a card of text across
+   the full width. Centring the second one made it tidy in isolation and made the product
+   read as two different products - the silhouette changed underneath the learner as they
+   moved from a decision to its consequence to the debrief, and a picture that had been on
+   the left for one screen was absent on the next.
+   Every screen is the picture on the left and the reading beside it. The text is left
+   aligned, because that is how a paragraph is read; the actions are centred in their own
+   column, which is the middle of the thing they belong to rather than the middle of a
+   screen they only occupy half of. Nothing is full width. */
+.aibs-slide .aibs-node-body,
+.aibs-slide .aibs-node-body > * {
+    text-align: start;
+}
+
+.aibs-consequence-actions,
+.aibs-deckend .aibs-brief-actions,
+.aibs-debrief-actions,
+.aibs-debriefhidden .aibs-debrief-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: auto;
+    padding-top: 4px;
+}
+
+/* On the debrief the pages are top-aligned, so `margin-top: auto` stopped meaning "after
+   the content" and started meaning "at the far end of the column" - on the closing page
+   that left the two controls stranded about 180px below the last card, looking dropped
+   rather than placed. They sit under the content, with a rule between what the learner
+   takes away and what they can do next. */
+.aibs-debrief .aibs-debrief-actions {
+    border-top: 1px solid var(--aibs-border-soft);
+    margin-top: 20px;
+    padding-top: 16px;
+}
+
+/* The way in is a statement, whether or not it has a picture beside it. With a scene it
+   became a normal two-column slide and its words went hard against the left edge of the
+   text half with the rest of the column empty under them; only the version without a
+   picture was centring. The column centres its contents either way. */
+.aibs-brief .aibs-deckend .aibs-node-body {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.aibs-brief .aibs-deckend .aibs-node-body > * {
+    text-align: center;
+}
+
+/* The heading and the sentence under it were a slide gap apart, which on the one screen
+   that is mostly empty read as one block of text rather than as a title and a note. */
+.aibs-brief .aibs-deckend .aibs-h3 {
+    margin-bottom: 10px;
+}
+
+/* The way in is one group - heading, what to expect, and the button - centred together.
+   `margin-top: auto` pinned the button to the bottom of a full-height column, which put
+   the words in the middle and the way on a long way under them. */
+.aibs-deckend .aibs-brief-actions {
+    justify-content: center;
+    margin-top: 24px;
+}
+
+/* A screen that genuinely has no picture is not a column at all - it is a statement on a
+   card - and left aligning it leaves the words hard against one edge with the rest of the
+   card empty beside them. Those centre. The class is written by the template rather than
+   worked out with :has(), so it is decided by the data rather than by the browser. */
+.aibs-slide.aibs-noscene .aibs-node-body,
+.aibs-slide.aibs-noscene .aibs-node-body > * {
+    text-align: center;
+}
+
+/* The finish, when there is no result to report. Centred on the card, with room around
+   the mark - this screen has one thing on it and it should look deliberate rather than
+   like a page that failed to load its content.
+
+   Its own rule. It was written into the selector list above, which turned every child of
+   every centred slide into a flex column with hidden overflow. */
+.aibs-debrief-hidden {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    text-align: center;
+}
+
+.aibs-finish-mark {
+    color: var(--aibs-positive);
+    display: block;
+    height: 96px;
+    margin-bottom: 18px;
+    width: 96px;
+}
+
+.aibs-finish-mark svg {
+    height: 100%;
+    width: 100%;
+}
+
+/* The ring closes, then the tick is drawn through it. Both are one stroke with its dash
+   pattern animated from "all gap" to "all line", which is what makes a line appear to be
+   drawn rather than to switch on. */
+.aibs-finish-ring {
+    stroke-dasharray: 264;
+    stroke-dashoffset: 264;
+    animation: aibs-draw .5s var(--aibs-ease) forwards;
+}
+
+.aibs-finish-tick {
+    stroke-dasharray: 56;
+    stroke-dashoffset: 56;
+    animation: aibs-draw .34s var(--aibs-ease) .42s forwards;
+}
+
+@keyframes aibs-draw {
+    to { stroke-dashoffset: 0; }
+}
+
+.aibs-finish-burst {
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+}
+
+.aibs-finish-piece {
+    animation: aibs-fall linear forwards;
+    border-radius: 1px;
+    position: absolute;
+    top: -12px;
+}
+
+@keyframes aibs-fall {
+    to { opacity: 0; transform: translateY(120%) rotate(var(--aibs-spin, 360deg)); }
+}
+
+/* Nothing draws itself and nothing falls. The tick and the ring are simply there, which
+   is the same screen without the celebration. */
+@media (prefers-reduced-motion: reduce) {
+    .aibs-finish-ring,
+    .aibs-finish-tick {
+        animation: none;
+        stroke-dashoffset: 0;
+    }
+
+    .aibs-finish-burst {
+        display: none;
+    }
+}
+
+.aibs-slide.aibs-noscene .aibs-node-body > * {
+    margin-inline: auto;
+    max-width: 62ch;
+}
+
+/* A row of cards uses the width; a measure is for prose. */
+.aibs-slide.aibs-noscene .aibs-node-body > .aibs-rings,
+.aibs-slide.aibs-noscene .aibs-node-body > .aibs-skill-list,
+.aibs-slide.aibs-noscene .aibs-node-body > .aibs-journey-list,
+.aibs-slide.aibs-noscene .aibs-node-body > .aibs-takeaways {
+    max-width: none;
+}
+
+.aibs-slide.aibs-noscene .aibs-node-body {
+    align-items: center;
+}
+
 /* ---------------------------------------------------------------- the debrief deck */
 
 /* The debrief carries the outcome, four skill scores, every decision with its reasoning,
    the lessons and the takeaways. On one page that is a scroll a learner abandons half way
    through; one page at a time is the same material in pieces they actually read. */
+/* One value, so the card is inset by the same amount on all four sides by construction
+   rather than by three separate declarations agreeing with each other. */
+.aibs-stage {
+    padding: 12px;
+}
+
+/* The deck is the positioning context for its own arrows. */
+.aibs-deck {
+    position: relative;
+}
+
 .aibs-deck-stage {
     display: block;
+    padding-inline: 46px;
 }
 
 .aibs-deckslide {
@@ -3293,13 +4162,36 @@ button.aibs-avatar {
     }
 }
 
+/* The arrows used to sit in a row under the deck, which cost a band of height on every
+   screen to hold two buttons, and put the way forward as far from the slide as it could be.
+   They now sit on the slide's own left and right edges, vertically centred - where a hand
+   reaching for "next" already is - and the stage carries the padding to hold them. */
 .aibs-deck-nav {
-    align-items: center;
-    display: flex;
-    gap: 14px;
-    justify-content: center;
-    margin-top: 18px;
+    display: contents;
     transition: opacity .3s var(--aibs-ease);
+}
+
+.aibs-deck-nav .aibs-iconbtn {
+    background: var(--aibs-surface);
+    box-shadow: var(--aibs-shadow-sm);
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+}
+
+.aibs-deck-nav [data-action="deckprev"] {
+    inset-inline-start: 4px;
+}
+
+.aibs-deck-nav [data-action="decknext"] {
+    inset-inline-end: 4px;
+}
+
+/* A press still has to read as a press, so the lift is composed with the centring. */
+.path-mod-aibranchedscenario .aibs-deck-nav .aibs-iconbtn:active:not(:disabled),
+.aibs-deck-nav .aibs-iconbtn:active:not(:disabled) {
+    transform: translateY(-50%) scale(.94);
 }
 
 /* While the slide is being read, the arrows step back rather than disappear: the learner
@@ -3363,13 +4255,13 @@ button.aibs-avatar {
 .aibs-lessoncard-good {
     animation-delay: .14s;
     background: var(--aibs-surface-alt);
-    border-inline-start: 3px solid var(--aibs-positive);
+    border: 1px solid var(--aibs-positive-border);
 }
 
 .aibs-lessoncard-bad {
     animation-delay: .24s;
     background: var(--aibs-surface-alt);
-    border-inline-start: 3px solid var(--aibs-negative);
+    border: 1px solid var(--aibs-negative-border);
 }
 
 .aibs-lessoncard-good:hover,

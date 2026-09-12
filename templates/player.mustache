@@ -87,6 +87,10 @@
     }
 }}
 <div class="aibs-player {{themeclass}}" data-region="player" data-cmid="{{cmid}}"
+     data-stages="{{stagecount}}"
+     data-metrics="{{#showmetrics}}1{{/showmetrics}}{{^showmetrics}}0{{/showmetrics}}"
+     data-bandgreen="{{bandgreen}}" data-bandred="{{bandred}}"
+     data-requirelisten="{{#requirelisten}}1{{/requirelisten}}{{^requirelisten}}0{{/requirelisten}}"
      data-audio="{{#enableaudio}}1{{/enableaudio}}{{^enableaudio}}0{{/enableaudio}}"
      data-replay="{{#allowreplay}}1{{/allowreplay}}{{^allowreplay}}0{{/allowreplay}}"
      data-debrief="{{#showdebrief}}1{{/showdebrief}}{{^showdebrief}}0{{/showdebrief}}">
@@ -97,14 +101,32 @@
             <header class="aibs-masthead aibs-masthead-compact">
                 <div class="aibs-masthead-text">
                     <h2 class="aibs-title">{{#scenariotitle}}{{scenariotitle}}{{/scenariotitle}}{{^scenariotitle}}{{title}}{{/scenariotitle}}</h2>
-                    <p class="aibs-titlemeta">
-                        {{#setting}}<span class="aibs-titlemeta-setting">{{setting}}</span>{{/setting}}
-                        {{#subtitle}}<span class="aibs-titlemeta-sub">{{subtitle}}</span>{{/subtitle}}
-                    </p>
                 </div>
                 <div class="aibs-masthead-side">
+                    {{! A record of what has already been decided, read only. There was no way
+                        to look back at all: a learner three decisions in could not remember
+                        what they had chosen at the first one, and going back to change it is
+                        not the answer - undoing a consequence would make the score mean
+                        nothing. This lets them look without letting them rewrite. }}
+                    <details class="aibs-history" data-region="history" hidden>
+                        <summary class="aibs-history-summary">
+                            {{#str}} journey:sofar, mod_aibranchedscenario {{/str}}
+                        </summary>
+                        <div class="aibs-history-body">
+                            <p class="aibs-history-note">
+                                {{#str}} journey:readonly, mod_aibranchedscenario {{/str}}</p>
+                            <ol class="aibs-history-list" data-region="historylist"></ol>
+                        </div>
+                    </details>
+                    {{#showtimeline}}
+                        {{! This setting used to gate the row of numbered dots. The dots are
+                            gone and it was left gating nothing at all, so turning it off had
+                            no effect on anything. It gates the position indicator now, which
+                            is what "show progress" means once there is only one of them. }}
+                        <p class="aibs-position" data-region="position" aria-hidden="true"></p>
+                    {{/showtimeline}}
                     {{#enableaudio}}
-                        <button type="button" class="aibs-audiobtn" data-action="mute"
+                        <button type="button" class="aibs-iconbtn aibs-audiobtn" data-action="mute"
                                 data-region="mutebutton" aria-pressed="true" data-state="on"
                                 title="{{#str}} narration:tipon, mod_aibranchedscenario {{/str}}"
                                 aria-label="{{#str}} narration:tipon, mod_aibranchedscenario {{/str}}">
@@ -135,7 +157,10 @@
                                           stroke-width="1.7" stroke-linecap="round"/>
                                 </svg>
                             </span>
-                            <span class="aibs-audiobtn-text" data-region="mutelabel">
+                            {{! The word was carrying no information the mark does not: the
+                                icon already shows on, off, blocked and none. It stays for a
+                                screen reader, which cannot see which mark is drawn. }}
+                            <span class="aibs-audiobtn-text aibs-sr-only" data-region="mutelabel">
                                 {{#str}} narration:on, mod_aibranchedscenario {{/str}}</span>
                         </button>
                     {{/enableaudio}}
@@ -154,30 +179,41 @@
             </header>
 
             <div class="aibs-statusbar">
-                {{#showtimeline}}
-                    <nav class="aibs-rail" aria-label="{{#str}} progress, mod_aibranchedscenario {{/str}}">
-                        <p class="aibs-rail-status" data-region="railstatus" role="status" aria-live="polite"></p>
-                        <ol class="aibs-rail-list" data-region="rail">
-                            {{#stages}}
-                                <li class="aibs-rail-step" data-step="{{index}}">
-                                    <span class="aibs-rail-dot" aria-hidden="true"></span>
-                                    <span class="aibs-rail-label">{{index}}</span>
-                                </li>
-                            {{/stages}}
-                        </ol>
-                    </nav>
-                {{/showtimeline}}
+                <p class="aibs-sr-only" data-region="railstatus" role="status" aria-live="polite"></p>
 
                 {{#showmetrics}}
                     <div class="aibs-meters" data-region="meters">
                         {{#metrics}}
-                            <div class="aibs-meter" data-metric="{{key}}">
-                                <span class="aibs-meter-label">{{label}}</span>
-                                <div class="aibs-meter-track" role="img" aria-label="{{label}}">
-                                    <div class="aibs-meter-fill" data-region="meterfill"
-                                         style="width: {{value}}%"></div>
-                                </div>
-                                <span class="aibs-meter-value" data-region="metervalue">{{value}}</span>
+                            <div class="aibs-meter {{tone}}" data-metric="{{key}}" data-label="{{label}}"
+                                 title="{{label}}">
+                                <span class="aibs-meter-dial">
+                                    <svg class="aibs-meter-ring" viewBox="0 0 36 36"
+                                         aria-hidden="true" focusable="false">
+                                        <circle class="aibs-meter-ringtrack" cx="18" cy="18" r="15"/>
+                                        <circle class="aibs-meter-ringfill" cx="18" cy="18" r="15"
+                                                data-region="meterfill" data-value="{{value}}"
+                                                stroke-dasharray="0 94.25"/>
+                                    </svg>
+                                    {{! The three words took more of the bar than the
+                                        readings did, so the mark stands for the name -
+                                        which is on the control as hover text, in the
+                                        legend in full, and said to a screen reader below.
+                                        It sits inside the ring rather than beside it: out
+                                        there it read as a loose mark between two dials
+                                        and it was not obvious which one it belonged to.
+                                        One definition of each mark, shared with the
+                                        consequence screen. }}
+                                    <span class="aibs-meter-mark" aria-hidden="true">
+                                        {{> mod_aibranchedscenario/metricmark }}
+                                    </span>
+                                </span>
+                                {{! The figure comes out of the ring and sits beside it,
+                                    where it has room to be read at a size worth counting
+                                    up to. }}
+                                <span class="aibs-meter-value" data-region="metervalue"
+                                      aria-hidden="true">{{value}}</span>
+                                <span class="aibs-sr-only" data-region="meterspoken">
+                                    {{label}} {{value}}</span>
                             </div>
                         {{/metrics}}
                     </div>
@@ -280,11 +316,9 @@
                                             <span class="aibs-lessoncard-label">
                                                 <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true"
                                                      focusable="false">
-                                                    <circle cx="10" cy="10" r="7.4" fill="none"
-                                                            stroke="currentColor" stroke-width="1.6"/>
-                                                    <path d="M6.6 10.2 9 12.6l4.4-5" fill="none"
-                                                          stroke="currentColor" stroke-width="1.7"
-                                                          stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <path d="M4.4 3.6h11.2a1.8 1.8 0 0 1 1.8 1.8v6.4a1.8 1.8 0 0 1-1.8 1.8H8.6l-3.8 2.8v-2.8h-.4a1.8 1.8 0 0 1-1.8-1.8V5.4a1.8 1.8 0 0 1 1.8-1.8Z"
+                                                          fill="none" stroke="currentColor" stroke-width="1.6"
+                                                          stroke-linejoin="round"/>
                                                 </svg>
                                                 {{#str}} lesson:saythis, mod_aibranchedscenario {{/str}}</span>
                                             <p class="aibs-lessoncard-text">{{example}}</p>
@@ -295,12 +329,11 @@
                                             <span class="aibs-lessoncard-label">
                                                 <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true"
                                                      focusable="false">
-                                                    <path d="M10 2.6 18.4 17H1.6L10 2.6Z" fill="none"
-                                                          stroke="currentColor" stroke-width="1.6"
-                                                          stroke-linejoin="round"/>
-                                                    <path d="M10 7.6v4.2" stroke="currentColor"
-                                                          stroke-width="1.7" stroke-linecap="round"/>
-                                                    <circle cx="10" cy="14.4" r="0.95" fill="currentColor"/>
+                                                    <circle cx="10" cy="10" r="7.4" fill="none"
+                                                            stroke="currentColor" stroke-width="1.6"/>
+                                                    <path d="M4.9 4.9l10.2 10.2" fill="none"
+                                                          stroke="currentColor" stroke-width="1.7"
+                                                          stroke-linecap="round"/>
                                                 </svg>
                                                 {{#str}} lesson:notthis, mod_aibranchedscenario {{/str}}</span>
                                             <p class="aibs-lessoncard-text">{{pitfall}}</p>
@@ -310,9 +343,34 @@
                             </article>
                         {{/lessonslides}}
 
-                        <article class="aibs-card aibs-deckslide aibs-deckend" data-region="deckslide" hidden>
-                            <h3 class="aibs-h3">{{#str}} lesson:ready, mod_aibranchedscenario {{/str}}</h3>
-                            <p class="aibs-step-lead">{{#str}} lesson:readylead, mod_aibranchedscenario {{/str}}</p>
+                        <article class="aibs-card aibs-deckslide aibs-slide aibs-deckend
+                                 {{^openingimage}}aibs-noscene{{/openingimage}}"
+                                 data-region="deckslide" hidden>
+                            {{#openingimage}}
+                                <div class="aibs-scene">
+                                    <img src="{{openingimage}}" alt="" class="aibs-scene-img"
+                                         loading="lazy">
+                                </div>
+                            {{/openingimage}}
+                            <div class="aibs-node-body">
+                            {{! The heading has to describe what is under it. It used to say
+                                "Ready when you are" over a "See how you did" button, over a
+                                "not published yet" notice, and over "no attempts left" - one
+                                sentence standing in front of five different situations. }}
+                            {{#canattempt}}{{#published}}
+                                {{#hasopen}}
+                                    <h3 class="aibs-h3">
+                                        {{#str}} lesson:resumehead, mod_aibranchedscenario {{/str}}</h3>
+                                    <p class="aibs-step-lead">
+                                        {{#str}} lesson:resumelead, mod_aibranchedscenario {{/str}}</p>
+                                {{/hasopen}}
+                                {{^hasopen}}
+                                    <h3 class="aibs-h3">
+                                        {{#str}} lesson:beginhead, mod_aibranchedscenario {{/str}}</h3>
+                                    <p class="aibs-step-lead">
+                                        {{#str}} lesson:readylead, mod_aibranchedscenario {{/str}}</p>
+                                {{/hasopen}}
+                            {{/published}}{{/canattempt}}
 
 
                 <div class="aibs-brief-actions">
@@ -321,24 +379,30 @@
                             {{! A finished attempt is the learner's to read again. Offering only
                                 "Begin the scenario" spent another attempt and put the earlier
                                 result out of reach. }}
-                            {{#hasfinished}}
-                                <button type="button" class="aibs-btn aibs-btn-primary"
-                                    data-action="showresult" data-attemptid="{{finishedattemptid}}">
-                                    {{#str}} seeyourresult, mod_aibranchedscenario {{/str}}
-                                </button>
-                            {{/hasfinished}}
+
                             {{#hasopen}}
                                 <button type="button" class="aibs-btn aibs-btn-primary aibs-start" data-action="start">
                                     {{#str}} resumescenario, mod_aibranchedscenario {{/str}}
                                 </button>
                             {{/hasopen}}
                             {{#canstartnew}}
-                                <button type="button" class="aibs-btn {{#hasfinished}}aibs-btn-secondary{{/hasfinished}}{{^hasfinished}}aibs-btn-primary{{/hasfinished}} aibs-start"
+                                <button type="button" class="aibs-btn aibs-btn-primary aibs-start"
                                     data-action="start">
                                     {{#hasfinished}}{{#str}} tryagain, mod_aibranchedscenario {{/str}}{{/hasfinished}}
                                     {{^hasfinished}}{{#str}} beginscenario, mod_aibranchedscenario {{/str}}{{/hasfinished}}
                                 </button>
                             {{/canstartnew}}
+                            {{! Reading a finished run again is a quiet second option here, not
+                                the blue button: this screen's job is to start the scenario.
+                                The full result has its own screen at the end. }}
+                            {{#hasfinished}}
+                                {{#showdebrief}}
+                                    <button type="button" class="aibs-btn aibs-btn-ghost"
+                                        data-action="showresult" data-attemptid="{{finishedattemptid}}">
+                                        {{#str}} seeyourresult, mod_aibranchedscenario {{/str}}
+                                    </button>
+                                {{/showdebrief}}
+                            {{/hasfinished}}
                             {{^canstartnew}}
                                 {{^hasfinished}}
                                     {{^hasopen}}
@@ -364,7 +428,8 @@
                         {{#str}} attemptsremaining, mod_aibranchedscenario, {{attemptsleft}} {{/str}}
                     </p>
                 {{/maxattempts}}
-                    </article>
+                            </div>
+                        </article>
 
                     </div>
 
@@ -377,7 +442,7 @@
                                       stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
                         </button>
-                        <span class="aibs-deck-count" data-region="deckcount" aria-live="polite"></span>
+
                         <button type="button" class="aibs-iconbtn" data-action="decknext"
                                 title="{{#str}} decknext, mod_aibranchedscenario {{/str}}"
                                 aria-label="{{#str}} decknext, mod_aibranchedscenario {{/str}}">

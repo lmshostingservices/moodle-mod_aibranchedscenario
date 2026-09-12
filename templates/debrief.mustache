@@ -79,43 +79,80 @@
 
     <div class="aibs-deck-stage">
 
-        <section class="aibs-card aibs-deckslide aibs-outcome {{outcomeclass}}" data-region="deckslide">
+        <section class="aibs-card aibs-deckslide aibs-slide aibs-outcome {{outcomeclass}} {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide">
+            {{#hasimage}}
+                <div class="aibs-scene">
+                    <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
+                </div>
+            {{/hasimage}}
+            <div class="aibs-node-body">
             <div class="aibs-outcome-head">
                 <span class="aibs-outcome-badge">{{outcomelabel}}</span>
-                <div class="aibs-score" role="img"
-                     aria-label="{{#str}} decisionqualityscore, mod_aibranchedscenario, {{score}} {{/str}}">
-                    <span class="aibs-score-value">{{score}}</span>
-                    <span class="aibs-score-unit">%</span>
+                {{! The only thing saying this number was a decision-quality score used to
+                    be an aria-label, which everyone who can see the screen cannot read. }}
+                <div class="aibs-score">
+                    <span class="aibs-score-figure">
+                        <span class="aibs-score-value">{{score}}</span>
+                        <span class="aibs-score-unit">%</span>
+                    </span>
+                    <span class="aibs-score-label">
+                        {{#str}} score, mod_aibranchedscenario {{/str}}</span>
                 </div>
             </div>
             {{#outcometitle}}<h3 class="aibs-h3">{{outcometitle}}</h3>{{/outcometitle}}
             <div class="aibs-prose aibs-prose-lead">{{#outcomeparas}}<p>{{.}}</p>{{/outcomeparas}}</div>
             <p class="aibs-fineprint">{{#str}} decisionstaken, mod_aibranchedscenario, {{decisions}} {{/str}}</p>
+                    </div>
         </section>
 
-        <section class="aibs-card aibs-deckslide aibs-skills" data-region="deckslide" hidden>
+        <section class="aibs-card aibs-deckslide aibs-slide aibs-skills {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" hidden>
+            {{#hasimage}}
+                <div class="aibs-scene">
+                    <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
+                </div>
+            {{/hasimage}}
+            <div class="aibs-node-body">
             <h3 class="aibs-h3">{{#str}} howyouhandledit, mod_aibranchedscenario {{/str}}</h3>
+            {{! These four are the grade, and nothing anywhere said what any of them meant or
+                how they relate to the three readings the learner watched all the way through.
+                A learner reasonably assumed the readings were the score. }}
+            <p class="aibs-step-lead">{{#str}} skills:lead, mod_aibranchedscenario {{/str}}</p>
             <ul class="aibs-skill-list">
                 {{#radar}}
-                    <li class="aibs-skill">
+                    <li class="aibs-skill {{tone}}">
                         <span class="aibs-skill-label">{{label}}</span>
                         <span class="aibs-skill-track">
                             <span class="aibs-skill-fill" style="width: {{percent}}%"></span>
                         </span>
-                        <span class="aibs-skill-value">{{percent}}%</span>
+                        {{! The number is its own element so it can be counted up to
+                            without the per cent sign or the spoken standing being
+                            rewritten on every frame of the animation. }}
+                        <span class="aibs-skill-value">
+                            <span class="aibs-skill-number" data-region="skillvalue"
+                                  data-to="{{percent}}">{{percent}}</span>%
+                            <span class="aibs-sr-only">{{standing}}</span>
+                        </span>
+                        <span class="aibs-skill-desc">{{description}}</span>
                     </li>
                 {{/radar}}
             </ul>
+                    </div>
         </section>
 
         {{#journeypages}}
-            <section class="aibs-card aibs-deckslide aibs-journey" data-region="deckslide" hidden>
+            <section class="aibs-card aibs-deckslide aibs-slide aibs-journey {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" hidden>
+            {{#hasimage}}
+                <div class="aibs-scene">
+                    <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
+                </div>
+            {{/hasimage}}
+            <div class="aibs-node-body">
                 <h3 class="aibs-h3">{{#str}} yourdecisions, mod_aibranchedscenario {{/str}}</h3>
                 <ol class="aibs-journey-list">
                     {{#decisions}}
                         <li class="aibs-journey-item {{signalclass}}">
                             <div class="aibs-journey-head">
-                                <span class="aibs-journey-seq">{{seq}}</span>
+                                <span class="aibs-journey-seq" aria-hidden="true">{{seq}}</span>
                                 <span class="aibs-journey-title">{{nodetitle}}</span>
                             </div>
                             <p class="aibs-journey-choice">{{choicetext}}</p>
@@ -124,74 +161,123 @@
                             {{#hasfeedback}}
                                 <div class="aibs-journey-feedback">
                                     <span class="aibs-journey-feedback-label">
+                                        {{> mod_aibranchedscenario/feedbackmark }}
                                         {{#str}} whythismattered, mod_aibranchedscenario {{/str}}</span>
                                     <div class="aibs-prose aibs-prose-small">
                                         {{#feedbackparas}}<p>{{.}}</p>{{/feedbackparas}}</div>
                                 </div>
                             {{/hasfeedback}}
-                            {{#principle}}<p class="aibs-journey-principle">{{principle}}</p>{{/principle}}
+                            {{#principle}}
+                                <p class="aibs-journey-principle">
+                                    <span class="aibs-chip-lead">
+                                        {{#str}} principletested, mod_aibranchedscenario {{/str}}</span>
+                                    {{principle}}
+                                </p>
+                            {{/principle}}
                         </li>
                     {{/decisions}}
                 </ol>
+                            </div>
             </section>
         {{/journeypages}}
 
-        <section class="aibs-card aibs-deckslide aibs-lessons" data-region="deckslide" hidden>
+        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" hidden>
+            {{#hasimage}}
+                <div class="aibs-scene">
+                    <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
+                </div>
+            {{/hasimage}}
+            <div class="aibs-node-body">
             <h3 class="aibs-h3">{{#str}} whatmattered, mod_aibranchedscenario {{/str}}</h3>
             <ul class="aibs-lesson-list">
-                {{#whatmattered}}<li class="aibs-lesson">{{.}}</li>{{/whatmattered}}
+                {{#whatmattered}}
+                    <li class="aibs-lesson"><span class="aibs-lesson-mark" aria-hidden="true">{{number}}</span>{{text}}</li>
+                {{/whatmattered}}
             </ul>
 
             {{#hascritical}}
                 <h4 class="aibs-h4">{{#str}} decisionsthatchanged, mod_aibranchedscenario {{/str}}</h4>
                 <ul class="aibs-lesson-list">
-                    {{#criticaldecisions}}<li class="aibs-lesson">{{.}}</li>{{/criticaldecisions}}
+                    {{#criticaldecisions}}
+                        <li class="aibs-lesson"><span class="aibs-lesson-mark" aria-hidden="true">{{number}}</span>{{text}}</li>
+                    {{/criticaldecisions}}
                 </ul>
             {{/hascritical}}
+                    </div>
         </section>
 
         {{#haspractice}}
-            <section class="aibs-card aibs-deckslide aibs-lessons" data-region="deckslide" hidden>
+            <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" hidden>
+            {{#hasimage}}
+                <div class="aibs-scene">
+                    <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
+                </div>
+            {{/hasimage}}
+            <div class="aibs-node-body">
                 <h3 class="aibs-h3">{{#str}} applyitinpractice, mod_aibranchedscenario {{/str}}</h3>
                 <ul class="aibs-lesson-list">
-                    {{#practice}}<li class="aibs-lesson">{{.}}</li>{{/practice}}
+                    {{#practice}}
+                        <li class="aibs-lesson"><span class="aibs-lesson-mark" aria-hidden="true">{{number}}</span>{{text}}</li>
+                    {{/practice}}
                 </ul>
 
                 {{#hassourceconnection}}
                     <h4 class="aibs-h4">{{#str}} sourceconnection, mod_aibranchedscenario {{/str}}</h4>
                     <div class="aibs-prose">{{#sourceconnectionparas}}<p>{{.}}</p>{{/sourceconnectionparas}}</div>
                 {{/hassourceconnection}}
+                            </div>
             </section>
         {{/haspractice}}
 
+        {{! The takeaways used to be a page of their own, directly after a page of advice,
+            which is two pages of advice at the end of a debrief - one too many. They sit
+            under the practice points now, and the actions that used to need a page of their
+            own sit at the bottom of this one. }}
         {{#hastakeaways}}
-            <section class="aibs-card aibs-deckslide" data-region="deckslide" hidden>
+            <section class="aibs-card aibs-deckslide aibs-slide aibs-lastpage {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" hidden>
+            {{#hasimage}}
+                <div class="aibs-scene">
+                    <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
+                </div>
+            {{/hasimage}}
+            <div class="aibs-node-body">
                 <h3 class="aibs-h3">{{#str}} takeaways, mod_aibranchedscenario {{/str}}</h3>
                 <div class="aibs-takeaways">
                     {{#takeaways}}
+                        {{! Numbered rather than marked with a repeated icon: the same
+                            bookmark on every card labelled nothing, while a number tells
+                            the learner how many of these there are and which one they are
+                            reading. Counted in PHP - mustache cannot. }}
                         <article class="aibs-takeaway">
+                            <span class="aibs-takeaway-mark" aria-hidden="true">{{number}}</span>
                             <h4 class="aibs-h4">{{heading}}</h4>
                             <div class="aibs-prose aibs-prose-small">{{#bodyparas}}<p>{{.}}</p>{{/bodyparas}}</div>
                         </article>
                     {{/takeaways}}
                 </div>
+                {{> mod_aibranchedscenario/debriefactions }}
+                            </div>
             </section>
         {{/hastakeaways}}
 
-        <section class="aibs-card aibs-deckslide aibs-deckend" data-region="deckslide" hidden>
-            <h3 class="aibs-h3">{{#str}} debriefend, mod_aibranchedscenario {{/str}}</h3>
-            <p class="aibs-step-lead">{{#str}} debriefendlead, mod_aibranchedscenario {{/str}}</p>
-            <div class="aibs-debrief-actions">
-                {{#allowreplay}}
-                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="replay">
-                        {{#str}} tryagain, mod_aibranchedscenario {{/str}}
-                    </button>
-                {{/allowreplay}}
-                <button type="button" class="aibs-btn aibs-btn-ghost" data-action="print">
-                    {{#str}} printdebrief, mod_aibranchedscenario {{/str}}
-                </button>
-            </div>
-        </section>
+        {{! With no takeaways there is nowhere else for the actions to go, so they take the
+            last page rather than being lost. This is the only case where a closing page is
+            drawn at all - it used to be drawn always, telling a learner they had reached the
+            end of something they could see they had reached the end of. }}
+        {{^hastakeaways}}
+            <section class="aibs-card aibs-deckslide aibs-slide aibs-lastpage aibs-deckend {{^hasimage}}aibs-noscene{{/hasimage}}"
+                     data-region="deckslide" hidden>
+            {{#hasimage}}
+                <div class="aibs-scene">
+                    <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
+                </div>
+            {{/hasimage}}
+            <div class="aibs-node-body">
+                <h3 class="aibs-h3">{{#str}} debriefend, mod_aibranchedscenario {{/str}}</h3>
+                {{> mod_aibranchedscenario/debriefactions }}
+                            </div>
+            </section>
+        {{/hastakeaways}}
 
     </div>
 
@@ -204,7 +290,6 @@
                       stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         </button>
-        <span class="aibs-deck-count" data-region="deckcount" aria-live="polite"></span>
         <button type="button" class="aibs-iconbtn" data-action="decknext"
                 title="{{#str}} decknext, mod_aibranchedscenario {{/str}}"
                 aria-label="{{#str}} decknext, mod_aibranchedscenario {{/str}}">

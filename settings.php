@@ -174,13 +174,36 @@ if ($ADMIN->fulltree) {
     ));
 
     $yesno = [0 => get_string('no'), 1 => get_string('yes')];
-    foreach (['showtimeline', 'showmetrics', 'showdebrief', 'enableimages', 'enableaudio'] as $toggle) {
+    // Each toggle with the value a new activity should start at. Holding the way forward
+    // closed until a screen has been heard out is the one that is off unless asked for:
+    // it is a deliberate restriction on the learner, not a presentation preference.
+    $toggles = [
+        'showtimeline' => 1,
+        'showmetrics' => 1,
+        'showdebrief' => 1,
+        'enableimages' => 1,
+        'enableaudio' => 1,
+        'requirelisten' => 0,
+    ];
+    foreach ($toggles as $toggle => $starts) {
         $settings->add(new admin_setting_configselect(
             'mod_aibranchedscenario/default' . $toggle,
             get_string('settings:default' . $toggle, 'mod_aibranchedscenario'),
             '',
-            1,
+            $starts,
             $yesno
+        ));
+    }
+
+    // The two thresholds every reading and every skill bar is coloured against.
+    foreach (['bandgreen' => 67, 'bandred' => 34] as $band => $starts) {
+        $settings->add(new admin_setting_configtext(
+            'mod_aibranchedscenario/default' . $band,
+            get_string('settings:default' . $band, 'mod_aibranchedscenario'),
+            '',
+            $starts,
+            PARAM_INT,
+            4
         ));
     }
 

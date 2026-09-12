@@ -97,11 +97,19 @@ class mod_aibranchedscenario_generator extends testing_module_generator {
             'characters' => [
                 ['id' => 'operator', 'name' => 'Sam Ng', 'role' => 'Machine operator'],
             ],
+            // A principle needs an example and a pitfall, and has since v1.20.0: a learner
+            // remembers the words they can use, and needs warning about the thing that
+            // sounds reasonable and is not. This fixture predated the rule and every test
+            // built on it was failing validation.
             'principles' => [
                 [
                     'id'      => 'speakup',
                     'title'   => 'Report faults before the next shift',
                     'summary' => 'Anything that can hurt someone is logged the moment it is seen.',
+                    'example' => '"I am logging the vibration now so the night shift sees it '
+                        . 'before they start."',
+                    'pitfall' => 'Telling the next supervisor in the corridor and assuming that '
+                        . 'counts as a record.',
                 ],
             ],
             'openingmetrics' => ['engagement' => 50, 'trust' => 50, 'tension' => 30],

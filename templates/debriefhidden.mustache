@@ -27,11 +27,30 @@
         "allowreplay": true
     }
 }}
-<section class="aibs-card aibs-debrief-hidden">
+{{! Nothing is being reported here, so this screen has one job: mark the finish. It used
+    to be a heading, a sentence of apology for the missing breakdown and a quiet button.
+    The tick draws itself on, the confetti falls once, and the way on is the blue primary
+    action - the same one that begins a scenario. }}
+{{! Not an aibs-slide: this card is not a page of a deck, and the slide rules turn it into
+    a two-column grid, which put the tick in the left-hand track while everything under it
+    stayed centred. }}
+<section class="aibs-card aibs-debrief-hidden" data-region="finish">
+    <span class="aibs-finish-burst" data-region="confetti" aria-hidden="true"></span>
+    <span class="aibs-finish-mark" aria-hidden="true">
+        <svg viewBox="0 0 96 96" focusable="false">
+            <circle class="aibs-finish-ring" cx="48" cy="48" r="42" fill="none"
+                    stroke="currentColor" stroke-width="3"/>
+            <path class="aibs-finish-tick" d="M30 49.5 42.5 62 66.5 36" fill="none"
+                  stroke="currentColor" stroke-width="5" stroke-linecap="round"
+                  stroke-linejoin="round"/>
+        </svg>
+    </span>
     <h3 class="aibs-h3">{{#str}} attemptfinished, mod_aibranchedscenario {{/str}}</h3>
     <p class="aibs-prose">{{#str}} debriefhidden, mod_aibranchedscenario {{/str}}</p>
     {{#allowreplay}}
-        <button type="button" class="aibs-btn aibs-btn-secondary" data-action="replay">
-            {{#str}} tryagain, mod_aibranchedscenario {{/str}}</button>
+        <div class="aibs-debrief-actions">
+            <button type="button" class="aibs-btn aibs-btn-primary" data-action="replay">
+                {{#str}} tryagain, mod_aibranchedscenario {{/str}}</button>
+        </div>
     {{/allowreplay}}
 </section>

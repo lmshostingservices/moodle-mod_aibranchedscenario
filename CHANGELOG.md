@@ -2,6 +2,423 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.30.0] - 2026-09-12
+
+### Changed — every figure counts to its value
+
+One count-up function now drives the three readings in the bar, the three rings on a
+consequence and the four skills in the debrief, so they all move with the same curve over
+the same time and arrive eighty milliseconds apart. Previously the rings counted and
+everything else snapped, which put two different ideas of how a number arrives on the same
+screen. The skill bars are staggered rather than all filling on one frame.
+
+### Changed — hover lifts, it does not repaint
+
+The dark inverse fill is now worn only by a control that is actually switched on. Every
+hover is the lift and the border: the primary action keeps its own accent rather than
+darkening, an option that is already chosen keeps its accent, and a choice card no longer
+takes a tinted wash that made it look selected while the pointer was over it.
+
+### Changed — thin rings
+
+The consequence dials were drawn at a tenth of their own diameter. They and the readings
+in the bar are now thin strokes.
+
+### Fixed — pictures ran the full width of the card
+
+The rule that puts a picture beside its text was the only rule in the stylesheet scoped to
+the body class alone; anywhere that class was absent, every deck slide fell back to
+stacking and the picture spanned the card. The "way in" slide had the same result from a
+different cause — a centred flex column written for a slide with no picture, applied to
+one that had it.
+
+### Fixed — a slide with no picture reserved the column for one
+
+Its text was centred inside the left 45% of the card, which reads as left-aligned. A slide
+without a scene is now one column.
+
+### Fixed — the readings were grey until the first decision
+
+The band was applied only by JavaScript, so the three marks painted in muted grey and
+stayed there until something moved them. They are banded server-side too, against the same
+thresholds the teacher set.
+
+### Changed — the three readings got marks that mean something
+
+Engagement was a heart-monitor trace, which said "vital signs" rather than "the room is
+with you"; it is now three figures. Tension was a lightning bolt, which reads as a hazard
+sign when a high tension is a reading rather than an alarm; it is now a thermometer. The
+shield is unchanged. All three are drawn once in the shared partial, so the bar and the
+consequence screen cannot disagree.
+
+### Changed — one shape for every progress indicator
+
+The mark sat outside the ring with the figure inside it, so a reading was two objects with
+nothing tying them together and the row of three read as six. Everywhere a reading is
+drawn — the bar and the consequence screen both — the mark is now centred in its own ring,
+so the ring is that reading's dial and the arc around the mark is where the reading stands,
+and the figure sits beside it with room to be read at a size worth counting up to. On the
+consequence the name moved to its own line beneath. In the bar, the gap inside a reading is
+smaller than the gap between two, so the row reads as three pairs.
+
+The third indicator, the debrief's skill bars, was drawn at a 10px track with a gradient
+fill while the dials had gone to thin flat strokes — two visual languages on adjacent
+screens. The track is 6px and the fill is the flat band colour.
+
+### Changed — the debrief lists are cards, one to a row
+
+Lessons learnt, Critical decisions, How to apply this and Key takeaways were bullet points
+and bare text. Each item is a card now, numbered from one, on the tinted surface with the
+same thin outline, the same lift on hover and the same body colour as every other card in
+the debrief. One to a row at every width, so there is no breakpoint to get wrong and the
+phone layout is the desktop layout.
+
+The four skills are cards too, each outlined and tinted by its own band, so a strong skill
+is a green card and a middling one amber. The bar track goes white inside a tinted card so
+it keeps its groove.
+
+### Changed — standard names
+
+Six labels were ours rather than the industry's: "What mattered most" is Lessons learnt,
+"Decisions that changed the outcome" is Critical decisions, "Apply it in practice" is How
+to apply this, "Back to the source material" is Source material, "Worth taking with you"
+is Key takeaways, and "That is the debrief" is Debrief complete. "Middling" is Moderate
+and "Understandable" is Neutral. The button that starts a scenario says Start; the heading
+above it already said Begin the scenario, so the screen was saying it twice.
+
+### Changed — one shape, one meaning, for every icon
+
+The tick in a circle marked both a well-judged decision and the "Say this" example, and
+the warning triangle marked both a costly decision and a pitfall. Two shapes were each
+carrying two meanings. "Say this" is a speech bubble and a pitfall is a no-entry mark.
+
+### Fixed — hover applied a grid to the card it was over
+
+A dangling selector left a rule reading `.aibs-lesson:hover, .aibs-takeaways`, so hovering
+a card applied the takeaways grid to it: the text moved and the card resized, and the
+intended hover never existed. Three more comment-interrupted selector lists were found by
+the check written for it, one of which had merged the finish screen's block into the
+no-picture rule and was turning every child of every centred slide into a flex column.
+
+### Fixed — touch targets and a sideways scroll
+
+Every round control was a 34px disc, comfortable with a mouse and too small for a finger.
+Where the pointer is coarse they are 44px, and the teacher's wizard steps have a 44px
+minimum height; the marks inside are unchanged, so only the hit area grows. A fixed 42px
+speaker badge could not shrink on a 320px screen.
+
+### Changed — the debrief
+
+"Why this mattered" was marked with a light bulb, which is the mark every product uses for
+an optional tip. It is not an aside — it is the point the decision was testing — so it is
+now an exclamation in a circle, drawn once and shared by the consequence screen, the
+debrief and the teacher's draft review. The panel it sits in is the amber sibling of the
+green outcome badge rather than another flat grey box.
+
+The grade is coloured by its band. It was accent blue on every run, so a strong outcome
+announced itself with a green badge and then reported its figure in the brand colour — the
+only banded number in the player that was not banded.
+
+Amber was `#b45309`, about twenty degrees from the negative red, so at 6px a middling skill
+bar and a bad one were the same colour. It is a real amber now.
+
+Each debrief page centred its own contents, so the heading sat at a different height on
+every one of the six and the column jumped on each arrow press. They share one baseline.
+
+The decision principle was bare accent-blue running text with a bold lead-in — the only
+blue prose in the product, and it read as a link that had failed to render. It is a chip.
+The skill rows had the same gap inside a row as between rows, so each description sat as
+close to the next skill as to its own bar and four rows read as eight lines.
+
+### Fixed — the skill bars animated behind a hidden slide
+
+A deck holds every page in the DOM and hides all but one, so the bars and their
+percentages ran their animation when the deck was built and were finished long before the
+learner arrowed to "How you handled it" — the one screen whose job is to deliver a result
+just sat there. Each slide now runs its arrivals at the moment it is shown, once. The
+grade counts up with them; it was the only figure on the debrief that simply appeared.
+
+### Changed — the finish, where the debrief is switched off
+
+A heading, a sentence about the missing breakdown, and a quiet button. The tick now draws
+itself on, confetti falls once in the player's own palette, and the way on is the blue
+primary action. Anyone who has asked for reduced motion gets the same screen, still.
+
+### Fixed — panels left over from removing the left-hand rules
+
+The "Why this mattered" panel and the teacher's speech panel were left rules with the text
+tucked in beside them. When the rules came off and the panels went to a thin outline on all
+four edges, the padding stayed on the one side it had always been on, so the text sat hard
+against the top, right and bottom of its own border. The takeaway cards were worse: they
+carried only a hover transition, so at rest they were unpadded text on the page background
+that grew a shadow when the pointer crossed them.
+
+### Fixed — the consequence marks were mangled
+
+The rule that turns a ring so its arc starts at twelve o'clock was a descendant selector,
+so it also caught the mark once the mark moved inside the dial: all three icons were sized
+to 72px and rotated onto their sides. It now applies to the ring element alone.
+
+### Changed — the benefit cards are three across
+
+Six cards packed four to a row left the last two stretched across the width of four.
+
+## [v1.26.0] - 2026-09-12
+
+### Changed — the readings carry their mark on both screens
+
+- Engagement, trust and tension got a drawn mark in the top bar in v1.23.0 and kept plain
+  words under the rings on the consequence screen, which is the one place a learner actually
+  studies them. Each ring now shows the same mark beside its name, and both take the colour
+  of the band the reading falls in — so the three readings on a consequence are coloured by
+  the same thresholds, in the same way, as the three in the bar above them.
+- **The three marks are defined once**, in a shared partial, rather than written out in both
+  templates. Engagement cannot end up as one shape in the bar and a different one underneath
+  a ring.
+
+## [v1.25.0] - 2026-09-12
+
+### Added — green, amber and red, with the thresholds in the teacher's hands
+
+- **Every figure the learner is shown is now banded.** The engagement, trust and tension
+  readings in the bar; the three rings on a consequence; and the four skill bars in the
+  debrief — which were the only numbers in the product with no colour on them at all, on the
+  one screen where the learner is actually being judged.
+- **Two thresholds, set on the activity**: the value a reading is good from, and the value
+  below which it is a problem. Everything between is amber. They were two numbers written
+  into the JavaScript, which meant a de-escalation exercise and a sales conversation were
+  told the same thing about a trust of 55. Site-wide defaults sit behind them, and the form
+  refuses a pair that cannot be true.
+- **One function does the banding for all three**, so a scenario cannot call a value good in
+  one place and middling in another. Tension is turned the right way up first, because a low
+  tension is a good one — a tension of 20 is green.
+- Each figure also says its band in words for anyone who cannot tell the colours apart.
+
+### Changed — where a reading stands beats which way it moved
+
+- The bar used to colour a reading by its last movement and by its standing, both written
+  onto the same ring, so a trust of 12 that had risen by two showed green — "improving"
+  beating "nearly gone". Movement is said on the consequence screen, by an arrow, at the
+  moment it happens. The bar says where things are.
+
+## [v1.24.0] - 2026-09-12
+
+### Changed — a change is an arrow, not the word "up"
+
+- The three readings on the consequence screen said "up 12", "down 12", "reduced by 8". They
+  now draw an arrow and the number. The arrow says the direction the reading moved; the
+  colour beside it says whether that direction was the good one — which is a different
+  question on tension, where falling is the gain. The worded form is what a screen reader
+  gets, because an arrow and a digit say nothing to somebody listening.
+- **A gain and a cost are finally coloured differently at all.** The classes that were
+  supposed to do it were being written onto the element and had no styles behind them, so
+  every change on every screen was the same grey whatever it meant.
+
+### Fixed — no picture means no column
+
+- Making every screen picture-left in v1.23.0 left one case wrong: a slide that has no
+  picture is not a column at all, and left aligning it puts the words hard against one edge
+  with the rest of the card empty beside them. A slide now says whether it has a scene, and
+  the ones that do not centre — the words, the measure and the actions. The class is written
+  by the template rather than worked out with `:has()`, so it is decided by the data rather
+  than by whether the browser supports the selector.
+
+### Fixed — the wizard lost its breathing room
+
+- Removing the shell's gutter for the player's sake took the wizard's padding with it, and
+  its first and last elements sat against the card edge. The wizard is a document, not a
+  fixed frame — it has no stage to carry the inset, so it carries its own.
+
+## [v1.23.0] - 2026-09-12
+
+### Changed — one shape for every screen
+
+- There used to be two: a slide with a picture beside its text, and a card of text across the
+  full width. Centring the second made it tidy in isolation and made the product read as two
+  products — the silhouette changed underneath the learner as they moved from a decision to
+  its consequence to the debrief, and the picture that had been on the left simply vanished.
+  **Every screen is now the picture on the left and the reading beside it.** Nothing runs the
+  full width.
+- **The consequence shows the scene the decision was taken in.** The room has not changed
+  because the learner chose something in it.
+- **The debrief borrows the scene the scenario opened on**, rather than being the one set of
+  screens with a different silhouette.
+- Text stays left aligned, because that is how a paragraph is read; the actions are centred
+  in their own column — the middle of the thing they belong to, rather than the middle of a
+  screen they occupy half of.
+
+### Changed — the top bar, again
+
+- **The narration control is a mark, not a pill.** The word said nothing the icon does not:
+  the control already draws a different mark for on, off, blocked and nothing-to-play. It is
+  now the same round shape as the fullscreen control beside it, and the word stays for a
+  screen reader, which cannot see which mark is drawn.
+- **The three readings are marks too.** "Engagement", "Trust" and "Tension" took more of the
+  bar than the readings themselves did. Each is now a drawn mark with its name on hover, in
+  the legend in full, and spoken to a screen reader.
+- The mark inside a filled control reverses out at every level — the chip behind the narration
+  icon used to carry its own accent colour, so the disc went dark and the mark stayed blue.
+
+### Changed — no card is coloured on one edge
+
+- A coloured rule down one side of a box that has a border on the other three reads as damage
+  rather than as emphasis. **A card that carries a signal is now outlined in it, thinly, on
+  every edge**, in the soft token rather than the strong one — a tint on an edge, not a
+  warning. The same goes for the quoted blocks, which used the same device.
+
+## [v1.22.0] - 2026-09-12
+
+Every open item from the screen audit, and one install bug found on the way.
+
+### Fixed — the upgrade could die on a real site
+
+- `$dbman` was fetched inside one of the version blocks, so any site whose stored version was
+  already past that block never ran the line — and the next block that needed it called
+  `field_exists()` on null and the install stopped mid-upgrade. A helper every step may need
+  belongs to the function, not to the one step that happened to need it first.
+
+### Fixed — a control that looked live and did nothing
+
+- The speaker's play button was rendered whenever a node had a recording, without asking
+  whether narration was on for the activity at all. `playSpeech()` then refused to act on it.
+  So on any scenario whose teacher had turned narration off while the clips still existed,
+  every speaking line showed an armed play button that did nothing when pressed — no state
+  change, no message. It is now gated on narration being on.
+
+### Fixed — two settings that did not do what they said
+
+- **"Show metrics" hid the readings in the bar and left them on the consequence screen**,
+  which is where the numbers matter most and where, after the bar was hidden, the legend
+  explaining them was no longer reachable. It now means what it says on every screen.
+- **"Show progress" gated nothing at all.** It used to gate the row of numbered dots; the
+  dots went in v1.21.0 and it was left gating nothing, so turning it off had no effect. It
+  gates the position indicator now.
+
+### Fixed — the grade arrived unexplained
+
+- The four graded skills had no description anywhere in the plugin, while the three readings
+  that are explicitly *not* the grade had a full legend. A learner watched engagement, trust
+  and tension all the way through, was told those were not the score, and then met four new
+  percentages that reconciled with nothing. Each skill now says what it measures, and the
+  page says plainly which numbers are the grade and which describe the room.
+- **The score had no visible label.** The only thing saying that "74.5%" was a decision
+  quality score was an `aria-label` — which everyone who can see the screen cannot read.
+
+### Fixed — things that did not say what they were
+
+- The principle chip was a bare phrase that could equally have been a tag, a quote or a
+  category. It now says what it is.
+- **Each reading says its standing in words, not only in colour.** The ring was coloured by
+  where a reading stands while the text under it only ever described the movement, so "trust
+  is currently low" was communicated by colour alone.
+
+### Added — looking back
+
+- There was no way to see what you had already decided. Going back to *change* a decision is
+  not the answer — undoing a consequence would make the score mean nothing — so this is a
+  read-only record, opened from the top bar and populated from the server on resume, so it is
+  the attempt's history rather than the browser session's.
+
+### Removed — two screens that were not worth a screen
+
+- **The debrief's closing page is gone.** Its content was a sentence telling the learner they
+  had reached the end of something they could see they had reached the end of, plus two
+  buttons. The buttons moved to the foot of the last page that has something on it.
+- **The takeaways no longer have a page of their own** directly after a page of advice. Two
+  pages of advice at the end of a debrief is one too many.
+
+## [v1.21.0] - 2026-09-11
+
+### Changed — the top bar, redesigned rather than patched
+
+- **One heading, not two.** The scenario's name sat above a second line repeating the
+  setting and the subtitle, on a page whose own banner has already named the activity.
+- **One progress indicator, not two.** A row of numbered dots counted decisions while a
+  line under the deck counted slides — two counts of different things on one screen, which
+  is a question rather than information. There is now a single position chip at the top
+  right, saying where the learner is in whatever they are looking at: "1 of 7" through the
+  lesson, "Decision 3 of 5" through the scenario. The number they are on carries the weight
+  and the total sits behind it.
+- **The arrows moved onto the slide's own left and right edges**, vertically centred, where
+  a hand reaching for "next" already is. They used to sit in a row underneath, which spent
+  a band of height on two buttons and put the way forward as far from the slide as it could
+  be. Nothing is reserved for them any more, so that height goes to the slide.
+- **The card is inset by one value on all four sides.** Removing the old gutter in v1.20.0
+  left ten pixels above the card and none anywhere else, so it sat hard against three edges.
+  The inset is now a single declaration on the stage and even by construction.
+
+### Fixed
+
+- **Fullscreen did not scale.** The frame is capped so a tall window does not crop a 16:9
+  photograph into a letterbox on its side — but the cap was still applying in fullscreen,
+  leaving a 620px card in the middle of a 1080px screen, which is the opposite of what the
+  button promises. Fullscreen is the one place the cap does not apply, and the picture grows
+  with the frame instead of holding a fixed ratio inside it.
+- **A switched-on control now reverses its mark out of its fill.** The fullscreen button
+  goes dark when it is active and the icon kept its resting colour, so it sat accent-blue on
+  a dark grey disc. Every held state inverts the same way the hover does.
+
+### Changed — one rule for where things sit
+
+- Two kinds of screen were not being told apart. A slide with a picture beside it is a
+  reading column: its text is left aligned because that is how a paragraph is read. A slide
+  with **no** picture is not a column at all — it is a statement on a card — and left
+  aligning it left the words hard against one edge with a third of the card empty beside
+  them, and the button that answers them floating off in a corner. Every screen without a
+  picture is now centred: the block, the words, and the actions under it. Continue was
+  bottom-left on the consequence screen for no reason other than that a div starts at the
+  left; it is bottom-centre, like every other primary action.
+
+### Fixed — the start screen was standing in front of five different situations
+
+- "Ready when you are — you will make a series of decisions" was printed unconditionally,
+  while the buttons underneath it branched five ways. So it appeared over "See how you did",
+  over "Carry on where you left off", over "not published yet", over "preview only" and over
+  "no attempts left" — describing none of them. The heading and its description now change
+  with the state: **Begin the scenario** before a first run, **Pick up where you left off**
+  on an open one.
+- **Reviewing a finished run is no longer the blue button on the start screen.** This screen
+  starts the scenario; reading a past result is a quiet second option, and it is not offered
+  at all when the teacher has turned the debrief off — which previously led to a button
+  promising a result and a screen saying there would not be one.
+
+### Added — hear each screen out before moving on
+
+- A new activity setting, off unless asked for. The way forward normally dims while a screen
+  is being read but can still be pressed; with this on it is genuinely held closed until the
+  reading finishes, so a learner cannot click past the teaching.
+- Previous is deliberately left open: going back is not skipping anything, and a learner who
+  wants to hear a screen again has to be able to reach it.
+- It cannot strand anyone. A recording that fails, or never finishes, releases the way
+  forward on its own, and anyone who has muted the narration is never held at all.
+
+## [v1.20.1] - 2026-09-11
+
+### Changed — the three readings are dials now
+
+- Each reading was a name, a run of track and a number. The track is the expensive part:
+  it has to be wide enough to read a proportion off, and three of them took most of the
+  width of the bar, which is why the readings wrapped onto a second line and pushed the
+  title around. A ring says the same proportion in the space of its own diameter and puts
+  the number inside itself. **Measured: the readings went from about 560px of the bar to
+  368px, and the whole top bar from 68px to 51px** - which, with the gutter and the
+  single-row bar from v1.20.0, is the difference between a 520px slide and a 620px one at
+  1920x945.
+- **They sweep up from empty when the screen opens**, staggered eighty milliseconds apart,
+  the same interval the choices and the outcome rings use. Under `prefers-reduced-motion`
+  they are simply drawn at their value.
+- The ring takes the colour of a move as well as the number, so a rise or a fall is visible
+  without reading the digits.
+- A ring is a picture, so each one also carries its reading in words for anyone listening to
+  the page rather than looking at it. The old markup put `role="img"` with a label that had
+  no value in it on the track, which announced "Trust, image" and left the number to a
+  separate element beside it.
+
+### Verified
+
+- The fit sweep was re-run after the change: fifty-one window and banner combinations, none
+  below the fold. The frame is still identical on every screen - 620/620, 570/570, 438/438.
+
 ## [v1.20.0] - 2026-09-11
 
 The scrolling is fixed, and it was not what any of us thought it was.

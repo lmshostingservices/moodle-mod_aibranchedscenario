@@ -29,6 +29,15 @@
  * @return bool Always true.
  */
 function xmldb_aibranchedscenario_upgrade($oldversion) {
+    global $DB;
+
+    // Once, at the top. It used to be fetched inside one of the version blocks below, which
+    // meant any site whose stored version was already past that block never executed the
+    // line - and the next block that needed it called field_exists() on null and the install
+    // died mid-upgrade. A helper every step may need belongs to the function, not to one
+    // step that happened to need it first.
+    $dbman = $DB->get_manager();
+
     if ($oldversion < 2026090900) {
         // First released version; nothing to upgrade from.
         upgrade_mod_savepoint(true, 2026090900, 'aibranchedscenario');
@@ -121,9 +130,6 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026091010) {
-        global $DB;
-        $dbman = $DB->get_manager();
-
         // Generating again used to overwrite the working copy in place, so an hour of
         // hand editing disappeared on one click with no way back. The previous copy is
         // now kept so that exactly one step can be undone.
@@ -383,6 +389,86 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
     if ($oldversion < 2026091131) {
         // Release 1.20.0 changes no schema: the fixed frame, the narration and the bar.
         upgrade_mod_savepoint(true, 2026091131, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091132) {
+        // Release 1.20.1 changes no schema: the readings became dials.
+        upgrade_mod_savepoint(true, 2026091132, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091133) {
+        // Whether the learner must hear a slide out before the way on unlocks.
+        $table = new xmldb_table('aibranchedscenario');
+        $field = new xmldb_field(
+            'requirelisten',
+            XMLDB_TYPE_INTEGER,
+            '2',
+            null,
+            XMLDB_NOTNULL,
+            null,
+            '0',
+            'enableaudio'
+        );
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_mod_savepoint(true, 2026091133, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091134) {
+        // Release 1.22.0 changes no schema: the nine screen-audit items.
+        upgrade_mod_savepoint(true, 2026091134, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091135) {
+        // Release 1.23.0 changes no schema: one shape for every screen.
+        upgrade_mod_savepoint(true, 2026091135, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091136) {
+        // Release 1.24.0 changes no schema: arrows, centring and the wizard's padding.
+        upgrade_mod_savepoint(true, 2026091136, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091137) {
+        // Where a reading stops being good and where it becomes a problem. These were two
+        // numbers written into the JavaScript, which meant the same thresholds for a
+        // de-escalation exercise and a sales conversation.
+        $table = new xmldb_table('aibranchedscenario');
+        foreach ([['bandgreen', '67', 'requirelisten'], ['bandred', '34', 'bandgreen']] as $spec) {
+            $field = new xmldb_field(
+                $spec[0],
+                XMLDB_TYPE_INTEGER,
+                '3',
+                null,
+                XMLDB_NOTNULL,
+                null,
+                $spec[1],
+                $spec[2]
+            );
+            if (!$dbman->field_exists($table, $field)) {
+                $dbman->add_field($table, $field);
+            }
+        }
+        upgrade_mod_savepoint(true, 2026091137, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091138) {
+        // Release 1.26.0 changes no schema: the readings carry their mark everywhere.
+        upgrade_mod_savepoint(true, 2026091138, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091240) {
+        // Release 1.30.0 changes no schema. The work it carries is the look-and-feel
+        // programme that 1.27.0 was built for and never released under.
+        upgrade_mod_savepoint(true, 2026091240, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091239) {
+        // Release 1.27.0 changes no schema: every figure counts to its value, the rings
+        // are drawn thin, hover lifts instead of repainting, and a slide without a
+        // picture stops reserving the column for one.
+        upgrade_mod_savepoint(true, 2026091239, 'aibranchedscenario');
     }
 
     return true;

@@ -80,6 +80,16 @@ class start_attempt extends external_api {
         $mediaurls = helper::media_urls($resolved['context'], $manager->get_revision());
         $seq = count(attempt_manager::get_events((int)$attempt->id));
 
+        $journey = [];
+        foreach ($manager->build_journey($attempt) as $step) {
+            $journey[] = [
+                'seq'        => $step['seq'],
+                'nodetitle'  => $step['nodetitle'],
+                'choicetext' => $step['choicetext'],
+                'signal'     => $step['signal'],
+            ];
+        }
+
         return [
             'attemptid'  => (int)$attempt->id,
             'attemptno'  => (int)$attempt->attemptno,
@@ -88,6 +98,7 @@ class start_attempt extends external_api {
             'metrics'    => helper::metrics($attempt),
             'node'       => helper::node_payload($node, $attempt, $mediaurls),
             'resumed'    => $seq > 0,
+            'journey'    => $journey,
         ];
     }
 
@@ -105,6 +116,16 @@ class start_attempt extends external_api {
             'metrics'   => helper::metrics_structure(),
             'node'      => helper::node_structure(),
             'resumed'   => new external_value(PARAM_BOOL, 'Whether an existing attempt was resumed'),
+            // What the learner has already decided, so a resumed attempt can show its own
+            // history rather than starting the record from whatever happens next.
+            'journey'   => new external_multiple_structure(
+                new external_single_structure([
+                    'seq'        => new external_value(PARAM_INT, 'Decision number'),
+                    'nodetitle'  => new external_value(PARAM_TEXT, 'The decision point'),
+                    'choicetext' => new external_value(PARAM_TEXT, 'What the learner chose'),
+                    'signal'     => new external_value(PARAM_ALPHA, 'How the choice was judged'),
+                ])
+            ),
         ]);
     }
 }

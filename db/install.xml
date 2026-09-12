@@ -25,6 +25,9 @@
         <FIELD NAME="showtimeline" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="1" SEQUENCE="false"/>
         <FIELD NAME="showmetrics" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="1" SEQUENCE="false"/>
         <FIELD NAME="enableaudio" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="requirelisten" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="bandgreen" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="67" SEQUENCE="false"/>
+        <FIELD NAME="bandred" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="34" SEQUENCE="false"/>
         <FIELD NAME="enableimages" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
         <FIELD NAME="grade" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="100" SEQUENCE="false" COMMENT="Maximum grade, 0 for no grade"/>
         <FIELD NAME="grademethod" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="last" SEQUENCE="false" COMMENT="last, first, highest or average"/>

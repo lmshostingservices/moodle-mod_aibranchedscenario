@@ -36,6 +36,8 @@
     * ispositive bool Whether the signal is positive
     * isneutral bool Whether the signal is neutral
     * isnegative bool Whether the signal is negative
+    * hasimage bool Whether the scene has a picture
+    * imageurl string The scene the decision was taken in
     * consequenceparas array What happened, one entry per paragraph
     * feedbackparas string Why it mattered, array of plain-text paragraphs
     * hasfeedback bool Whether feedback is present
@@ -62,7 +64,20 @@
         "continuelabel": "Continue"
     }
 }}
-<article class="aibs-card aibs-consequence aibs-enter {{signalclass}}">
+{{! The same shape as every other screen: the scene on the left, what happened beside it.
+    It used to be a single column across the full width, which made it the one screen with a
+    different silhouette from the two either side of it. The picture is the scene the learner
+    has just acted in - it has not changed because they chose something. }}
+<article class="aibs-card aibs-consequence aibs-slide aibs-enter {{signalclass}}
+         {{^hasimage}}aibs-noscene{{/hasimage}}">
+
+    {{#hasimage}}
+        <div class="aibs-scene">
+            <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
+        </div>
+    {{/hasimage}}
+
+    <div class="aibs-node-body">
 
     <div class="aibs-consequence-head">
         <span class="aibs-signal">
@@ -89,7 +104,13 @@
             {{/isnegative}}
             {{signallabel}}
         </span>
-        {{#principle}}<span class="aibs-chip aibs-chip-quiet">{{principle}}</span>{{/principle}}
+        {{#principle}}
+            <span class="aibs-chip aibs-chip-quiet">
+                <span class="aibs-chip-lead">
+                    {{#str}} principletested, mod_aibranchedscenario {{/str}}</span>
+                {{principle}}
+            </span>
+        {{/principle}}
     </div>
 
     <div class="aibs-prose aibs-prose-lead">{{#consequenceparas}}<p>{{.}}</p>{{/consequenceparas}}</div>
@@ -97,16 +118,60 @@
     <ul class="aibs-rings">
         {{#deltas}}
             <li class="aibs-ring {{tone}}">
-                <span class="aibs-ring-dial">
-                    <svg viewBox="0 0 72 72" aria-hidden="true" focusable="false">
-                        <circle class="aibs-ring-track" cx="36" cy="36" r="28"/>
-                        <circle class="aibs-ring-fill" cx="36" cy="36" r="28"
-                                data-dash="{{dash}}" data-startdash="{{startdash}}"/>
-                    </svg>
-                    <span class="aibs-ring-value" data-from="{{before}}" data-to="{{after}}">{{before}}</span>
+                {{! The same shape as the bar above: the mark is centred in its own dial,
+                    so the arc is drawn around the thing it is measuring, and the figure
+                    sits beside it rather than inside the circle. }}
+                <span class="aibs-ring-readout">
+                    <span class="aibs-ring-dial">
+                        <svg viewBox="0 0 72 72" aria-hidden="true" focusable="false">
+                            <circle class="aibs-ring-track" cx="36" cy="36" r="28"/>
+                            <circle class="aibs-ring-fill" cx="36" cy="36" r="28"
+                                    data-dash="{{dash}}" data-startdash="{{startdash}}"/>
+                        </svg>
+                        <span class="aibs-ring-mark" aria-hidden="true">
+                            {{> mod_aibranchedscenario/metricmark }}
+                        </span>
+                    </span>
+                    {{! Rendered at the value it ends on, not the one it starts from: the
+                        count-up writes the starting figure on its first frame anyway, so
+                        the animation is unchanged, and anywhere the script does not run
+                        the ring reads the reading the learner actually has rather than
+                        the one they had before this decision. }}
+                    <span class="aibs-ring-value" data-from="{{before}}" data-to="{{after}}">{{after}}</span>
                 </span>
                 <span class="aibs-ring-label">{{label}}</span>
-                <span class="aibs-ring-change {{#good}}aibs-up{{/good}}{{#bad}}aibs-down{{/bad}}">{{change}}</span>
+                <span class="aibs-ring-change {{#good}}aibs-up{{/good}}{{#bad}}aibs-down{{/bad}}">
+                    <span class="aibs-ring-arrow" aria-hidden="true">
+                        {{#isup}}
+                            <svg class="aibs-icon" viewBox="0 0 20 20" focusable="false">
+                                <path d="M10 15.4V5.2m-4.1 4.1L10 5.2l4.1 4.1" fill="none"
+                                      stroke="currentColor" stroke-width="1.9"
+                                      stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        {{/isup}}
+                        {{#isdown}}
+                            <svg class="aibs-icon" viewBox="0 0 20 20" focusable="false">
+                                <path d="M10 4.6v10.2m-4.1-4.1L10 14.8l4.1-4.1" fill="none"
+                                      stroke="currentColor" stroke-width="1.9"
+                                      stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        {{/isdown}}
+                        {{#isflat}}
+                            <svg class="aibs-icon" viewBox="0 0 20 20" focusable="false">
+                                <path d="M5.6 10h8.8" fill="none" stroke="currentColor"
+                                      stroke-width="1.9" stroke-linecap="round"/>
+                            </svg>
+                        {{/isflat}}
+                    </span>
+                    {{^isflat}}<span class="aibs-ring-amount" aria-hidden="true">{{amount}}</span>{{/isflat}}
+                    {{! The worded form is what a screen reader gets: an arrow and a digit
+                        say nothing to somebody listening, and "reduced by 8" carries the
+                        one thing the arrow cannot - that falling is the good direction. }}
+                    <span class="aibs-sr-only">{{change}}</span>
+                </span>
+                {{! The colour alone said where the reading stands; this says it in words, for
+                    anyone who cannot tell the colours apart or is listening to the page. }}
+                <span class="aibs-ring-standing">{{standing}}</span>
             </li>
         {{/deltas}}
     </ul>
@@ -114,11 +179,7 @@
     {{#hasfeedback}}
         <div class="aibs-feedback">
             <h4 class="aibs-h4">
-                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-                    <path d="M10 2.8a5 5 0 0 0-2.9 9.1v1.6h5.8v-1.6A5 5 0 0 0 10 2.8Z" fill="none"
-                          stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                    <path d="M8.2 16.2h3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
+                {{> mod_aibranchedscenario/feedbackmark }}
                 {{#str}} whythismattered, mod_aibranchedscenario {{/str}}
             </h4>
             <div class="aibs-prose">{{#feedbackparas}}<p>{{.}}</p>{{/feedbackparas}}</div>
@@ -134,4 +195,6 @@
             </svg>
         </button>
     </div>
+    </div>
+
 </article>

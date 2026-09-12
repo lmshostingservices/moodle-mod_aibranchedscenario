@@ -93,6 +93,38 @@ class mod_aibranchedscenario_mod_form extends moodleform_mod {
         $mform->setDefault('enableaudio', self::default_for('enableaudio', 1));
         $mform->addHelpButton('enableaudio', 'enableaudio', 'mod_aibranchedscenario');
 
+        $mform->addElement(
+            'selectyesno',
+            'requirelisten',
+            get_string('requirelisten', 'mod_aibranchedscenario')
+        );
+        $mform->setDefault('requirelisten', self::default_for('requirelisten', 0));
+        $mform->addHelpButton('requirelisten', 'requirelisten', 'mod_aibranchedscenario');
+        $mform->hideIf('requirelisten', 'enableaudio', 'eq', 0);
+
+        // Where a reading stops counting as good, and where it becomes a problem. A
+        // de-escalation exercise and a sales conversation do not agree about what a
+        // trust of 55 means, and these used to be two numbers inside the JavaScript.
+        $mform->addElement(
+            'text',
+            'bandgreen',
+            get_string('bandgreen', 'mod_aibranchedscenario'),
+            ['size' => 4]
+        );
+        $mform->setType('bandgreen', PARAM_INT);
+        $mform->setDefault('bandgreen', self::default_for('bandgreen', 67));
+        $mform->addHelpButton('bandgreen', 'bandgreen', 'mod_aibranchedscenario');
+
+        $mform->addElement(
+            'text',
+            'bandred',
+            get_string('bandred', 'mod_aibranchedscenario'),
+            ['size' => 4]
+        );
+        $mform->setType('bandred', PARAM_INT);
+        $mform->setDefault('bandred', self::default_for('bandred', 34));
+        $mform->addHelpButton('bandred', 'bandred', 'mod_aibranchedscenario');
+
         $mform->addElement('header', 'attempts', get_string('attemptsettings', 'mod_aibranchedscenario'));
 
         $attemptoptions = [0 => get_string('unlimited', 'mod_aibranchedscenario')];
@@ -202,6 +234,17 @@ class mod_aibranchedscenario_mod_form extends moodleform_mod {
             if ($score < 0 || $score > 100) {
                 $errors['completionminscore'] = get_string('error:minscorerange', 'mod_aibranchedscenario');
             }
+        }
+
+        $green = (int)($data['bandgreen'] ?? 67);
+        $red = (int)($data['bandred'] ?? 34);
+        foreach (['bandgreen' => $green, 'bandred' => $red] as $field => $value) {
+            if ($value < 0 || $value > 100) {
+                $errors[$field] = get_string('error:bandrange', 'mod_aibranchedscenario');
+            }
+        }
+        if (!isset($errors['bandgreen']) && !isset($errors['bandred']) && $green <= $red) {
+            $errors['bandgreen'] = get_string('error:bandorder', 'mod_aibranchedscenario');
         }
 
         return $errors;

@@ -496,6 +496,11 @@ class helper {
             $radar[] = [
                 'skill' => $skill,
                 'label' => get_string('skill:' . $skill, 'mod_aibranchedscenario'),
+                // A bar with a number on it and no explanation is the whole grade arriving
+                // unexplained. These four are what the learner is actually marked on, and
+                // they were the only numbers in the product with nothing saying what they
+                // meant - while the three that are explicitly not the grade had a legend.
+                'description' => get_string('skill:' . $skill . 'desc', 'mod_aibranchedscenario'),
                 'value' => $value,
                 'raw'   => (int)$attempt->{$skill},
             ];
@@ -529,13 +534,16 @@ class helper {
             'practice'     => array_values($debrief['practice']),
             'sourceconnection' => $debrief['sourceconnection'],
             'sourceconnectionparas' => self::paragraph_list($debrief['sourceconnection']),
-            'takeaways'    => array_values(array_map(function ($takeaway) {
+            // Numbered, because the cards are marked with their position and mustache
+            // cannot count. One-based: it is what the learner reads, not an array index.
+            'takeaways'    => array_values(array_map(function ($takeaway, $index) {
                 return [
                     'heading'  => $takeaway['heading'],
                     'body'     => $takeaway['body'],
+                    'number'   => $index + 1,
                     'bodyparas' => self::paragraph_list($takeaway['body']),
                 ];
-            }, $definition['takeaways'])),
+            }, $definition['takeaways'], array_keys($definition['takeaways']))),
         ];
     }
 
@@ -559,6 +567,7 @@ class helper {
                 new external_single_structure([
                     'skill' => new external_value(PARAM_ALPHA, 'Skill key'),
                     'label' => new external_value(PARAM_TEXT, 'Translated skill label'),
+                    'description' => new external_value(PARAM_TEXT, 'What the skill measures'),
                     'value' => new external_value(PARAM_FLOAT, 'Normalised value between 0 and 1'),
                     'raw'   => new external_value(PARAM_INT, 'Raw accumulated value'),
                 ])
@@ -591,6 +600,7 @@ class helper {
                 new external_single_structure([
                     'heading'  => new external_value(PARAM_TEXT, 'Takeaway heading'),
                     'body'     => new external_value(PARAM_TEXT, 'Takeaway body'),
+                    'number'   => new external_value(PARAM_INT, 'Position in the list'),
                     'bodyparas' => self::paragraphs_structure('Takeaway body as plain text; escape before use as HTML'),
                 ])
             ),

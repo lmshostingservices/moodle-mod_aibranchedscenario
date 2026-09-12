@@ -48,7 +48,8 @@ class backup_aibranchedscenario_activity_structure_step extends backup_activity_
             'name', 'intro', 'introformat', 'status', 'theme', 'scenariolang',
             'scenariojson', 'sourcejson', 'generationmeta', 'revision',
             'maxattempts', 'allowreplay', 'showdebrief', 'showtimeline', 'showmetrics',
-            'enableaudio', 'enableimages', 'grademethod',
+            'enableaudio', 'requirelisten', 'bandgreen', 'bandred',
+            'enableimages', 'grademethod',
             'completionfinish', 'completionminscore',
             'timecreated', 'timemodified',
         ]);

@@ -39,7 +39,6 @@ const SELECTORS = {
     debrief: '[data-region="debrief"]',
     loading: '[data-region="loading"]',
     error: '[data-region="error"]',
-    rail: '[data-region="rail"]',
     railStatus: '[data-region="railstatus"]',
     meters: '[data-region="meters"]',
 };
@@ -78,9 +77,12 @@ class Player {
     /**
      * Height held for the deck arrows on screens that do not have them, in pixels.
      *
+     * Zero since the arrows moved onto the slide's left and right edges: they take no
+     * height of their own now, so there is none to hold for them.
+     *
      * @type {Number}
      */
-    static NAV_RESERVE = 52;
+    static NAV_RESERVE = 0;
 
     /**
      * Create a controller bound to a player root element.
@@ -91,6 +93,21 @@ class Player {
         this.root = root;
         this.cmid = parseInt(root.dataset.cmid, 10);
         this.audioEnabled = root.dataset.audio === '1';
+        this.showMetrics = root.dataset.metrics !== '0';
+        // Where a reading stops counting as good and where it becomes a problem. These were
+        // two numbers written into this file, which meant a de-escalation exercise and a
+        // sales conversation were told the same thing about a trust of 55.
+        this.bandGreen = parseInt(root.dataset.bandgreen, 10);
+        this.bandRed = parseInt(root.dataset.bandred, 10);
+        if (isNaN(this.bandGreen)) {
+            this.bandGreen = 67;
+        }
+        if (isNaN(this.bandRed)) {
+            this.bandRed = 34;
+        }
+        // When the teacher has asked for it, the way on is genuinely closed while a screen
+        // is being read rather than merely dimmed.
+        this.requireListen = root.dataset.requirelisten === '1';
         this.muted = false;
         // Set when the browser refuses to start sound without a gesture, and when the
         // current scene simply has no recording. Both look identical to a learner —
@@ -108,6 +125,10 @@ class Player {
         this.nextSeq = 1;
         this.step = 0;
         this.pendingNode = null;
+        this.sceneImage = '';
+        // Every decision made in this attempt, in order. Seeded from the server on resume
+        // so the record is the attempt's, not the browser session's.
+        this.journey = [];
         this.audio = null;
         this.wayOnTimer = null;
         // The frame is measured once and then held. Recomputing it on every screen made it
@@ -135,7 +156,7 @@ class Player {
             'stageprogress', 'attemptfinished',
             'deltaup', 'deltadown', 'deltareduced', 'deltaraised', 'deltasame',
             'error:printblocked', 'listento', 'fullscreen:enter', 'fullscreen:exit',
-            'deckposition',
+            'deckposition', 'standing:strong', 'standing:mixed', 'standing:weak',
         ];
         const values = await getStrings(keys.map((key) => ({key, component: 'mod_aibranchedscenario'})));
         keys.forEach((key, index) => {
@@ -144,6 +165,7 @@ class Player {
 
         this.syncStickyOffset();
         this.watchPinned();
+        this.startMeters();
         // The opening lesson is on the page before anything is asked of the server.
         this.startDeck(this.root.querySelector('[data-region="brief"] [data-region="deck"]'));
         let resizeTimer = null;
@@ -317,6 +339,8 @@ class Player {
             }
             this.hideRegion(SELECTORS.debrief);
             this.hideRegion(SELECTORS.consequence);
+            this.journey = Array.isArray(response.journey) ? response.journey.slice() : [];
+            this.drawHistory();
             this.updateMeters(response.metrics, null);
             await this.renderNode(response.node);
         } catch (error) {
@@ -358,6 +382,15 @@ class Player {
             this.step = response.seq;
             this.stopAudio();
             this.updateMeters(response.after, response.before);
+            this.journey.push({
+                seq: this.journey.length + 1,
+                nodetitle: element.closest('[data-nodeid]')
+                    ? (element.closest('[data-nodeid]').querySelector('.aibs-h3') || {}).textContent || ''
+                    : '',
+                choicetext: (element.querySelector('.aibs-choice-text') || {}).textContent || '',
+                signal: response.signal,
+            });
+            this.drawHistory();
             this.pendingNode = response.finished ? null : response.node;
             this.finished = response.finished;
             await this.renderConsequence(response);
@@ -383,9 +416,16 @@ class Player {
         const context = Object.assign({}, node, {
             hasimage: Boolean(node.imageurl),
             hasspeaker: Boolean(node.speech) && Boolean(node.speaker),
-            hasspeechaudio: Boolean(node.speechurl),
+            // Gated on the activity having narration at all, not merely on a recording
+            // existing. A scenario whose teacher turned narration off still carries the
+            // clips, so this used to render an armed play button that playSpeech() then
+            // refused to act on - a control that looked live and did nothing at all.
+            hasspeechaudio: Boolean(node.speechurl) && this.audioEnabled,
             speakerinitial: (node.speaker || '').trim().charAt(0).toUpperCase(),
         });
+        // Kept so the consequence can show the scene the decision was taken in: the room
+        // has not changed because the learner chose something in it.
+        this.sceneImage = node.imageurl || '';
         await this.render(SELECTORS.node, 'mod_aibranchedscenario/node', context);
         this.hideRegion(SELECTORS.consequence);
         this.updateRail();
@@ -428,12 +468,13 @@ class Player {
             // wants to know where the room is now, and the arrow underneath says which way
             // it just moved. Tension reads the other way round, so it is inverted here too.
             const standing = inverted ? 100 - after : after;
-            let tone = 'aibs-tone-warn';
-            if (standing >= 67) {
-                tone = 'aibs-tone-good';
-            } else if (standing < 34) {
-                tone = 'aibs-tone-bad';
-            }
+            // The colour was saying something the words never did: green meant "this is
+            // high now" while the text underneath only ever described the movement. A
+            // learner who cannot tell the colours apart was told "up 12" and nothing about
+            // where it had got to. Each ring now says its standing in words as well.
+            const band = this.band(standing);
+            const tone = band.tone;
+            const standingword = this.strings[band.word];
             const arc = (value) => {
                 const bounded = Math.max(0, Math.min(100, value));
                 const filled = (circumference * bounded) / 100;
@@ -441,6 +482,16 @@ class Player {
             };
             deltas.push({
                 label: this.strings['metric:' + key],
+                // The direction the number moved, drawn as an arrow, and the size on its
+                // own. The worded form stays as the accessible text: an arrow plus a digit
+                // is quick to read and says nothing to somebody listening to the page.
+                isengagement: key === 'engagement',
+                istrust: key === 'trust',
+                istension: key === 'tension',
+                isup: change > 0,
+                isdown: change < 0,
+                isflat: change === 0,
+                amount: size,
                 before: before,
                 after: after,
                 tone: tone,
@@ -450,6 +501,7 @@ class Player {
                 bad: change !== 0 && !good,
                 same: change === 0,
                 change: wording,
+                standing: standingword,
             });
         });
 
@@ -464,7 +516,13 @@ class Player {
             feedbackparas: response.feedbackparas,
             hasfeedback: response.feedbackparas.length > 0,
             principle: response.principle,
-            deltas: deltas,
+            hasimage: Boolean(this.sceneImage),
+            imageurl: this.sceneImage,
+            // The setting hid the readings in the bar and left them here, on the screen
+            // where the numbers matter most and where the legend explaining them is no
+            // longer reachable. It now means what it says on every screen.
+            showdeltas: this.showMetrics,
+            deltas: this.showMetrics ? deltas : [],
             finished: response.finished,
             continuelabel: response.finished ? this.strings.seewhathappened : this.strings.continue,
         };
@@ -535,6 +593,7 @@ class Player {
             this.stopAudio();
             this.playAudio('', '');
             this.setRailComplete();
+            this.dropConfetti();
             this.focusRegion(SELECTORS.debrief);
             return true;
         }
@@ -546,11 +605,29 @@ class Player {
                 hassourceconnection: response.sourceconnectionparas.length > 0,
                 hascritical: response.criticaldecisions.length > 0,
                 haspractice: response.practice.length > 0,
+                // Numbered here rather than in the payload: the web service returns these
+                // as plain strings and other things read it, so the counting belongs to
+                // the screen that draws the numbers. Each list starts again at one.
+                whatmattered: this.numbered(response.whatmattered),
+                criticaldecisions: this.numbered(response.criticaldecisions),
+                practice: this.numbered(response.practice),
                 hastakeaways: response.takeaways.length > 0,
+                // Every screen is picture-left, including these. The debrief has no scene of
+                // its own, so it borrows the one the scenario opened on rather than being
+                // the one set of screens with a different silhouette.
+                hasimage: Boolean(this.openingImage()),
+                imageurl: this.openingImage(),
                 allowreplay: this.root.dataset.replay !== '0',
-                radar: response.radar.map((entry) => Object.assign({}, entry, {
-                    percent: Math.round(entry.value * 100),
-                })),
+                radar: response.radar.map((entry) => {
+                    const percent = Math.round(entry.value * 100);
+                    // The grade was the one set of numbers with no colour on it at all,
+                    // on the screen where the learner is being judged.
+                    return Object.assign({}, entry, {
+                        percent: percent,
+                        tone: this.band(percent).tone,
+                        standing: this.strings[this.band(percent).word],
+                    });
+                }),
                 // The debrief is a deck rather than one long page, so the decisions are
                 // handed over a page at a time. Two to a page: one reads as a lot of
                 // clicking, three puts the last one under the fold again.
@@ -565,8 +642,9 @@ class Player {
             // The debrief is read, not listened to: none of its slides carries audio, so
             // starting the deck also puts the control into its "nothing here" state.
             this.stopAudio();
+            // The deck's own reveal runs each slide's arrivals as it is shown; animating
+            // the skill bars here ran them against a slide that was still hidden.
             this.startDeck(this.root.querySelector(SELECTORS.debrief + ' [data-region="deck"]'));
-            this.animateSkillBars();
             this.setRailComplete();
             this.focusRegion(SELECTORS.debrief);
         } catch (error) {
@@ -648,13 +726,10 @@ class Player {
         slides.forEach((slide, position) => {
             slide.hidden = position !== wanted;
         });
+        // Whatever this slide animates, it animates now that it can be seen.
+        this.revealSlide(slides[wanted]);
 
-        const count = deck.querySelector('[data-region="deckcount"]');
-        if (count) {
-            count.textContent = this.strings.deckposition
-                .replace('{$a->current}', wanted + 1)
-                .replace('{$a->total}', slides.length);
-        }
+        this.showPosition(wanted + 1, slides.length, this.strings.deckposition);
         const prev = deck.querySelector('[data-action="deckprev"]');
         const next = deck.querySelector('[data-action="decknext"]');
         if (prev) {
@@ -766,15 +841,9 @@ class Player {
         // own height already accounts for it and measuring it again would double count.
         let chrome = this.outerHeight(bar, true) - barheight;
 
-        // The arrows are reserved for on every screen, including the ones that do not have
-        // them. Measuring them only where they appear made the frame taller on a decision
-        // than on a lesson slide, so the card visibly grew and shrank as the learner moved
-        // through - which is the thing a fixed frame exists to prevent. The space is held
-        // whether or not anything is standing in it.
-        const nav = this.root.querySelector('.aibs-deck-nav');
-        chrome += nav && nav.offsetParent !== null
-            ? this.outerHeight(nav, false)
-            : Player.NAV_RESERVE;
+        // Nothing is held for the arrows any more: they sit on the slide's edges rather
+        // than under it, so they cost no height on any screen.
+        chrome += Player.NAV_RESERVE;
         const rootstyle = window.getComputedStyle(this.root);
         chrome += parseFloat(rootstyle.paddingBottom) || 0;
 
@@ -807,8 +876,11 @@ class Player {
 
         const framed = available >= Player.MIN_FRAME;
         this.root.classList.toggle('aibs-no-frame', !framed);
-        // Capped, not maximised. See MAX_FRAME.
-        const height = framed ? Math.round(Math.min(available, Player.MAX_FRAME)) : 0;
+        // Capped, not maximised - except in fullscreen, where using the whole screen is the
+        // entire point of having asked for it. Keeping the cap there left a 620px card in
+        // the middle of a 1080px screen, which is the opposite of what the button promises.
+        const ceilingheight = this.isFullscreen() ? available : Math.min(available, Player.MAX_FRAME);
+        const height = framed ? Math.round(ceilingheight) : 0;
         this.root.style.setProperty('--aibs-slide-max', height + 'px');
         if (!framed) {
             // Settled: there is no room here, and that does not change screen by screen.
@@ -947,12 +1019,24 @@ class Player {
             }
             const value = meter.querySelector('[data-region="metervalue"]');
             const fill = meter.querySelector('[data-region="meterfill"]');
+            const spoken = meter.querySelector('[data-region="meterspoken"]');
             if (value) {
-                value.textContent = after[key];
+                // From whatever is on screen to the new reading, so the bar counts in
+                // step with the rings on the consequence rather than snapping while they
+                // sweep. Before is unknown on the opening render; then it counts from
+                // what is already shown, which is the same number, and so does nothing.
+                const from = before && typeof before[key] !== 'undefined'
+                    ? Number(before[key])
+                    : parseInt(value.textContent, 10);
+                this.countUp(value, from, Number(after[key]));
             }
-            if (fill) {
-                fill.style.width = after[key] + '%';
+            if (spoken) {
+                // The ring is a picture; this is the same reading in words, for anyone
+                // who is listening to the page rather than looking at it.
+                spoken.textContent = (meter.dataset.label || '') + ' ' + after[key];
             }
+            this.drawMeter(fill, after[key]);
+            this.toneMeter(meter, key, after[key]);
             meter.classList.remove('aibs-is-rising', 'aibs-is-falling');
             if (before && after[key] > before[key]) {
                 meter.classList.add('aibs-is-rising');
@@ -963,29 +1047,195 @@ class Player {
     }
 
     /**
+     * Which band a reading falls in, against the thresholds the teacher set.
+     *
+     * Used by every number the learner is shown: the readings in the bar, the rings on a
+     * consequence, and the four skill bars in the debrief. One function, so a scenario
+     * cannot say a value is good in one place and middling in another.
+     *
+     * @param {Number} standing A value from 0 to 100, already turned the right way up.
+     * @returns {Object} {tone, word} - a CSS modifier and a string key.
+     */
+    band(standing) {
+        if (standing >= this.bandGreen) {
+            return {tone: 'aibs-tone-good', word: 'standing:strong'};
+        }
+        if (standing < this.bandRed) {
+            return {tone: 'aibs-tone-bad', word: 'standing:weak'};
+        }
+        return {tone: 'aibs-tone-warn', word: 'standing:mixed'};
+    }
+
+    /**
+     * Set a meter ring to a percentage.
+     *
+     * The ring is one circle with a dash pattern: the first number is how much of the
+     * circumference is drawn, the second is the whole of it. Animating the first is what
+     * makes the ring sweep round, and the CSS transition on it does the work.
+     *
+     * @param {?SVGCircleElement} ring The ring to draw.
+     * @param {Number} percent Where to draw it to, 0 to 100.
+     * @returns {void}
+     */
+    drawMeter(ring, percent) {
+        if (!ring) {
+            return;
+        }
+        const radius = parseFloat(ring.getAttribute('r')) || 15;
+        const circumference = 2 * Math.PI * radius;
+        const clamped = Math.max(0, Math.min(100, Number(percent) || 0));
+        ring.setAttribute(
+            'stroke-dasharray',
+            ((clamped / 100) * circumference).toFixed(2) + ' ' + circumference.toFixed(2)
+        );
+    }
+
+    /**
+     * Colour a reading in the bar against the bands.
+     *
+     * @param {HTMLElement} meter The reading's container.
+     * @param {String} key Which reading it is.
+     * @param {Number} value Its current value.
+     * @returns {void}
+     */
+    toneMeter(meter, key, value) {
+        if (!meter) {
+            return;
+        }
+        // Tension reads the other way up: a low tension is a good one.
+        const standing = key === 'tension' ? 100 - Number(value) : Number(value);
+        const tone = this.band(standing).tone;
+        meter.classList.remove('aibs-tone-good', 'aibs-tone-warn', 'aibs-tone-bad');
+        meter.classList.add(tone);
+    }
+
+    /**
+     * Draw the meters for the first time, sweeping up from empty.
+     *
+     * The markup renders them at zero so that the opening sweep happens on the page the
+     * learner is actually looking at, rather than being finished before it appears.
+     *
+     * @returns {void}
+     */
+    startMeters() {
+        const reduced = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        this.root.querySelectorAll('[data-region="meterfill"]').forEach((ring, index) => {
+            const target = Number(ring.dataset.value) || 0;
+            const meter = ring.closest('[data-metric]');
+            this.toneMeter(meter, meter ? meter.dataset.metric : '', target);
+            const value = meter ? meter.querySelector('[data-region="metervalue"]') : null;
+            if (reduced) {
+                this.drawMeter(ring, target);
+                return;
+            }
+            // Staggered, like every other set of things that arrives together here.
+            const delay = 80 + (index * 80);
+            window.setTimeout(() => this.drawMeter(ring, target), delay);
+            // The ring sweeps up from empty on the opening render, so the number does
+            // too - a dial filling under a number that was already final looked like two
+            // unrelated things happening in the same circle.
+            this.countUp(value, 0, target, delay);
+        });
+    }
+
+    /**
      * Reflect progress on the rail and announce it.
      *
      * @returns {void}
      */
     updateRail() {
-        const rail = this.root.querySelector(SELECTORS.rail);
-        if (!rail) {
+        const total = parseInt(this.root.dataset.stages, 10) || 0;
+        if (!total) {
             return;
         }
-        const steps = rail.querySelectorAll('.aibs-rail-step');
-        steps.forEach((element, index) => {
-            element.classList.remove('aibs-is-done', 'aibs-is-current');
-            if (index < this.step) {
-                element.classList.add('aibs-is-done');
-            } else if (index === this.step) {
-                element.classList.add('aibs-is-current');
-            }
+        const current = Math.min(this.step + 1, total);
+        this.showPosition(current, total, this.strings.stageprogress);
+    }
+
+    /**
+     * The picture the scenario opened on, for screens that have none of their own.
+     *
+     * @returns {String} An image URL, or the empty string.
+     */
+    openingImage() {
+        const img = this.root.querySelector('[data-region="brief"] .aibs-scene-img');
+        return img ? img.getAttribute('src') || '' : '';
+    }
+
+    /**
+     * Redraw the read-only record of decisions already made.
+     *
+     * @returns {void}
+     */
+    drawHistory() {
+        const panel = this.root.querySelector('[data-region="history"]');
+        const list = this.root.querySelector('[data-region="historylist"]');
+        if (!panel || !list) {
+            return;
+        }
+        // Nothing decided yet is nothing to look back at, so the control is not there.
+        panel.hidden = this.journey.length === 0;
+        list.textContent = '';
+        this.journey.forEach((step) => {
+            const item = document.createElement('li');
+            item.className = 'aibs-history-item aibs-signal-' + (step.signal || 'neutral');
+            const title = document.createElement('span');
+            title.className = 'aibs-history-title';
+            title.textContent = step.nodetitle || '';
+            const choice = document.createElement('span');
+            choice.className = 'aibs-history-choice';
+            choice.textContent = step.choicetext || '';
+            item.appendChild(title);
+            item.appendChild(choice);
+            list.appendChild(item);
         });
+    }
+
+    /**
+     * Put the learner's position in the one place it is ever shown.
+     *
+     * There used to be two of these and they counted different things: a row of numbered
+     * dots saying which decision this was, and a line under the deck saying which slide
+     * this was. Two progress indicators on one screen is not twice as informative, it is a
+     * question about which one to believe.
+     *
+     * @param {Number} current Where the learner is, counting from one.
+     * @param {Number} total How many there are.
+     * @param {String} template The string to phrase it with.
+     * @returns {void}
+     */
+    showPosition(current, total, template) {
+        const chip = this.root.querySelector('[data-region="position"]');
+        const phrase = (template || '{$a->current} of {$a->total}')
+            .replace('{$a->current}', current)
+            .replace('{$a->total}', total);
+        if (chip) {
+            // Split on the number so the one the learner is on can carry the weight and
+            // the total can sit behind it, without the phrasing being assumed here - a
+            // translation may put the words in any order.
+            const parts = phrase.split(String(current));
+            chip.textContent = '';
+            if (parts.length === 2) {
+                if (parts[0].trim()) {
+                    chip.appendChild(document.createTextNode(parts[0]));
+                }
+                const now = document.createElement('span');
+                now.className = 'aibs-position-now';
+                now.textContent = String(current);
+                chip.appendChild(now);
+                const rest = document.createElement('span');
+                rest.className = 'aibs-position-of';
+                rest.textContent = parts[1];
+                chip.appendChild(rest);
+            } else {
+                chip.textContent = phrase;
+            }
+        }
+        // Said once, in words, for anyone listening rather than looking.
         const status = this.root.querySelector(SELECTORS.railStatus);
-        if (status && steps.length) {
-            status.textContent = this.strings.stageprogress
-                .replace('{$a->current}', Math.min(this.step + 1, steps.length))
-                .replace('{$a->total}', steps.length);
+        if (status) {
+            status.textContent = phrase;
         }
     }
 
@@ -995,14 +1245,10 @@ class Player {
      * @returns {void}
      */
     setRailComplete() {
-        const rail = this.root.querySelector(SELECTORS.rail);
-        if (!rail) {
-            return;
+        const chip = this.root.querySelector('[data-region="position"]');
+        if (chip) {
+            chip.textContent = this.strings.attemptfinished;
         }
-        rail.querySelectorAll('.aibs-rail-step').forEach((element) => {
-            element.classList.remove('aibs-is-current');
-            element.classList.add('aibs-is-done');
-        });
         const status = this.root.querySelector(SELECTORS.railStatus);
         if (status) {
             status.textContent = this.strings.attemptfinished;
@@ -1014,18 +1260,147 @@ class Player {
      *
      * @returns {void}
      */
-    animateSkillBars() {
-        const fills = this.root.querySelectorAll('.aibs-skill-fill');
-        fills.forEach((fill) => {
+    animateSkillBars(scope) {
+        const within = scope || this.root;
+        const reduced = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const stagger = reduced ? 0 : 80;
+        const fills = within.querySelectorAll('.aibs-skill-fill');
+        fills.forEach((fill, index) => {
             const target = fill.style.width;
+            if (reduced) {
+                return;
+            }
             fill.style.width = '0%';
             fill.classList.add('aibs-is-animated');
-            window.requestAnimationFrame(() => {
+            // One after another, the same eighty milliseconds apart as the rings and the
+            // readings. Four bars all filling on the same frame reads as a page loading;
+            // four arriving in order reads as a result being given.
+            window.setTimeout(() => {
                 window.requestAnimationFrame(() => {
-                    fill.style.width = target;
+                    window.requestAnimationFrame(() => {
+                        fill.style.width = target;
+                    });
                 });
-            });
+            }, index * stagger);
         });
+
+        // The percentage beside each bar counts up with it. These were the last numbers
+        // in the player that simply appeared, on the one screen where the learner is
+        // being told how they did.
+        within.querySelectorAll('[data-region="skillvalue"]').forEach((value, index) => {
+            this.countUp(value, 0, parseInt(value.dataset.to, 10), index * stagger);
+        });
+    }
+
+    /**
+     * Pair each line of a list with its position, one-based.
+     *
+     * Mustache cannot count, and these lists arrive as plain strings.
+     *
+     * @param {String[]} lines The list as the service returned it.
+     * @returns {Object[]} One entry per line, carrying its number and its text.
+     */
+    numbered(lines) {
+        return (lines || []).map((text, index) => ({number: index + 1, text: text}));
+    }
+
+    /**
+     * Mark the finish, once.
+     *
+     * Drawn rather than loaded: a handful of absolutely positioned pieces falling through
+     * the card, in the player's own palette rather than in party colours, so the moment
+     * reads as this product celebrating rather than as a widget bolted on. No library and
+     * no image - the whole effect is forty elements and one keyframe.
+     *
+     * Skipped outright for anybody who has asked for reduced motion; the CSS hides the
+     * layer as well, so this is belt and braces rather than the only guard.
+     *
+     * @returns {void}
+     */
+    dropConfetti() {
+        const layer = this.root.querySelector('[data-region="confetti"]');
+        const reduced = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!layer || reduced || layer.dataset.done === '1') {
+            return;
+        }
+        layer.dataset.done = '1';
+        const styles = getComputedStyle(this.root);
+        const palette = ['--aibs-positive', '--aibs-accent', '--aibs-warn', '--aibs-border']
+            .map((token) => styles.getPropertyValue(token).trim())
+            .filter((colour) => colour !== '');
+        if (!palette.length) {
+            return;
+        }
+        const pieces = 40;
+        for (let i = 0; i < pieces; i++) {
+            const piece = document.createElement('span');
+            piece.className = 'aibs-finish-piece';
+            const wide = 5 + Math.round(Math.random() * 4);
+            piece.style.background = palette[i % palette.length];
+            piece.style.height = (wide + Math.round(Math.random() * 6)) + 'px';
+            piece.style.insetInlineStart = (Math.random() * 100).toFixed(2) + '%';
+            piece.style.width = wide + 'px';
+            piece.style.setProperty(
+                '--aibs-spin',
+                (Math.random() < .5 ? -1 : 1) * (180 + Math.round(Math.random() * 540)) + 'deg'
+            );
+            piece.style.animationDelay = (Math.random() * .9).toFixed(2) + 's';
+            piece.style.animationDuration = (1.7 + (Math.random() * 1.3)).toFixed(2) + 's';
+            layer.appendChild(piece);
+        }
+        // The layer is taken out once the last piece has landed, so a finished screen is
+        // not left holding forty dead elements for as long as the learner sits on it.
+        window.setTimeout(() => layer.replaceChildren(), 4200);
+    }
+
+    /**
+     * Run a slide's arrivals at the moment it is actually put on screen.
+     *
+     * A deck holds every page in the DOM and hides all but one, so anything animated when
+     * the deck was built ran against a hidden slide and was finished long before the
+     * learner arrowed to it. The skill bars were the case that mattered: by the time "How
+     * you handled it" was reached, the bars were already full and the percentages already
+     * final, so the one screen that is supposed to deliver a result just sat there.
+     *
+     * Once per slide - stepping back to a page does not replay it, which would make the
+     * deck feel like it was reloading rather than like pages of one thing.
+     *
+     * @param {HTMLElement} slide The slide being shown.
+     * @returns {void}
+     */
+    revealSlide(slide) {
+        if (!slide || slide.dataset.aibsRevealed === '1') {
+            return;
+        }
+        slide.dataset.aibsRevealed = '1';
+        this.animateSkillBars(slide);
+        this.animateScore(slide);
+    }
+
+    /**
+     * Count the grade up to itself.
+     *
+     * The one figure on the debrief the learner is actually waiting for was the only one
+     * that simply appeared. The decimal places come from what was rendered, so a score of
+     * 75 does not arrive as "75.0".
+     *
+     * @param {HTMLElement} scope The slide to look in.
+     * @returns {void}
+     */
+    animateScore(scope) {
+        const el = (scope || this.root).querySelector('.aibs-score-value');
+        if (!el) {
+            return;
+        }
+        const shown = el.textContent.trim();
+        const to = parseFloat(shown);
+        if (isNaN(to)) {
+            return;
+        }
+        const dot = shown.indexOf('.');
+        this.countUp(el, 0, to, 140, dot === -1 ? 0 : shown.length - dot - 1);
     }
 
     /**
@@ -1129,6 +1504,16 @@ class Player {
     }
 
     /**
+     * Whether the player itself is the element filling the screen.
+     *
+     * @returns {Boolean} True when this player is in fullscreen.
+     */
+    isFullscreen() {
+        const active = document.fullscreenElement || document.webkitFullscreenElement;
+        return Boolean(active) && active === this.root;
+    }
+
+    /**
      * Pull the slide frame back up if the slide ended up past the bottom of the screen.
      *
      * Sizing the frame from the chrome around it is arithmetic, and arithmetic can be
@@ -1210,30 +1595,62 @@ class Player {
         });
 
         this.root.querySelectorAll('.aibs-ring-value').forEach((value, index) => {
-            const from = parseInt(value.dataset.from, 10);
-            const to = parseInt(value.dataset.to, 10);
-            if (isNaN(from) || isNaN(to) || reduced || from === to) {
-                value.textContent = isNaN(to) ? value.textContent : String(to);
+            this.countUp(
+                value,
+                parseInt(value.dataset.from, 10),
+                parseInt(value.dataset.to, 10),
+                index * stagger
+            );
+        });
+    }
+
+    /**
+     * Count one number up to another, in step with the shape it sits on.
+     *
+     * Every number the learner watches change - the three readings in the bar, the three
+     * rings on a consequence, the four skills in the debrief - counts rather than
+     * switching, and they all count with the same curve and over the same time as the
+     * ring or bar beside them fills. Written once here because when this was inlined at
+     * each call site the rings counted and the bar did not, and the two sat on the same
+     * screen disagreeing about whether a number arrives or lands.
+     *
+     * A reading that is not moving is not animated: counting 50 up to 50 is a flicker.
+     *
+     * @param {?HTMLElement} el The element whose text is the number.
+     * @param {Number} from Where the count starts.
+     * @param {Number} to Where it ends.
+     * @param {Number} [delay=0] Milliseconds to wait first, for staggering a set.
+     * @param {Number} [places=0] Decimal places to keep, for a figure like 74.5.
+     * @returns {void}
+     */
+    countUp(el, from, to, delay, places) {
+        if (!el || isNaN(to)) {
+            return;
+        }
+        const dp = places || 0;
+        const reduced = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (isNaN(from) || reduced || from === to) {
+            el.textContent = to.toFixed(dp);
+            return;
+        }
+        const started = (window.performance ? window.performance.now() : Date.now())
+            + (delay || 0);
+        const duration = 900;
+        const step = (now) => {
+            if (now < started) {
+                window.requestAnimationFrame(step);
                 return;
             }
-            const delay = index * stagger;
-            const started = (window.performance ? window.performance.now() : Date.now()) + delay;
-            const duration = 900;
-            const step = (now) => {
-                if (now < started) {
-                    window.requestAnimationFrame(step);
-                    return;
-                }
-                const elapsed = Math.min(1, (now - started) / duration);
-                // Ease out, so the number settles rather than stopping dead.
-                const eased = 1 - Math.pow(1 - elapsed, 3);
-                value.textContent = String(Math.round(from + ((to - from) * eased)));
-                if (elapsed < 1) {
-                    window.requestAnimationFrame(step);
-                }
-            };
-            window.requestAnimationFrame(step);
-        });
+            const elapsed = Math.min(1, (now - started) / duration);
+            // Ease out, so the number settles rather than stopping dead.
+            const eased = 1 - Math.pow(1 - elapsed, 3);
+            el.textContent = (from + ((to - from) * eased)).toFixed(dp);
+            if (elapsed < 1) {
+                window.requestAnimationFrame(step);
+            }
+        };
+        window.requestAnimationFrame(step);
     }
 
     /**
@@ -1455,8 +1872,17 @@ class Player {
      * @returns {void}
      */
     setDeckWaiting(waiting) {
+        const holding = Boolean(waiting);
         this.root.querySelectorAll('.aibs-deck-nav').forEach((nav) => {
-            nav.classList.toggle('aibs-is-waiting', Boolean(waiting));
+            nav.classList.toggle('aibs-is-waiting', holding);
+        });
+        if (!this.requireListen) {
+            return;
+        }
+        // Held closed, not just dimmed. Previous is left alone: going back is not skipping
+        // anything, and a learner who wants to hear a slide again must be able to reach it.
+        this.root.querySelectorAll('[data-action="decknext"]').forEach((button) => {
+            button.disabled = holding;
         });
     }
 

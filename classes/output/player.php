@@ -128,12 +128,39 @@ class player implements \renderable, \templatable {
             }
         }
 
+        // Where a reading stops being good and where it becomes a problem, as the teacher
+        // set them. The same two numbers go to the template for JavaScript to band by.
+        $green = (int)($this->scenario->bandgreen ?? 67);
+        $red = (int)($this->scenario->bandred ?? 34);
+
         $metrics = [];
         foreach (schema::metrics() as $metric) {
+            $value = (int)($definition['openingmetrics'][$metric] ?? 50);
+            // Tension reads the other way up: a low tension is a good one.
+            $standing = $metric === 'tension' ? 100 - $value : $value;
+            if ($standing >= $green) {
+                $tone = 'aibs-tone-good';
+            } else if ($standing < $red) {
+                $tone = 'aibs-tone-bad';
+            } else {
+                $tone = 'aibs-tone-warn';
+            }
+            // The template draws a different mark for each reading, and mustache cannot
+            // switch on a value, so each row says which one it is.
+            //
+            // The band is written here as well as by the JavaScript that updates it after
+            // every decision, so the opening reading is already coloured when the page
+            // paints. Left to the script, the three marks arrived grey and stayed grey
+            // until the first decision - which is what "cant see the icons" was looking
+            // at: a thin grey stroke on a white bar.
             $metrics[] = [
                 'key'   => $metric,
                 'label' => get_string('metric:' . $metric, 'mod_aibranchedscenario'),
-                'value' => (int)($definition['openingmetrics'][$metric] ?? 50),
+                'value' => $value,
+                'tone'  => $tone,
+                'isengagement' => $metric === 'engagement',
+                'istrust'      => $metric === 'trust',
+                'istension'    => $metric === 'tension',
             ];
         }
 
@@ -169,6 +196,10 @@ class player implements \renderable, \templatable {
             'showdebrief'  => !empty($this->scenario->showdebrief),
             'allowreplay'  => !empty($this->scenario->allowreplay),
             'enableaudio'  => !empty($this->scenario->enableaudio),
+            'requirelisten' => !empty($this->scenario->enableaudio)
+                && !empty($this->scenario->requirelisten),
+            'bandgreen'    => (int)($this->scenario->bandgreen ?? 67),
+            'bandred'      => (int)($this->scenario->bandred ?? 34),
             'maxattempts'  => (int)$this->scenario->maxattempts,
             'attemptsused' => $attemptsused,
             'hasopen'      => (bool)$open,
