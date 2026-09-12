@@ -491,5 +491,12 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091242, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091243) {
+        // Release 1.33.0 changes no schema and no code. 1.32.0 had already been promoted
+        // under this content, so the pipeline had nothing to write; this is the version it
+        // needs to publish the same work.
+        upgrade_mod_savepoint(true, 2026091243, 'aibranchedscenario');
+    }
+
     return true;
 }

@@ -2,6 +2,12 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.33.0] - 2026-09-12
+
+Version bump only. 1.32.0 had already been promoted under exactly these bytes, so the
+pipeline had nothing to write; this is the version number it publishes the same work under.
+No code, schema, string or stylesheet change.
+
 ## [v1.32.0] - 2026-09-12
 
 ### Fixed — generation was being refused for a field we never asked for
