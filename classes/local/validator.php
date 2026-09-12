@@ -325,7 +325,7 @@ class validator {
         if (!is_string($value)) {
             return '';
         }
-        // "auto" is what an assistant writes when it has been told the activity can pick
+        // The word "auto" is what an assistant writes when it has been told the activity can pick
         // the next stage, and it is not a node id, so the whole scenario was rejected as
         // unreachable. The two spellings mean the same thing and both are accepted.
         $trimmed = strtolower(trim($value));

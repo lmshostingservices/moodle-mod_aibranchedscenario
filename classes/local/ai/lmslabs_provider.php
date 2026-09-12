@@ -77,6 +77,29 @@ class lmslabs_provider implements provider {
     /** @var int Most characters of narration text the speech route accepts. */
     const MAX_SPEECH_CHARS = 4500;
 
+    /**
+     * @var string The one thing every generated definition is required to carry and the
+     * service was never asked for.
+     *
+     * A principle has needed both an example and a pitfall since v1.20.0 - a slide that
+     * states a rule and nothing else teaches a learner nothing they can use - and the
+     * validator refuses a definition that omits either, naming the principle. The
+     * generate request never said so. The paste-and-import path asks for them at length
+     * (see import_prompt), which is why that path produced them and generation did not:
+     * every generated scenario was refused for a field we had not requested, after the
+     * teacher had been charged for it.
+     *
+     * It is sent as part of the free-text steer because that is the only field on the
+     * route that carries a requirement, and it is kept short because that field is capped
+     * at 2000 characters and the rest of it belongs to the teacher.
+     */
+    const PRINCIPLE_REQUIREMENT =
+        'Every principle must carry an "example" and a "pitfall", both non-empty. '
+        . 'The example is the words a learner could actually say or the action they '
+        . 'could take, written out in full - never a restatement of the principle. '
+        . 'The pitfall is the plausible-sounding version that does not work, and why. '
+        . 'A principle missing either one is rejected.';
+
     /** @var array Metadata from the last successful call. */
     protected $lastmeta = [];
 
@@ -748,7 +771,7 @@ class lmslabs_provider implements provider {
      * @return string
      */
     protected static function instructions(array $request): string {
-        $parts = [];
+        $parts = [self::PRINCIPLE_REQUIREMENT];
         $prefixes = [
             'brief'            => '',
             'centralproblem'   => 'The central problem is',
@@ -769,7 +792,17 @@ class lmslabs_provider implements provider {
         if (!empty($request['atmosphere'])) {
             $parts[] = 'Atmosphere: ' . (string)$request['atmosphere'];
         }
-        return \core_text::substr(trim(implode("\n\n", $parts)), 0, 2000);
+        // The cap belongs to the route, and the whole brief used to be cut to fit it. The
+        // requirement above is the one part that must survive the cut - it is what the
+        // definition is validated against - so the teacher's own words are trimmed to
+        // what is left rather than the requirement being trimmed off the end of them.
+        $requirement = \core_text::substr((string)array_shift($parts), 0, 2000);
+        $budget = 2000 - \core_text::strlen($requirement) - 2;
+        $rest = trim(implode("\n\n", $parts));
+        if ($rest !== '') {
+            $rest = "\n\n" . \core_text::substr($rest, 0, max(0, $budget));
+        }
+        return trim($requirement . $rest);
     }
 
     /**

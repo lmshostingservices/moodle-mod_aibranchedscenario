@@ -375,6 +375,18 @@
     min-width: 0;
 }
 
+/* The controls at the end of the bar are one row of marks. This was never said, and while
+   the first of them was a line of text it did not need saying - the div laid out inline
+   content and the row happened by accident. Making the decision history a round control
+   like the two beside it turned all three into blocks, and they stacked. */
+.aibs-masthead-side {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
 .aibs-eyebrow {
     color: var(--aibs-muted);
     font-size: var(--aibs-text-meta);
@@ -1555,7 +1567,12 @@
     border: 1px solid var(--aibs-warn-border);
     border-radius: var(--aibs-radius-sm);
     margin-top: 18px;
-    padding: 14px 16px;
+    /* In ems, so the padding grows with the text it wraps. The slide scales its type
+       against --aibs-fit and this panel did not, so the bigger the type got the tighter
+       the box looked - and the closing line sat almost on the bottom edge. A little more
+       below than above, because the heading's line box already reads as space at the top
+       while a descender runs right down into the bottom padding. */
+    padding: .8em 1em 1em;
 }
 
 /* The label wears the band, so the panel is not a tinted box with a grey title on it. */
@@ -2584,7 +2601,7 @@
     border: 1px solid var(--aibs-warn-border);
     border-radius: var(--aibs-radius-sm);
     margin-top: 10px;
-    padding: 10px 12px;
+    padding: .7em .85em .85em;
 }
 
 .aibs-journey-feedback-label {
@@ -3817,27 +3834,48 @@ button.aibs-avatar {
     display: none !important;
 }
 
+/* The same round control as the narration and fullscreen buttons beside it, so the bar
+   is one row of marks rather than a row of marks with a line of capitals above it. */
 .aibs-history-summary {
+    align-items: center;
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
     border-radius: 999px;
-    color: var(--aibs-muted);
+    color: var(--aibs-text);
     cursor: pointer;
-    font-size: var(--aibs-text-micro);
-    font-weight: var(--aibs-weight-label);
-    letter-spacing: .03em;
+    display: inline-flex;
+    height: 34px;
+    justify-content: center;
     list-style: none;
-    padding: 5px 12px;
-    text-transform: uppercase;
-    white-space: nowrap;
+    transition: border-color .18s var(--aibs-ease), transform .18s var(--aibs-ease);
+    width: 34px;
 }
 
-.aibs-history-summary::-webkit-details-marker {
+/* Safari draws its own disclosure triangle unless this is said in its own words. */
+.aibs-history-summary::-webkit-details-marker,
+.aibs-history-summary::marker {
     display: none;
 }
 
 .aibs-history-summary:hover,
 .aibs-history-summary:focus-visible {
+    border-color: var(--aibs-accent-border);
+    transform: translateY(-1px);
+}
+
+/* Open, it is a held state, like the narration toggle when narration is on. */
+.aibs-history[open] .aibs-history-summary {
     background: var(--aibs-invert);
+    border-color: var(--aibs-invert);
     color: var(--aibs-on-invert);
+}
+
+@media (pointer: coarse) {
+    .path-mod-aibranchedscenario .aibs-history-summary,
+    .aibs-history-summary {
+        height: 44px;
+        width: 44px;
+    }
 }
 
 .aibs-history-body {

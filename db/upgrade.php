@@ -482,5 +482,14 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091241, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091242) {
+        // Release 1.32.0 changes no schema. It fixes the generate request, which never
+        // asked the service for the example and the pitfall that the validator has
+        // required on every principle since 1.20.0, so every generated definition was
+        // refused for a field the plugin had not requested. Nothing stored is affected:
+        // the refused definitions were never written.
+        upgrade_mod_savepoint(true, 2026091242, 'aibranchedscenario');
+    }
+
     return true;
 }

@@ -2,6 +2,45 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.32.0] - 2026-09-12
+
+### Fixed — generation was being refused for a field we never asked for
+
+Since v1.20.0 a principle has had to carry an **example** and a **pitfall**, and a definition
+that omits either is refused with the principle named. The reasoning stands: a teaching slide
+that states a rule and nothing else gives a learner nothing they can use. But the generate
+request never asked the service for either field. The paste-and-import path asks for them at
+length, which is why that path produced them and generation did not — so a teacher who used
+the wizard was charged, waited, and was told:
+
+> The principle "Preparation and Planning" has no example. … has no pitfall.
+
+This is the same shape of fault as the v1.6.4 one: a contract that differed across the
+boundary, on our side of it. The requirement is now part of every generate request, and it is
+the one part of the brief that survives the route's 2000-character ceiling — the teacher's own
+words are trimmed to what is left rather than the requirement being cut off the end of them.
+Four harness checks cover it, and all four fail on the previous code.
+
+### Fixed — the controls at the end of the top bar
+
+Making the decision-history control a round mark like the two beside it turned all three into
+blocks, and they stacked. The bar had never actually said they were a row; while the first of
+them was text, the row happened by accident. It is a row on purpose now. An older hover rule
+that repainted the history control was also still in the stylesheet, against the rule that
+hover lifts and never repaints; it is gone, and the harness checks for both.
+
+### Changed — the decision history is a mark, not a heading
+
+The rest of the top bar is icon-only, and this one control still spelled itself out in
+capitals. It carries a list mark now, with its name as hover text and on the control for a
+screen reader.
+
+### Fixed — padding under a feedback panel
+
+The amber panel's text sat hard against its bottom edge. Its padding is set in `em` now, so
+it scales with the slide's type rather than staying at a fixed pixel value while the text
+around it grows.
+
 ## [v1.31.0] - 2026-09-12
 
 ### Changed — the settings page explains itself

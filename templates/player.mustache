@@ -109,8 +109,26 @@
                         not the answer - undoing a consequence would make the score mean
                         nothing. This lets them look without letting them rewrite. }}
                     <details class="aibs-history" data-region="history" hidden>
-                        <summary class="aibs-history-summary">
-                            {{#str}} journey:sofar, mod_aibranchedscenario {{/str}}
+                        {{! A mark, not a label. The rest of the bar is icon-only - the
+                            narration toggle and the fullscreen control both carry their
+                            name as hover text rather than printing it - and this was the
+                            one control still spelling itself out in capitals above the
+                            position chip. The name is still on the control and still read
+                            to a screen reader. }}
+                        <summary class="aibs-history-summary"
+                                 title="{{#str}} journey:sofar, mod_aibranchedscenario {{/str}}"
+                                 aria-label="{{#str}} journey:sofar, mod_aibranchedscenario {{/str}}">
+                            <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true"
+                                 focusable="false">
+                                <path d="M3.4 5.4h2M3.4 10h2M3.4 14.6h2" fill="none"
+                                      stroke="currentColor" stroke-width="1.7"
+                                      stroke-linecap="round"/>
+                                <path d="M8.4 5.4h8.2M8.4 10h8.2M8.4 14.6h5.4" fill="none"
+                                      stroke="currentColor" stroke-width="1.7"
+                                      stroke-linecap="round"/>
+                            </svg>
+                            <span class="aibs-sr-only">
+                                {{#str}} journey:sofar, mod_aibranchedscenario {{/str}}</span>
                         </summary>
                         <div class="aibs-history-body">
                             <p class="aibs-history-note">
