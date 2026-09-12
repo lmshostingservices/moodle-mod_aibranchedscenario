@@ -520,15 +520,6 @@ class validator {
             if ($title === '') {
                 continue;
             }
-            foreach (['example', 'pitfall'] as $needed) {
-                if ($this->text($item[$needed] ?? '', 600) === '') {
-                    $this->problems[] = get_string(
-                        'error:principleneeds' . $needed,
-                        'mod_aibranchedscenario',
-                        $title
-                    );
-                }
-            }
             $seen[] = $id;
             $out[] = [
                 'id'      => $id,
@@ -540,10 +531,15 @@ class validator {
                 //
                 // They used to be optional, and the consequence was visible on screen: a
                 // teaching slide carrying one sentence and half a screen of nothing,
-                // because the service had simply left them out. A slide that teaches one
-                // line is not worth a slide. They are required now, and a definition that
-                // omits them is rejected with the principle named, rather than quietly
-                // publishing a scenario that teaches less than it should.
+                // because the service had simply left them out.
+                //
+                // From v1.20.0 a missing one rejected the whole definition, and that was
+                // the wrong lever. The teacher has already been charged by the time the
+                // definition is read, so refusing it over two sentences threw away a
+                // scenario that was otherwise sound and took their credits with it. The
+                // principle is named at review instead - see quality_review - where the
+                // teacher can type the example in, which is where a human filling a gap
+                // belongs. The player already draws the slide without them.
                 'example' => $this->text($item['example'] ?? '', 600),
                 'pitfall' => $this->text($item['pitfall'] ?? '', 600),
             ];

@@ -63,6 +63,9 @@ class quality_review {
         // before the node walk and survives the early return below. It did not, and the
         // check quietly never ran on a definition whose nodes had not been read yet.
         $spelling = self::spelling_warnings($definition);
+        // Principles are a property of the document too, and like spelling they have to be
+        // checked before the node walk or they are lost to the early return below.
+        $spelling = array_merge($spelling, self::principle_warnings($definition));
         $nodes = $definition['nodes'] ?? [];
         if (!is_array($nodes) || !$nodes) {
             return $spelling;
@@ -77,6 +80,51 @@ class quality_review {
 
         $scenario = self::scenario_warnings($nodes);
         return array_merge($spelling, $scenario, $out);
+    }
+
+    /**
+     * Principles taught as a rule and nothing else.
+     *
+     * A principle carries an example - the words a learner could actually say - and a
+     * pitfall - the plausible version that does not work. Without them the teaching slide
+     * states a rule and stops, which is the thing a scenario exists to avoid.
+     *
+     * This used to reject the whole definition. It was the wrong lever: by the time the
+     * definition is read the teacher has been charged, so a scenario that was otherwise
+     * sound was thrown away, and their credits with it, over two sentences a human can
+     * write in a few seconds. It is said here instead, where the teacher is already
+     * reading the scenario and can type the missing line into the editor before
+     * publishing.
+     *
+     * @param array $definition A validated definition.
+     * @return array Warning rows.
+     */
+    protected static function principle_warnings(array $definition): array {
+        $out = [];
+        foreach ((array)($definition['principles'] ?? []) as $principle) {
+            if (!is_array($principle)) {
+                continue;
+            }
+            $title = trim((string)($principle['title'] ?? ''));
+            if ($title === '') {
+                continue;
+            }
+            foreach (['example', 'pitfall'] as $needed) {
+                if (trim((string)($principle[$needed] ?? '')) !== '') {
+                    continue;
+                }
+                $out[] = [
+                    'nodeid'  => (string)($principle['id'] ?? ''),
+                    'node'    => $title,
+                    'message' => get_string(
+                        'quality:principleneeds' . $needed,
+                        'mod_aibranchedscenario',
+                        $title
+                    ),
+                ];
+            }
+        }
+        return $out;
     }
 
     /**

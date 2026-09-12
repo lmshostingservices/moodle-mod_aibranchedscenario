@@ -2,6 +2,30 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.34.0] - 2026-09-12
+
+### Fixed — a thin principle no longer throws away a paid generation
+
+v1.32.0 added the missing example and pitfall to the generate request, which was the right
+fix for the wrong half of the problem. The other half is that refusing the whole definition
+was never the right lever. By the time the definition is read the teacher has been charged;
+rejecting a scenario that is otherwise sound — the nodes, the branching, the scoring, the
+writing — over two sentences a human can type in seconds costs them their credits and gives
+them nothing.
+
+So the check moves from the validator to the review step. A principle with no example or no
+pitfall is now raised where the teacher is already reading the scenario, naming the principle
+and saying what to add, and they fill it in before publishing. The player has always drawn
+the slide without them, so nothing breaks in the meantime.
+
+The reasoning behind v1.20.0 stands and is unchanged: a slide that states a rule and stops
+teaches nothing a learner can use. It is enforced at the point where a person can act on it
+rather than at the point where the only available action is to pay again.
+
+Five harness checks replace the two that only asserted the error strings existed: a thin
+principle validates, both gaps are raised at review, the review names the principle, and a
+complete principle is not mentioned at all.
+
 ## [v1.33.0] - 2026-09-12
 
 Version bump only. 1.32.0 had already been promoted under exactly these bytes, so the

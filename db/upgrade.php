@@ -498,5 +498,12 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091243, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091244) {
+        // Release 1.34.0 changes no schema. A principle with no example or no pitfall no
+        // longer rejects the whole definition; it is raised at review instead. Nothing
+        // stored is affected - the definitions this refused were never written.
+        upgrade_mod_savepoint(true, 2026091244, 'aibranchedscenario');
+    }
+
     return true;
 }
