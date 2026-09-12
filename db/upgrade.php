@@ -505,5 +505,13 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091244, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091245) {
+        // Release 1.35.0 changes no schema. An example and a pitfall written into a
+        // principle's summary are now pulled back into their own fields, the metrics
+        // legend is a button rather than a native disclosure, options are shuffled at
+        // generation, the type scale follows the fit, and the title is held to one row.
+        upgrade_mod_savepoint(true, 2026091245, 'aibranchedscenario');
+    }
+
     return true;
 }

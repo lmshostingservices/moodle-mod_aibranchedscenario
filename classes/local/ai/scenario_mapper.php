@@ -203,8 +203,46 @@ class scenario_mapper {
             return $out;
         }
 
-        $out['choices'] = $choices;
+        $out['choices'] = self::shuffled($choices, (string)($out['id'] ?? ''));
 
+        return $out;
+    }
+
+    /**
+     * Put the options in an order that gives nothing away.
+     *
+     * The generator writes the best option first. It does this consistently, so A was the
+     * strongest answer at every decision in the scenario - and a learner notices that
+     * within two screens and stops reading the options at all. The scenario then measures
+     * whether they spotted the pattern rather than whether they know the material.
+     *
+     * The order is settled once, here, where the service's answer becomes ours: the
+     * teacher edits the same order the learner sees, which they could not do if it were
+     * shuffled again at each attempt. It is seeded from the node's own id rather than left
+     * to chance, so regenerating the same scenario gives the same order and a support
+     * question about "option B" still means something a week later.
+     *
+     * @param array $choices Mapped choices, in the order the service sent them.
+     * @param string $seed Node identifier.
+     * @return array
+     */
+    protected static function shuffled(array $choices, string $seed): array {
+        if (count($choices) < 2) {
+            return $choices;
+        }
+        $order = array_keys($choices);
+        // A Fisher-Yates walk driven by a hash of the node id, so it is deterministic
+        // without depending on the state of any shared random number generator.
+        $digest = md5($seed === '' ? 'aibs' : $seed);
+        for ($i = count($order) - 1; $i > 0; $i--) {
+            $byte = hexdec(substr($digest, ($i * 2) % 30, 2));
+            $j = $byte % ($i + 1);
+            [$order[$i], $order[$j]] = [$order[$j], $order[$i]];
+        }
+        $out = [];
+        foreach ($order as $position) {
+            $out[] = $choices[$position];
+        }
         return $out;
     }
 

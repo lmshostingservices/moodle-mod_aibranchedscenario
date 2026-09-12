@@ -236,15 +236,21 @@
                         {{/metrics}}
                     </div>
 
-                    <details class="aibs-legend">
-                        <summary class="aibs-legend-summary"
-                                 title="{{#str}} metrics:explain, mod_aibranchedscenario {{/str}}"
-                                 aria-label="{{#str}} metrics:explain, mod_aibranchedscenario {{/str}}">
+                    {{! A button, not a <details>. The native disclosure widget was a poor fit
+                        here: its summary carries behaviour of its own, themes style and bind
+                        to it, and on at least one live theme clicking this opened the course
+                        index drawer rather than the panel. A button says what it is, holds
+                        its own state in aria-expanded, and the click stops here. }}
+                    <div class="aibs-legend" data-region="legend">
+                        <button type="button" class="aibs-legend-summary" data-action="legend"
+                                aria-expanded="false" aria-controls="aibs-legend-body-{{uniqid}}"
+                                title="{{#str}} metrics:explain, mod_aibranchedscenario {{/str}}"
+                                aria-label="{{#str}} metrics:explain, mod_aibranchedscenario {{/str}}">
                             <span class="aibs-legend-icon" aria-hidden="true"></span>
                             <span class="aibs-sr-only">
                                 {{#str}} metrics:explain, mod_aibranchedscenario {{/str}}</span>
-                        </summary>
-                        <div class="aibs-legend-body">
+                        </button>
+                        <div class="aibs-legend-body" id="aibs-legend-body-{{uniqid}}" hidden>
                             <p class="aibs-legend-lead">{{#str}} metrics:lead, mod_aibranchedscenario {{/str}}</p>
                             <div class="aibs-legend-grid">
                                 <div class="aibs-legend-item" data-metric="engagement">
@@ -289,7 +295,7 @@
                             <p class="aibs-legend-note">
                                 {{#str}} metrics:gradedby, mod_aibranchedscenario {{/str}}</p>
                         </div>
-                    </details>
+                    </div>
                 {{/showmetrics}}
             </div>
         </div>

@@ -94,17 +94,28 @@
        same job in twenty-six declarations. */
     /* The uppercase micro-label: an eyebrow, a meter caption, a card label. .72/.74/.76
        were three sizes doing one job. */
-    --aibs-text-micro: .75rem;
-    --aibs-text-meta: .8125rem;
+    /* Each of these has a base that never moves and a working value that a slide is free
+       to scale. Without the split the scale was absolute: the slide's own text grew and
+       shrank with the fit while every chip, label and sub-heading on it stayed exactly
+       where it was, which is why a fullscreen slide looked like body text pasted into a
+       page built for something else. */
+    --aibs-text-micro-base: .75rem;
+    --aibs-text-meta-base: .8125rem;
+    --aibs-text-sub-base: .9375rem;
+    --aibs-text-body-base: 1rem;
+    --aibs-text-lead-base: 1.0625rem;
+
+    --aibs-text-micro: var(--aibs-text-micro-base);
+    --aibs-text-meta: var(--aibs-text-meta-base);
     --aibs-text-small: .875rem;
     /* The other half of the scale. Below this line the file used to hold .92, .95, 1.02,
        1.04, 1.05, 1.06, 1.16, 1.18, 1.7, 1.9 and 2.3rem - eleven sizes, several of them
        a hundredth of a rem apart, which is a difference no eye can see and no rule can
        justify. The ramp is one step of roughly a pixel at reading sizes, where a step has
        to be small to stay legible, and opens up at display sizes where it does not. */
-    --aibs-text-sub: .9375rem;
-    --aibs-text-body: 1rem;
-    --aibs-text-lead: 1.0625rem;
+    --aibs-text-sub: var(--aibs-text-sub-base);
+    --aibs-text-body: var(--aibs-text-body-base);
+    --aibs-text-lead: var(--aibs-text-lead-base);
     --aibs-text-title: 1.1875rem;
     --aibs-text-head: 1.5rem;
     --aibs-text-stat: 1.75rem;
@@ -972,6 +983,10 @@
 
 .aibs-legend-summary {
     align-items: center;
+    /* It is a button now, so the browser's own chrome has to be taken off it explicitly -
+       a summary carried none of this. */
+    background: none;
+    border: 0;
     border-radius: 999px;
     color: var(--aibs-muted);
     cursor: pointer;
@@ -982,10 +997,6 @@
     list-style: none;
     padding: 4px;
     transition: color .18s var(--aibs-ease), background-color .18s var(--aibs-ease);
-}
-
-.aibs-legend-summary::-webkit-details-marker {
-    display: none;
 }
 
 /* The mark inverts; the disc behind it stays out of the way, or the control reads as two
@@ -1014,8 +1025,7 @@
     width: 19px;
 }
 
-.aibs-legend[open] .aibs-legend-icon,
-.aibs-legend[open] .aibs-legend-icon,
+.aibs-legend-summary[aria-expanded="true"] .aibs-legend-icon,
 .aibs-legend-summary:hover .aibs-legend-icon,
 .aibs-legend-summary:focus-visible .aibs-legend-icon {
     background: var(--aibs-invert);
@@ -1248,6 +1258,19 @@
     flex: 0 0 auto;
     height: 1.05em;
     width: 1.05em;
+}
+
+/* A screen that is scaled scales whole. The fit is set on the slide, so the working type
+   values are redefined there and every chip, label and sub-heading on it moves with the
+   prose instead of standing still while the prose grows. */
+.aibs-slide,
+.aibs-consequence,
+.aibs-deckslide {
+    --aibs-text-micro: calc(var(--aibs-text-micro-base) * var(--aibs-fit, 1));
+    --aibs-text-meta: calc(var(--aibs-text-meta-base) * var(--aibs-fit, 1));
+    --aibs-text-sub: calc(var(--aibs-text-sub-base) * var(--aibs-fit, 1));
+    --aibs-text-body: calc(var(--aibs-text-body-base) * var(--aibs-fit, 1));
+    --aibs-text-lead: calc(var(--aibs-text-lead-base) * var(--aibs-fit, 1));
 }
 
 /* ------------------------------------------------------------------- node */
@@ -3459,8 +3482,19 @@ button.aibs-avatar {
     /* The masthead stops being a box and lets its two halves become items of the bar
        itself, so the title and the controls can sit at opposite ends of one row with the
        progress and the readings between them. */
+    /* One row: the title on the left, the controls on the right. Wrapping put the
+       controls on a row of their own and spent a band of the screen on a heading. */
     .path-mod-aibranchedscenario .aibs-topbar .aibs-masthead-compact {
+        flex-wrap: nowrap;
         display: contents;
+    }
+
+    /* The title is measured against this box, so it has to be able to be narrower than
+       its own text - a flex item will not go below its content unless it is told to. */
+    .path-mod-aibranchedscenario .aibs-topbar .aibs-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .path-mod-aibranchedscenario .aibs-topbar .aibs-masthead-text {

@@ -521,10 +521,15 @@ class validator {
                 continue;
             }
             $seen[] = $id;
+            $taught = $this->split_taught(
+                $this->text($item['summary'] ?? '', 800),
+                $this->text($item['example'] ?? '', 600),
+                $this->text($item['pitfall'] ?? '', 600)
+            );
             $out[] = [
                 'id'      => $id,
                 'title'   => $title,
-                'summary' => $this->text($item['summary'] ?? '', 800),
+                'summary' => $taught['summary'],
                 // A principle stated is a principle forgotten. These are the words a
                 // learner can actually use, and the ones that sound reasonable and are
                 // not.
@@ -540,11 +545,97 @@ class validator {
                 // principle is named at review instead - see quality_review - where the
                 // teacher can type the example in, which is where a human filling a gap
                 // belongs. The player already draws the slide without them.
-                'example' => $this->text($item['example'] ?? '', 600),
-                'pitfall' => $this->text($item['pitfall'] ?? '', 600),
+                'example' => $taught['example'],
+                'pitfall' => $taught['pitfall'],
             ];
         }
         return $out;
+    }
+
+    /**
+     * Pull an example and a pitfall back out of a summary that swallowed them.
+     *
+     * The service does not always put these in their own fields. It often writes one
+     * paragraph - "Seek opportunities where both parties can benefit. Example: "If we
+     * extend the contract duration, could we discuss a price adjustment?" Pitfall: Viewing
+     * negotiation as a zero-sum game." - and leaves example and pitfall empty.
+     *
+     * Everything downstream then behaves as though the principle taught a rule and nothing
+     * else. The two cards on the teaching slide are drawn only when their field has
+     * something in it, so they did not appear; the slide showed a heading and a wall of
+     * prose with the good bits buried in the middle of it; and the definition was, for a
+     * while, refused outright for fields whose content was sitting right there in the
+     * summary.
+     *
+     * So the words are put where they belong. A field the service did fill is never
+     * overwritten - this only recovers what would otherwise be lost - and a summary with no
+     * marker in it is returned exactly as it came.
+     *
+     * @param string $summary The principle's summary as written.
+     * @param string $example The example field, which may be empty.
+     * @param string $pitfall The pitfall field, which may be empty.
+     * @return array Keys: summary, example, pitfall.
+     */
+    protected function split_taught(string $summary, string $example, string $pitfall): array {
+        $result = ['summary' => $summary, 'example' => $example, 'pitfall' => $pitfall];
+        if ($summary === '' || ($example !== '' && $pitfall !== '')) {
+            return $result;
+        }
+
+        // The labels a generator actually writes, longest first so that "common mistake"
+        // is matched before "mistake" could be. A label counts only at the start of a
+        // sentence or a line, which is where a label goes - otherwise "for example" in the
+        // middle of a sentence would cut the summary in half.
+        $labels = [
+            'example' => ['for example', 'example', 'sounds like', 'say something like', 'try'],
+            'pitfall' => ['common mistake', 'common pitfall', 'pitfall', 'avoid', 'not this',
+                'what not to do', 'the trap'],
+        ];
+
+        $found = [];
+        foreach ($labels as $field => $words) {
+            foreach ($words as $word) {
+                $pattern = '/(?:^|(?<=[.!?"\x{201D}])\s+|\n)\s*' . preg_quote($word, '/')
+                    . '\s*[:\x{2014}\x{2013}-]\s*/iu';
+                if (preg_match($pattern, $summary, $m, PREG_OFFSET_CAPTURE)) {
+                    $found[$field] = ['start' => $m[0][1], 'body' => $m[0][1] + strlen($m[0][0])];
+                    break;
+                }
+            }
+        }
+        if (!$found) {
+            return $result;
+        }
+
+        // Each label runs to the next label or to the end, so the order they appear in is
+        // what bounds them, not the order they are listed above.
+        $bounds = $found;
+        uasort($bounds, function ($a, $b) {
+            return $a['start'] <=> $b['start'];
+        });
+        $starts = array_column($bounds, 'start');
+        $first = min($starts);
+
+        $keys = array_keys($bounds);
+        foreach ($keys as $i => $field) {
+            $from = $bounds[$field]['body'];
+            $to = isset($keys[$i + 1]) ? $bounds[$keys[$i + 1]]['start'] : strlen($summary);
+            $text = trim(substr($summary, $from, max(0, $to - $from)));
+            // A label the service wrote but left nothing after is not worth acting on, and
+            // a field it filled properly is never replaced.
+            if ($text !== '' && $result[$field] === '') {
+                $result[$field] = $this->text($text, 600);
+            }
+        }
+
+        // What is left is the principle itself. If the summary was nothing but labels there
+        // is no rule left to state, so the original is kept rather than leaving the slide
+        // with a heading and no lead.
+        $lead = trim(substr($summary, 0, $first));
+        if ($lead !== '') {
+            $result['summary'] = $this->text($lead, 800);
+        }
+        return $result;
     }
 
     /**

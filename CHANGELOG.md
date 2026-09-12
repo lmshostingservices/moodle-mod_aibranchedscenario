@@ -2,6 +2,60 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.35.0] - 2026-09-12
+
+### Fixed — the example and the pitfall were in the summary all along
+
+The service does not always fill the `example` and `pitfall` fields. It often writes one
+paragraph instead — *"Seek opportunities where both parties can benefit. Example: "If we
+extend the contract duration, could we discuss a price adjustment?" Pitfall: Viewing
+negotiation as a zero-sum game."* — and leaves both fields empty.
+
+Everything downstream then behaved as though the principle taught a rule and nothing else.
+The two cards on the teaching slide are drawn only when their field has something in it, so
+they never appeared; the slide showed a heading and a wall of prose with the good bits buried
+in the middle of it; the narration read it as one undifferentiated block; and for three
+releases the definition was refused outright for fields whose content was sitting right there
+in the summary.
+
+The words are now put where they belong. A field the service did fill is never overwritten,
+a summary with no label in it is returned exactly as it came, and a label mid-sentence — "for
+example the deadline" — does not cut the summary in half. The cards, their icons, their
+banding and their hover were already built and simply had no data; they fill the slide now.
+
+### Fixed — the metrics legend opened the course index
+
+The "?" beside the readings was a `<details>`, and on a live theme clicking it opened the
+course index drawer instead of the panel. A native disclosure carries behaviour of its own
+and themes bind to its summary. It is a button now, holding its state in `aria-expanded`,
+closing on Escape or a click elsewhere — and every click inside the player now stops at the
+player, so no handler on the page can act on one again.
+
+### Fixed — option A was the right answer every time
+
+The generator writes the best option first, consistently, so A was the strongest answer at
+every decision. A learner notices that within two screens and stops reading the options, and
+the scenario then measures whether they spotted the pattern rather than whether they know the
+material. The order is now settled once, at generation, seeded from the node's own id — so it
+is stable across regenerations and the teacher edits the same order the learner sees.
+
+### Fixed — fullscreen gave the same words with more white around them
+
+Two faults, one symptom. The fit scale only ever stepped *down*, so in fullscreen the frame
+grew to the whole screen and the type did not follow it. And the type scale was declared in
+`rem`, so even where the fit did apply, only the prose moved — every chip, label and
+sub-heading stood still. The scale now grows into a screen that has room to spare (capped at
+1.5×, and only where nothing had to be stepped down first), and the scale has a base the fit
+multiplies, so a screen scales whole. Measured in a browser: chip and body text both move by
+exactly 1.3× at fit 1.3.
+
+### Fixed — a long title took the controls onto a second row
+
+The bar is a title on the left and the controls on the right. A long scenario title wrapped
+and took the whole bar with it. The title is held to one row now and steps its type down to
+stay there, as far as 72% before it is allowed to wrap — smaller than that and the heading is
+smaller than the text beneath it, which reads as a mistake.
+
 ## [v1.34.0] - 2026-09-12
 
 ### Fixed — a thin principle no longer throws away a paid generation

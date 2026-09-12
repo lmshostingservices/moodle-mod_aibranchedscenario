@@ -75,6 +75,33 @@ class Player {
     static MAX_FRAME = 620;
 
     /**
+     * The largest the type is allowed to grow when a screen has room to spare.
+     *
+     * The fit scale only ever stepped down, which is right on a page - the frame is sized
+     * to the page and the type is what gives. In fullscreen it was wrong: the frame grew to
+     * the whole screen and the type did not follow it, so a learner who went fullscreen got
+     * the same words they had before with a great deal more white around them. The scale
+     * grows there now, and this is where it stops - past about half again the line length
+     * runs past what is comfortable to read and the screen starts to look like a slide made
+     * for a room rather than one made for a person.
+     *
+     * @type {Number}
+     */
+    static MAX_FIT = 1.5;
+
+    /**
+     * The smallest the scenario title is allowed to get while it is being held to one row,
+     * as a fraction of the size the stylesheet gives it.
+     *
+     * Past this the title is smaller than the text under it, which reads as a mistake
+     * rather than as a heading. A title long enough to need more than this is allowed to
+     * wrap - two rows of bar is better than a heading nobody can read.
+     *
+     * @type {Number}
+     */
+    static MIN_TITLE = 0.72;
+
+    /**
      * Height held for the deck arrows on screens that do not have them, in pixels.
      *
      * Zero since the arrows moved onto the slide's left and right edges: they take no
@@ -200,7 +227,26 @@ class Player {
                 return;
             }
             event.preventDefault();
+            // The click ends here. A theme is free to bind its own handlers to the page -
+            // one of them was opening the course index drawer when the metrics legend was
+            // clicked - and none of them has any business acting on a control inside the
+            // player.
+            event.stopPropagation();
             this.handle(target.dataset.action, target);
+        });
+
+        // A panel opened from the bar closes when the learner looks elsewhere, the way a
+        // menu does. Both listeners are on the document because the point is what happens
+        // outside the player, not inside it.
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('.aibs-legend')) {
+                this.closeLegend();
+            }
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                this.closeLegend();
+            }
         });
 
         return true;
@@ -242,6 +288,9 @@ class Player {
                 break;
             case 'fullscreen':
                 this.toggleFullscreen();
+                break;
+            case 'legend':
+                this.toggleLegend(element);
                 break;
             case 'deckprev':
                 this.stepDeck(element, -1);
@@ -1164,6 +1213,69 @@ class Player {
     }
 
     /**
+     * Hold the scenario title to a single row.
+     *
+     * The bar is a title on the left and the controls on the right. A long title wrapped
+     * to a second line and took the whole bar with it, so the controls dropped onto a row
+     * of their own and the player lost a band of the screen to a heading. Truncating it
+     * would be worse - the title is the one thing on the bar that says what this is - so
+     * the type steps down instead, and only as far as it has to.
+     *
+     * @returns {void}
+     */
+    fitTitle() {
+        const title = this.root.querySelector('.aibs-masthead-compact .aibs-title');
+        if (!title) {
+            return;
+        }
+        title.style.removeProperty('font-size');
+        window.requestAnimationFrame(() => {
+            let size = parseFloat(window.getComputedStyle(title).fontSize) || 0;
+            if (!size) {
+                return;
+            }
+            const floor = size * Player.MIN_TITLE;
+            let guard = 0;
+            while (title.scrollWidth > title.clientWidth + 1 && size > floor && guard < 20) {
+                size -= 0.5;
+                guard++;
+                title.style.fontSize = size.toFixed(1) + 'px';
+            }
+        });
+    }
+
+    /**
+     * Open or close the panel that explains the three readings.
+     *
+     * @param {HTMLElement} button The control that was pressed.
+     * @returns {void}
+     */
+    toggleLegend(button) {
+        const body = this.root.querySelector('.aibs-legend-body');
+        if (!body) {
+            return;
+        }
+        const open = button.getAttribute('aria-expanded') === 'true';
+        button.setAttribute('aria-expanded', open ? 'false' : 'true');
+        body.hidden = open;
+    }
+
+    /**
+     * Close the readings panel, wherever the learner clicked.
+     *
+     * @returns {void}
+     */
+    closeLegend() {
+        const button = this.root.querySelector('[data-action="legend"]');
+        const body = this.root.querySelector('.aibs-legend-body');
+        if (!button || !body) {
+            return;
+        }
+        button.setAttribute('aria-expanded', 'false');
+        body.hidden = true;
+    }
+
+    /**
      * Redraw the read-only record of decisions already made.
      *
      * @returns {void}
@@ -1443,6 +1555,7 @@ class Player {
      */
     fitSlide() {
         this.fadeScenes();
+        this.fitTitle();
         // What else is on the screen changes from one screen to the next - the arrows are
         // on a deck and not on a decision, the top bar grows a line when it wraps - so the
         // space available is worked out again each time rather than once at load.
@@ -1468,6 +1581,27 @@ class Player {
                         scale -= 0.04;
                         guard++;
                         slide.style.setProperty('--aibs-fit', scale.toFixed(2));
+                    }
+                    // The scale only ever stepped down, which is right on a page: the frame
+                    // is sized to the page and the type is what gives. In fullscreen it was
+                    // wrong. The frame grew to the whole screen and the type did not follow
+                    // it, so a learner who went fullscreen got the same words they had
+                    // before with a great deal more white around them. Where the screen fits
+                    // with room to spare, the type grows into it.
+                    if (guard === 0 && this.isFullscreen()) {
+                        while (scale < Player.MAX_FIT && guard < 28) {
+                            const next = Math.round((scale + 0.04) * 100) / 100;
+                            slide.style.setProperty('--aibs-fit', next.toFixed(2));
+                            // Reading scrollHeight settles the layout, so each step is
+                            // measured rather than assumed. The last step that still fits
+                            // is the one that is kept.
+                            if (body.scrollHeight > body.clientHeight + 1) {
+                                slide.style.setProperty('--aibs-fit', scale.toFixed(2));
+                                break;
+                            }
+                            scale = next;
+                            guard++;
+                        }
                     }
                     this.lockPageScroll();
                 });
