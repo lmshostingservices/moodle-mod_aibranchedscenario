@@ -93,6 +93,7 @@ class provider implements
             'status'       => 'privacy:metadata:aibranchedscenario_jobs:status',
             'jobtype'      => 'privacy:metadata:aibranchedscenario_jobs:jobtype',
             'requestjson'  => 'privacy:metadata:aibranchedscenario_jobs:requestjson',
+            'payloadjson'  => 'privacy:metadata:aibranchedscenario_jobs:payloadjson',
             'resultjson'   => 'privacy:metadata:aibranchedscenario_jobs:resultjson',
             'errormsg'     => 'privacy:metadata:aibranchedscenario_jobs:errormsg',
             'modelused'    => 'privacy:metadata:aibranchedscenario_jobs:modelused',

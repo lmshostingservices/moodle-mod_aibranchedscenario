@@ -124,6 +124,7 @@
         <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="queued" SEQUENCE="false"/>
         <FIELD NAME="jobtype" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="scenario" SEQUENCE="false"/>
         <FIELD NAME="requestjson" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="payloadjson" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Exact outgoing request body, replayed on every retry of this job"/>
         <FIELD NAME="resultjson" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="errormsg" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="modelused" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false"/>

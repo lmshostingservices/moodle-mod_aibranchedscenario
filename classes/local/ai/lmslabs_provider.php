@@ -324,6 +324,14 @@ class lmslabs_provider implements provider {
         if ($status === 429) {
             throw new generation_exception('error:serviceratelimited');
         }
+        // The service answers a handle it has seen before, carrying a different body, with
+        // 409 and this code. It neither generates nor charges. Branching on the code rather
+        // than the message is the service's own instruction - the wording is not a contract.
+        // A teacher should be told to generate again rather than shown a conflict they had
+        // no part in.
+        if ($status === 409 || (is_array($decoded) && ($decoded['error'] ?? '') === 'IDEMPOTENCY_CONFLICT')) {
+            throw new generation_exception('error:generationconflict');
+        }
         if (!is_array($decoded)) {
             throw new generation_exception('error:serviceunreadable');
         }
@@ -460,8 +468,15 @@ class lmslabs_provider implements provider {
         if ($raw === -1) {
             $unlimited = true;
         }
+        // What this service will accept, recorded as it answers rather than asked for
+        // again later. A plugin that sends a field the route does not know is refused with
+        // 400 INVALID_REQUEST before it is even authenticated, so the standard travels only
+        // where the service says it is welcome.
+        self::remember_capabilities($decoded);
+
         return [
             'connected' => true,
+            'standardlimit' => self::standard_budget('generate'),
             'credits'   => $unlimited ? 0 : max(0, $raw),
             'unlimited' => $unlimited,
             'siteid'    => isset($decoded['siteId']) && is_string($decoded['siteId'])
@@ -493,6 +508,20 @@ class lmslabs_provider implements provider {
         $current = self::current_values($request);
         if ($current) {
             $payload['currentValues'] = $current;
+        }
+
+        // Filling the wizard from pasted content carried no guidance at all - only the source
+        // and whatever the teacher had already typed - and the fields it fills are the first
+        // thing anyone sees of the product. It gets the same standard as everything else,
+        // but only where this route has said so itself: the shared character limit is not
+        // evidence that populate takes the field, and a field the route does not know fails
+        // the request outright.
+        $budget = self::standard_budget('populate');
+        if ($budget > 0) {
+            $standard = content_standard::full_text($budget);
+            if ($standard !== '') {
+                $payload['contentStandard'] = $standard;
+            }
         }
 
         $requestid = self::request_id(self::OP_POPULATE, json_encode($payload));
@@ -630,8 +659,30 @@ class lmslabs_provider implements provider {
      * @return array Keys: scenario, meta.
      */
     public function generate_scenario(array $request): array {
-        $payload = $this->generate_payload($request);
-        $requestid = self::request_id(self::OP_SCENARIO, json_encode($payload));
+        // A retry replays the body stored with the job rather than rebuilding it, because
+        // the service matches a repeated handle against the body it saw first and an
+        // upgraded plugin would otherwise build a different one under the same handle.
+        $payload = is_array($request['replaypayload'] ?? null) && $request['replaypayload'] !== []
+            ? $request['replaypayload']
+            : $this->generate_payload($request);
+        // The handle is the job, not the words.
+        //
+        // It used to be a hash of the payload, which is stable for the wrong reason: two
+        // deliberate presses of Generate on unchanged wizard inputs produce byte-identical
+        // payloads, so they produced the same handle. Now that the service reuses a saved
+        // result rather than charging twice for a repeated handle, that teacher would be
+        // handed the scenario they had just rejected, with nothing on screen to say so.
+        //
+        // One logical generation has exactly one job row - queue_scenario() refuses to open
+        // a second while one is queued or running for the activity - and a retried adhoc
+        // task re-runs against that same row. So the job id is stable across every retry of
+        // one generation and different for every new one, which is the distinction the
+        // service is actually trying to draw. Falls back to the payload hash when no job is
+        // in play, so a caller without one still sends a well-formed handle.
+        $jobid = (int)($request['idempotencykey'] ?? 0);
+        $requestid = $jobid > 0
+            ? self::request_id(self::OP_SCENARIO, 'job' . $jobid)
+            : self::request_id(self::OP_SCENARIO, json_encode($payload));
         $data = $this->call(self::ROUTE_PREFIX . '/generate', $payload, $requestid);
         if (!is_array($data)) {
             throw new generation_exception('error:servicenoscenario');
@@ -655,7 +706,7 @@ class lmslabs_provider implements provider {
      * @return array Request body, carrying only keys the schema names.
      * @throws generation_exception When there is too little source content to send.
      */
-    protected function generate_payload(array $request): array {
+    public function generate_payload(array $request): array {
         $source = trim((string)($request['sourcecontent'] ?? ''));
         if (\core_text::strlen($source) < self::MIN_GENERATE_CHARS) {
             throw new generation_exception('error:sourcetooshort', self::MIN_GENERATE_CHARS);
@@ -734,6 +785,18 @@ class lmslabs_provider implements provider {
         $instructions = self::instructions($request);
         if ($instructions !== '') {
             $payload['instructions'] = $instructions;
+        }
+
+        // The standard travels in its own field where the service has said it accepts one,
+        // and nowhere else. A field the route does not know is refused with 400
+        // INVALID_REQUEST before the request is even authenticated, so an unverified guess
+        // here would fail every generation on the site rather than degrade quietly.
+        $budget = self::standard_budget('generate');
+        if ($budget > 0) {
+            $standard = content_standard::full_text($budget);
+            if ($standard !== '') {
+                $payload['contentStandard'] = $standard;
+            }
         }
 
         return $payload;
@@ -841,8 +904,14 @@ class lmslabs_provider implements provider {
         // what decides whose voice a line is read in and whose face is in the picture. The
         // teacher's own prose last, with whatever remains, because it is the one part that
         // degrades gracefully - a shorter brief is still a brief.
+        //
+        // Where the service takes a field of its own for the standard, none of that applies:
+        // the standard goes there in full and this field is the teacher's words and the
+        // cast, which is what it was always meant to hold.
         $ceiling = 2000;
-        $standard = content_standard::short_text($ceiling - content_standard::TEACHER_FLOOR);
+        $standard = self::standard_budget('generate') > 0
+            ? ''
+            : content_standard::short_text($ceiling - content_standard::TEACHER_FLOOR);
         $blocks = $standard === '' ? [] : [$standard];
         foreach ([$castline, trim(implode("\n\n", $parts))] as $block) {
             if ($block === '') {
@@ -970,5 +1039,51 @@ class lmslabs_provider implements provider {
             'nodeTypes'    => schema::nodetypes(),
             'outcomes'     => schema::outcomes(),
         ];
+    }
+
+    /**
+     * Record what the service says it accepts, from whatever answer carried it.
+     *
+     * Two shapes mean the same thing. `limits.contentStandardCharacters` is the older
+     * signal and speaks only for the generate route. `capabilities.contentStandard` names
+     * the routes explicitly and is authoritative where present - a shared limit is not
+     * evidence that populate takes the field.
+     *
+     * @param array $decoded A decoded status response.
+     * @return void
+     */
+    protected static function remember_capabilities(array $decoded): void {
+        $limit = (int)(($decoded['limits']['contentStandardCharacters'] ?? 0));
+        $caps = $decoded['capabilities']['contentStandard'] ?? null;
+        $routes = [
+            // No explicit capability block: a positive limit is the legacy way of saying
+            // generate takes the field, and says nothing at all about populate.
+            'generate' => is_array($caps) ? !empty($caps['generate']) : $limit > 0,
+            'populate' => is_array($caps) ? !empty($caps['populate']) : false,
+        ];
+        set_config('standardlimit', max(0, $limit), 'mod_aibranchedscenario');
+        set_config('standardroutes', json_encode($routes), 'mod_aibranchedscenario');
+        set_config('standardseen', time(), 'mod_aibranchedscenario');
+    }
+
+    /**
+     * How much of the content standard this service will accept on a route.
+     *
+     * Zero means send nothing. That is the answer when the service has never been asked,
+     * when it was asked and did not advertise the field, and when the route is not one of
+     * the routes it named - all three of which have to behave the same way, because the
+     * cost of guessing wrong is every generation on the site failing validation before it
+     * is authenticated.
+     *
+     * @param string $route Route name, 'generate' or 'populate'.
+     * @return int Characters accepted, or 0 if the field must be omitted.
+     */
+    public static function standard_budget(string $route): int {
+        $limit = (int)get_config('mod_aibranchedscenario', 'standardlimit');
+        if ($limit <= 0) {
+            return 0;
+        }
+        $routes = json_decode((string)get_config('mod_aibranchedscenario', 'standardroutes'), true);
+        return is_array($routes) && !empty($routes[$route]) ? $limit : 0;
     }
 }

@@ -301,6 +301,24 @@ class generator {
         $source['language'] = $scenario->scenariolang;
         $source['theme'] = $scenario->theme;
         $source['contractversion'] = schema::CONTRACT_VERSION;
+        // Identifies this generation to the service so a retried task is recognised as the
+        // same one and not charged twice, while a teacher generating again deliberately is
+        // recognised as a new one and gets a new scenario. Never reaches the request body -
+        // the payload is built from an allow-list of named fields.
+        $source['idempotencykey'] = (int)$job->id;
+
+        // The body is built once, stored, and replayed on every later attempt at this job.
+        // The service matches a repeated handle against the body it saw the first time, so
+        // a retry that rebuilt the body with an upgraded plugin's content standard would be
+        // refused as a conflict rather than resumed. Stored before the first call, not
+        // after it, so an attempt that dies mid-flight still has a body to replay.
+        $stored = $job->payloadjson !== null && $job->payloadjson !== ''
+            ? json_decode($job->payloadjson, true) : null;
+        if (!is_array($stored) || $stored === []) {
+            $stored = $this->provider->generate_payload($source);
+            $DB->set_field('aibranchedscenario_jobs', 'payloadjson', json_encode($stored), ['id' => $job->id]);
+        }
+        $source['replaypayload'] = $stored;
 
         try {
             $result = $this->provider->generate_scenario($source);

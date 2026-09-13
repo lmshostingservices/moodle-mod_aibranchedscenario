@@ -94,6 +94,20 @@ interface provider {
     public function generate_scenario(array $request): array;
 
     /**
+     * Build the exact request body a scenario generation would send.
+     *
+     * Separated from sending it so the caller can store the body with the job before the
+     * first attempt. The service matches a repeated request handle against the body it saw
+     * the first time, so a retry has to replay the stored body rather than rebuild it - a
+     * plugin upgraded between the two attempts would otherwise produce a different body
+     * under the same handle, and the service would refuse it as a conflict.
+     *
+     * @param array $request Normalised wizard inputs plus language and contract version.
+     * @return array The request body.
+     */
+    public function generate_payload(array $request): array;
+
+    /**
      * Generate one scene image.
      *
      * @param string $prompt Scene description.

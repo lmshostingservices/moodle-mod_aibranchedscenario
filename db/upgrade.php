@@ -571,5 +571,29 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091253, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091254) {
+        // The idempotency handle sent with a generation now identifies the job rather than
+        // the wizard inputs, so a teacher generating again on unchanged inputs gets a new
+        // scenario instead of the saved one.
+        //
+        // That makes the job's outgoing body worth keeping. The service matches a repeated
+        // handle against the body it saw the first time, so a retry that rebuilt the body
+        // with an upgraded plugin's content standard would be refused as a conflict. The
+        // body is stored once and replayed instead of rebuilt.
+        upgrade_mod_savepoint(true, 2026091254, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091255) {
+        // Somewhere to keep that body. The service matches a repeated handle against the
+        // body it saw the first time, so a retry that rebuilt the body with an upgraded
+        // plugin's content standard would be refused as a conflict rather than resumed.
+        $table = new xmldb_table('aibranchedscenario_jobs');
+        $field = new xmldb_field('payloadjson', XMLDB_TYPE_TEXT, null, null, null, null, null, 'requestjson');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_mod_savepoint(true, 2026091255, 'aibranchedscenario');
+    }
+
     return true;
 }

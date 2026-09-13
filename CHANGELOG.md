@@ -2,6 +2,71 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.43.0] - 2026-09-13
+
+### Fixed — pressing Generate again returned the scenario you had just rejected
+
+LMS Labs added retry protection: a repeated request handle reuses the saved result rather
+than charging a second time, and they confirmed the handle they key on is the `X-Request-Id`
+header the plugin has always sent.
+
+The plugin built that handle from a hash of the request payload. Two deliberate presses of
+Generate on unchanged wizard inputs produce byte-identical payloads — so they produced the
+same handle, and the teacher would have been handed back the scenario they had just rejected
+with nothing on screen to say nothing had regenerated.
+
+The handle now identifies the **job**, not the words. One generation has exactly one job row
+(the plugin already refuses to open a second while one is queued or running for the same
+activity), and a retried background task re-runs against that same row. So:
+
+- a retry of one generation keeps its handle — still recognised, still not charged twice
+- a deliberate regeneration gets a new handle — fresh scenario, charged once
+
+The key travels in the header only; the request body is built from an allow-list of named
+fields and cannot carry it.
+
+### Added — the job's outgoing request is kept and replayed
+
+On LMS Labs' own recommendation. The service matches a repeated handle against the request
+body it saw the first time, so a retry that rebuilt the body — with, say, an upgraded
+plugin's content standard in it — would be refused as a conflict rather than resumed. The
+body is now built once, stored on the job **before** the first call so an attempt that dies
+mid-flight still has something to replay, and replayed on every later attempt.
+
+New column `aibranchedscenario_jobs.payloadjson`, declared to the Privacy API.
+
+### Added — a handle conflict is a message, not a stack trace
+
+`409 IDEMPOTENCY_CONFLICT` is recognised by its error code rather than its wording, as the
+service asks. It neither generates nor charges, so the teacher is told exactly that and
+asked to generate again.
+
+### Added — the two routes finally state the same standard
+
+LMS Labs added a `contentStandard` field to the generate route, capped at 20,000 characters
+and sitting alongside `instructions` rather than replacing it. The plugin now sends the
+twelve rules there **at full length** — 3,584 characters, the same wording the pasted prompt
+uses — instead of the 1,464-character compressed form that had to share one small field with
+the teacher's own brief.
+
+The `instructions` field goes back to what it was always for: the teacher's words and the
+cast, which had been competing with the standard for the same 2,000 characters and losing.
+
+**Sent only where the service says it is accepted.** The routes validate the request body
+before authenticating it, so a field a route does not recognise fails the whole request with
+`400 INVALID_REQUEST` — a wrong guess here would break every generation on the site rather
+than degrade quietly. So the plugin reads the service's own signal: the explicit
+`capabilities.contentStandard.<route>` flag where present, a positive
+`limits.contentStandardCharacters` as the older generate-only signal, and otherwise nothing
+at all. A fresh install that has never spoken to the service sends nothing, which is correct.
+The standard is trimmed to the advertised limit rather than assumed to fit.
+
+The same field is wired for `/populate` — which until now carried no writing guidance
+whatsoever, though the wizard fields it fills are the first thing a teacher sees of the
+product — and stays switched off there until the service advertises that route, because a
+shared character limit is not evidence that the route takes the field.
+
+
 ## [v1.42.0] - 2026-09-13
 
 The self-audit continued for three more rounds. Everything below was found by checking my

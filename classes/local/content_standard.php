@@ -200,6 +200,28 @@ class content_standard {
     }
 
     /**
+     * The standard in full, for a route with a field of its own to put it in.
+     *
+     * The same twelve rules the pasted prompt states, in the same words. Until the service
+     * grew a field for them, the paid route got a compressed version that fitted beside the
+     * teacher's brief in one small field - every rule present, but each cut to a line. This is
+     * the same twelve rules at the length the pasted prompt states them, which is what
+     * makes the two routes one product. It is not the whole pasted prompt: the schema
+     * skeleton and the worked node are written in the plugin's own import JSON and belong
+     * only to the route where a person pastes them into an assistant.
+     *
+     * @param int $budget Characters available. Zero or less returns nothing.
+     * @return string
+     */
+    public static function full_text(int $budget): string {
+        if ($budget <= 0) {
+            return '';
+        }
+        $text = "Write every scenario to this standard.\n\n" . implode("\n\n", self::long_lines());
+        return \core_text::strlen($text) <= $budget ? $text : \core_text::substr($text, 0, $budget);
+    }
+
+    /**
      * The standard as the generate route states it, cut to the room available.
      *
      * Rules are added in priority order while they fit. What does not fit is not silently
