@@ -516,6 +516,7 @@ class lmslabs_provider implements provider {
         // but only where this route has said so itself: the shared character limit is not
         // evidence that populate takes the field, and a field the route does not know fails
         // the request outright.
+        $this->refresh_capabilities();
         $budget = self::standard_budget('populate');
         if ($budget > 0) {
             $standard = content_standard::full_text($budget);
@@ -791,6 +792,7 @@ class lmslabs_provider implements provider {
         // and nowhere else. A field the route does not know is refused with 400
         // INVALID_REQUEST before the request is even authenticated, so an unverified guess
         // here would fail every generation on the site rather than degrade quietly.
+        $this->refresh_capabilities();
         $budget = self::standard_budget('generate');
         if ($budget > 0) {
             $standard = content_standard::full_text($budget);
@@ -1039,6 +1041,45 @@ class lmslabs_provider implements provider {
             'nodeTypes'    => schema::nodetypes(),
             'outcomes'     => schema::outcomes(),
         ];
+    }
+
+
+    /** @var int How long a recorded capability answer is trusted before it is asked again. */
+    const CAPABILITY_TTL = DAYSECS;
+
+    /**
+     * Ask the service what it accepts, if nobody has asked recently.
+     *
+     * The answer arrives on the status route, and the only thing that called it was the
+     * plugin settings page. So on a site where no administrator happened to open that page
+     * after upgrading, nothing was ever recorded, the budget stayed at zero, and the
+     * standard silently never went - the feature would have shipped and done nothing.
+     *
+     * Asked here instead, at most once a day, on a path that is already about to make a
+     * far larger request. A failure is not an error: the recorded answer, or the absence of
+     * one, simply stands, and an absent answer means the field is omitted - which is the
+     * safe direction.
+     *
+     * @return void
+     */
+    protected function refresh_capabilities(): void {
+        $seen = (int)get_config('mod_aibranchedscenario', 'standardseen');
+        if ($seen > 0 && $seen > time() - self::CAPABILITY_TTL) {
+            return;
+        }
+        if (!$this->is_configured()) {
+            return;
+        }
+        try {
+            $this->get_status();
+        } catch (\Throwable $e) {
+            $e = null;
+        }
+        // Stamped whatever happened, including when the service was unreachable and
+        // recorded nothing. An unanswered probe is the generation's problem to report, not
+        // this lookup's, and retrying it on every generation would add a failing request to
+        // each one. The recorded answer, or the absence of one, stands until tomorrow.
+        set_config('standardseen', time(), 'mod_aibranchedscenario');
     }
 
     /**

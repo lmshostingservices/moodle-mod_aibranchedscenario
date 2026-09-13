@@ -595,5 +595,12 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091255, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091256) {
+        // Release 1.44.0 changes no schema. It asks the service what it accepts from the
+        // generation path rather than only from the settings page, so a site where no
+        // administrator opened that page still sends the full content standard.
+        upgrade_mod_savepoint(true, 2026091256, 'aibranchedscenario');
+    }
+
     return true;
 }

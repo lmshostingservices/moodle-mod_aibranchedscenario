@@ -2,6 +2,50 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.44.0] - 2026-09-13
+
+### Fixed — every choice in a pasted scenario led nowhere
+
+Reported live. A scenario drafted through the paste route came back with **`next` missing
+from every choice on every node**, so nothing was reachable, no ending was reachable, and the
+validator rejected the whole document:
+
+> Choice A on node n1 does not lead anywhere … No ending can be reached from the start of the
+> scenario.
+
+The cause was in the prompt, not the model. The prompt carries one fully written-out decision
+node as its example, and **none of that example's three choices had a `next`**. A sentence
+above it explained that `next` had been abbreviated away along with three other fields — but
+a model copies the example it can see, it does not reconstruct what a caveat says is missing.
+
+Every choice in the worked example now carries `next`: two pointing at a named node and one
+showing the `"__auto__"` pattern the last stage needs, so both forms are demonstrated rather
+than described. The caveat now says the opposite — that `next` is present and that a choice
+without one leads nowhere.
+
+**Guarded permanently.** The harness parses the worked example as JSON and fails if any
+choice is missing any field a choice needs, and if it does not show both a named target and
+the automatic one. Prose about the example is no longer a substitute for the example.
+
+
+### Fixed — the content standard would have shipped and done nothing on most sites
+
+v1.43.0 sends the full standard only where the service advertises that it accepts the field,
+which is right. But the only thing in the plugin that ever read that advertisement was the
+**settings page**. On any site where no administrator happened to open plugin settings after
+upgrading, nothing was ever recorded, the budget stayed at zero, and the standard was
+silently never sent — the feature would have shipped and quietly done nothing.
+
+The generation path now asks for itself, at most once a day, on a request that is already
+about to be far larger. An unreachable service is left to the generation to report: the probe
+is marked done either way, so a service that is down does not add a failing request to every
+generation, and an absent answer keeps the field switched off, which is the safe direction.
+
+Verified live by LMS Labs the same day: the status route currently exposes
+`limits.contentStandardCharacters: 20000` and **no `capabilities` block at all**, so the
+legacy positive-limit path is the one actually in use for generate, and populate stays
+correctly disabled.
+
 ## [v1.43.0] - 2026-09-13
 
 ### Fixed — pressing Generate again returned the scenario you had just rejected

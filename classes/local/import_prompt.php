@@ -60,10 +60,12 @@ class import_prompt {
             'ONE DECISION NODE, WRITTEN OUT',
             '',
             'This shows the register and the spread of choices. Do not reuse its people, '
-                . 'its place or its wording. It is abbreviated: every choice in your own '
-                . 'document also needs "principleid", "effects", "skills" and "next", as '
-                . 'the shape above shows. A choice with no "skills" scores zero for all '
-                . 'four, which makes the decision count for nothing.',
+                . 'its place or its wording. Note that every choice carries "next" - a '
+                . 'choice without one leads nowhere, and a document whose choices all lead '
+                . 'nowhere is rejected in full. It is abbreviated in one respect only: '
+                . 'every choice in your own document also needs "principleid", "effects" '
+                . 'and "skills", as the shape above shows. A choice with no "skills" '
+                . 'scores zero for all four, which makes the decision count for nothing.',
             '',
             self::worked_node(),
             '',
@@ -179,7 +181,7 @@ class import_prompt {
                 . 'promised would end on time.",',
             '  "challenge": "What do you do?",',
             '  "choices": [',
-            '    {"id": "n2_a", "signal": "negative",',
+            '    {"id": "n2_a", "signal": "negative", "next": "n3",',
             '     "text": "Tell her what you remember and say you will check the chart '
                 . 'from home if anything is off.",',
             '     "consequence": "She writes it down. She does not ask you the third '
@@ -187,7 +189,7 @@ class import_prompt {
             '     "feedback": "Ending on your certainty left her holding a question she '
                 . 'had not finished asking, so she stopped asking. The next gap will be '
                 . 'found by someone on the next shift."},',
-            '    {"id": "n2_b", "signal": "positive",',
+            '    {"id": "n2_b", "signal": "positive", "next": "n3",',
             '     "text": "Sit down, open the chart, and read the last two entries out '
                 . 'with her.",',
             '     "consequence": "It takes four minutes. She finds the gap you had not '
@@ -195,7 +197,7 @@ class import_prompt {
             '     "feedback": "Reading it out together made the chart hers to check '
                 . 'rather than yours to defend, so she found the gap and marked it. She '
                 . 'will open the next one without waiting to be asked."},',
-            '    {"id": "n2_c", "signal": "neutral",',
+            '    {"id": "n2_c", "signal": "neutral", "next": "__auto__",',
             '     "text": "Ask her to put her questions in the ward group chat so you '
                 . 'can answer them properly later.",',
             '     "consequence": "She agrees. By the time you reply she has already '
