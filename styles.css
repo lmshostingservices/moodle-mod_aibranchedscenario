@@ -2141,6 +2141,34 @@
     animation: aibs-rise .42s var(--aibs-ease) both;
 }
 
+/* The other half of that. Screens arrived on a curve and left in a single frame, so every
+   join in the scenario was a jolt between two screens that were each careful on their own.
+   A screen settles back the way it came up, and a little faster: waiting to leave is dead
+   time, but leaving instantly is what the eye reads as a flicker. */
+@keyframes aibs-settle {
+    from {
+        opacity: 1;
+        transform: none;
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-8px) scale(.995);
+    }
+}
+
+.aibs-is-leaving {
+    animation: aibs-settle .16s var(--aibs-ease) both;
+    /* It is on its way out; nothing on it should still be clickable. */
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aibs-is-leaving {
+        animation: none;
+    }
+}
+
 .aibs-enter .aibs-choice {
     animation: aibs-rise .38s var(--aibs-ease) both;
 }

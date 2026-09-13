@@ -102,6 +102,16 @@ class Player {
     static MIN_TITLE = 0.72;
 
     /**
+     * How long a screen takes to leave, in milliseconds.
+     *
+     * Short enough that it never feels like waiting, long enough that the eye reads it as
+     * one screen replacing another rather than as a flicker.
+     *
+     * @type {Number}
+     */
+    static LEAVE_MS = 160;
+
+    /**
      * Height held for the deck arrows on screens that do not have them, in pixels.
      *
      * Zero since the arrows moved onto the slide's left and right edges: they take no
@@ -151,6 +161,9 @@ class Player {
         this.attemptId = 0;
         this.nextSeq = 1;
         this.step = 0;
+        // The narrative stage of the screen on show, which is what the bar counts. It is
+        // not the number of clicks: a beat is a click and is not a decision.
+        this.stage = 1;
         this.pendingNode = null;
         this.sceneImage = '';
         // Every decision made in this attempt, in order. Seeded from the server on resume
@@ -442,7 +455,19 @@ class Player {
             this.drawHistory();
             this.pendingNode = response.finished ? null : response.node;
             this.finished = response.finished;
-            await this.renderConsequence(response);
+            // A consequence that says nothing is worse than no consequence at all. A beat
+            // carries a synthesised choice with no prose, no feedback and no effects, so
+            // pressing its Continue drew a screen showing the word "Neutral", three
+            // readings that had not moved and a second Continue - two clicks to be told
+            // nothing, in the middle of the scenario. Where there is genuinely nothing to
+            // report, the screen is skipped and the learner goes on to what happens next.
+            if (this.saysSomething(response)) {
+                await this.leaveRegion(SELECTORS.node);
+                await this.renderConsequence(response);
+            } else {
+                this.hideRegion(SELECTORS.consequence);
+                await this.showPendingNode();
+            }
         } catch (error) {
             buttons.forEach((button) => {
                 button.disabled = false;
@@ -475,6 +500,16 @@ class Player {
         // Kept so the consequence can show the scene the decision was taken in: the room
         // has not changed because the learner chose something in it.
         this.sceneImage = node.imageurl || '';
+        // The bar and the card both said "Decision N" and they said different numbers.
+        // The card printed the node's own narrative stage; the bar counted events, and an
+        // event is logged for a beat as well as a decision, so four clicks through two
+        // beats had the bar reading "Decision 5 of 5" while the card beside it said
+        // "Decision 3". Two counters, two definitions, both on screen at once. There is
+        // one number now and it is the node's, which is the one the learner can see.
+        const stage = parseInt(node.stage, 10);
+        if (stage > 0) {
+            this.stage = stage;
+        }
         await this.render(SELECTORS.node, 'mod_aibranchedscenario/node', context);
         this.hideRegion(SELECTORS.consequence);
         this.updateRail();
@@ -601,7 +636,7 @@ class Player {
         if (this.pendingNode) {
             const node = this.pendingNode;
             this.pendingNode = null;
-            this.hideRegion(SELECTORS.consequence);
+            await this.leaveRegion(SELECTORS.consequence);
             await this.renderNode(node);
             return true;
         }
@@ -831,6 +866,41 @@ class Player {
             region.hidden = true;
             region.innerHTML = '';
         }
+    }
+
+    /**
+     * Let a screen leave before the next one arrives.
+     *
+     * Every screen animated in and none of them animated out: the decision vanished in the
+     * same frame the consequence appeared, and the consequence vanished in the same frame
+     * the next decision appeared. Each screen was polished on its own and the joins between
+     * them were a jolt, which is what makes a sequence of good screens feel disjointed.
+     *
+     * It is a fade rather than a slide because the picture on the left does not change
+     * between a decision and its consequence - the room is the same room - and sliding it
+     * out and back in would say that it had.
+     *
+     * @param {String} selector The region selector.
+     * @returns {Promise} Resolves once the screen has gone.
+     */
+    async leaveRegion(selector) {
+        const region = this.root.querySelector(selector);
+        if (!region || region.hidden || !region.firstElementChild) {
+            this.hideRegion(selector);
+            return;
+        }
+        // Somebody who has asked for less motion is asking for this too, and a leaving
+        // screen is never worth waiting for if the animation cannot run.
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            this.hideRegion(selector);
+            return;
+        }
+        region.classList.add('aibs-is-leaving');
+        await new Promise((resolve) => {
+            window.setTimeout(resolve, Player.LEAVE_MS);
+        });
+        region.classList.remove('aibs-is-leaving');
+        this.hideRegion(selector);
     }
 
     /**
@@ -1198,7 +1268,7 @@ class Player {
         if (!total) {
             return;
         }
-        const current = Math.min(this.step + 1, total);
+        const current = Math.min(Math.max(this.stage || 1, 1), total);
         this.showPosition(current, total, this.strings.stageprogress);
     }
 
@@ -1210,6 +1280,31 @@ class Player {
     openingImage() {
         const img = this.root.querySelector('[data-region="brief"] .aibs-scene-img');
         return img ? img.getAttribute('src') || '' : '';
+    }
+
+    /**
+     * Is there anything on this consequence worth stopping the learner for?
+     *
+     * Three things can make it worth a screen: something happened in the story, the
+     * teacher's note on why it mattered, or one of the three readings moving. With none of
+     * them the screen is a signal word and a button, which teaches nothing and reads as a
+     * fault in the plugin rather than as a quiet moment in the scenario.
+     *
+     * The validator already refuses a real decision whose choice has no consequence, so in
+     * practice this is the beat's synthesised choice and nothing else.
+     *
+     * @param {Object} response The reply from submit_choice.
+     * @returns {Boolean} True when the screen has something to say.
+     */
+    saysSomething(response) {
+        if ((response.consequenceparas || []).length || (response.feedbackparas || []).length) {
+            return true;
+        }
+        const before = response.before || {};
+        const after = response.after || {};
+        return ['engagement', 'trust', 'tension'].some((key) => {
+            return (parseInt(after[key], 10) || 0) !== (parseInt(before[key], 10) || 0);
+        });
     }
 
     /**

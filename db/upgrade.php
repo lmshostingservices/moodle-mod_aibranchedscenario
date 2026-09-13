@@ -513,5 +513,12 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091245, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091246) {
+        // Release 1.36.0 changes no schema. It is the flow review: one decision counter
+        // instead of two that disagreed, no consequence screen where there is nothing to
+        // report, and a screen that leaves before the next one arrives.
+        upgrade_mod_savepoint(true, 2026091246, 'aibranchedscenario');
+    }
+
     return true;
 }

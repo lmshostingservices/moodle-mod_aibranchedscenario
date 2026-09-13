@@ -2,6 +2,37 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.36.0] - 2026-09-12
+
+### The flow review
+
+The screens were each careful on their own and the sequence did not hold together. Three
+faults compounded into that, and they are separable.
+
+**Two decision counters, disagreeing on screen at the same time.** The chip on the card
+printed the node's own narrative stage. The bar counted *events* — and an event is logged
+for a beat as well as for a decision, so four clicks through two beats had the bar reading
+"Decision 5 of 5" beside a card saying "Decision 3". Both said "Decision" and neither was
+wrong by its own definition, which is the worst kind of wrong. There is one number now and
+it is the node's, because that is the one the learner can see.
+
+**A screen in the middle of the scenario that said nothing.** A beat carries a synthesised
+choice with no consequence prose, no feedback and no effects, and it went through the same
+path as a real decision — so pressing a beat's Continue drew a consequence screen showing
+the word "Neutral", three readings that had not moved, and a second Continue. Two clicks to
+be told nothing. Where there is genuinely nothing to report the screen is skipped and the
+learner goes straight on to what happens next. The test is the story, the teacher's note and
+the three readings; if any of them has something, the screen is drawn as before.
+
+**Joins with no transition.** Every screen animated *in* and none animated *out*: the
+decision vanished in the same frame the consequence appeared. A screen settles back the way
+it came up, over 160ms — a fade rather than a slide, because the picture on the left does not
+change between a decision and its consequence and sliding it out would say that it had. A
+leaving screen cannot be clicked, and anybody who has asked for less motion does not wait for
+it.
+
+Nine harness checks cover the three; four of them fail on the previous code.
+
 ## [v1.35.0] - 2026-09-12
 
 ### Fixed — the example and the pitfall were in the summary all along
