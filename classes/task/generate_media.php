@@ -75,5 +75,71 @@ class generate_media extends \core\task\adhoc_task {
             'Activity ' . $scenario->id . ' media: '
                 . $counts['images'] . ' images, ' . $counts['narrations'] . ' narrations.'
         );
+
+        // Media made after publishing used to be lost, permanently.
+        //
+        // The two routes into a scenario behave differently and only one of them was
+        // safe. Generation runs its media inside the same task, so by the time the
+        // teacher sees a result the pictures and the narration already exist and
+        // publishing copies them across. Import cannot: it returns the moment the
+        // definition is validated and leaves the media to this task, which waits for
+        // cron. A teacher who pastes a scenario in and publishes it - which is the
+        // obvious thing to do, since the scenario is right there and looks finished -
+        // publishes before this has run.
+        //
+        // publish_media() is the only thing that ever copies the working media into a
+        // revision, and it runs at publish time. So this task would finish minutes
+        // later, write its work into the working area, and no learner would ever see
+        // any of it: a scenario imported from the pasted prompt had no pictures and no
+        // voice, and nothing about it looked broken enough to explain why.
+        //
+        // Whichever of the two finishes last now does the copying, so the order stops
+        // mattering. The guard is that the published revision has to be the same
+        // definition this media was made for - otherwise a draft that has moved on
+        // would put its pictures onto the revision learners are still playing.
+        $revision = scenario_manager::get_current_revision($scenario);
+        if (!$revision) {
+            return;
+        }
+        if (!self::same_scenes($revision->scenariojson, $definition)) {
+            mtrace('Activity ' . $scenario->id . ' has published a different definition; media held.');
+            return;
+        }
+        $media->publish_media((int)$revision->revision);
+        mtrace('Activity ' . $scenario->id . ' media copied into revision ' . $revision->revision . '.');
+    }
+
+    /**
+     * Does the published revision hold the same scenes this media was made for?
+     *
+     * The test is the node ids, in order, and not the whole definition. Every media file
+     * is stored under its node's id at that node's position, so the node list is exactly
+     * what decides whether a picture still belongs to the screen it was drawn for.
+     *
+     * Comparing the definitions in full would be both stricter and less accurate: the
+     * working copy is stored as it arrived and the revision is stored after the validator
+     * has normalised it, so the two differ on a freshly published scenario that has not
+     * been touched at all - which would hold the media every time and fix nothing. It
+     * would also hold the media because a teacher corrected a typo, which changes no
+     * scene and no picture.
+     *
+     * @param string $publishedjson The revision's stored definition.
+     * @param array $working The definition the media was generated for.
+     * @return bool
+     */
+    protected static function same_scenes(string $publishedjson, array $working): bool {
+        $published = json_decode($publishedjson, true);
+        if (!is_array($published)) {
+            return false;
+        }
+        $ids = static function ($definition) {
+            $out = [];
+            foreach ((array)($definition['nodes'] ?? []) as $node) {
+                $out[] = (string)($node['id'] ?? '');
+            }
+            return $out;
+        };
+        $publishedids = $ids($published);
+        return $publishedids !== [] && $publishedids === $ids($working);
     }
 }

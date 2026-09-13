@@ -90,6 +90,32 @@ class scenario_mapper {
             }
         }
 
+        // The cast was not mapped at all, and everything that depends on knowing who is in
+        // the scenario had been quietly running on the fallback ever since.
+        //
+        // A node's speaker is matched against this list to find the voice their line is
+        // read in, so with the list empty every spoken line was read by the narrator. The
+        // illustrator brief names the people in frame from this list, so with it empty
+        // every scene image in the product was drawn to "one worker, seen from behind or in
+        // three-quarter view, face not the subject of the image". And the avatar the
+        // learner clicks to hear someone speak had nobody to show.
+        //
+        // None of that looked like a fault. It looked like the pictures being a bit
+        // impersonal and the narration being a bit flat.
+        $facilitator = is_array($wire['facilitator'] ?? null)
+            ? self::person_from_wire($wire['facilitator'])
+            : null;
+        $characters = [];
+        foreach ((array)($wire['characters'] ?? []) as $character) {
+            if (!is_array($character)) {
+                continue;
+            }
+            $person = self::person_from_wire($character);
+            if (trim($person['name']) !== '') {
+                $characters[] = $person;
+            }
+        }
+
         $metrics = (array)($wire['openingMetrics'] ?? []);
 
         return [
@@ -106,6 +132,8 @@ class scenario_mapper {
                 'trust'      => (int)($metrics['trust'] ?? 50),
                 'tension'    => (int)($metrics['tension'] ?? 30),
             ],
+            'facilitator'    => $facilitator,
+            'characters'     => $characters,
             'principles'     => $principles,
             'startnode'      => (string)($wire['startNodeId'] ?? ''),
             'nodes'          => $nodes,
@@ -116,6 +144,23 @@ class scenario_mapper {
                 'sourceconnection'  => (string)($debrief['sourceConnection'] ?? ''),
             ],
             'takeaways'      => $takeaways,
+        ];
+    }
+
+    /**
+     * Convert one person from the wire format.
+     *
+     * @param array $person Person object from the service.
+     * @return array
+     */
+    protected static function person_from_wire(array $person): array {
+        $gender = \core_text::strtolower(trim((string)($person['gender'] ?? '')));
+        return [
+            'name'       => (string)($person['name'] ?? ''),
+            'role'       => (string)($person['role'] ?? ''),
+            'trait'      => (string)($person['trait'] ?? ''),
+            'appearance' => (string)($person['appearance'] ?? ''),
+            'gender'     => in_array($gender, ['male', 'female'], true) ? $gender : '',
         ];
     }
 
@@ -140,7 +185,18 @@ class scenario_mapper {
             // can be spoken in that person's voice.
             'speaker'           => (string)($node['speaker'] ?? ($node['speakerName'] ?? '')),
             'challenge'         => (string)($node['challenge'] ?? ''),
+            // The service's own description of the scene, and the same scene written for a
+            // screen reader. Neither was mapped, so the illustrator was briefed without the
+            // one line written specifically for it, and every picture in the product fell
+            // back to alt text condensed from the situation prose.
+            'imageprompt'       => (string)($node['imagePrompt'] ?? ($node['imageprompt'] ?? '')),
+            'imagealt'          => (string)($node['imageAlt'] ?? ($node['imagealt'] ?? '')),
         ];
+
+        // A node the generator marks as a point every path passes through.
+        if (isset($node['bottleneck'])) {
+            $out['bottleneck'] = !empty($node['bottleneck']);
+        }
 
         if (isset($node['stage'])) {
             $out['stage'] = (int)$node['stage'];

@@ -77,10 +77,16 @@
        conflict with: the circle fills, the mark inside it reverses out. */
     --aibs-invert: #475467;
     --aibs-on-invert: #fff;
-    --aibs-accent: #4f46e5;
-    --aibs-accent-strong: #3730a3;
-    --aibs-accent-soft: #eef0fe;
-    --aibs-accent-border: #c7cbf8;
+    /* The premium blue, which is the palette. It used to be indigo here and the blue lived
+       only inside .aibs-theme-slate, so anything rendering before a theme class was applied
+       - or falling back for any reason - came out purple. The default setting has been
+       slate for a long time; the base was never moved to match it, which is why a purple
+       button could still appear in a product whose palette is one blue, green, red, amber
+       and soft greys. These four values are .aibs-theme-slate's, deliberately identical. */
+    --aibs-accent: #2563eb;
+    --aibs-accent-strong: #1d4ed8;
+    --aibs-accent-soft: #eaf1fe;
+    --aibs-accent-border: #bfd4fb;
     --aibs-radius: 16px;
     --aibs-radius-sm: 10px;
     --aibs-shadow-sm: 0 1px 2px rgba(16, 24, 40, .05);
@@ -185,13 +191,6 @@
 /* The six accents again. A hue that reads as confident on white is muddy on near-black, so
    each one is lifted; the soft fill becomes a dark tint of the accent rather than a pastel,
    and the border a mid tone that can still be seen against both. */
-.aibs-player[data-aibs-scheme="dark"].aibs-theme-indigo,
-.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-indigo {
-    --aibs-accent: #818cf8;
-    --aibs-accent-strong: #a5b4fc;
-    --aibs-accent-soft: #1e2140;
-    --aibs-accent-border: #3f4680;
-}
 
 .aibs-player[data-aibs-scheme="dark"].aibs-theme-slate,
 .aibs-wizard[data-aibs-scheme="dark"].aibs-theme-slate {
@@ -209,13 +208,6 @@
     --aibs-accent-border: #1e5340;
 }
 
-.aibs-player[data-aibs-scheme="dark"].aibs-theme-ocean,
-.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-ocean {
-    --aibs-accent: #22d3ee;
-    --aibs-accent-strong: #67e8f9;
-    --aibs-accent-soft: #10262d;
-    --aibs-accent-border: #1d4f5c;
-}
 
 .aibs-player[data-aibs-scheme="dark"].aibs-theme-amber,
 .aibs-wizard[data-aibs-scheme="dark"].aibs-theme-amber {
@@ -225,13 +217,6 @@
     --aibs-accent-border: #5f4514;
 }
 
-.aibs-player[data-aibs-scheme="dark"].aibs-theme-violet,
-.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-violet {
-    --aibs-accent: #a78bfa;
-    --aibs-accent-strong: #c4b5fd;
-    --aibs-accent-soft: #241b3d;
-    --aibs-accent-border: #4a3a7a;
-}
 
 /* A photograph is lit for a white page. Dropping it a little keeps it from being the only
    bright rectangle in a dark frame, and it comes back to full strength under the pointer. */
@@ -245,12 +230,6 @@
    grid is the part that matters. What did matter was the handful of values sitting off
    it (3, 5, 9, 11, 15px), which are now snapped onto it. Keep new values even. */
 
-.aibs-theme-indigo {
-    --aibs-accent: #4f46e5;
-    --aibs-accent-strong: #3730a3;
-    --aibs-accent-soft: #eef0fe;
-    --aibs-accent-border: #c7cbf8;
-}
 
 .aibs-theme-slate {
     --aibs-accent: #2563eb;
@@ -266,12 +245,6 @@
     --aibs-accent-border: var(--aibs-positive-border);
 }
 
-.aibs-theme-ocean {
-    --aibs-accent: #0891b2;
-    --aibs-accent-strong: #0e7490;
-    --aibs-accent-soft: #e4f4f8;
-    --aibs-accent-border: #b3e0ec;
-}
 
 .aibs-theme-amber {
     --aibs-accent: #c2650a;
@@ -280,12 +253,6 @@
     --aibs-accent-border: #f3d3ab;
 }
 
-.aibs-theme-violet {
-    --aibs-accent: #7c3aed;
-    --aibs-accent-strong: #6d28d9;
-    --aibs-accent-soft: #f3ecfe;
-    --aibs-accent-border: #dcc9fb;
-}
 
 /* ------------------------------------------------------------------- shell */
 
@@ -322,9 +289,66 @@
     padding: clamp(18px, 2.2vw, 32px);
 }
 
+/* The product's own typeface.
+   There was no font-family anywhere in this stylesheet, so the plugin took whatever the site
+   theme set - which meant the same scenario looked like a different product on every site it
+   was installed on, and a theme serving a serif face turned a premium interface into a
+   document. It is a system stack rather than a webfont: no external request, nothing to
+   block on, nothing for a privacy review to object to, and it is the face the learner's own
+   operating system already renders best.
+
+   Stated on the roots, so it applies to everything inside the player and the wizard and to
+   nothing else on the page. A site that wants its own face can still override it. */
+.aibs-player,
+.aibs-wizard {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+        "Noto Sans", sans-serif;
+}
+
+/* Headings are what a theme reaches for first, so they are told as well as inherited. */
+.aibs-player h1, .aibs-player h2, .aibs-player h3, .aibs-player h4,
+.aibs-player h5, .aibs-player h6,
+.aibs-wizard h1, .aibs-wizard h2, .aibs-wizard h3, .aibs-wizard h4,
+.aibs-wizard h5, .aibs-wizard h6 {
+    font-family: inherit;
+}
+
+/* A control does not inherit the page's font unless it is told to. */
+.aibs-player button, .aibs-player input, .aibs-player select, .aibs-player textarea,
+.aibs-wizard button, .aibs-wizard input, .aibs-wizard select, .aibs-wizard textarea {
+    font-family: inherit;
+}
+
 .aibs-player *,
 .aibs-wizard * {
     box-sizing: border-box;
+}
+
+/* What a site theme is allowed to reach into, and what it is not.
+   The plugin renders inside somebody else's theme, and Boost and its children ship rules
+   that touch any markup on the page. Tested against a stylesheet made of the rules themes
+   actually ship, the colours, radii, fills and hovers all held - they are stated. Three
+   things did not, because they were never stated and the browser default was being relied
+   on instead:
+
+   A list item is spaced by its list's gap, not by a margin of its own. A theme's
+   `li { margin-bottom: .75rem }` added a margin on top of that gap to every reading, skill
+   bar, lesson card and decision record - all of which are list items - and the whole rhythm
+   of the debrief moved.
+
+   A scene photograph has no border. A theme's `img { border: 3px solid }` drew one around
+   every picture in the product.
+
+   Neither is a rule about how the plugin should look; both are about not leaving a value to
+   whoever happens to own the page. */
+.aibs-player li,
+.aibs-wizard li {
+    margin-block: 0;
+}
+
+.aibs-player .aibs-scene-img,
+.aibs-wizard .aibs-scene-img {
+    border: 0;
 }
 
 .aibs-visually-hidden {
@@ -2230,22 +2254,33 @@
    but it is restated as the step's own resting surface, not as a dark fill. Hover is the
    lift and the border; nothing changes colour. */
 .path-mod-aibranchedscenario .aibs-wizard-step:hover,
-.aibs-wizard-step:hover {
+.path-mod-aibranchedscenario .aibs-wizard-step:focus-visible,
+.aibs-wizard-step:hover,
+.aibs-wizard-step:focus-visible {
     background: var(--aibs-surface) !important;
     border-color: var(--aibs-accent-border);
+    /* The background was pinned here and the text colour was not, so a theme that paints
+       white text on every hovered button won - and the label went white on the step's own
+       white surface, which is a step that disappears when you point at it. Both halves of
+       a colour pair have to be stated or neither is. */
+    color: var(--aibs-muted) !important;
     transform: translateY(-1px);
 }
 
 /* The current and completed steps carry their own colour, and hovering one must not
    drop it back to the resting grey. */
 .path-mod-aibranchedscenario .aibs-wizard-step[aria-current="step"]:hover,
-.aibs-wizard-step[aria-current="step"]:hover {
+.path-mod-aibranchedscenario .aibs-wizard-step[aria-current="step"]:focus-visible,
+.aibs-wizard-step[aria-current="step"]:hover,
+.aibs-wizard-step[aria-current="step"]:focus-visible {
     background: var(--aibs-accent-strong) !important;
     color: var(--aibs-on-accent) !important;
 }
 
 .path-mod-aibranchedscenario .aibs-wizard-step.aibs-is-complete:hover,
-.aibs-wizard-step.aibs-is-complete:hover {
+.path-mod-aibranchedscenario .aibs-wizard-step.aibs-is-complete:focus-visible,
+.aibs-wizard-step.aibs-is-complete:hover,
+.aibs-wizard-step.aibs-is-complete:focus-visible {
     color: var(--aibs-accent-strong) !important;
 }
 
@@ -3171,6 +3206,20 @@ button.aibs-avatar {
     white-space: nowrap;
 }
 
+/* On a phone the amount holds its width - it is a number and must not wrap - and the label
+   beside it was left with 34px, which broke "Scenario with images" one character to a line.
+   A row that cannot hold two things beside each other holds them one above the other. It
+   uses a breakpoint the file already has rather than inventing one - the set is kept short
+   on purpose, because every extra breakpoint is another width nobody tests at. */
+@media (max-width: 600px) {
+    .path-mod-aibranchedscenario .aibs-pricing-row,
+    .aibs-pricing-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 2px;
+    }
+}
+
 /* ------------------------------------------- step one: what it is and what it costs */
 
 .aibs-benefits-title {
@@ -3401,12 +3450,33 @@ button.aibs-avatar {
    filled because it is switched on there was nothing left to say. The rise is the feedback;
    the border firming up is the rest of it. Held states still fill - being on is a state, not
    a gesture - and that is the one place the colour changes. */
+/* The base pins the mark's colour with !important and left the fill to the cascade, which
+   is the same half-a-pair fault the wizard steps had, the other way round: a theme that
+   paints a dark grey background on every hovered button won, and the fullscreen and
+   narration controls turned into a dark disc under a dark mark. Hover here is the lift and
+   the border and nothing else, so the resting fill is restated rather than surrendered. */
 .path-mod-aibranchedscenario .aibs-iconbtn:hover,
 .path-mod-aibranchedscenario .aibs-iconbtn:focus-visible,
 .aibs-iconbtn:hover,
 .aibs-iconbtn:focus-visible {
+    background: var(--aibs-surface) !important;
     border-color: var(--aibs-accent-border);
+    color: var(--aibs-text) !important;
     transform: translateY(-1px);
+}
+
+/* A control that is switched on keeps its fill when pointed at. */
+.path-mod-aibranchedscenario .aibs-iconbtn[aria-pressed="true"]:hover,
+.path-mod-aibranchedscenario .aibs-iconbtn[aria-pressed="true"]:focus-visible,
+.path-mod-aibranchedscenario .aibs-iconbtn.aibs-is-on:hover,
+.path-mod-aibranchedscenario .aibs-iconbtn.aibs-is-on:focus-visible,
+.aibs-iconbtn[aria-pressed="true"]:hover,
+.aibs-iconbtn[aria-pressed="true"]:focus-visible,
+.aibs-iconbtn.aibs-is-on:hover,
+.aibs-iconbtn.aibs-is-on:focus-visible {
+    background: var(--aibs-invert) !important;
+    border-color: var(--aibs-invert);
+    color: var(--aibs-on-invert) !important;
 }
 
 /* The deck arrows are centred with a transform, so theirs composes with the lift. */
@@ -3746,7 +3816,12 @@ button.aibs-avatar {
            paging through made the whole column jump up and down. They share one baseline
            now, and a short page is simply short. */
         justify-content: flex-start;
-        overflow-y: auto;
+        /* Never auto. A debrief page that did not fit grew a scrollbar, which is the one
+           thing the whole fit mechanism exists to avoid - and it appeared on the page the
+           learner is most likely to read carefully. The page is fitted like every other
+           screen; if it still does not fit, the fullscreen control is the answer, not a
+           scrollbar inside a card. */
+        overflow: hidden;
     }
 
     /* The way in is a statement card and centres - but only when it has nothing to put
@@ -4121,12 +4196,26 @@ button.aibs-avatar {
     margin-top: 24px;
 }
 
-/* A screen that genuinely has no picture is not a column at all - it is a statement on a
-   card - and left aligning it leaves the words hard against one edge with the rest of the
-   card empty beside them. Those centre. The class is written by the template rather than
-   worked out with :has(), so it is decided by the data rather than by the browser. */
+/* A screen with no picture centres its COLUMN and left aligns the WORDS inside it.
+   Those are two different things and they were conflated. Centring the block was right -
+   left aligning the whole card leaves the words hard against one edge with the rest of the
+   card empty beside them. Centring every line inside the block was wrong: a centred
+   paragraph has no left edge to come back to, so the eye hunts for the start of each line,
+   and a list of records centred line by line reads as a poster rather than as a record. The
+   column is centred by the auto margins above; the text reads down its own left edge.
+
+   The class is written by the template rather than worked out with :has(), so it is decided
+   by the data rather than by the browser. */
 .aibs-slide.aibs-noscene .aibs-node-body,
 .aibs-slide.aibs-noscene .aibs-node-body > * {
+    text-align: start;
+}
+
+/* The exception, and the reason the rule above used to be centre: a card carrying one
+   heading and one sentence - the way in, the withheld debrief - is a statement, not a
+   column of reading, and a statement centres. */
+.aibs-slide.aibs-noscene.aibs-deckend .aibs-node-body,
+.aibs-slide.aibs-noscene.aibs-deckend .aibs-node-body > * {
     text-align: center;
 }
 
@@ -4214,16 +4303,164 @@ button.aibs-avatar {
     max-width: 62ch;
 }
 
-/* A row of cards uses the width; a measure is for prose. */
+/* Prose on a card with no picture uses the card.
+   The 62ch measure above is right where a column of text sits beside a picture: it is the
+   line length reading is comfortable at. On a card with no picture it left a block of words
+   half the width of the card it was sitting in, with empty card either side, which reads as
+   a mistake rather than as a measure. The card is the measure here. */
+.aibs-slide.aibs-noscene .aibs-node-body > .aibs-prose {
+    margin-inline: 0;
+    max-width: none;
+    width: 100%;
+}
+
+/* A row of cards uses the width; a measure is for prose.
+   `max-width: none` was only half of it. The body centres its children, and a centred
+   flex child shrinks to its content instead of stretching - so the three readings took
+   only as much width as they wanted and wrapped to two-and-one down the middle of a card
+   that had the whole width spare. A row that is meant to use the width has to be told to
+   stretch as well as told not to be capped. */
 .aibs-slide.aibs-noscene .aibs-node-body > .aibs-rings,
 .aibs-slide.aibs-noscene .aibs-node-body > .aibs-skill-list,
 .aibs-slide.aibs-noscene .aibs-node-body > .aibs-journey-list,
+.aibs-slide.aibs-noscene .aibs-node-body > .aibs-lesson-list,
 .aibs-slide.aibs-noscene .aibs-node-body > .aibs-takeaways {
+    align-self: stretch;
     max-width: none;
+    width: 100%;
+}
+
+/* A record reads down a left edge, not from the middle out.
+   The debrief has no picture, so its pages took the centred statement-card treatment -
+   which is right for a heading and a sentence and wrong for a list of records. Every line
+   of the decision list was centred: the choice, the consequence, the note inside the amber
+   panel, and a "Principle tested" chip that sat in the middle of the card and ran off the
+   end of it. Records line up. */
+.aibs-debrief .aibs-journey-list,
+.aibs-debrief .aibs-journey-item,
+.aibs-debrief .aibs-lesson-list,
+.aibs-debrief .aibs-lesson,
+.aibs-debrief .aibs-takeaways,
+.aibs-debrief .aibs-takeaway,
+.aibs-debrief .aibs-skill-list,
+.aibs-debrief .aibs-skill,
+.aibs-debrief .aibs-prose {
+    text-align: start;
+}
+
+/* The chip is a label on the card, so it starts where the card's text starts and wraps
+   rather than running past the edge. */
+.aibs-debrief .aibs-journey-principle {
+    max-width: 100%;
+}
+
+/* With the row at full width the three readings share it evenly rather than each holding
+   a 150px basis and leaving a ragged tail. */
+.aibs-slide.aibs-noscene .aibs-rings > .aibs-ring {
+    flex: 1 1 0;
+}
+
+/* A consequence with no picture: the readings take the column the picture would have had.
+   Every other screen in the player is a picture on the left and the words on the right,
+   and a consequence without a picture was the one screen that broke that silhouette - it
+   put everything down the middle and left a band of empty card on either side. The
+   readings are the one thing on this screen that is not prose, so they stand in for the
+   picture and the reading order is unchanged. */
+@media (min-width: 900px) {
+    /* With no picture the readings take the column the picture would have had and the words
+       sit beside them, so the screen keeps the same silhouette as every other one. Two
+       children, two columns, and nothing to stretch apart. */
+    .path-mod-aibranchedscenario .aibs-consequence.aibs-noscene .aibs-node-body,
+    .aibs-consequence.aibs-noscene .aibs-node-body {
+        align-items: start;
+        column-gap: clamp(18px, 2.2vw, 34px);
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+        text-align: start;
+    }
+
+    .path-mod-aibranchedscenario .aibs-consequence.aibs-noscene .aibs-consequence-main,
+    .aibs-consequence.aibs-noscene .aibs-consequence-main {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        grid-column: 2;
+        /* Both columns are placed explicitly. The order property above is for the flex
+           column on the picture card; left to auto-placement here it put the readings on a
+           second row underneath the words instead of beside them. */
+        grid-row: 1;
+        min-width: 0;
+    }
+
+    .path-mod-aibranchedscenario .aibs-consequence.aibs-noscene .aibs-node-body > .aibs-rings,
+    .aibs-consequence.aibs-noscene .aibs-node-body > .aibs-rings {
+        align-self: stretch;
+        flex-direction: column;
+        grid-column: 1;
+        grid-row: 1;
+        margin: 0;
+        max-width: none;
+        width: 100%;
+    }
+
+    .path-mod-aibranchedscenario .aibs-consequence.aibs-noscene .aibs-rings > .aibs-ring,
+    .aibs-consequence.aibs-noscene .aibs-rings > .aibs-ring {
+        flex: 0 0 auto;
+    }
+
+    /* The wrapper's own children are laid out by it, not by the centred-column rule. */
+    .path-mod-aibranchedscenario .aibs-consequence.aibs-noscene .aibs-consequence-main > *,
+    .aibs-consequence.aibs-noscene .aibs-consequence-main > * {
+        margin-inline: 0;
+        max-width: none;
+        text-align: start;
+        width: 100%;
+    }
+
 }
 
 .aibs-slide.aibs-noscene .aibs-node-body {
     align-items: center;
+}
+
+/* The readings were moved to the front of the consequence markup so that a card with no
+   picture can put them in the column the picture would have had. That changed the order the
+   words are read in on EVERY card, so the correction belongs at every width - not inside the
+   desktop block, where it was. Below 900px the wrapper was an ordinary div and the readings
+   sat above the signal pill and the prose, so a phone showed the numbers before it said what
+   had happened.
+
+   The wrapper is not a box: its children join the body's own column, and order puts each
+   piece back where it was written. */
+.aibs-consequence .aibs-consequence-main {
+    display: contents;
+}
+
+.aibs-consequence .aibs-consequence-head {
+    order: 1;
+}
+
+.aibs-consequence .aibs-prose-lead {
+    order: 2;
+}
+
+.aibs-consequence .aibs-rings {
+    order: 3;
+}
+
+.aibs-consequence .aibs-feedback {
+    order: 4;
+}
+
+.aibs-consequence .aibs-consequence-actions {
+    order: 5;
+}
+
+/* order only means anything to a flex or grid container, and below the frame breakpoint the
+   body is a plain block. */
+.aibs-consequence .aibs-node-body {
+    display: flex;
+    flex-direction: column;
 }
 
 /* ---------------------------------------------------------------- the debrief deck */
@@ -4494,6 +4731,10 @@ body.aibs-noscroll {
 button.aibs-avatar:hover,
 button.aibs-avatar:focus-visible {
     background: var(--aibs-accent-strong);
+    /* Stated rather than inherited, for the same reason as the wizard steps: a rule that
+       changes one half of a colour pair and leaves the other to the site theme is a rule
+       that works until it meets a theme. */
+    color: var(--aibs-on-accent) !important;
     transform: scale(1.06);
 }
 

@@ -159,8 +159,44 @@ class image_prompt {
         if ($setting !== '') {
             $anchor .= ' Location, unchanged throughout: ' . $setting . '.';
         }
+        // It is no use insisting that the time of day and the light are the same in every
+        // frame without ever saying what they are. Told only to keep them constant, a model
+        // picks afresh each time and the set arrives in six different lightings - which is
+        // exactly the fault the anchor exists to prevent. They are named here, and derived
+        // from the scenario rather than chosen at random, so the same scenario asks for the
+        // same light every time it is generated.
+        $anchor .= ' Time and light, unchanged throughout: ' . self::light_for($definition) . '.';
+        $anchor .= ' Shot in landscape, wider than it is tall, with the people in the middle '
+            . 'third of the frame.';
         $anchor .= ' Visual treatment, unchanged throughout: ' . self::style_phrase($style) . '.';
         return $anchor;
+    }
+
+    /**
+     * The hour and the light for this scenario's whole set of images.
+     *
+     * The anchor promises every frame shares a time of day and a source of light, and never
+     * said what either was, so each frame was free to invent its own and a set came back in
+     * six different lightings. One of five is chosen from the scenario's own title and
+     * setting, which means it is stable: regenerate the same scenario and the light does not
+     * move. It is a hash rather than a choice because there is nothing in the definition that
+     * honestly says what time of day it is, and inventing a field for it would be a bigger
+     * promise than the picture needs.
+     *
+     * @param array $definition The whole scenario.
+     * @return string
+     */
+    protected static function light_for(array $definition): string {
+        $lights = [
+            'mid-morning, daylight through windows on one side of the room',
+            'early afternoon, flat overhead daylight with the blinds half drawn',
+            'late afternoon, low warm daylight from one end of the room',
+            'early evening, overhead interior lighting with the windows dark',
+            'first thing in the morning, thin cool daylight and the lights still on',
+        ];
+        $seed = (string)($definition['title'] ?? '') . '|' . (string)($definition['setting'] ?? '');
+        $index = hexdec(substr(md5($seed === '|' ? 'aibs' : $seed), 0, 4)) % count($lights);
+        return $lights[$index];
     }
 
     /**

@@ -195,16 +195,33 @@
                 {{/whatmattered}}
             </ul>
 
-            {{#hascritical}}
-                <h4 class="aibs-h4">{{#str}} decisionsthatchanged, mod_aibranchedscenario {{/str}}</h4>
-                <ul class="aibs-lesson-list">
-                    {{#criticaldecisions}}
-                        <li class="aibs-lesson"><span class="aibs-lesson-mark" aria-hidden="true">{{number}}</span>{{text}}</li>
-                    {{/criticaldecisions}}
-                </ul>
-            {{/hascritical}}
                     </div>
         </section>
+
+        {{! Its own page. Two headings and two numbered lists on one card overran the frame,
+            and a debrief page that does not fit is the one screen a learner reads slowly -
+            it grew a scrollbar rather than fitting, which is the thing the whole frame
+            exists to avoid. They are separate subjects and they are separate pages. }}
+        {{#hascritical}}
+            <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons
+                     {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" hidden>
+                {{#hasimage}}
+                    <div class="aibs-scene">
+                        <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
+                    </div>
+                {{/hasimage}}
+                <div class="aibs-node-body">
+                    <h3 class="aibs-h3">
+                        {{#str}} decisionsthatchanged, mod_aibranchedscenario {{/str}}</h3>
+                    <ul class="aibs-lesson-list">
+                        {{#criticaldecisions}}
+                            <li class="aibs-lesson"><span class="aibs-lesson-mark"
+                                 aria-hidden="true">{{number}}</span>{{text}}</li>
+                        {{/criticaldecisions}}
+                    </ul>
+                </div>
+            </section>
+        {{/hascritical}}
 
         {{#haspractice}}
             <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" hidden>
@@ -221,10 +238,11 @@
                     {{/practice}}
                 </ul>
 
-                {{#hassourceconnection}}
-                    <h4 class="aibs-h4">{{#str}} sourceconnection, mod_aibranchedscenario {{/str}}</h4>
-                    <div class="aibs-prose">{{#sourceconnectionparas}}<p>{{.}}</p>{{/sourceconnectionparas}}</div>
-                {{/hassourceconnection}}
+                {{! "Source material" used to sit under the practice list. It was a second
+                    subject on a page that already had five numbered items, it pushed the
+                    page past its frame, and it told the learner about the scenario's
+                    provenance rather than about their own performance - which is not what
+                    a debrief is for. }}
                             </div>
             </section>
         {{/haspractice}}

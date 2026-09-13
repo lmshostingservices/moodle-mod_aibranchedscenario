@@ -90,6 +90,19 @@ class Player {
     static MAX_FIT = 1.5;
 
     /**
+     * The smallest the type is allowed to get while a screen is being fitted.
+     *
+     * It was .74, and a screen that still did not fit there was left to overflow - which
+     * on the debrief showed as a scrollbar inside the card, the one thing the fit exists
+     * to avoid. A few more steps down is a better answer than a scrollbar on the page a
+     * learner reads most carefully. Below this the type is smaller than the interface
+     * around it and the screen stops looking deliberate, so the floor stays.
+     *
+     * @type {Number}
+     */
+    static MIN_FIT = 0.68;
+
+    /**
      * The smallest the scenario title is allowed to get while it is being held to one row,
      * as a fraction of the size the stylesheet gives it.
      *
@@ -1672,7 +1685,8 @@ class Player {
                     this.trimToFold(slide);
                     let scale = 1;
                     let guard = 0;
-                    while (body.scrollHeight > body.clientHeight + 1 && scale > 0.74 && guard < 14) {
+                    while (body.scrollHeight > body.clientHeight + 1
+                            && scale > Player.MIN_FIT && guard < 22) {
                         scale -= 0.04;
                         guard++;
                         slide.style.setProperty('--aibs-fit', scale.toFixed(2));

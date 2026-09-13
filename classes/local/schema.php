@@ -63,6 +63,9 @@ class schema {
     /** @var int Tension level at or above which a crisis variant is shown. */
     const CRISIS_TENSION_THRESHOLD = 75;
 
+    /** @var string The theme an activity falls back to, and the product's own accent. */
+    const DEFAULT_THEME = 'slate';
+
     /**
      * Visual themes.
      *
@@ -73,14 +76,45 @@ class schema {
      * @return array theme id => [accent, accentstrong, accentsoft, accentborder]
      */
     public static function themes(): array {
+        // The palette is closed: one blue, with green and amber for the banded states and
+        // soft greys for everything else. Indigo, ocean and violet were none of those, and
+        // an activity set to one of them rendered a product whose accent contradicted its
+        // own design. They are still accepted by retired_themes() below, so an activity
+        // already saved with one keeps working - it simply draws in the blue now.
         return [
-            'indigo'  => ['#4f46e5', '#3730a3', '#eef0fe', '#c7cbf8'],
             'slate'   => ['#2563eb', '#1d4ed8', '#eaf1fe', '#bfd4fb'],
             'emerald' => ['#059669', '#047857', '#e7f6f0', '#b4e3d0'],
-            'ocean'   => ['#0891b2', '#0e7490', '#e4f4f8', '#b3e0ec'],
             'amber'   => ['#c2650a', '#9a4f08', '#fdf1e2', '#f3d3ab'],
-            'violet'  => ['#7c3aed', '#6d28d9', '#f3ecfe', '#dcc9fb'],
         ];
+    }
+
+    /**
+     * Themes that are no longer offered but may still be stored on an activity.
+     *
+     * Dropping a value a teacher has already saved would fail validation on a scenario that
+     * was fine yesterday, so these are still valid; they simply resolve to the default.
+     *
+     * @return string[]
+     */
+    public static function retired_themes(): array {
+        return ['indigo', 'ocean', 'violet'];
+    }
+
+    /**
+     * The CSS class for an activity's stored theme.
+     *
+     * Built by hand in three renderers from whatever was on the record, so a retired value
+     * still produced its own class and still drew in its own colour - which is the whole
+     * fault, since the point of retiring it was that the colour is not in the palette. A
+     * stored value that is no longer offered resolves to the default here, once, rather
+     * than being trusted in three places.
+     *
+     * @param string $theme The value stored on the activity.
+     * @return string A class name, always one of the offered themes.
+     */
+    public static function theme_class(string $theme): string {
+        $theme = trim($theme);
+        return 'aibs-theme-' . (in_array($theme, self::theme_ids(), true) ? $theme : self::DEFAULT_THEME);
     }
 
     /**

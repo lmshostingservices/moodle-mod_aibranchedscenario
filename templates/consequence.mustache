@@ -79,42 +79,16 @@
 
     <div class="aibs-node-body">
 
-    <div class="aibs-consequence-head">
-        <span class="aibs-signal">
-            {{#ispositive}}
-                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-                    <circle cx="10" cy="10" r="7.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
-                    <path d="M6.6 10.2 9 12.6l4.4-5" fill="none" stroke="currentColor" stroke-width="1.7"
-                          stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            {{/ispositive}}
-            {{#isneutral}}
-                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-                    <circle cx="10" cy="10" r="7.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
-                    <path d="M6.4 10h7.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
-                </svg>
-            {{/isneutral}}
-            {{#isnegative}}
-                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-                    <path d="M10 2.6 18.4 17H1.6L10 2.6Z" fill="none" stroke="currentColor"
-                          stroke-width="1.6" stroke-linejoin="round"/>
-                    <path d="M10 7.6v4.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
-                    <circle cx="10" cy="14.4" r="0.95" fill="currentColor"/>
-                </svg>
-            {{/isnegative}}
-            {{signallabel}}
-        </span>
-        {{#principle}}
-            <span class="aibs-chip aibs-chip-quiet">
-                <span class="aibs-chip-lead">
-                    {{#str}} principletested, mod_aibranchedscenario {{/str}}</span>
-                {{principle}}
-            </span>
-        {{/principle}}
-    </div>
 
-    <div class="aibs-prose aibs-prose-lead">{{#consequenceparas}}<p>{{.}}</p>{{/consequenceparas}}</div>
+    {{! The readings come first in the markup and everything after them is one block,
+        because a card with no picture puts the readings in the column the picture would
+        have had and the words beside them - and a column has to be one cell. A grid item
+        spanning several rows stretches those rows to its own height, so with the readings
+        spanning and the words flowing one row each, the four things beside them were spread
+        from the top of the card to the bottom with a hole in the middle of it.
 
+        On the card that does have a picture the wrapper is display:contents and the order
+        property puts every piece back where it was, so that card is unchanged. }}
     <ul class="aibs-rings">
         {{#deltas}}
             <li class="aibs-ring {{tone}}">
@@ -176,6 +150,45 @@
         {{/deltas}}
     </ul>
 
+    <div class="aibs-consequence-main">
+
+    <div class="aibs-consequence-head">
+        <span class="aibs-signal">
+            {{#ispositive}}
+                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <circle cx="10" cy="10" r="7.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M6.6 10.2 9 12.6l4.4-5" fill="none" stroke="currentColor" stroke-width="1.7"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            {{/ispositive}}
+            {{#isneutral}}
+                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <circle cx="10" cy="10" r="7.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M6.4 10h7.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+            {{/isneutral}}
+            {{#isnegative}}
+                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <path d="M10 2.6 18.4 17H1.6L10 2.6Z" fill="none" stroke="currentColor"
+                          stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="M10 7.6v4.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    <circle cx="10" cy="14.4" r="0.95" fill="currentColor"/>
+                </svg>
+            {{/isnegative}}
+            {{signallabel}}
+        </span>
+        {{#principle}}
+            <span class="aibs-chip aibs-chip-quiet">
+                <span class="aibs-chip-lead">
+                    {{#str}} principletested, mod_aibranchedscenario {{/str}}</span>
+                {{principle}}
+            </span>
+        {{/principle}}
+    </div>
+
+    <div class="aibs-prose aibs-prose-lead">{{#consequenceparas}}<p>{{.}}</p>{{/consequenceparas}}</div>
+
+
     {{#hasfeedback}}
         <div class="aibs-feedback">
             <h4 class="aibs-h4">
@@ -194,6 +207,7 @@
                       stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         </button>
+    </div>
     </div>
     </div>
 

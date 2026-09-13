@@ -384,6 +384,7 @@ class helper {
                     'role'       => new external_value(PARAM_TEXT, 'Character role', VALUE_DEFAULT, ''),
                     'trait'      => new external_value(PARAM_TEXT, 'Defining trait', VALUE_DEFAULT, ''),
                     'appearance' => new external_value(PARAM_TEXT, 'Appearance notes', VALUE_DEFAULT, ''),
+                    'gender' => new external_value(PARAM_ALPHA, 'male or female', VALUE_DEFAULT, ''),
                 ]),
                 'Characters in the scenario',
                 VALUE_DEFAULT,

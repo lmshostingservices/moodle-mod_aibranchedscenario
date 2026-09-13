@@ -160,7 +160,7 @@ class draft_review implements \renderable, \templatable {
             'hasdraft'    => true,
             'warnings'    => $warnings,
             'haswarnings' => $warnings !== [],
-            'themeclass'  => 'aibs-theme-' . $this->scenario->theme,
+            'themeclass'  => schema::theme_class((string)$this->scenario->theme),
             'title'       => $definition['title'],
             'subtitle'    => $definition['subtitle'],
             'role'        => $definition['role'],

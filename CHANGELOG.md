@@ -2,6 +2,330 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.42.0] - 2026-09-13
+
+The self-audit continued for three more rounds. Everything below was found by checking my
+own work rather than by anyone reporting it, and all of it is on the two teacher-facing
+screens that no automated sweep had ever covered, because every sweep I had written pointed
+at the player.
+
+### Fixed — the teacher report had no gutter at all
+
+The shell that every screen in the product sits in carries the border and the canvas; the
+inset that keeps content off that rounded edge lives on `.aibs-shell` inside it. The report
+opened the first and never the second. Its masthead, its figures and its table sat hard
+against the border - the only screen in the plugin with no padding whatsoever, and it has
+been shipping that way.
+
+### Fixed — the single-attempt view rendered outside the shell entirely
+
+Opening a learner's attempt from the report drew buttons and decision cards with no shell
+around them. Every design token in this plugin is declared on the shell, so those cards were
+asking for custom properties that did not exist on that page, and the browser discards the
+whole declaration when that happens: no surface colour, no border colour, no radius. The
+attempt list had been given the shell; the attempt underneath it had not.
+
+### Fixed — the report and the draft review never went dark
+
+`scheme.js` measures the page behind the activity and matches it, which is what stops the
+plugin being a white slab on a dark Moodle theme. The player and the wizard each call it
+from their own module. The report and the draft review load no JavaScript at all, so they
+were the two screens left white - and they are the two a teacher opens most. The module now
+has an `init` that watches every shell on a page, and both call it.
+
+### Fixed — the report built its accent class by hand, and its fallback was a retired one
+
+Three renderers resolve a stored theme through `schema::theme_class()`. The report did not:
+it concatenated the class itself and fell back to `indigo`, which was retired from the
+palette and has no block left in the stylesheet. It drew in the base blue by luck, because
+the default tokens happen to be slate's.
+
+### Changed — the slide rules are now checked at phone widths
+
+The four layout rules - nothing scrolls, nothing is clipped, text uses its column, nothing
+runs outside its card - were measured at 1440, 1280 and 980 only. They are now measured at
+900, 600 and 380 as well, which is where a slide is most likely to break all four. All four
+hold at every width, with a picture and without.
+
+### Changed — three harness checks that could not fail
+
+One asserted that a hard-coded array contained a hard-coded string. Two others were written
+against the exact spelling of code that turned out to be wrong, so they held the plugin to
+the fault. All three now check the behaviour they were meant to guard, and a new one covers
+the picker words sent to the service, so an option added without its string is caught rather
+than silently sent as a schema key.
+
+## [v1.41.0] - 2026-09-13
+
+### Fixed — the cast was never read off the wire
+
+LMS Labs flagged that their new fields would not reach Moodle because the mapper omits them.
+Checking that turned up something older and worse: **`facilitator` and `characters` were
+never mapped at all.** Not since the first release.
+
+Everything that needs to know who is in the scenario had been silently running on its
+fallback ever since:
+
+- **Every spoken line was read by the narrator.** A node's `speaker` is matched against the
+  cast to find the voice it should be read in. With no cast, nothing ever matched.
+- **Every scene image was drawn to the no-cast fallback** — *"one worker, seen from behind or
+  in three-quarter view, face not the subject of the image"* — because the illustrator brief
+  names the people in frame from that list.
+- **The avatar a learner clicks to hear someone speak had nobody to show.**
+
+None of it ever looked like a fault. It looked like the pictures being impersonal and the
+narration being flat.
+
+Also never mapped, and now carried: a node's **`imageprompt`** (so the illustrator was
+briefed without the one line written for it) and **`imagealt`** (so every picture fell back
+to alt text condensed from the situation prose), plus **`bottleneck`**.
+
+**This does not repair existing scenarios.** A definition stored before this release has no
+cast, because none was ever read. Regenerating or re-importing is what fills it in.
+
+### Verified — the grade spread agreed with LMS Labs
+
+Their new server-assigned scores are 87.5 all-strong, 50 neutral, 12.5 all-weak. Checked
+against the bands the plugin actually draws: strong / mixed / high-risk endings, and green /
+amber / red colours, all three agree. The spread it replaces did not — an all-weak path
+scored 37.5, which is the high-risk *ending* but the amber *colour*, so the red band was
+unreachable. Six checks pin it.
+
+## [v1.40.0] - 2026-09-13
+
+Everything on the outstanding list, less the three that need somebody else.
+
+### Fixed — nothing anywhere asked for a character's gender
+
+It chooses the voice a character's spoken line is read in, and it is what keeps their face
+the same from one scene image to the next. The wizard had no field for it, the suggest brief
+never mentioned it, and the generate request never sent it — so on **every scenario ever
+generated** the narrator read the line and the illustrator was given nothing to hold to.
+
+The wizard now asks for it, the suggest brief asks for it as a fifth bar-separated part, and
+it is stored and validated to the two values that resolve to a voice.
+
+### Fixed — the suggest route never asked for a principle's example or pitfall
+
+The brief asked for "one short line each", so on the path a teacher uses to draft principles
+the two fields the validator requires were never requested. It now asks for all three parts
+with a worked example.
+
+### Fixed — the teacher's cast was being dropped on its way to the service
+
+The wire carries a name and a role. Trait, appearance and gender — all typed into the wizard
+— were discarded. They travel in the free-text field the route already accepts, rather than
+in keys it has never agreed to, so this ships without a contract negotiation.
+
+### Fixed — narration labels were spoken in the site language
+
+A French scenario had "Sounds like this", "Not this" and "Why this mattered" read aloud in
+English in the middle of French narration. They are fetched in the scenario's language now,
+falling back to English only where the site has no pack for it.
+
+### Fixed — the image brief promised a light it never named
+
+"the same time of day, the same source of light" — without ever saying what either was, so
+each frame invented its own and a set came back in six different lightings. One of five is
+now named, derived from the scenario's own title and setting so it is stable across
+regenerations, along with an explicit landscape framing.
+
+### Changed — the palette is closed in code, not just in intent
+
+Indigo, ocean and violet were selectable accents in a product whose palette is one blue plus
+green and amber. They are retired: no longer offered, no longer in the stylesheet, and a
+stored value still **validates** — an activity saved with one keeps working and draws in the
+default rather than failing. Three accents remain.
+
+### Changed — the plugin states its own typeface
+
+There was no `font-family` anywhere, so the plugin took the site theme's and the same
+scenario looked like a different product on every site. A system stack now: no external
+request, nothing to block on, nothing for a privacy review. The hostile-theme sweep is at
+**0 of an original 23**.
+
+## [v1.39.0] - 2026-09-13
+
+### The two routes are held to the same standard
+
+v1.38.0 closed the gap by writing a short standard for the generate route. That fixed the
+symptom and left the cause: the rules existed twice, in two files, in two wordings, and
+nothing stopped them drifting apart again — which is exactly how the paid route came to be
+held to a lower standard than the free one for four releases.
+
+There is **one list** now. `content_standard` holds twelve craft rules in priority order,
+each with a long form and a short one. The pasted prompt renders the long forms — the text
+it has always carried, moved rather than rewritten. The generate request renders the short
+forms. A rule cannot exist on one route and not the other, because there is only one place
+to add one.
+
+All twelve fit. A realistic request carries the complete standard **and** the teacher's full
+brief in 1,855 of the route's 2,000 characters. Where a teacher writes more than that, whole
+rules drop from the bottom of the priority list — never a sentence cut in half — and the top
+of that list is the rules whose absence was watched to produce bad scenarios: option position,
+example and pitfall as their own fields, spelling variety, and feedback that explains the
+mechanism. The teacher is never squeezed below a 500-character floor, because a perfectly
+written scenario about the wrong subject is worth nothing.
+
+Eleven harness checks cover it, including that the pasted prompt states every rule in full
+and that a squeezed standard still ends in a full stop.
+
+### Fixed — the pressures were sent as schema keys
+
+"What makes this hard" and "What is at stake" are pickers, so what is stored is a key. The
+request was sending the key: `timepressure; conflictingpriorities`. That is not English, it
+is not what the teacher chose from, and it reads to a model as a tag rather than as a
+description of the situation. It now sends the words the teacher saw — *time pressure;
+conflicting priorities*. An unknown key is still sent as itself rather than dropped.
+
+### Fixed — prose on a card with no picture uses the card
+
+The 62-character measure is right where text sits beside a picture; on a card with no
+picture it left a block of words half the width of the card with empty card either side.
+The layout audit is now at zero findings.
+
+## [v1.38.0] - 2026-09-13
+
+### Fixed — the paid route was held to a lower standard than the free one
+
+The prompt a teacher pastes into ChatGPT carries about **14,500 characters** of craft
+instruction: second person and present tense, no option obviously correct, feedback that
+explains the mechanism rather than restating the choice, no verdict language, the challenge
+ending in a question mark, the spelling variety held throughout, and a fully worked decision
+node showing the register.
+
+The generate route carried **none of it**. It sent the teacher's typed words, a handful of
+context fields, and — since 1.32.0 — 373 characters about principles. Every question of craft
+was left to the service's own prompt, which this plugin does not control and cannot see.
+
+That gap is visible in what came back, and it explains three faults separately reported:
+
+- **The best option arrived first at every decision**, because nothing said not to.
+- **Examples and pitfalls arrived folded into the summary as prose**, because nothing said
+  they were their own fields.
+- **Australian spelling did not survive**, because the rule asking for it only ever went
+  down the other path.
+
+`CONTENT_STANDARD` now goes with every generate request. The route caps the field at 2000
+characters and the teacher's own words share it, so this is not the whole standard — it is
+the rules whose absence has been *watched to fail*, in 884 characters, leaving 1114 for the
+teacher. The rest belongs in the service's prompt, where there is room for it. A harness
+check lists those rules by name and fails if any is dropped.
+
+### Fixed — the consequence with no picture, and what a site theme can reach into
+
+**The consequence card.** The readings take the column the picture would have had and the
+words sit beside them, so the screen keeps the same silhouette as every other one. The first
+attempt was wrong and looked it: a grid item spanning several rows stretches those rows to
+its own height, so the four things beside the readings were spread from the top of the card
+to the bottom with a hole in the middle. The words are one block now, and a block cannot be
+stretched apart. On the card that *does* have a picture the wrapper is `display: contents`
+and `order` puts every piece back where it was, so that card is unchanged.
+
+**Theme overrides.** Tested against a stylesheet built from the rules Boost and its children
+actually ship — button hovers, heading fonts, list padding, link colours, image borders, a
+base font size — 23 properties moved. The colours, radii, fills and hovers all held, because
+they are stated. Three things did not, because they were never stated and the browser default
+was being relied on instead:
+
+- **List item margins.** Every reading, skill bar, lesson card and decision record is a list
+  item, spaced by its list's `gap`. A theme's `li { margin-bottom }` added a margin on top of
+  that gap and the whole rhythm of the debrief moved.
+- **A border on the scene photograph**, from a theme's `img { border }`.
+- **The typeface** — see below.
+
+Two of the three are fixed and checked; 23 exposures are now 2, and both remaining are the
+same one.
+
+### Known — the plugin sets no typeface of its own
+
+There is no `font-family` anywhere in the stylesheet, so the plugin takes the site theme's
+font. That is normal for a Moodle plugin and wrong for a product whose look is meant to be
+consistent, and it is a decision rather than a bug, so it is recorded rather than changed.
+
+Worth knowing alongside it: the review page had been imposing IBM Plex Sans on the plugin
+frame, so every screen reviewed there was shown in a typeface that will not be on a real
+site. The frame now takes the browser default, which is the honest stand-in for "whatever
+the theme says". What is reviewed is what ships.
+
+### Changed — a screen with no picture centres its column and left-aligns its words
+
+Two different things that had been conflated. Centring the block is right: left-aligning the
+whole card leaves the words hard against one edge with the rest of the card empty beside
+them. Centring every *line* inside the block was wrong — a centred paragraph gives the eye no
+left edge to come back to, and a list of records centred line by line reads as a poster
+rather than a record. The one exception is a card carrying a single heading and sentence, the
+way in and the withheld debrief: a statement centres.
+
+## [v1.37.0] - 2026-09-13
+
+### Fixed — a scenario imported from the pasted prompt had no pictures and no voice
+
+The two routes into a scenario behaved differently and only one of them was safe.
+Generation runs its media inside the same task, so the pictures and the narration are
+finished before the teacher ever sees a result. Import cannot: it returns the moment the
+definition validates and leaves the media to a task waiting on cron. A teacher who pastes a
+scenario in and publishes it — the obvious thing to do, since the scenario is right there
+and looks finished — publishes first.
+
+`publish_media()` was the only thing that ever copied working media into a revision, and it
+runs at publish time. So the task finished minutes later, wrote its work into an area no
+learner reads, and **the media was lost permanently** — not delayed. Whichever of the two
+finishes last now does the copying, guarded so media only joins a revision holding the same
+scenes it was made for.
+
+### Fixed — the debrief pages, against a written checklist
+
+The same four faults kept coming back one screenshot at a time, so they are now measured on
+every screen at three widths in both picture states — see the slide quality checklist.
+
+- **`.aibs-lesson-list` was missing from the full-width exemption**, so "Lessons learnt",
+  "How to apply this" and "Key takeaways" were capped and centred in a card twice their
+  width. This was the "text is not full width" fault.
+- **The debrief read from the middle out.** With no picture its pages took the centred
+  statement-card treatment, which suits a heading and a sentence and not a list of records:
+  every line of the decision list was centred, including the note inside the amber panel and
+  a "Principle tested" chip that ran off the end of the card. Records line up now.
+- **"Critical decisions" has its own page.** Two headings and two numbered lists on one card
+  overran the frame and grew a scrollbar.
+- **"Source material" is gone.** It was a second subject on a page that already had five
+  numbered items, and it told the learner about the scenario's provenance rather than about
+  their own performance.
+- **No debrief page scrolls.** The fit floor moved from .74 to .68 so a page steps down to
+  fit rather than overflowing, and the debrief body clips nothing.
+
+### Fixed — the round controls took the theme's hover fill
+
+The icon buttons pinned the mark's colour and left the fill to the cascade — the same
+half-a-pair fault as the wizard steps, the other way round. A theme painting dark grey on
+every hovered button turned the fullscreen and narration controls into a dark disc under a
+dark mark. The sweep that missed it has been widened: it only looked at rules that repainted
+a background and forgot the text, and a control that pins *neither* half is equally exposed.
+
+### Fixed — a comment split a selector list in half
+
+Inserting a rule in the middle of a multi-line selector list silently cut it in two, and the
+readings, skill bars, decision list and takeaways lost their full width. The harness check
+for comment-interrupted selector lists caught it before it shipped — the same class of fault
+it was written for after the last one.
+
+## [v1.36.1] - 2026-09-13
+
+### Fixed — a wizard step vanished when you pointed at it
+
+The step tabs pinned their hover *background* and left the text colour to the site theme.
+The theme paints white text on every hovered button, so the label went white on the step's
+own white surface.
+
+The rule worth keeping: **a rule that repaints one half of a colour pair and leaves the other
+to the site theme works until it meets a theme.** Both halves are stated now, on the steps
+and on the speaker avatar, and the sweep is a harness check rather than a memory — every
+hover or focus rule that sets a background must state a colour beside it, and the check names
+the offending selector when one does not. Measured in a browser against a stand-in theme
+forcing white on hover: white-on-white before the fix, readable after.
+
+Focus now matches hover, so a keyboard user meets the same states as a mouse user.
+
 ## [v1.36.0] - 2026-09-12
 
 ### The flow review

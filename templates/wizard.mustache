@@ -56,7 +56,7 @@
     Example context (json):
     {
         "cmid": 42,
-        "themeclass": "aibs-theme-indigo",
+        "themeclass": "aibs-theme-slate",
         "viewurl": "https://example.com/mod/aibranchedscenario/view.php?id=42",
         "aiavailable": true,
         "published": false,
@@ -442,6 +442,25 @@
                             {{#str}} field:characterappearance, mod_aibranchedscenario {{/str}}</label>
                         <input type="text" class="aibs-input" id="aibs-charlook-{{index}}"
                             data-character-field="appearance" value="{{appearance}}" maxlength="400">
+                    </div>
+                    {{! Not a description of the person. It chooses the voice this character's
+                        spoken line is read in, and it is what keeps their face the same from
+                        one scene image to the next. Nothing in the plugin was asking for it,
+                        so both fell back on every scenario. }}
+                    <div class="aibs-field">
+                        <label class="aibs-field-label" for="aibs-chargender-{{index}}">
+                            {{#str}} field:charactergender, mod_aibranchedscenario {{/str}}</label>
+                        <select class="aibs-input" id="aibs-chargender-{{index}}"
+                                data-character-field="gender">
+                            <option value="" {{^ismale}}{{^isfemale}}selected{{/isfemale}}{{/ismale}}>
+                                {{#str}} field:charactergendernone, mod_aibranchedscenario {{/str}}</option>
+                            <option value="female" {{#isfemale}}selected{{/isfemale}}>
+                                {{#str}} gender:female, mod_aibranchedscenario {{/str}}</option>
+                            <option value="male" {{#ismale}}selected{{/ismale}}>
+                                {{#str}} gender:male, mod_aibranchedscenario {{/str}}</option>
+                        </select>
+                        <p class="aibs-field-help">
+                            {{#str}} field:charactergenderhelp, mod_aibranchedscenario {{/str}}</p>
                     </div>
                 </fieldset>
             {{/characters}}

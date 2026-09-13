@@ -17,6 +17,7 @@
 namespace mod_aibranchedscenario\local\ai;
 
 use curl;
+use mod_aibranchedscenario\local\content_standard;
 use mod_aibranchedscenario\local\schema;
 use mod_aibranchedscenario\local\source_normaliser;
 
@@ -76,29 +77,6 @@ class lmslabs_provider implements provider {
 
     /** @var int Most characters of narration text the speech route accepts. */
     const MAX_SPEECH_CHARS = 4500;
-
-    /**
-     * @var string The one thing every generated definition is required to carry and the
-     * service was never asked for.
-     *
-     * A principle has needed both an example and a pitfall since v1.20.0 - a slide that
-     * states a rule and nothing else teaches a learner nothing they can use - and the
-     * validator refuses a definition that omits either, naming the principle. The
-     * generate request never said so. The paste-and-import path asks for them at length
-     * (see import_prompt), which is why that path produced them and generation did not:
-     * every generated scenario was refused for a field we had not requested, after the
-     * teacher had been charged for it.
-     *
-     * It is sent as part of the free-text steer because that is the only field on the
-     * route that carries a requirement, and it is kept short because that field is capped
-     * at 2000 characters and the rest of it belongs to the teacher.
-     */
-    const PRINCIPLE_REQUIREMENT =
-        'Every principle must carry an "example" and a "pitfall", both non-empty. '
-        . 'The example is the words a learner could actually say or the action they '
-        . 'could take, written out in full - never a restatement of the principle. '
-        . 'The pitfall is the plausible-sounding version that does not work, and why. '
-        . 'A principle missing either one is rejected.';
 
     /** @var array Metadata from the last successful call. */
     protected $lastmeta = [];
@@ -771,7 +749,10 @@ class lmslabs_provider implements provider {
      * @return string
      */
     protected static function instructions(array $request): string {
-        $parts = [self::PRINCIPLE_REQUIREMENT];
+        // The standard and the teacher's own words share one 2000-character field, so the
+        // standard is given what is left once the teacher has their floor. Rules are dropped
+        // from the bottom of the priority list, never from the middle of a sentence.
+        $parts = [];
         $prefixes = [
             'brief'            => '',
             'centralproblem'   => 'The central problem is',
@@ -783,8 +764,22 @@ class lmslabs_provider implements provider {
                 $parts[] = trim($prefix . ' ' . $value);
             }
         }
+        // These two are pickers, so what is stored is a schema key. They were being sent as
+        // the key - "timepressure; conflictingpriorities" - which is not English, is not what
+        // the teacher chose from, and reads to a model as a tag rather than as a description
+        // of the situation. The words the teacher saw are the words that go.
         foreach (['whyhard' => 'What makes this hard', 'stakes' => 'What is at stake'] as $name => $label) {
-            $items = array_filter(array_map('strval', (array)($request[$name] ?? [])));
+            $items = [];
+            foreach ((array)($request[$name] ?? []) as $key) {
+                $key = trim((string)$key);
+                if ($key === '') {
+                    continue;
+                }
+                $stringid = $name . ':' . $key;
+                $items[] = get_string_manager()->string_exists($stringid, 'mod_aibranchedscenario')
+                    ? \core_text::strtolower(get_string($stringid, 'mod_aibranchedscenario'))
+                    : $key;
+            }
             if ($items) {
                 $parts[] = $label . ': ' . implode('; ', $items);
             }
@@ -792,17 +787,75 @@ class lmslabs_provider implements provider {
         if (!empty($request['atmosphere'])) {
             $parts[] = 'Atmosphere: ' . (string)$request['atmosphere'];
         }
-        // The cap belongs to the route, and the whole brief used to be cut to fit it. The
-        // requirement above is the one part that must survive the cut - it is what the
-        // definition is validated against - so the teacher's own words are trimmed to
-        // what is left rather than the requirement being trimmed off the end of them.
-        $requirement = \core_text::substr((string)array_shift($parts), 0, 2000);
-        $budget = 2000 - \core_text::strlen($requirement) - 2;
-        $rest = trim(implode("\n\n", $parts));
-        if ($rest !== '') {
-            $rest = "\n\n" . \core_text::substr($rest, 0, max(0, $budget));
+
+        // The cast, in full, in the one field on this route that takes free text.
+        //
+        // The characters array on the wire carries a name and a role and nothing else, and
+        // the teacher has typed three more things into the wizard that the plugin was
+        // dropping: how the person behaves under pressure, what they look like, and their
+        // gender. The last of those is not a detail - it chooses the voice their spoken line
+        // is read in and it is what keeps their face the same from one scene image to the
+        // next, so dropping it meant every generated scenario fell back to the narrator and
+        // gave the illustrator nothing to hold to.
+        //
+        // Adding keys to the characters array would be the tidier home for this, but the
+        // route validates that array strictly and a rejected request fails the whole
+        // generation. This says the same thing in a field that is already free text and
+        // already accepted, which is a change that can ship without a contract negotiation.
+        $cast = [];
+        foreach ((array)($request['characters'] ?? []) as $character) {
+            if (!is_array($character)) {
+                continue;
+            }
+            $name = trim((string)($character['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $detail = array_filter([
+                trim((string)($character['role'] ?? '')),
+                trim((string)($character['trait'] ?? '')),
+                trim((string)($character['appearance'] ?? '')),
+                trim((string)($character['gender'] ?? '')),
+            ], static function ($value) {
+                return $value !== '';
+            });
+            $cast[] = $detail ? $name . ' - ' . implode('; ', $detail) : $name;
         }
-        return trim($requirement . $rest);
+        $castline = $cast
+            ? 'Cast, each as name - role; behaviour under pressure; appearance; gender. '
+                . 'Carry every one of these into the scenario, and give every person you '
+                . 'invent the same four: ' . implode(' | ', array_slice($cast, 0, 6))
+            : '';
+        // The route caps this field at 2000 characters and three things want it: the standard
+        // every scenario is written to, who is in it, and what it is about.
+        //
+        // The first version of this measured the teacher's words first and gave the standard
+        // whatever was left, which read as generous and was backwards. A teacher with a full
+        // brief took 1500 of the 2000, the standard was squeezed into 500, and nine of the
+        // twelve rules fell off the bottom - on exactly the route that had no standard at all
+        // until this week. The cast, appended last, was cut off entirely.
+        //
+        // They are filled in the order they matter. The standard first, in full, because it
+        // is what the writing is judged against and it is the same on both routes or the two
+        // routes are not the same product. The cast next, because it is compact and it is
+        // what decides whose voice a line is read in and whose face is in the picture. The
+        // teacher's own prose last, with whatever remains, because it is the one part that
+        // degrades gracefully - a shorter brief is still a brief.
+        $ceiling = 2000;
+        $standard = content_standard::short_text($ceiling - content_standard::TEACHER_FLOOR);
+        $blocks = $standard === '' ? [] : [$standard];
+        foreach ([$castline, trim(implode("\n\n", $parts))] as $block) {
+            if ($block === '') {
+                continue;
+            }
+            $used = \core_text::strlen(implode("\n\n", $blocks));
+            $room = $ceiling - $used - ($blocks ? 2 : 0);
+            if ($room <= 0) {
+                break;
+            }
+            $blocks[] = \core_text::substr($block, 0, $room);
+        }
+        return trim(implode("\n\n", $blocks));
     }
 
     /**

@@ -380,6 +380,31 @@ class media_manager {
     }
 
     /**
+     * The Moodle language code for a scenario language, for reading a label aloud in it.
+     *
+     * The three labels the narrator speaks - the two on a principle slide and the one on a
+     * consequence - were fetched in the site language, so a French scenario had an English
+     * word read out in the middle of French narration. They are fetched in the scenario's
+     * language now. Where the site has no language pack for it Moodle falls back to English,
+     * which is exactly where this started, so nothing is lost by trying.
+     *
+     * @param string $language BCP-47 code as stored on the activity, such as en-AU.
+     * @return string A Moodle language code, such as en_au.
+     */
+    protected static function label_lang(string $language): string {
+        $language = str_replace('-', '_', \core_text::strtolower(trim($language)));
+        if ($language === '') {
+            return 'en';
+        }
+        $installed = get_string_manager()->get_list_of_translations(true);
+        if (isset($installed[$language])) {
+            return $language;
+        }
+        $short = explode('_', $language)[0];
+        return isset($installed[$short]) ? $short : 'en';
+    }
+
+    /**
      * Generate and store the narration for one slide of the opening lesson.
      *
      * @param provider $provider Generation provider.
@@ -398,13 +423,14 @@ class media_manager {
     ): bool {
         // Read with the same labels the slide shows, or the example and the pitfall run
         // together into one paragraph and a listener cannot tell which is which.
+        $lang = self::label_lang($language);
         $parts = [(string)($principle['title'] ?? '') . '.', (string)($principle['summary'] ?? '')];
         if (trim((string)($principle['example'] ?? '')) !== '') {
-            $parts[] = get_string('lesson:saythis', 'mod_aibranchedscenario') . '. '
+            $parts[] = get_string('lesson:saythis', 'mod_aibranchedscenario', null, $lang) . '. '
                 . (string)$principle['example'];
         }
         if (trim((string)($principle['pitfall'] ?? '')) !== '') {
-            $parts[] = get_string('lesson:notthis', 'mod_aibranchedscenario') . '. '
+            $parts[] = get_string('lesson:notthis', 'mod_aibranchedscenario', null, $lang) . '. '
                 . (string)$principle['pitfall'];
         }
         $text = trim(implode("\n\n", array_filter($parts, static function ($part) {
@@ -489,8 +515,13 @@ class media_manager {
         // together into one paragraph.
         $parts = [trim((string)($choice['consequence'] ?? ''))];
         if (trim((string)($choice['feedback'] ?? '')) !== '') {
-            $parts[] = get_string('whythismattered', 'mod_aibranchedscenario') . '. '
-                . (string)$choice['feedback'];
+            $label = get_string(
+                'whythismattered',
+                'mod_aibranchedscenario',
+                null,
+                self::label_lang($language)
+            );
+            $parts[] = $label . '. ' . (string)$choice['feedback'];
         }
         $text = trim(implode("\n\n", array_filter($parts, static function ($part) {
             return $part !== '';

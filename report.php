@@ -26,6 +26,7 @@ require(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/lib.php');
 
 use mod_aibranchedscenario\local\attempt_manager;
+use mod_aibranchedscenario\local\schema;
 
 $id = required_param('id', PARAM_INT);
 $page = optional_param('page', 0, PARAM_INT);
@@ -43,6 +44,10 @@ $PAGE->set_url($baseurl);
 $PAGE->set_title(get_string('attemptreport', 'mod_aibranchedscenario'));
 $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($context);
+// The report carries no behaviour of its own, but it does render the activity shell, and
+// that shell has to know whether the page behind it is dark. Without this it was the one
+// screen in the product that stayed white on a dark Moodle theme.
+$PAGE->requires->js_call_amd('mod_aibranchedscenario/scheme', 'init');
 
 $candelete = has_capability('mod/aibranchedscenario:deleteattempts', $context);
 
@@ -101,6 +106,12 @@ if ($viewid) {
     $owner = core_user::get_user((int)$attempt->userid, '*', IGNORE_MISSING);
 
     echo $OUTPUT->header();
+    // Every design token in this plugin is declared on the activity shell, so the buttons
+    // and decision cards below were drawing outside it: no surface, no border colour, no
+    // radius, because the custom properties they ask for did not exist on this page. The
+    // attempt list was given the shell; the attempt itself was not.
+    echo html_writer::start_div('aibs-wizard ' . schema::theme_class((string)$moduleinstance->theme));
+    echo html_writer::start_div('aibs-shell');
     echo $OUTPUT->heading(format_string($moduleinstance->name));
     echo html_writer::link(
         $baseurl,
@@ -110,6 +121,8 @@ if ($viewid) {
 
     if (!$revision) {
         echo $OUTPUT->notification(get_string('report:revisiongone', 'mod_aibranchedscenario'), 'warning');
+        echo html_writer::end_div();
+        echo html_writer::end_div();
         echo $OUTPUT->footer();
         exit;
     }
@@ -147,6 +160,8 @@ if ($viewid) {
         get_string('report:nodecisions', 'mod_aibranchedscenario'),
         'info'
     ), 'aibs-review-choices');
+    echo html_writer::end_div();
+    echo html_writer::end_div();
     echo $OUTPUT->footer();
     exit;
 }
@@ -157,7 +172,15 @@ echo $OUTPUT->header();
 // so a teacher coming straight from the wizard landed on what looked like a different,
 // older plugin. It now sits in the same shell, under the same masthead, as every other
 // screen in the activity.
-echo html_writer::start_div('aibs-wizard aibs-theme-' . s($moduleinstance->theme ?: 'indigo'));
+// Built by hand here, with a retired theme as its fallback, while the three renderers
+// resolved the same value through schema::theme_class(). A stored theme that is no
+// longer offered has one resolution, in one place.
+// The shell carries the border and the canvas; the inset lives on .aibs-shell inside
+// it. The report opened the one and never the other, so its masthead, its figures and
+// its table all sat hard against the rounded edge - the only screen in the product
+// with no gutter at all.
+echo html_writer::start_div('aibs-wizard ' . schema::theme_class((string)$moduleinstance->theme));
+echo html_writer::start_div('aibs-shell');
 echo html_writer::start_tag('header', ['class' => 'aibs-masthead aibs-masthead-compact']);
 echo html_writer::start_div('aibs-masthead-text');
 echo html_writer::tag('p', get_string('report:eyebrow', 'mod_aibranchedscenario'), ['class' => 'aibs-eyebrow']);
@@ -200,6 +223,7 @@ echo html_writer::div($summary, 'aibs-report-summary');
 
 if (!$total) {
     echo $OUTPUT->notification(get_string('noattemptsyet', 'mod_aibranchedscenario'), 'info');
+    echo html_writer::end_div();
     echo html_writer::end_div();
     echo $OUTPUT->footer();
     exit;
@@ -255,5 +279,6 @@ $recordset->close();
 
 echo html_writer::div(html_writer::table($table), 'aibs-tablewrap');
 echo $OUTPUT->paging_bar($total, $page, $perpage, $baseurl);
+echo html_writer::end_div();
 echo html_writer::end_div();
 echo $OUTPUT->footer();

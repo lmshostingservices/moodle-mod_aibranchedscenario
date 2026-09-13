@@ -181,7 +181,7 @@ class player implements \renderable, \templatable {
             'cmid'         => (int)$this->cm->id,
             'instanceid'   => (int)$this->scenario->id,
             'theme'        => $this->scenario->theme,
-            'themeclass'   => 'aibs-theme-' . $this->scenario->theme,
+            'themeclass'   => schema::theme_class((string)$this->scenario->theme),
             'title'        => format_string($this->scenario->name, true, ['context' => $this->context]),
             'scenariotitle' => is_array($definition) ? $definition['title'] : '',
             'subtitle'     => is_array($definition) ? $definition['subtitle'] : '',

@@ -161,3 +161,19 @@ export const watch = (element) => {
         }
     }
 };
+
+/**
+ * Match every activity shell on a page that carries no other JavaScript of its own.
+ *
+ * The player and the wizard each call watch() from their own module, because each already
+ * has one. The teacher report and the draft review render the same shell and loaded no
+ * JavaScript at all, so on a dark Moodle theme they were the one white slab left in the
+ * product - the exact failure this module exists to prevent, on the two screens a teacher
+ * sees most. They have no behaviour to initialise beyond this, so rather than a module
+ * each, they call this.
+ *
+ * @returns {void}
+ */
+export const init = () => {
+    document.querySelectorAll('.aibs-player, .aibs-wizard').forEach((element) => watch(element));
+};

@@ -693,13 +693,13 @@ class Wizard {
      */
     applyCharacter(suggestion) {
         const parts = suggestion.split('|').map((part) => part.trim()).filter((part) => part !== '');
-        // The brief asks for four bar-separated parts. A model that answers in prose
+        // The brief asks for five bar-separated parts. A model that answers in prose
         // instead would otherwise have its whole sentence written into the name field
         // and stored as a person's name.
         if (parts.length < 2) {
             return false;
         }
-        const keys = ['name', 'role', 'trait', 'appearance'];
+        const keys = ['name', 'role', 'trait', 'appearance', 'gender'];
         const fieldsets = this.root.querySelectorAll('[data-character]');
         for (const fieldset of fieldsets) {
             const name = fieldset.querySelector('[data-character-field="name"]');
@@ -708,9 +708,17 @@ class Wizard {
             }
             keys.forEach((key, index) => {
                 const element = fieldset.querySelector(`[data-character-field="${key}"]`);
-                if (element && parts[index]) {
-                    element.value = parts[index];
+                if (!element || !parts[index]) {
+                    return;
                 }
+                if (key === 'gender') {
+                    // A select, not a text box: anything that is not one of its two values
+                    // is left unset rather than written in and silently dropped later.
+                    const value = parts[index].toLowerCase().trim();
+                    element.value = (value === 'male' || value === 'female') ? value : '';
+                    return;
+                }
+                element.value = parts[index];
             });
             return true;
         }

@@ -148,52 +148,10 @@ class import_prompt {
             '',
             'WHAT MAKES IT GOOD',
             '',
-            '- The learner is in the moment, in second person and present tense, not '
-                . 'being told about a topic. Never open a scene with "Imagine", "In this '
-                . 'scenario" or "You will learn".',
-            '- The other people want something of their own and have their own reason for '
-                . 'being difficult. Nobody is a strawman and nobody exists only to be '
-                . 'corrected.',
-            '- Every choice is what a competent, tired person might actually do on the '
-                . 'day. The weaker options are reasonable readings of the situation '
-                . 'rather than obvious mistakes, and the stronger one is never the '
-                . 'longest, the kindest sounding, or the only one that mentions asking a '
-                . 'question.',
-            '- Consequences are shown happening in the room. Never write a verdict: no '
-                . '"correct", "incorrect", "well done", "unfortunately", "the best choice '
-                . 'would have been", and no mention of scores, skills or what was being '
-                . 'assessed anywhere the learner reads.',
-            '- Feedback explains the MECHANISM, never restates the choice. The learner '
-                . 'has just read what they did; telling them again teaches nothing. Every '
-                . 'feedback must answer why it worked or why it did not, in this shape: '
-                . 'what the behaviour did to the other person, and what that changes next. '
-                . 'Name the person. "You addressed Priya\'s confusion directly" is a '
-                . 'restatement and is wrong; "Reading it out with her made the gap hers to '
-                . 'find, so she raised the next one instead of working around you" is the '
-                . 'mechanism and is right.',
-            '- The same applies when a choice goes badly: say what it cost the other '
-                . 'person and what they will do differently because of it, not that it was '
-                . 'a poor choice. One or two sentences, in the same voice as the story, '
-                . 'not praise, not a lecture, and never addressed to the learner as a '
-                . 'student.',
-            '- Every principle carries an "example" and a "pitfall". The example is the '
-                . 'words a learner could actually say or do, written as a line of speech '
-                . 'or a concrete action - "So what I am hearing is the deadline is the '
-                . 'problem, not the guidelines. Have I got that right?" - never a '
-                . 'restatement of the principle. The pitfall is the plausible-sounding '
-                . 'version that does not work, and why it does not: "Asking \'does that '
-                . 'make sense?\', which invites a yes and tells you nothing." These are '
-                . 'taught before the scenario starts, so they are the difference between '
-                . 'a learner who knows the principle and one who can use it.',
-            '- "challenge" must be a question addressed to the learner and must end in a '
-                . 'question mark: "What do you say to Jamie?", "How do you answer that?". '
-                . 'An instruction such as "Ensure Jamie understands the guidelines." is '
-                . 'wrong, because it sits directly above the lettered options and reads as '
-                . 'one of them rather than as the question they answer.',
-            '- Never name the skill being assessed in "situation", "challenge", a '
-                . 'choice\'s "text", "consequence" or "feedback". Name it only in the '
-                . 'debrief.',
-            '- The debrief names what mattered rather than repeating the story.',
+            // The craft rules live in content_standard so the pasted prompt and the
+            // generate request cannot state different ones. This is the long form of
+            // the same list, which is the text this prompt has always carried.
+            ...content_standard::long_lines(),
         ];
 
         return implode("\n", $lines);

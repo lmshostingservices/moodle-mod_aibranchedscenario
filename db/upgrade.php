@@ -520,5 +520,56 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091246, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091247) {
+        // Release 1.36.1 changes no schema. A hovered wizard step kept its label instead
+        // of taking the site theme's white text onto its own white surface.
+        upgrade_mod_savepoint(true, 2026091247, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091248) {
+        // Release 1.37.0 changes no schema. Media generated after publishing now reaches
+        // the learner, the debrief pages are laid out against the slide quality checklist,
+        // and "Critical decisions" has a page of its own.
+        upgrade_mod_savepoint(true, 2026091248, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091249) {
+        // Release 1.38.0 changes no schema. The generate route now carries the content
+        // standard the pasted prompt has always carried, and a screen with no picture
+        // centres its column while reading its words down a left edge.
+        upgrade_mod_savepoint(true, 2026091249, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091250) {
+        // Release 1.39.0 changes no schema. The two ways of writing a scenario now read
+        // their craft rules from one list, so the pasted prompt and the generate request
+        // cannot state different ones.
+        upgrade_mod_savepoint(true, 2026091250, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091251) {
+        // Release 1.40.0 changes no schema. A character gains a gender, stored inside the
+        // existing source JSON column; three accents outside the palette are retired but
+        // still validate, so an activity saved with one keeps working and simply draws in
+        // the default.
+        upgrade_mod_savepoint(true, 2026091251, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091252) {
+        // Release 1.41.0 changes no schema. The mapper now carries the cast, the scene
+        // brief and its alt text off the wire; all three were being dropped, so every
+        // stored scenario generated before this has no cast at all. Regenerating or
+        // re-importing is what fills it in - nothing here can recover what was never read.
+        upgrade_mod_savepoint(true, 2026091252, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091253) {
+        // Release 1.42.0 changes no schema. It repairs the two teacher-facing screens: the
+        // report had no gutter and its single-attempt view rendered outside the shell that
+        // declares every design token, and neither the report nor the draft review ever
+        // matched a dark Moodle theme because they loaded no JavaScript at all.
+        upgrade_mod_savepoint(true, 2026091253, 'aibranchedscenario');
+    }
+
     return true;
 }

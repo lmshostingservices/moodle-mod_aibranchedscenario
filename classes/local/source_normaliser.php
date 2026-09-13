@@ -120,11 +120,18 @@ class source_normaliser {
                 if ($name === '') {
                     continue;
                 }
+                // Gender is not a description of the person. It chooses the voice their
+                // spoken line is read in and it is what keeps their face the same from one
+                // scene image to the next, and nothing anywhere in the plugin was asking
+                // for it - not the wizard, not the suggest brief, not the generate request -
+                // so both fell back to a default on every scenario ever generated.
+                $gender = \core_text::strtolower(self::line($character['gender'] ?? '', 10));
                 $out['characters'][] = [
                     'name'       => $name,
                     'role'       => self::line($character['role'] ?? '', 120),
                     'trait'      => self::line($character['trait'] ?? '', 200),
                     'appearance' => self::line($character['appearance'] ?? '', 400),
+                    'gender'     => in_array($gender, ['male', 'female'], true) ? $gender : '',
                 ];
             }
         }

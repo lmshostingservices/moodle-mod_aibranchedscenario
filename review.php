@@ -39,6 +39,9 @@ $PAGE->set_url('/mod/aibranchedscenario/review.php', ['id' => $cm->id]);
 $PAGE->set_title(get_string('review:title', 'mod_aibranchedscenario'));
 $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($context);
+// The draft review renders the player shell and loads nothing else, so it needs the one
+// thing that shell cannot work out for itself: whether the page behind it is dark.
+$PAGE->requires->js_call_amd('mod_aibranchedscenario/scheme', 'init');
 
 echo $OUTPUT->header();
 // No Moodle heading here: the review template carries its own masthead with the same

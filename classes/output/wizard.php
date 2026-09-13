@@ -160,6 +160,8 @@ class wizard implements \renderable, \templatable {
                 'role'       => $source['characters'][$i]['role'] ?? '',
                 'trait'      => $source['characters'][$i]['trait'] ?? '',
                 'appearance' => $source['characters'][$i]['appearance'] ?? '',
+                'ismale'     => ($source['characters'][$i]['gender'] ?? '') === 'male',
+                'isfemale'   => ($source['characters'][$i]['gender'] ?? '') === 'female',
             ];
         }
 
@@ -175,7 +177,7 @@ class wizard implements \renderable, \templatable {
         return [
             'cmid'         => (int)$this->cm->id,
             'sesskey'      => sesskey(),
-            'themeclass'   => 'aibs-theme-' . $this->scenario->theme,
+            'themeclass'   => schema::theme_class((string)$this->scenario->theme),
             'viewurl'      => (new \moodle_url(
                 '/mod/aibranchedscenario/view.php',
                 ['id' => $this->cm->id]

@@ -147,19 +147,23 @@ class field_brief {
                 . 'for. Example: You are the registered nurse handing over bay four at '
                 . 'the end of a night shift.',
             'characterfull' =>
-                'One other person in the scenario. Answer as exactly four parts on one '
+                'One other person in the scenario. Answer as exactly five parts on one '
                 . 'line separated by vertical bars, in this order and nothing else: '
                 . 'given name | their role | one trait shown as behaviour under pressure '
-                . '| how they look, for illustration only. They must have their own '
+                . '| how they look, for illustration only | male or female. The last part '
+                . 'is not a description of them: it chooses the voice their spoken line is '
+                . 'read in and keeps their face the same from one scene image to the next, '
+                . 'so answer it with one of those two words and nothing else. '
+                . 'They must have their own '
                 . 'reason for being difficult rather than existing to be corrected, and '
                 . 'they are not the person the learner is playing. If the context lists '
                 . 'people already in the scenario, this must be somebody else, with a '
                 . 'different name and a different job, who wants something the others do '
                 . 'not. Give no age and no ethnicity, do not name a real person, and do '
-                . 'not use a vertical bar inside any of the four parts. '
+                . 'not use a vertical bar inside any of the five parts. '
                 . 'Example: Priya | Incoming nurse taking on four bays | Asks the same '
                 . 'question a second time, more quietly | Tall, dark hair tied back, '
-                . 'navy scrubs and a lanyard.',
+                . 'navy scrubs and a lanyard | female.',
             'charactertrait' =>
                 'One trait that shapes how this person behaves under pressure, as '
                 . 'behaviour rather than a label. Under twelve words. '
@@ -171,9 +175,17 @@ class field_brief {
                 . 'Example: Tall, dark hair tied back, navy scrubs and a lanyard.',
             'principles' =>
                 'The handful of principles good practice in this scenario turns on, drawn '
-                . 'from the source content. Three to five short lines, one principle each, '
-                . 'each phrased as something a person does. '
-                . 'Example: Say back what you heard before you answer it.',
+                . 'from the source content. Three to five lines, one principle each, each '
+                . 'phrased as something a person does. '
+                . 'Write each one as three parts on one line separated by vertical bars, in '
+                . 'this order: the principle | an example | a pitfall. The example is the '
+                . 'words a learner could actually say, written out in full, never a '
+                . 'restatement of the principle. The pitfall is the plausible version that '
+                . 'does not work, and why. Both are taught before the scenario starts and '
+                . 'both are required. '
+                . 'Example: Say back what you heard before you answer it. | "So the deadline '
+                . 'is the problem, not the guidelines - have I got that right?" | Asking '
+                . '"does that make sense?", which invites a yes and tells you nothing.',
             'imageprompt' =>
                 'One extra instruction for the illustrator, added on top of a brief that '
                 . 'already fixes the location, the people and the visual style, so do not '

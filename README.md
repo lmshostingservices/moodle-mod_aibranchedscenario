@@ -7,8 +7,8 @@ that connects the experience back to the source material.
 
 - **Component:** `mod_aibranchedscenario`
 - **Installation folder:** `mod/aibranchedscenario`
-- **Release:** 1.36.0
-- **Numeric version:** 2026091246
+- **Release:** 1.42.0
+- **Numeric version:** 2026091253
 - **Supported Moodle versions:** 4.4 to 5.2 (`$plugin->requires = 2024042200`)
 - **Licence:** GNU GPL v3 or later
 
