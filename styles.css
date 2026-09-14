@@ -4298,36 +4298,23 @@ button.aibs-avatar {
     }
 }
 
-.aibs-slide.aibs-noscene .aibs-node-body > * {
-    margin-inline: auto;
-    max-width: 62ch;
-}
+/* One column, centred as a block, with every line left-aligned inside it.
+   Each of these rules was true on its own and the set of them was the fault. The body
+   centred its children, and a centred flex child shrinks to fit its own content - so every
+   block ended up a different width and therefore at a different LEFT EDGE. The pill started
+   in one place, the heading in another, the prose in a third, the choices in a fourth.
+   Measured on a decision card at 1440px: six blocks, six left edges, 467px between the
+   outermost two. Widening the prose to the full card and leaving its siblings capped only
+   sharpened it, because the prose then began further left than everything beneath it.
 
-/* Prose on a card with no picture uses the card.
-   The 62ch measure above is right where a column of text sits beside a picture: it is the
-   line length reading is comfortable at. On a card with no picture it left a block of words
-   half the width of the card it was sitting in, with empty card either side, which reads as
-   a mistake rather than as a measure. The card is the measure here. */
-.aibs-slide.aibs-noscene .aibs-node-body > .aibs-prose {
+   A reader follows one left edge down the page. So the column is the thing that is centred,
+   once, on the body - and the children simply fill it. They no longer have widths of their
+   own to disagree about. */
+.aibs-slide.aibs-noscene .aibs-node-body > * {
+    align-self: stretch;
     margin-inline: 0;
     max-width: none;
-    width: 100%;
-}
-
-/* A row of cards uses the width; a measure is for prose.
-   `max-width: none` was only half of it. The body centres its children, and a centred
-   flex child shrinks to its content instead of stretching - so the three readings took
-   only as much width as they wanted and wrapped to two-and-one down the middle of a card
-   that had the whole width spare. A row that is meant to use the width has to be told to
-   stretch as well as told not to be capped. */
-.aibs-slide.aibs-noscene .aibs-node-body > .aibs-rings,
-.aibs-slide.aibs-noscene .aibs-node-body > .aibs-skill-list,
-.aibs-slide.aibs-noscene .aibs-node-body > .aibs-journey-list,
-.aibs-slide.aibs-noscene .aibs-node-body > .aibs-lesson-list,
-.aibs-slide.aibs-noscene .aibs-node-body > .aibs-takeaways {
-    align-self: stretch;
-    max-width: none;
-    width: 100%;
+    width: auto;
 }
 
 /* A record reads down a left edge, not from the middle out.
@@ -4419,8 +4406,17 @@ button.aibs-avatar {
 
 }
 
+/* The column itself: a comfortable measure, centred in the card, holding everything.
+   62ch was the measure for a column of text sitting beside a picture. With no picture the
+   card is wider and the same measure left a narrow strip down the middle with empty card
+   either side, which reads as a mistake rather than as a choice. This is wide enough to use
+   the card and short enough to still read as a line of prose. */
 .aibs-slide.aibs-noscene .aibs-node-body {
-    align-items: center;
+    align-items: stretch;
+    margin-inline: auto;
+    max-width: 76ch;
+    text-align: start;
+    width: 100%;
 }
 
 /* The readings were moved to the front of the consequence markup so that a card with no

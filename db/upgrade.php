@@ -602,5 +602,11 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091256, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091257) {
+        // Release 1.45.0 changes no schema. A slide with no picture now lays its content
+        // out as one column, centred in the card, with every block on the same left edge.
+        upgrade_mod_savepoint(true, 2026091257, 'aibranchedscenario');
+    }
+
     return true;
 }

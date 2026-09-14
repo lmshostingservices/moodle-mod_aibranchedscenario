@@ -2,6 +2,34 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.45.0] - 2026-09-13
+
+### Fixed — a slide with no picture had six different left edges
+
+Reported with a screenshot, and the measurement was worse than it looked: on a decision card
+at 1440px, **six blocks sat at six different left edges, 467px between the outermost two.**
+The pill started in one place, the heading in another, the prose in a third, the spoken line
+in a fourth, the question in a fifth, the choices in a sixth.
+
+Every rule that produced it was defensible on its own. The body centred its children — and a
+centred flex child shrinks to fit its own content, so each block ended up a different width
+and therefore at a different left edge. An earlier fix widened the prose to the full card to
+stop it reading as a narrow strip, which was right about the strip and made the alignment
+worse: the prose then began further left than everything beneath it.
+
+A reader follows one left edge down the page. So **the column is now the thing that is
+centred**, once, on the body — and the children fill it. They no longer have widths of their
+own to disagree about. The measure is wide enough to use the card and short enough to still
+read as prose.
+
+Two exceptions, both deliberate and both stated rather than discovered: the finish screen is
+a statement and stays centred, and a consequence with no picture keeps its readings in the
+column the picture would have had.
+
+**Guarded permanently.** A new sweep measures the left edge of every block on every
+no-picture slide at five widths and fails on a second edge or on centred text, with only
+those two exceptions allowed.
+
 ## [v1.44.0] - 2026-09-13
 
 ### Fixed — every choice in a pasted scenario led nowhere
