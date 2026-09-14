@@ -81,10 +81,9 @@ class content_standard {
             // Watched to fail: both arrived inside the summary as prose, so the teaching
             // slide showed a rule and nothing a learner could use.
             'principle' => [
-                'short' => 'Every principle carries "example" and "pitfall" as their own '
-                    . 'non-empty fields, never folded into the summary: the example is the '
-                    . 'words a learner could say, written out; the pitfall is the plausible '
-                    . 'version that fails, and why.',
+                'short' => '"example" and "pitfall" are their own non-empty fields on every '
+                    . 'principle, never folded into the summary: the example is words a '
+                    . 'learner could say; the pitfall is the plausible version that fails.',
                 'long'  => '- Every principle carries an "example" and a "pitfall", each in '
                     . 'its own field and never folded into the summary as prose. The example '
                     . 'is the words a learner could actually say or do, written as a line of '
@@ -171,6 +170,16 @@ class content_standard {
                     . 'it was a poor choice. One or two sentences, in the same voice as the '
                     . 'story, not praise, not a lecture, and never addressed to the learner '
                     . 'as a student.',
+            ],
+            'cast' => [
+                'short' => 'Name the same cast in every scene; no unnamed stand-ins.',
+                'long'  => '- The scenario has a named cast, and every scene names the people '
+                    . 'in it. If Mark the lawyer is in scene one, scene three refers to Mark '
+                    . 'by name and not to "the lawyer" or "a colleague". Do not introduce a '
+                    . 'new unnamed person to do a job one of the named cast would do, and do '
+                    . 'not change anyone\'s role, seniority or gender part-way through. The '
+                    . 'illustrations are briefed from this text, so a scene that stops naming '
+                    . 'someone is a scene that gets a picture of a stranger.',
             ],
             'motives' => [
                 'short' => 'Everyone else wants something of their own and has a reason for '

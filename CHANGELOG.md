@@ -2,6 +2,68 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.54.0] - 2026-09-14
+
+### Changed
+- **Images.** Every page of the debrief drew the same frame, scenes repeated between slides,
+  and a character named in scene one could come back as a different person in scene three.
+  The brief was also mostly governance: roughly two thirds of it described the rules of the
+  set and about a tenth described what was actually in front of the camera, so the model
+  filled the gap from the training mean - and the training mean for "meeting room,
+  professionals" is the stock photograph. Specifically:
+  - The cast sheet now travels with **every** frame. It used to be included only when that
+    scene's own prose happened to name somebody, so a lawyer called Mark was simply absent
+    from the brief for any scene that did not say "Mark" - and a model told to draw a lawyer,
+    with nothing said about which one, draws a different one.
+  - A scene that names nobody is drawn with named cast members rather than falling through to
+    "one worker, seen from behind", which was how a set acquired people who were in no other
+    frame.
+  - Each frame names a physical object the scene is about, chosen from the words the scene
+    already uses, because a model renders nouns and "the client cares about money more than
+    timing" has no pixels.
+  - The lighting rig is chosen from the setting rather than hashed from the scenario, so a
+    night shift no longer gets late-afternoon west windows - a rig that contradicts its own
+    location is rendered as mush, which is what read back as poor lighting. It then ramps
+    across the set: open and even early, harder in the middle, hardest at a crisis, and
+    resolving or dropping away at the ending.
+  - The composition is chosen from how many people are in the frame and what kind of moment
+    it is, rather than by hashing the node id, and each option carries a focal length, a
+    camera height and something in the foreground.
+  - Hands, eyelines, one incongruous detail and an explicit refusal of the stock photograph
+    are now in every brief.
+  - Removed: "with the people in the middle third of the frame" (a written request for the
+    centred stock composition), "outwardly ordinary / routine work continuing / steady light"
+    (asking for boring and receiving it), the abstract list of the learner's options (a model
+    cannot photograph a proposition), and "cinematic, shallow depth of field" (the most
+    diluted phrase available, and it asserted a lens and a light over the ones the frame had
+    just chosen for the scene).
+  - The blanket ban on text was fighting the props - the best props are paper - so paperwork
+    is now present but unreadable rather than absent.
+- The content standard gained a rule requiring the same named cast in every scene, since the
+  illustrations are briefed from that text: a scene that stops naming someone is a scene that
+  gets a picture of a stranger.
+- **Work in progress is a modal.** It was a strip at the top of a long form while the teacher
+  watched the button they had pressed at the bottom of it, and it left the page fully usable -
+  so the button could be pressed twice and the browser navigated away mid-import, abandoning a
+  half-written scenario or credits already spent. It now covers the page, says what is being
+  made stage by stage, cannot be dismissed, and blocks navigation until the work is done.
+  "Save and apply" was also missing from the set of buttons disabled while work is running.
+- **Publishing says so.** It ended in a toast that had faded by the time the teacher looked
+  up, on a page that looked exactly as it had before. It closes on a stated result that names
+  the next step - switching to student view.
+
+### Fixed
+- The image brief was cut at the character when it ran long, leaving briefs ending mid-word.
+  That is not a shorter instruction; it is a sentence the model has to guess the end of. It
+  falls back to the last full stop.
+- One verbose character record, or a paragraph-long setting, could spend the entire brief
+  budget on its own. Both are capped, as is a teacher's own direction.
+- The harness reported strings added in the current release as missing, because the string
+  manager's cache was built before the plugin was synced in. It resets before it is asked.
+- The browser sweeps inlined the stylesheet at build time and were measuring a page assembled
+  two days earlier - reporting "0 findings" against CSS that was not the CSS being shipped.
+  Every sweep now rebuilds the page first.
+
 ## [v1.53.0] - 2026-09-14
 
 ### Changed

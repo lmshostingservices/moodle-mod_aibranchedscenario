@@ -2133,22 +2133,136 @@
 
 /* -------------------------------------------------------- status and error */
 
-.aibs-loading {
+/* A strip at the top of a long form, while the teacher watches the button they pressed at
+   the bottom of it - and with the form still fully usable behind it, so the button could
+   be pressed twice and the page could be navigated away from mid-import. It is a modal.
+
+   The scrim is fixed to the viewport rather than to the wizard, because the wizard is
+   taller than the screen and a scrim that ends where the card ends covers nothing.
+
+   Design tokens are declared on the .aibs-wizard shell, and the scrim is inside it, so
+   every var() here resolves. The z-index is above Moodle's own sticky footer, which sits
+   at 1030 in Boost and would otherwise sit on top of a dialog that is meant to be modal. */
+.aibs-workscrim {
     align-items: center;
-    color: var(--aibs-muted);
+    background: rgba(15, 23, 42, .55);
+    backdrop-filter: blur(2px);
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px 10px;
+    inset: 0;
     justify-content: center;
-    padding: 26px;
+    padding: 24px;
+    position: fixed;
+    z-index: 1100;
+}
+
+.aibs-workscrim[hidden] {
+    display: none;
+}
+
+.aibs-worksheet {
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius);
+    box-shadow: 0 24px 64px rgba(15, 23, 42, .28);
+    max-width: 34rem;
+    padding: 28px 30px;
+    text-align: center;
+    width: 100%;
+}
+
+.aibs-worksheet:focus {
+    outline: none;
+}
+
+.aibs-work-spinner {
+    margin-bottom: 14px;
 }
 
 .aibs-loading-text {
     font-weight: var(--aibs-weight-label);
+    margin: 0 0 4px;
 }
 
-.aibs-loading[hidden] {
-    display: none;
+/* The stages of the job, reading down a left edge - a list of what is happening is a
+   list, not a centred paragraph, and a reader follows one left edge down it. */
+.aibs-worksteps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    list-style: none;
+    margin: 16px auto 0;
+    max-width: 26rem;
+    padding: 0;
+    text-align: start;
+}
+
+.aibs-workstep {
+    align-items: center;
+    color: var(--aibs-muted);
+    display: grid;
+    font-size: var(--aibs-text-small);
+    gap: 10px;
+    grid-template-columns: 18px minmax(0, 1fr);
+}
+
+/* One shape per state, so the list reads without relying on colour: a stage still to come
+   is an empty ring, the one running is a filled ring, the finished ones are ticked. */
+.aibs-workstep-mark {
+    block-size: 14px;
+    border: 2px solid var(--aibs-border);
+    border-radius: 999px;
+    display: block;
+    inline-size: 14px;
+    justify-self: center;
+    position: relative;
+}
+
+.aibs-workstep-doing {
+    color: var(--aibs-text);
+    font-weight: var(--aibs-weight-label);
+}
+
+.aibs-workstep-doing .aibs-workstep-mark {
+    animation: aibs-workpulse 1.4s var(--aibs-ease) infinite;
+    background: var(--aibs-accent);
+    border-color: var(--aibs-accent);
+}
+
+.aibs-workstep-done .aibs-workstep-mark {
+    background: var(--aibs-positive);
+    border-color: var(--aibs-positive);
+}
+
+/* The tick is a clipped solid rather than two borders on adjacent edges of one box: an
+   element coloured on one edge only is the thing this product does not draw, and a check
+   built from a bottom border and a start border is exactly that, rotated 45 degrees. */
+.aibs-workstep-done .aibs-workstep-mark::after {
+    background: var(--aibs-surface);
+    clip-path: polygon(14% 46%, 0 60%, 38% 100%, 100% 22%, 86% 8%, 36% 72%);
+    content: '';
+    inset: 3px;
+    position: absolute;
+}
+
+@keyframes aibs-workpulse {
+    50% { opacity: .45; }
+}
+
+.aibs-worknote {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-small);
+    margin: 18px 0 0;
+}
+
+/* The page behind a modal does not scroll. */
+body.aibs-work-locked {
+    overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aibs-workstep-doing .aibs-workstep-mark {
+        animation: none;
+    }
 }
 
 .aibs-spinner {

@@ -40,6 +40,9 @@ const SELECTORS = {
     loading: '[data-region="loading"]',
     loadingText: '[data-region="loadingtext"]',
     loadingEta: '[data-region="loadingeta"]',
+    workSteps: '[data-region="worksteps"]',
+    workDialog: '[data-region="workdialog"]',
+    workLive: '[data-region="worklive"]',
 };
 
 /**
@@ -93,6 +96,8 @@ class Wizard {
             'saved', 'generationqueued', 'generationrunning', 'generationready',
             'published', 'error:generic', 'nosuggestion', 'unsavedchanges',
             'fillingfields', 'promptcopied', 'restore:nothing', 'mediaqueued',
+            'work:checking', 'work:saving', 'work:media', 'work:reading', 'work:filling',
+            'work:writing', 'work:done', 'worknote',
         ];
         const values = await getStrings(keys.map((key) => ({key, component: 'mod_aibranchedscenario'})));
         keys.forEach((key, index) => {
@@ -120,14 +125,38 @@ class Wizard {
             this.dirty = true;
         });
 
+        // Work in flight blocks the page as firmly as the browser allows. Leaving mid-way
+        // through an import abandons a scenario half-written; leaving mid-way through a
+        // generation abandons credits that have already been spent.
         window.addEventListener('beforeunload', (event) => {
-            if (!this.dirty) {
+            if (!this.busy && !this.dirty) {
                 return undefined;
             }
             event.preventDefault();
             event.returnValue = '';
             return '';
         });
+
+        // Nothing inside the dialog can be tabbed out of, and nothing outside it can be
+        // clicked, while the work is running. A modal that can be tabbed behind is not a
+        // modal - it just looks like one.
+        document.addEventListener('keydown', (event) => {
+            if (!this.busy) {
+                return;
+            }
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+            if (event.key === 'Tab') {
+                const dialog = this.root.querySelector(SELECTORS.workDialog);
+                if (dialog) {
+                    event.preventDefault();
+                    dialog.focus();
+                }
+            }
+        }, true);
 
         this.root.querySelectorAll('[data-group]').forEach((group) => this.syncOther(group));
         const wanted = parseInt(new URL(window.location.href).searchParams.get('step'), 10);
@@ -424,11 +453,63 @@ class Wizard {
         if (eta) {
             eta.hidden = !(busy && showEta);
         }
+        // Import was missing from this list, so "Save and apply" stayed live while the
+        // import it had started was still running and a second press queued a second one.
         this.root.querySelectorAll(
-            '[data-action="generate"], [data-action="publish"], [data-action="populate"], [data-action="suggest"]'
+            '[data-action="generate"], [data-action="publish"], [data-action="populate"],' +
+            ' [data-action="suggest"], [data-action="import"]'
         ).forEach((button) => {
             button.disabled = busy;
         });
+        // The page behind the dialog does not scroll while the dialog is up, and the
+        // dialog takes focus so a keyboard user is inside it rather than tabbing around a
+        // form they cannot use.
+        document.body.classList.toggle('aibs-work-locked', Boolean(busy));
+        if (busy) {
+            const dialog = this.root.querySelector(SELECTORS.workDialog);
+            if (dialog) {
+                dialog.focus({preventScroll: true});
+            }
+        } else {
+            this.workSteps([]);
+        }
+    }
+
+    /**
+     * Replace the list of things this job is doing.
+     *
+     * A spinner and the word "working" tell a teacher that something is happening and
+     * nothing about what. These are the actual stages of the job, each one marked as it
+     * completes, so a wait of a minute and a half reads as progress rather than as a
+     * page that has stopped responding.
+     *
+     * @param {Array} steps Each {text, state} where state is 'doing', 'done' or 'todo'.
+     * @returns {void}
+     */
+    workSteps(steps) {
+        const list = this.root.querySelector(SELECTORS.workSteps);
+        if (!list) {
+            return;
+        }
+        list.replaceChildren();
+        steps.forEach((step) => {
+            const row = document.createElement('li');
+            row.className = 'aibs-workstep aibs-workstep-' + (step.state || 'todo');
+            const mark = document.createElement('span');
+            mark.className = 'aibs-workstep-mark';
+            mark.setAttribute('aria-hidden', 'true');
+            const text = document.createElement('span');
+            text.textContent = step.text;
+            row.append(mark, text);
+            list.append(row);
+        });
+        // Announced once, as one line, rather than as a list that a screen reader reads
+        // again from the top every time a step changes.
+        const live = this.root.querySelector(SELECTORS.workLive);
+        const doing = steps.filter((step) => step.state === 'doing')[0];
+        if (live && doing) {
+            live.textContent = doing.text;
+        }
     }
 
     /**
@@ -543,6 +624,17 @@ class Wizard {
         for (let i = 0; i < empty.length; i += batch) {
             const slice = empty.slice(i, i + batch);
             this.setBusy(true, this.strings.fillingfields);
+            // This route has real progress to report - it walks the empty fields in
+            // batches - so it reports it rather than showing one unchanging spinner for
+            // the length of the run.
+            this.workSteps([
+                {text: this.strings['work:reading'], state: 'done'},
+                {
+                    text: this.strings['work:filling'] + ' ('
+                        + Math.min(i + slice.length, empty.length) + '/' + empty.length + ')',
+                    state: 'doing',
+                },
+            ]);
             const source = this.collect();
             const answers = await Promise.all(slice.map((field) =>
                 this.call('suggest_field', {field: field, source: source})
@@ -842,6 +934,11 @@ class Wizard {
         }
 
         this.setBusy(true, this.strings.generationqueued, true);
+        this.workSteps([
+            {text: this.strings.generationqueued, state: 'doing'},
+            {text: this.strings['work:writing'], state: 'todo'},
+            {text: this.strings['work:media'], state: 'todo'},
+        ]);
         try {
             const queued = await this.call('queue_generation', {});
             await this.poll(queued.jobid);
@@ -961,6 +1058,11 @@ class Wizard {
             }
             if (status.status === 'running') {
                 this.setBusy(true, this.strings.generationrunning, true);
+                this.workSteps([
+                    {text: this.strings.generationqueued, state: 'done'},
+                    {text: this.strings['work:writing'], state: 'doing'},
+                    {text: this.strings['work:media'], state: 'todo'},
+                ]);
             }
             if (status.status === 'ready') {
                 // A run where some or all of the images failed used to look identical
@@ -973,6 +1075,11 @@ class Wizard {
                     );
                 }
                 this.setBusy(true, this.strings.generationready);
+                this.workSteps([
+                    {text: this.strings.generationqueued, state: 'done'},
+                    {text: this.strings['work:writing'], state: 'done'},
+                    {text: this.strings['work:media'], state: 'doing'},
+                ]);
                 this.dirty = false;
                 window.location.reload();
                 return true;
@@ -995,18 +1102,50 @@ class Wizard {
      */
     async publish() {
         this.clearError();
-        this.setBusy(true);
+        this.setBusy(true, this.strings['work:publishing']);
+        this.workSteps([{text: this.strings['work:publishing'], state: 'doing'}]);
         try {
             await this.call('publish_scenario', {});
-            Toast.show(this.strings.published, 'success');
-            Notification.addNotification({message: this.strings.published, type: 'success'});
             this.dirty = false;
-        } catch (error) {
-            this.showError(error);
-        } finally {
+            // Publishing ended in a toast that had faded by the time the teacher looked
+            // up, on a page that looked exactly as it had before - so the one action that
+            // decides whether learners can see anything gave no sign it had happened, and
+            // nothing said what to do next. It closes on a stated result and the one step
+            // that follows it.
+            Notification.addNotification({message: this.strings.published, type: 'success'});
             this.setBusy(false);
+            await this.showPublished();
+        } catch (error) {
+            this.setBusy(false);
+            this.showError(error);
         }
         return true;
+    }
+
+    /**
+     * Say that the scenario is live, and what to do to see it.
+     *
+     * @returns {Promise} Resolves once the teacher dismisses it.
+     */
+    async showPublished() {
+        // The same modal class the generate confirmation uses, so the two read as one
+        // product rather than as two dialogs from different decades. There is nothing to
+        // save here, so the save button carries the acknowledgement and the cancel button
+        // is taken away - a dialog with two ways to say "fine" is a dialog with one too
+        // many buttons.
+        const modal = await ModalSaveCancel.create({
+            title: await getString('publishdone:title', 'mod_aibranchedscenario'),
+            body: `<p>${await getString('publishdone:lead', 'mod_aibranchedscenario')}</p>`,
+        });
+        modal.setSaveButtonText(await getString('publishdone:close', 'mod_aibranchedscenario'));
+        return new Promise((resolve) => {
+            modal.getRoot().on(ModalEvents.save, () => modal.hide());
+            modal.getRoot().on(ModalEvents.hidden, () => {
+                modal.destroy();
+                resolve(true);
+            });
+            modal.show();
+        });
     }
 
     /**
@@ -1092,12 +1231,25 @@ class Wizard {
             return false;
         }
         this.clearError();
-        this.setBusy(true);
+        this.setBusy(true, this.strings['work:checking']);
+        this.workSteps([
+            {text: this.strings['work:checking'], state: 'doing'},
+            {text: this.strings['work:saving'], state: 'todo'},
+            {text: this.strings['work:media'], state: 'todo'},
+        ]);
         try {
             const response = await this.call('import_definition', {
                 definition: encodeDefinition(field.value)
             });
             if (response.imported) {
+                // The call returns once everything is done, so the stages are marked
+                // complete together rather than pretending to have been watched.
+                this.workSteps([
+                    {text: this.strings['work:checking'], state: 'done'},
+                    {text: this.strings['work:saving'], state: 'done'},
+                    {text: this.strings['work:media'],
+                        state: response.mediaqueued > 0 ? 'done' : 'todo'},
+                ]);
                 this.dirty = false;
                 // An import produces a finished scenario, so the teacher belongs at the
                 // step where it is reviewed and published rather than back at the top of
@@ -1113,15 +1265,17 @@ class Wizard {
                 if (response.mediaqueued > 0) {
                     url.searchParams.set('media', String(response.mediaqueued));
                 }
+                // The dialog stays up through the navigation. Clearing it first would
+                // show the teacher an idle form for the moment before the page changes,
+                // which reads as the import having done nothing.
                 window.location.assign(url.toString());
-            } else {
-                this.showError({message: response.problems});
+                return true;
             }
+            this.showError({message: response.problems});
         } catch (error) {
             this.showError(error);
-        } finally {
-            this.setBusy(false);
         }
+        this.setBusy(false);
         return true;
     }
 

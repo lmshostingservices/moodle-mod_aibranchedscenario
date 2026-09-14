@@ -107,11 +107,26 @@
 
         <div class="aibs-error" data-region="error" role="alert" hidden></div>
 
-        <div class="aibs-loading" data-region="loading" role="status" aria-live="polite" hidden>
-            <span class="aibs-spinner" aria-hidden="true"></span>
-            <span class="aibs-loading-text" data-region="loadingtext">
-                {{#str}} working, mod_aibranchedscenario {{/str}}</span>
-            <span class="aibs-loading-eta" data-region="loadingeta" hidden>{{generationeta}}</span>
+        {{! A strip at the top of a long form, while a teacher watches the button they
+            pressed at the bottom of it. Worse, it left the page fully usable: the button
+            could be pressed again, the browser could be navigated away from, and a
+            generation that was actually running looked like nothing had happened.
+
+            It is a modal now. It covers the form, it says what is being made rather than
+            just "working", and it cannot be dismissed while the work is in flight - there
+            is no close control, Escape does nothing, and the page will not be left. }}
+        <div class="aibs-workscrim" data-region="loading" role="status" aria-live="polite" hidden>
+            <div class="aibs-worksheet" role="dialog" aria-modal="true"
+                 aria-labelledby="aibs-worktitle" data-region="workdialog" tabindex="-1">
+                <span class="aibs-spinner aibs-work-spinner" aria-hidden="true"></span>
+                <h3 class="aibs-h3 aibs-loading-text" id="aibs-worktitle" data-region="loadingtext">
+                    {{#str}} working, mod_aibranchedscenario {{/str}}</h3>
+                <ul class="aibs-worksteps" data-region="worksteps"></ul>
+                <p class="aibs-loading-eta" data-region="loadingeta" hidden>{{generationeta}}</p>
+                <p class="aibs-worknote">{{#str}} worknote, mod_aibranchedscenario {{/str}}</p>
+                <span class="aibs-sr-only" role="status" aria-live="polite"
+                      data-region="worklive"></span>
+            </div>
         </div>
 
         <section class="aibs-card" data-region="step" data-step="1">

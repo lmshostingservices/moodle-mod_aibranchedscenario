@@ -660,5 +660,13 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091465, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091466) {
+        // Release 1.54.0 changes no schema. The image briefs carry the cast, an object, a
+        // lighting rig and real staging, and the debrief pages are illustrated from their
+        // own words - so regenerate an activity's media to pick up the frames they now ask
+        // for.
+        upgrade_mod_savepoint(true, 2026091466, 'aibranchedscenario');
+    }
+
     return true;
 }
