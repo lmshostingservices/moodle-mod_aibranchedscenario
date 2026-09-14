@@ -698,8 +698,44 @@ class Player {
         this.setBusy(true);
         try {
             const response = await this.call('get_debrief', {attemptid: this.attemptId});
+            // The closing card is the last thing a learner sees and it said the same thing
+            // after every run: a green tick, a blue figure and a grey pill. A tick means
+            // "all correct", so it was telling someone who scored 32% that they had got it
+            // right. The verdict, the mark, the pill and the figure all take the band the
+            // score actually earned, and the tick is kept for the one run that earns it.
+            const endpercent = Math.round(response.score);
+            const endband = this.band(endpercent);
+            const endperfect = endpercent >= 100;
+            const verdictkey = endperfect ? 'endverdict:perfect' : {
+                'aibs-tone-good': 'endverdict:strong',
+                'aibs-tone-warn': 'endverdict:mixed',
+                'aibs-tone-bad': 'endverdict:weak',
+            }[endband.tone];
+            // The scenario's own frames, walked once. Each page takes its own picture when
+            // it has one and the next unused frame when it does not; the walk never
+            // returns to a frame it has already handed out while an unused one remains.
+            const spare = (response.sceneurls || []).slice();
+            const used = new Set([response.whatmatteredimageurl, response.criticalimageurl,
+                response.practiceimageurl, response.takeawaysimageurl, response.outcomeimageurl]
+                .filter(Boolean));
+            const pageimage = (own) => {
+                if (own) {
+                    return own;
+                }
+                while (spare.length) {
+                    const next = spare.shift();
+                    if (next && !used.has(next)) {
+                        used.add(next);
+                        return next;
+                    }
+                }
+                return '';
+            };
             const context = Object.assign({}, response, {
                 outcomeclass: 'aibs-outcome-' + response.outcome,
+                endtone: endband.tone,
+                endperfect: endperfect,
+                endverdict: this.strings[verdictkey] || '',
                 hassourceconnection: response.sourceconnectionparas.length > 0,
                 hascritical: response.criticaldecisions.length > 0,
                 haspractice: response.practice.length > 0,
@@ -710,11 +746,22 @@ class Player {
                 criticaldecisions: this.numbered(response.criticaldecisions),
                 practice: this.numbered(response.practice),
                 hastakeaways: response.takeaways.length > 0,
-                // Every screen is picture-left, including these. The debrief has no scene of
-                // its own, so it borrows the one the scenario opened on rather than being
-                // the one set of screens with a different silhouette.
+                // Every screen is picture-left, including these - but for a long time every
+                // one of them borrowed the SAME frame, the one the scenario opened on. The
+                // picture is there so a page is remembered by it, and five pages carrying
+                // one photograph are remembered by none of them.
+                //
+                // A page uses the frame briefed from its own words. Where that frame does
+                // not exist - an older revision, or a generation that was refused - it
+                // takes the next unused scene from the scenario instead of falling back to
+                // the opening frame again, so no two pages in a row look alike.
                 hasimage: Boolean(this.openingImage()),
                 imageurl: this.openingImage(),
+                whatmatteredimageurl: pageimage(response.whatmatteredimageurl),
+                criticalimageurl: pageimage(response.criticalimageurl),
+                practiceimageurl: pageimage(response.practiceimageurl),
+                takeawaysimageurl: pageimage(response.takeawaysimageurl),
+                outcomeimageurl: pageimage(response.outcomeimageurl),
                 allowreplay: this.root.dataset.replay !== '0',
                 radar: response.radar.map((entry) => {
                     const percent = Math.round(entry.value * 100);
@@ -845,7 +892,13 @@ class Player {
         // already guarded against reduced motion and against running twice; the sound is
         // guarded by the learner's own narration setting, because somebody who turned the
         // voice off did not ask for a chime instead.
-        if (slides[wanted].classList.contains('aibs-deckend')) {
+        // The celebration is for a perfect run and nothing else. It fired on every finish,
+        // so a learner who had just been told their decisions cost the deal got confetti
+        // and a chime for it, which reads as the product not having understood what
+        // happened. The card says so itself now - it carries aibs-endperfect only when
+        // every decision was the best one available.
+        if (slides[wanted].classList.contains('aibs-deckend')
+                && slides[wanted].classList.contains('aibs-endperfect')) {
             this.dropConfetti(slides[wanted]);
             this.playFanfare();
         }
@@ -1633,7 +1686,12 @@ class Player {
         if (!palette.length) {
             return;
         }
-        const pieces = 40;
+        // The fall was translateY(120%), and a percentage on translateY is a percentage of
+        // the ELEMENT, not of the layer it falls through - so a 10px piece fell 12px and
+        // the confetti was a band of colour across the top of the card that faded where it
+        // started. The distance is the height it actually has to cross, measured.
+        const distance = Math.max(layer.getBoundingClientRect().height, 240);
+        const pieces = 90;
         for (let i = 0; i < pieces; i++) {
             const piece = document.createElement('span');
             piece.className = 'aibs-finish-piece';
@@ -1646,13 +1704,15 @@ class Player {
                 '--aibs-spin',
                 (Math.random() < .5 ? -1 : 1) * (180 + Math.round(Math.random() * 540)) + 'deg'
             );
-            piece.style.animationDelay = (Math.random() * .9).toFixed(2) + 's';
-            piece.style.animationDuration = (1.7 + (Math.random() * 1.3)).toFixed(2) + 's';
+            piece.style.setProperty('--aibs-fall', Math.round(distance * (1.05 + Math.random() * .25)) + 'px');
+            piece.style.setProperty('--aibs-drift', (Math.round((Math.random() - .5) * 120)) + 'px');
+            piece.style.animationDelay = (Math.random() * 1.1).toFixed(2) + 's';
+            piece.style.animationDuration = (2.2 + (Math.random() * 1.6)).toFixed(2) + 's';
             layer.appendChild(piece);
         }
         // The layer is taken out once the last piece has landed, so a finished screen is
         // not left holding forty dead elements for as long as the learner sits on it.
-        window.setTimeout(() => layer.replaceChildren(), 4200);
+        window.setTimeout(() => layer.replaceChildren(), 5200);
     }
 
     /**
@@ -1731,6 +1791,63 @@ class Player {
     }
 
     /**
+     * Does anything on this screen have more content than the box it is drawn in?
+     *
+     * The fit loop used to ask one element - the slide's body - whether it overflowed, and
+     * a two-column card is the case where that question has the wrong answer. The body of
+     * a consequence with a picture is a grid whose height is set by the photograph beside
+     * it; the words live in the other column, and each block in that column - the prose,
+     * the amber note - clips inside ITS own box. The body therefore reported that
+     * everything fitted while the situation was cut off mid-sentence and the explanation
+     * was cut off under it, which is exactly what a learner was shown.
+     *
+     * So the question is asked of the body and of everything inside it. The picture is
+     * excluded because a photograph is meant to be cropped to its frame, and the
+     * screen-reader text is excluded because it is a 1px clipped box on purpose.
+     *
+     * @param {HTMLElement} body The slide body being measured.
+     * @returns {Boolean} True when something is being cut off.
+     */
+    overflowing(body) {
+        if (!body) {
+            return false;
+        }
+        if (body.scrollHeight > body.clientHeight + 1) {
+            return true;
+        }
+        const boxes = body.querySelectorAll('*');
+        for (let i = 0; i < boxes.length; i++) {
+            const el = boxes[i];
+            if (el.classList.contains('aibs-scene') || el.classList.contains('aibs-scene-img')
+                    || el.closest('.aibs-scene')
+                    || el.classList.contains('aibs-sr-only')
+                    || el.classList.contains('aibs-visually-hidden')
+                    || el.closest('.aibs-sr-only, .aibs-visually-hidden')) {
+                continue;
+            }
+            // Not "has a height": the case that matters is a block squeezed to nothing.
+            // Measured on the card a learner reported, the prose had a client height of 0
+            // and 339px of text inside it, while the body reported 7px of overflow - so a
+            // guard that skipped zero-height boxes skipped the only box being cut, and two
+            // steps of the scale "fixed" a screen whose sentence was still severed
+            // mid-word. Whether the element is drawn at all is a separate question, and
+            // that is what the rect count answers.
+            if (!el.getClientRects().length) {
+                continue;
+            }
+            const style = window.getComputedStyle(el);
+            if (style.overflowY !== 'hidden' && style.overflowY !== 'auto'
+                    && style.overflowY !== 'scroll') {
+                continue;
+            }
+            if (el.scrollHeight > el.clientHeight + 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Shrink a screen until it fits, rather than letting it scroll.
      *
      * A slide that scrolls is not a slide: the options are the point of the screen and
@@ -1765,7 +1882,7 @@ class Player {
                     this.trimToFold(slide);
                     let scale = 1;
                     let guard = 0;
-                    while (body.scrollHeight > body.clientHeight + 1
+                    while (this.overflowing(body)
                             && scale > Player.MIN_FIT && guard < 22) {
                         scale -= 0.04;
                         guard++;
@@ -1777,14 +1894,24 @@ class Player {
                     // it, so a learner who went fullscreen got the same words they had
                     // before with a great deal more white around them. Where the screen fits
                     // with room to spare, the type grows into it.
-                    if (guard === 0 && this.isFullscreen()) {
+                    // A slide that fits with room to spare grows into it, on a page as
+                    // well as in fullscreen.
+                    //
+                    // Growth used to be gated on fullscreen, so on a normal page the scale
+                    // could only ever step DOWN. A sparse screen - a short consequence, an
+                    // ending, a two-column card with a few lines in each - therefore sat at
+                    // its base size inside a frame with half the height empty, which reads
+                    // as small type rather than as a calm layout. The loop measures every
+                    // step, so it stops the moment the next one would not fit; the only
+                    // thing that changes is that it is now allowed to try.
+                    if (guard === 0) {
                         while (scale < Player.MAX_FIT && guard < 28) {
                             const next = Math.round((scale + 0.04) * 100) / 100;
                             slide.style.setProperty('--aibs-fit', next.toFixed(2));
                             // Reading scrollHeight settles the layout, so each step is
                             // measured rather than assumed. The last step that still fits
                             // is the one that is kept.
-                            if (body.scrollHeight > body.clientHeight + 1) {
+                            if (this.overflowing(body)) {
                                 slide.style.setProperty('--aibs-fit', scale.toFixed(2));
                                 break;
                             }
@@ -2092,6 +2219,22 @@ class Player {
         this.audio = new Audio(this.audioUrl);
         this.audio.addEventListener('ended', () => {
             this.narrationDone = true;
+            // The screen is read in two voices, one after the other.
+            //
+            // A line spoken by a named character is deliberately left out of the
+            // narrator's clip - it has one of its own, in that character's voice, which is
+            // what stops a scenario sounding like one person reading a play aloud. But
+            // nothing ever played that second clip: it was reachable only by noticing the
+            // avatar and pressing it. So a learner listening straight through heard the
+            // title, the situation and the question, and never the line in the middle of
+            // them, which is the part the scene turns on.
+            //
+            // The avatar still works and still marks itself played; this is what happens
+            // when nobody presses anything.
+            if (this.speechUrl && !this.speechDone && !this.muted) {
+                this.playSpeech(this.root.querySelector('[data-action="speak"]'));
+                return;
+            }
             this.releaseWayOn();
         });
         // A clip that dies half way through fires error, not ended. Without this the way
@@ -2369,13 +2512,37 @@ class Player {
             return;
         }
         this.muted = !this.muted;
+
+        // Mute, not stop.
+        //
+        // This used to call stopAudio(), which pauses the clip AND discards it, so
+        // unmuting had nothing to resume and started the narration again from the top. A
+        // learner who silenced one sentence lost their place in the whole scene and had to
+        // sit through it a second time - which is not what a speaker icon promises.
+        //
+        // Silencing the element leaves it playing, so unmuting picks up exactly where the
+        // voice had got to. Speech synthesis has no muted property, so it is paused and
+        // resumed, which comes to the same thing from the listener's side.
+        if (this.audio) {
+            this.audio.muted = this.muted;
+        }
+        if (window.speechSynthesis) {
+            if (this.muted) {
+                window.speechSynthesis.pause();
+            } else {
+                window.speechSynthesis.resume();
+            }
+        }
+
         if (this.muted) {
-            this.stopAudio();
-            // Muting is a decision not to listen, so the way on is not held any longer.
+            // Muting is still a decision not to listen, so the way on is not held any
+            // longer - that part was right and is unchanged.
             this.narrationDone = true;
             this.speechDone = true;
             this.releaseWayOn();
-        } else if (this.audioUrl) {
+        } else if (!this.audio && this.audioUrl) {
+            // Nothing is playing to unmute - the slide was arrived at while muted - so this
+            // press is what starts it.
             this.playAudio(this.audioUrl, this.speechUrl);
         }
         this.refreshAudioButton();

@@ -2,6 +2,108 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.53.0] - 2026-09-14
+
+### Changed
+- The debrief drew the same outcome photograph on every one of its pages - the lessons, the
+  practice points, the takeaways, the decision record and the closing card. It showed a
+  reader nothing the outcome page had not already shown, and it cost each of those pages
+  half its width. The picture now appears once, on the ending, which is the page whose
+  subject it is.
+- With the picture gone, the lesson and takeaway lists pair up across the card above 900px,
+  the way the decision record already did, and stack again below it.
+- The closing sentence on the last page took the shell's base size, which made it the
+  smallest text on the last screen a learner sees. It takes the lead size and a measure of
+  its own.
+
+- The closing card said the same thing after every run: a green ring, a green tick, a grey
+  pill and an accent-blue figure. A tick means every decision was the best one available, so
+  it is kept for the run that earns it; every other run is marked with the alert, and the
+  mark, the outcome pill and the decision-quality figure all take the band the score earned.
+  The heading now says how the run went instead of announcing that it is over.
+- A mixed outcome's pill was grey. Everything else this product reports is banded red, amber
+  or green, so a grey pill between a green one and a red one read as no reading at all.
+  Mixed is the amber band.
+
+- Every page of the debrief drew the same frame - whichever one the scenario opened on - so
+  the lessons, the critical decisions, the practice points and the takeaways were illustrated
+  by a photograph of a room nobody was talking about any more. Each of those pages is now
+  briefed its own frame from its own words, through the same prompt builder every scene uses.
+  A page whose frame is missing takes the next unused scene from the scenario rather than
+  falling back to the opening one, so no two pages look alike.
+
+### Fixed
+- **Text was being cut off mid-sentence on decision cards, silently.** The blocks that carry
+  words are flex children, and a flex child's default is to be shrinkable below its own
+  content; with `overflow: hidden` on it, the text that no longer fits is simply not drawn.
+  Measured on a reported card: the situation paragraph had a client height of ZERO with 339px
+  of text inside it, while the slide body reported seven pixels of overflow. Seven pixels is
+  two steps of the type scale, so the fit loop stepped down twice, saw the body fit and
+  declared the screen done - with the sentence severed mid-word. Two changes: the blocks that
+  carry words no longer shrink below their text, so whatever will not fit becomes honest
+  overflow on the body; and the fit loop now asks the whole screen whether anything is cut
+  off rather than asking the body alone.
+- The celebration fired on every finish, so a learner who had just been told their decisions
+  cost the deal got confetti and a chime for it. It is for a perfect run and nothing else.
+- Confetti fell twelve pixels. The fall was `translateY(120%)`, and a percentage on
+  translateY is a percentage of the piece rather than of the layer it falls through, so the
+  effect was a band of colour along the top edge of the card that faded where it started.
+  Each piece is now given the distance it has to cross, with drift and a longer fall.
+- A duplicated block at the end of the stylesheet was cancelling the closing card's column
+  layout, so below 900px the mark, heading, figures, sentence and buttons were laid out side
+  by side. The duplicate is gone.
+- The type scale only ever stepped down, so a slide with room to spare showed the same words
+  with more white around them. Growth was gated on fullscreen, which is not where a learner
+  meets a slide; the gate is gone and the type grows wherever the slide is drawn.
+- On a decision's consequence the three readings came before the note explaining what the
+  decision did. The note is the point of the screen and now comes first.
+
+## [v1.52.0] - 2026-09-14
+
+### Fixed — the opening slide still did not play
+
+The clip was being generated and published, and then never asked for. v1.47.0 added the
+narration; it did not add the playback. The slide is not a node, so no node payload covered
+it, and its article carried no `data-audio` attribute to play one from. **Generation without
+playback is silence that costs credits.**
+
+`player.php` now builds the URL and the slide carries the attribute. Verified by rendering
+the real template from a real revision: the attribute comes out with a live pluginfile URL.
+
+### Fixed — the spoken line was never read aloud unless you clicked the avatar
+
+A line said by a named character is deliberately left out of the narrator's clip — it has one
+of its own, in that character's voice, which is what stops a scenario sounding like one
+person reading a play aloud. **Nothing ever played that second clip.** It was reachable only
+by noticing the avatar and pressing it, so a learner listening straight through heard the
+title, the situation and the question, and never the line between them — the part the scene
+turns on.
+
+The narration now runs into the spoken line automatically. The avatar still plays it on
+demand and still marks itself played. The way on already waited on `speechDone`, which is how
+this was always meant to work.
+
+### Fixed — the audio button was a stop button, not a mute button
+
+Muting called `stopAudio()`, which pauses the clip **and discards it**, so unmuting had
+nothing to resume and started the narration again from the top. A learner who silenced one
+sentence lost their place in the whole scene and had to sit through it a second time — which
+is not what a speaker icon promises.
+
+Muting now silences the element and leaves it playing, so unmuting picks up exactly where the
+voice had got to. Speech synthesis has no muted property, so it is paused and resumed, which
+is the same thing from the listener's side. Muting still hands the way on back, as before.
+
+### Changed — the paste screen stopped calling things definitions
+
+"Definition" is the plugin's word for its own JSON, not a teacher's word for anything. The
+screen where somebody arrives holding whatever an assistant just gave them asked them to
+paste a "definition" and then to "import" it — two pieces of jargon for one plain act.
+
+- **Paste the prompt output here** (was "Paste the definition here")
+- **Save and apply** (was "Import definition")
+- The section heading and the three error messages on that path were reworded to match.
+
 ## [v1.51.0] - 2026-09-14
 
 Everything here was found by auditing my own work from today, and all of it is mine.

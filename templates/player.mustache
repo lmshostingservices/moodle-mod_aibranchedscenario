@@ -44,6 +44,7 @@
     * subtitle string Scenario subtitle
     * role string The role the learner plays
     * hookparas string Opening situation, array of plain-text paragraphs
+    * openingaudio string Narration for the opening situation, or empty
     * setting string Where the scenario takes place
     * published bool Whether a revision has been published
     * canattempt bool Whether this user may attempt the scenario
@@ -70,6 +71,7 @@
         "subtitle": "A late shift, a fault nobody logged",
         "role": "You are the afternoon shift supervisor.",
         "hookparas": ["It is 2:40 pm."],
+        "openingaudio": "",
         "setting": "Packing line, main floor",
         "published": true,
         "canattempt": true,
@@ -307,7 +309,11 @@
                 <div class="aibs-deck" data-region="deck" data-slide="0">
                     <div class="aibs-deck-stage">
 
-                        <article class="aibs-card aibs-deckslide aibs-slide" data-region="deckslide">
+                        {{! The deck plays each slide's own clip as it is shown. This one had no
+                            attribute to play from, so the first thing a learner heard was the
+                            second slide. }}
+                        <article class="aibs-card aibs-deckslide aibs-slide" data-region="deckslide"
+                                 data-audio="{{openingaudio}}">
                             {{#openingimage}}
                                 <div class="aibs-scene">
                                     <img src="{{openingimage}}" alt="" class="aibs-scene-img" loading="lazy">

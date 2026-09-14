@@ -1793,11 +1793,16 @@
 
 /* Mixed is the commonest ending of the three - it is the fallback band and the default
    whenever an outcome word is not recognised - and it was the only one with no badge of
-   its own, falling through to the accent colours and reading as a third brand tone. */
+   its own, falling through to the accent colours and reading as a third brand tone.
+
+   It was then given grey, which is worse than blue in one specific way: the product bands
+   everything else it reports in red, amber and green, so a grey pill between a green one
+   and a red one reads as "no reading taken" rather than as the middle of the three. Mixed
+   is the amber band, and it says so. */
 .aibs-outcome-mixed .aibs-outcome-badge {
-    background: var(--aibs-neutral-soft);
-    border-color: var(--aibs-border);
-    color: var(--aibs-neutral);
+    background: var(--aibs-warn-soft);
+    border-color: var(--aibs-warn-border);
+    color: var(--aibs-warn);
 }
 
 /* The grade takes the band of the outcome it belongs to. It was accent blue on every
@@ -1905,6 +1910,29 @@
 @media (min-width: 900px) {
     .path-mod-aibranchedscenario .aibs-journey .aibs-journey-list,
     .aibs-journey .aibs-journey-list {
+        align-items: start;
+        column-gap: clamp(14px, 1.6vw, 24px);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* The review pages carry no picture, so their lists take the whole card.
+   Every page of the debrief used to repeat the SAME outcome photograph down its left half:
+   the lessons, the practice points, the takeaways and the decision record all showed the
+   picture of the ending, which told a reader nothing they had not already seen on the
+   outcome page and cost each of those pages half its width. The photograph earns its place
+   on the ending, where it IS the subject. On a page whose subject is a list of records it
+   is decoration standing in front of the content, so those pages lost it - and the lists
+   that were squeezed into a half-width strip now pair up across the card, the same way the
+   decision record already did.
+
+   Below the two-column threshold they stack, because at that width a pair is too narrow to
+   read. */
+@media (min-width: 900px) {
+    .path-mod-aibranchedscenario .aibs-lessons .aibs-lesson-list,
+    .aibs-lessons .aibs-lesson-list,
+    .path-mod-aibranchedscenario .aibs-lastpage .aibs-takeaways,
+    .aibs-lastpage .aibs-takeaways {
         align-items: start;
         column-gap: clamp(14px, 1.6vw, 24px);
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4258,6 +4286,51 @@ button.aibs-avatar {
     width: 96px;
 }
 
+/* The closing card took the positive green whatever had happened - a green ring and a green
+   tick after a run that cost the deal. It takes the band the score earned, the same three
+   marks every other figure in the player is banded against. */
+.aibs-deckend.aibs-tone-good .aibs-finish-mark {
+    color: var(--aibs-positive);
+}
+
+.aibs-deckend.aibs-tone-warn .aibs-finish-mark {
+    color: var(--aibs-warn);
+}
+
+.aibs-deckend.aibs-tone-bad .aibs-finish-mark {
+    color: var(--aibs-negative);
+}
+
+/* "Scenario complete" is now the label above the verdict rather than the verdict itself:
+   a learner can see the scenario is complete, so the heading says how it went instead. */
+.aibs-finish-eyebrow {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-strong);
+    letter-spacing: .08em;
+    margin: 0 0 2px;
+    text-transform: uppercase;
+}
+
+/* The result the learner is waiting for was accent blue on every run, beside a grey pill
+   that named the ending in sentence case. The pill bands from the section's outcome class
+   the same way the outcome page's does, and the figure bands from the score. */
+.aibs-endstat-outcome {
+    white-space: nowrap;
+}
+
+.aibs-deckend.aibs-tone-good .aibs-endstat-score {
+    color: var(--aibs-positive);
+}
+
+.aibs-deckend.aibs-tone-warn .aibs-endstat-score {
+    color: var(--aibs-warn);
+}
+
+.aibs-deckend.aibs-tone-bad .aibs-endstat-score {
+    color: var(--aibs-negative);
+}
+
 .aibs-finish-mark svg {
     height: 100%;
     width: 100%;
@@ -4295,8 +4368,21 @@ button.aibs-avatar {
     top: -12px;
 }
 
+/* A percentage on translateY is a percentage of the ELEMENT, so 120% moved a 10px piece
+   twelve pixels: the confetti was a band of colour along the top edge of the card that
+   faded where it had started. The distance is measured and handed in as a length, so a
+   piece crosses the card it is falling through.
+
+   Two stages, because a piece that fades from the first frame never reads as falling: it
+   holds its colour through most of the drop and goes out near the floor. */
 @keyframes aibs-fall {
-    to { opacity: 0; transform: translateY(120%) rotate(var(--aibs-spin, 360deg)); }
+    0%   { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg); }
+    82%  { opacity: 1; }
+    100% {
+        opacity: 0;
+        transform: translate3d(var(--aibs-drift, 0), var(--aibs-fall, 320px), 0)
+            rotate(var(--aibs-spin, 360deg));
+    }
 }
 
 /* Nothing draws itself and nothing falls. The tick and the ring are simply there, which
@@ -4480,12 +4566,18 @@ button.aibs-avatar {
     order: 2;
 }
 
+/* Why it mattered comes before the numbers.
+   The readings were third and the explanation fourth, so a learner who had just made a
+   decision was shown three figures and had to get past them to find out what the decision
+   actually did. The explanation is the point of the screen; the readings are the scoreboard
+   underneath it. On a card with a picture the column is tight enough that what sits last is
+   what gets cut, and a cut scoreboard costs less than a cut explanation. */
 .aibs-consequence .aibs-rings {
-    order: 3;
+    order: 4;
 }
 
 .aibs-consequence .aibs-feedback {
-    order: 4;
+    order: 3;
 }
 
 .aibs-consequence .aibs-consequence-actions {
@@ -4497,6 +4589,29 @@ button.aibs-avatar {
 .aibs-consequence .aibs-node-body {
     display: flex;
     flex-direction: column;
+}
+
+/* Words do not give way. The slide body is a flex column, and a flex child's default is
+   `flex: 0 1 auto` with `min-height: 0` - it may be shrunk below its own content, and with
+   `overflow: hidden` on it the text that no longer fits is simply not drawn. Measured on
+   the card a learner reported: the situation paragraph had a CLIENT HEIGHT OF ZERO and
+   339px of text inside it, while the body reported seven pixels of overflow. Seven pixels
+   is two steps of the type scale, so the fit loop stepped down twice, saw the body fit,
+   and declared the screen done - with the sentence severed mid-word and the explanation
+   under it cut off as well. Nothing reported a fault because nothing was asked.
+
+   The blocks that carry words refuse to shrink. Whatever will not fit then shows up as
+   overflow on the BODY, where the fit loop can see it and step the whole screen down
+   together, which is the behaviour the frame was built for. The scoreboard and the
+   picture may still give - a compressed dial is still readable, half a sentence is not. */
+.aibs-slide .aibs-node-body > .aibs-prose,
+.aibs-slide .aibs-node-body > .aibs-prose-lead,
+.aibs-slide .aibs-node-body > .aibs-feedback,
+.aibs-slide .aibs-node-body > .aibs-consequence-head,
+.aibs-consequence .aibs-prose,
+.aibs-consequence .aibs-prose-lead,
+.aibs-consequence .aibs-feedback {
+    flex-shrink: 0;
 }
 
 /* ---------------------------------------------------------------- the debrief deck */
@@ -4889,43 +5004,16 @@ button.aibs-avatar:focus-visible {
     padding: 12px 18px;
 }
 
-
-
-/* The closing card: the verdict, not a full stop.
-   It was a heading and two buttons, so a learner reached the end of the whole activity and
-   had nothing to read there - while the result they earned sat on the second page of nine.
-   The figures are already in the debrief payload; this is where they belong as well, because
-   this is the screen someone is looking at when they decide whether it was worth doing. */
-.aibs-deckend-body {
-    align-items: center;
-    /* The confetti layer is inset:0 absolute, so it needs a positioned ancestor or it
-       measures itself against whatever further up the page happens to be positioned - which
-       it did, spilling 46px past each edge of the card at every width. The other finish
-       card had position:relative and overflow:hidden for exactly this reason; this one was
-       given the markup and not the containing block. */
-    overflow: hidden;
-    position: relative;
-    text-align: center;
-}
-
-.aibs-endstats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: clamp(12px, 2.4vw, 32px);
-    justify-content: center;
-    margin-block: 4px;
-}
-
-.aibs-endstat {
-    align-items: center;
-    background: var(--aibs-surface-alt);
-    border: 1px solid var(--aibs-border);
-    border-radius: var(--aibs-radius-sm);
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 8.5em;
-    padding: 12px 18px;
+/* The closing sentence was the smallest text on the last screen a learner sees.
+   It inherited nothing - no size of its own - so it fell to the shell's own base while the
+   figures above it were set in the stat scale, and the line that tells someone what they can
+   do next read smaller than the card's own labels. It is the only instruction on the page,
+   so it takes the lead size, and a measure of its own so that a card which is now the full
+   width of the frame does not run it edge to edge. */
+.aibs-deckend-body > .aibs-prose {
+    font-size: var(--aibs-text-lead);
+    margin-inline: auto;
+    max-width: 56ch;
 }
 
 /* On a phone the three stats took the card past the fold, which is the one rule this
@@ -4971,9 +5059,11 @@ button.aibs-avatar:focus-visible {
     line-height: var(--aibs-leading-tight);
 }
 
-/* The outcome is a word, not a figure, and at display size it wrapped out of its card. */
+/* The outcome is a word, not a figure, and at display size it wrapped out of its card.
+   It is now the same pill the outcome page uses, so it takes the pill's own size: a badge
+   set at heading size is a heading with a border round it, not a badge. */
 .aibs-endstat-outcome {
-    font-size: var(--aibs-text-h3);
+    font-size: var(--aibs-text-meta);
     text-wrap: balance;
 }
 

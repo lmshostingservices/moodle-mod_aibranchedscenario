@@ -513,9 +513,12 @@ class helper {
         // while the moment it describes had a voice.
         $cm = get_coursemodule_from_instance('aibranchedscenario', (int)$scenario->id, 0, false, IGNORE_MISSING);
         $narration = [];
+        $scene = [];
         if ($cm) {
             $revision = $manager->get_revision();
-            $narration = self::media_urls(context_module::instance($cm->id), $revision)['narration'];
+            $media = self::media_urls(context_module::instance($cm->id), $revision);
+            $narration = $media['narration'];
+            $scene = $media['scene'];
         }
 
         $journey = [];
@@ -538,6 +541,19 @@ class helper {
             'outcometitle' => $outcomenode['title'] ?? '',
             // The ending, and the three debrief screens that are the same every attempt.
             'outcomeaudiourl'  => (string)($narration[$outcomenode['id'] ?? ''] ?? ''),
+            // Every page of the debrief drew the same opening frame. Each one that has
+            // words of its own now has a picture briefed from those words.
+            'whatmatteredimageurl' => (string)($scene['debrief_whatmattered'] ?? ''),
+            'criticalimageurl' => (string)($scene['debrief_criticaldecisions'] ?? ''),
+            'practiceimageurl' => (string)($scene['debrief_practice'] ?? ''),
+            'takeawaysimageurl' => (string)($scene['debrief_takeaways'] ?? ''),
+            'outcomeimageurl'  => (string)($scene[$outcomenode['id'] ?? ''] ?? ''),
+            // Every frame the scenario has, in node order. A debrief page whose own
+            // picture could not be generated takes the next one of these rather than
+            // redrawing whichever frame happens to be first - the point of the picture is
+            // that the page is remembered by it, and a page illustrated by the same
+            // photograph as the four pages around it is remembered by none of them.
+            'sceneurls' => array_values(array_map('strval', $scene)),
             'whatmatteredaudiourl' => (string)($narration['debrief_whatmattered'] ?? ''),
             'practiceaudiourl' => (string)($narration['debrief_practice'] ?? ''),
             'takeawaysaudiourl' => (string)($narration['debrief_takeaways'] ?? ''),
@@ -578,6 +594,17 @@ class helper {
             'outcomelabel' => new external_value(PARAM_TEXT, 'Translated outcome band label'),
             'outcometitle' => new external_value(PARAM_TEXT, 'Title of the outcome node'),
             'outcomeaudiourl' => new external_value(PARAM_URL, 'Narration for the ending, or empty'),
+            'whatmatteredimageurl' => new external_value(PARAM_URL, 'Picture for the lessons page, or empty'),
+            'criticalimageurl' => new external_value(PARAM_URL, 'Picture for the critical decisions page, or empty'),
+            'practiceimageurl' => new external_value(PARAM_URL, 'Picture for the practice page, or empty'),
+            'takeawaysimageurl' => new external_value(PARAM_URL, 'Picture for the takeaways page, or empty'),
+            'outcomeimageurl' => new external_value(PARAM_URL, 'Picture for the ending, or empty'),
+            'sceneurls' => new external_multiple_structure(
+                new external_value(PARAM_URL, 'A scene picture from the scenario'),
+                'Every frame the scenario has, in node order',
+                VALUE_DEFAULT,
+                []
+            ),
             'whatmatteredaudiourl' => new external_value(PARAM_URL, 'Narration for what mattered, or empty'),
             'practiceaudiourl' => new external_value(PARAM_URL, 'Narration for applying it, or empty'),
             'takeawaysaudiourl' => new external_value(PARAM_URL, 'Narration for the takeaways, or empty'),

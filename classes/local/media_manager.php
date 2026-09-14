@@ -407,6 +407,58 @@ class media_manager {
             }
         }
 
+        // Every page of the debrief used to redraw the SAME picture - whichever frame the
+        // scenario opened on - so the lessons, the practice points and the takeaways were
+        // all illustrated by a photograph of a room nobody was talking about any more. A
+        // picture that does not reflect the words beside it is decoration, and the honest
+        // fix is not to remove it but to draw the right one: each of these pages gets a
+        // frame briefed from its own text, through the same prompt builder every scene
+        // uses, so it sits in the scenario's own world rather than beside it.
+        if ($wantsimages) {
+            $debrief = (array)($definition['debrief'] ?? []);
+            $pages = [
+                'whatmattered' => [
+                    get_string('whatmattered', 'mod_aibranchedscenario'),
+                    self::lines_text($debrief['whatmattered'] ?? []),
+                ],
+                'criticaldecisions' => [
+                    get_string('decisionsthatchanged', 'mod_aibranchedscenario'),
+                    self::lines_text($debrief['criticaldecisions'] ?? []),
+                ],
+                'practice' => [
+                    get_string('applyitinpractice', 'mod_aibranchedscenario'),
+                    self::lines_text($debrief['practice'] ?? []),
+                ],
+                'takeaways' => [
+                    get_string('takeaways', 'mod_aibranchedscenario'),
+                    self::takeaways_text($definition['takeaways'] ?? []),
+                ],
+            ];
+            $slot = 0;
+            foreach ($pages as $name => $page) {
+                $slot++;
+                [$title, $text] = $page;
+                if (trim($text) === '') {
+                    continue;
+                }
+                $counts['imageswanted']++;
+                $made = $this->generate_scene(
+                    $provider,
+                    $definition,
+                    [
+                        'id'        => 'debrief_' . $name,
+                        'title'     => $title,
+                        'situation' => $text,
+                    ],
+                    $style,
+                    self::DEBRIEF_ITEMID_BASE + $slot
+                );
+                if ($made) {
+                    $counts['images']++;
+                }
+            }
+        }
+
         // The reasons travel with the counts, so both routes record them without either
         // having to know they exist. A count of zero against a want of fourteen is a
         // question; the same count with "insufficientcredits" beside it is an answer.

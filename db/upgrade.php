@@ -646,5 +646,19 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091263, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091264) {
+        // Release 1.52.0 changes no schema. The opening slide plays its clip, the spoken
+        // line follows the narration, muting silences rather than rewinds, and the paste
+        // screen stopped calling things definitions.
+        upgrade_mod_savepoint(true, 2026091264, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091465) {
+        // Release 1.53.0 changes no schema. The debrief draws the scenario's picture once,
+        // on the ending it belongs to, and its review pages use the whole card instead of
+        // repeating that picture down their left half.
+        upgrade_mod_savepoint(true, 2026091465, 'aibranchedscenario');
+    }
+
     return true;
 }

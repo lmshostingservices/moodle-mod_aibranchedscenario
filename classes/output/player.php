@@ -74,6 +74,28 @@ class player implements \renderable, \templatable {
      * @param \stdClass|null $revision Published revision.
      * @return array Template context.
      */
+    /**
+     * The URL of the opening situation's narration, if it was made.
+     *
+     * @param stdClass $revision The published revision.
+     * @return string
+     */
+    protected function opening_narration($revision): string {
+        $media = new media_manager($this->context);
+        $narration = $media->urls_for_revision(
+            media_manager::AREA_REVISION_NARRATION,
+            (int)$revision->revision
+        );
+        return (string)($narration[media_manager::OPENING_KEY] ?? '');
+    }
+
+    /**
+     * Build the lesson slides that open the scenario, one per principle.
+     *
+     * @param array|mixed $definition The validated scenario definition.
+     * @param stdClass|null $revision The published revision, or null if there is none.
+     * @return array Slide rows for the template; empty when there is nothing to teach.
+     */
     protected function lesson_slides($definition, $revision): array {
         if (!is_array($definition) || empty($definition['principles']) || !$revision) {
             return [];
@@ -215,6 +237,11 @@ class player implements \renderable, \templatable {
             'hasprinciples' => is_array($definition) && !empty($definition['principles']),
             'lessonslides' => $lessonslides,
             'openingimage' => $lessonslides ? (string)$lessonslides[0]['imageurl'] : '',
+            // The opening situation has a clip of its own. It was being generated and
+            // published and then never asked for: this slide is not a node, so nothing in
+            // the node payload covered it, and its article carried no audio attribute to
+            // play one from. A learner met silence, then heard every screen after it.
+            'openingaudio' => $revision ? (string)($this->opening_narration($revision) ?? '') : '',
         ];
     }
 }
