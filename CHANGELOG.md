@@ -2,6 +2,232 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.51.0] - 2026-09-14
+
+Everything here was found by auditing my own work from today, and all of it is mine.
+
+### Fixed — 1,197 lines of the stylesheet were duplicated
+
+A whole section of `styles.css` appeared twice, byte for byte — roughly a fifth of the file.
+It came from one of my own scripted edits earlier today splicing a block out and re-appending
+it without removing the original.
+
+It was not cosmetic: duplicated `@media` blocks and rules mean the later copy silently wins,
+so any override written between the two copies had no effect. Two existing harness checks —
+counting `aspect-ratio: auto` and the frame's media query — are what caught it, by reporting
+"expected 2 got 3". Both were written as exact counts, which is usually a brittle way to
+check anything and was exactly right here.
+
+### Fixed — the closing card was laid out sideways on a phone
+
+`.aibs-deckend-body` inherited a flex **row**. Above 900px the no-picture column treatment
+overrode it; below, nothing did — so the completion mark, the heading, the three figures, the
+sentence and the buttons were laid out side by side in 170px columns.
+
+### Fixed — its confetti escaped the card
+
+The layer is `position: absolute; inset: 0`, and the card was not a positioned ancestor, so
+it measured itself against whatever further up the page was — spilling 46px past each edge at
+every width. The other finish card had `position: relative; overflow: hidden` for exactly
+this reason; this one was given the markup and not the containing block.
+
+### Fixed — every deck slide lost a quarter of a phone screen to its arrows
+
+`.aibs-deck-stage` reserves 46px each side so the arrows sit beside the card. At 1440px that
+is three per cent of the width and invisible. At 380px it is 92px, and **every deck slide in
+the product** — the lesson deck and the debrief both — was rendering into about 208px.
+
+Below 600px the arrows now sit under the deck, where a thumb can reach them more easily than
+a 34px target pinned to the screen edge, and the card gets the width back: 208px to 300px.
+
+### Fixed — a dead line, and a check that required it
+
+I added `this.audioEnabled = this.root.dataset.audio === '1'` to the debrief handler and a
+harness check asserting it was there. It is a no-op — the property is set once from the same
+attribute and nothing changes it at runtime — so the check was keeping dead code alive. Both
+removed; the check now asserts the deck actually carries and plays the clips.
+
+### Changed — the new breakpoint was not on the list
+
+My phone rules introduced a fourth breakpoint at 640px. The project keeps a deliberately
+short list — 420, 600, 899 — and a harness check enforces it. Moved to 600.
+
+## [v1.50.0] - 2026-09-14
+
+### Added — the closing card celebrates
+
+**Confetti**, in the product's own palette rather than party colours, so the moment reads as
+this product marking an ending rather than a widget bolted on. Forty elements and one
+keyframe — no library, no image. It already existed for the no-debrief finish screen and had
+never been fired for the debrief's own ending.
+
+It is now scoped to the card that asks for it: `dropConfetti()` took the *first* confetti
+layer on the page, which was fine while there was one and would have been wrong the moment
+there were two.
+
+**A short rising chime** — a major triad, arpeggiated, under half a second. Synthesised from
+an oscillator rather than loaded: a sound file would be one more asset to ship, to serve
+through pluginfile, and to have blocked by a theme. Each note is shaped rather than switched,
+because an abrupt start on a sine is a click.
+
+**Both stay out of the way.** The chime is silent for a learner who turned narration off — a
+person who did not want a voice did not ask for a chime instead — and for anyone who asked
+for reduced motion, since that request is for less going on rather than specifically for less
+movement. The confetti was already guarded both ways. Neither plays twice, and a browser that
+refuses to open an audio context simply makes no sound; nothing here is load-bearing.
+
+## [v1.49.0] - 2026-09-14
+
+### Fixed — most scenarios had no ending at all
+
+The closing card was wrapped in `{{^hastakeaways}}` — it was drawn **only when a scenario
+had no takeaways**. Every normal scenario has them, so every normal scenario simply stopped
+on a list: no completion, no result, and the Try again button buried under the last takeaway.
+A learner pressed the arrow to find out whether there was more.
+
+The reasoning behind that had been sound as far as it went — a page whose only content is
+"you have reached the end" tells someone what they can already see, so it was removed. The
+mistake was removing the page rather than giving it something to say.
+
+### Changed — the ending carries the verdict
+
+The card is always drawn now, and it closes on what the learner actually did:
+
+- a drawn completion mark
+- **the outcome they earned**, in words
+- **their decision quality**, as the headline figure
+- **how many decisions it took**
+- Try again, and keep a copy
+
+Every one of those figures was already in the debrief payload. The result sat on page two of
+nine and page nine had nothing on it.
+
+The actions moved off the takeaways page, so the way on appears once, where the scenario
+ends, rather than at the foot of the page before.
+
+### Fixed — three labels were sentences with their subject removed
+
+`decisionstaken` is `'Decisions taken: {$a}'`. Used as a bare label it rendered as
+**"DECISIONS TAKEN:"** with a dangling colon. Three standalone labels added, and the harness
+now fails any closing-card label that carries a placeholder or ends in a colon.
+
+## [v1.48.0] - 2026-09-14
+
+### Added — the ending and the whole debrief are narrated
+
+A learner who turned narration on heard every screen of the scenario and then silence for
+the half of the product that explains what just happened. That was not a fault to find: it
+was a decision taken in `player.js` — *"the debrief is read, not listened to"* — and never
+stated anywhere a teacher could see it. The ending was skipped too: `generate_for_definition`
+skipped narration for `outcome` nodes, so the screen the whole scenario exists to deliver
+arrived silent.
+
+Now narrated: **the ending**, **What mattered**, **Apply it in practice**, **Key takeaways**,
+and **each decision record**.
+
+**The decision records cost nothing extra.** The clip for a decision already exists — it is
+the one played on the consequence screen when the learner made that choice, stored under the
+choice's own id. The record of the decision plays that same clip rather than a second being
+generated for the same words. Only three new clips per scenario are generated, one for each
+fixed debrief screen.
+
+**Proved by running it, not by reading it.** With a stub provider on a real finished attempt:
+
+```
+activity 51, revision 13: narrations 21/21
+
+--- THE DECISION CARDS ---
+  decision 1  choice n1_a      READ OUT
+  decision 2  choice n2a_a     READ OUT
+  decision 3  choice n3_a      READ OUT
+
+--- THE OTHER DEBRIEF SCREENS ---
+  the ending           READ OUT
+  what mattered        READ OUT
+  apply in practice    READ OUT
+  key takeaways        READ OUT
+```
+
+**Existing activities need their media regenerated** to pick up the clips these screens now
+ask for. Nothing breaks without it — a screen with no clip is simply silent, as before.
+
+### Changed — two harness checks that held the old behaviour in place
+
+One asserted the debrief was *not* narrated, quoting the comment that made it so. The other
+counted one exact attribute order and failed because `data-audio` was added between the two
+attributes it matched. Both now check the intent rather than the spelling.
+
+## [v1.47.0] - 2026-09-14
+
+### Fixed — THE ROOT CAUSE: every media file destroyed the one written before it
+
+This is the fault behind "no images" and "no voiceover", and it is a single line.
+
+`media_manager::store()` deleted **every file sharing the item id** before writing, and every
+asset belonging to one node shares one item id. So each write destroyed its predecessor:
+
+| Written for node `n1` | Effect |
+|---|---|
+| scene `n1` | stored |
+| crisis scene `n1_crisis` | **deletes `n1`** |
+| narration `n1` | stored |
+| speaker's line `n1_said` | **deletes `n1`** |
+| choice clip `n1_a`, then `n1_b` | **each deletes the last** |
+
+Exactly one image and one narration survived per node, and the survivor was whichever was
+written last — a *choice* clip. **The narration a learner hears when a screen opens never
+survived at all.**
+
+Measured on a seven-node scenario with a stub provider, so the numbers are the plumbing and
+not the service: **15 narration clips generated and charged for, 7 files left**, none of them
+node narration; and a node with a crisis variant lost its ordinary scene image too.
+
+Everything about this looked like media that had never been generated — which is why the
+first four explanations I offered were all wrong.
+
+The comment on the principle clips already said *"storing a file clears whatever else shares
+its item id"*. That was known, worked around for the principles by giving each its own id,
+and left in place for everything else.
+
+`store()` now replaces the file it is writing and nothing else. Same scenario after the fix:
+**8 of 8 images and every node's narration present.**
+
+**Guarded by behaviour, not by reading.** The harness stores two assets under one item id and
+fails if either disappears, then rewrites one and fails if the count changes.
+
+
+### Fixed — a reading measure was applied to screens made of record cards
+
+My own regression, introduced in v1.45.0 and reported three times before I caught the shape
+of it. That release gave a no-picture slide one centred column at a 76ch reading measure,
+which is right for a paragraph and wrong for every screen whose content is a list of cards.
+The decision record, the lessons, the skills, the takeaways and the two-column consequence
+were all squeezed into a single column's width with roughly a third of the card left empty
+down each side.
+
+A measure is for a line of prose. A screen of records uses the card. Named by the slide
+classes the template already writes rather than worked out with `:has()`, so the decision
+comes from the data.
+
+**Guarded by measurement, not by eye.** The alignment sweep now measures how much of its
+card each no-picture slide actually uses and fails any record screen under 85%. The fault it
+catches left them at about 55%. The two-column consequence had been *exempted* from that
+sweep — which is precisely why three releases went by without it being caught.
+
+### Changed — the decision records sit two across
+
+They were two to a page but stacked, so on a wide card the second sat under the fold with
+the right-hand half of the slide empty. A decision record is short and self-contained, so
+two read comfortably as a pair. Below 900px they stack again.
+
+### Fixed — the opening situation was never narrated
+
+The first screen a learner sees is built from the scenario's `hook` and `role`, and it is
+not a node — so the narration loop, which walks nodes and principles, never reached it, and
+the deck slide carried no audio attribute to play one from even if it had. A learner who
+turned narration on met silence, then heard every screen after it, which reads as the
+narration being broken rather than as one screen missing it.
+
 ## [v1.46.0] - 2026-09-14
 
 ### Fixed — media could fail completely, on either route, and leave no trace anywhere

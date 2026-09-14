@@ -199,6 +199,12 @@ $string['applyitinpractice'] = 'How to apply this';
 $string['sourceconnection'] = 'Source material';
 $string['decisionqualityscore'] = 'Decision quality {$a}%';
 $string['decisionstaken'] = 'Decisions taken: {$a}';
+// Labels for the closing card. The three above are sentence templates carrying a {$a}
+// placeholder, so using them as bare labels left "Decisions taken:" with nothing after the
+// colon. A label is not a sentence with its subject removed.
+$string['endstat:outcome'] = 'Outcome';
+$string['endstat:quality'] = 'Decision quality';
+$string['endstat:decisions'] = 'Decisions taken';
 $string['editscenario'] = 'Edit scenario';
 $string['step:source'] = 'Source';
 $string['step:scene'] = 'The scene';

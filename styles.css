@@ -1896,6 +1896,21 @@
     padding: 0;
 }
 
+/* Two decisions to a page, side by side rather than stacked.
+   They were stacked, which on a wide card put the second one under the fold and left the
+   right-hand half of the slide empty. A decision record is a short, self-contained block -
+   a choice, what followed, why it mattered - so two of them read comfortably as a pair.
+   Below the two-column threshold they stack again, because at that width a pair would make
+   each one too narrow to read. */
+@media (min-width: 900px) {
+    .path-mod-aibranchedscenario .aibs-journey .aibs-journey-list,
+    .aibs-journey .aibs-journey-list {
+        align-items: start;
+        column-gap: clamp(14px, 1.6vw, 24px);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 /* Same surface, same radius, same lift as every other card in the debrief. Only the
    outline differs, and it differs because it carries the band - whether the decision
    helped or cost. These were the one set of cards with no hover at all. */
@@ -4317,6 +4332,25 @@ button.aibs-avatar {
     width: auto;
 }
 
+/* A measure is for a line of prose. A screen made of records is not prose.
+   The centred column above is right for a situation, a consequence or an ending: a reader
+   follows one left edge down a paragraph, and a paragraph that runs the whole width of a
+   wide card is tiring. It is wrong for every screen whose content is a list of cards -
+   the decision record, the lesson deck, the skills, the takeaways, the readings. Those are
+   rows, they were built to use the width, and capping them at a reading measure left each
+   card stranded down the middle with a third of the card empty on either side.
+
+   Named by the slide classes the template already writes, not worked out with :has() -
+   the template knows which screen this is, so the decision is made from the data rather
+   than from whether the browser supports the selector. */
+.aibs-slide.aibs-noscene.aibs-journey .aibs-node-body,
+.aibs-slide.aibs-noscene.aibs-lessons .aibs-node-body,
+.aibs-slide.aibs-noscene.aibs-skills .aibs-node-body,
+.aibs-slide.aibs-noscene.aibs-deckend .aibs-node-body,
+.aibs-slide.aibs-noscene.aibs-lastpage .aibs-node-body {
+    max-width: none;
+}
+
 /* A record reads down a left edge, not from the middle out.
    The debrief has no picture, so its pages took the centred statement-card treatment -
    which is right for a heading and a sentence and wrong for a list of records. Every line
@@ -4363,6 +4397,12 @@ button.aibs-avatar {
         column-gap: clamp(18px, 2.2vw, 34px);
         display: grid;
         grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+        /* The centred-column rule caps a no-picture body at a reading measure, which is
+           right for one column of words and wrong here: this screen is TWO columns, and the
+           cap squeezed both of them into the width of one, leaving a third of the card
+           empty down each side. A measure is for a line of prose. A pair of columns uses
+           the card. */
+        max-width: none;
         text-align: start;
     }
 
@@ -4803,5 +4843,223 @@ button.aibs-avatar:focus-visible {
 @supports (height: 100svh) {
     .path-mod-aibranchedscenario .aibs-slide {
         max-height: var(--aibs-slide-max, 74svh);
+    }
+}
+
+/* The closing card: the verdict, not a full stop.
+   It was a heading and two buttons, so a learner reached the end of the whole activity and
+   had nothing to read there - while the result they earned sat on the second page of nine.
+   The figures are already in the debrief payload; this is where they belong as well, because
+   this is the screen someone is looking at when they decide whether it was worth doing. */
+.aibs-deckend-body {
+    align-items: center;
+    /* A column. The card inherits a flex row from the body rules, which above 900px is
+       overridden by the no-picture column treatment and below it is not - so on a phone the
+       mark, the heading, the three figures, the sentence and the buttons were laid out side
+       by side in 170px columns. Everything on this card reads downward. */
+    display: flex;
+    flex-direction: column;
+    /* The confetti layer is inset:0 absolute, so it needs a positioned ancestor or it
+       measures itself against whatever further up the page happens to be positioned - which
+       it did, spilling 46px past each edge of the card at every width. The other finish
+       card had position:relative and overflow:hidden for exactly this reason; this one was
+       given the markup and not the containing block. */
+    overflow: hidden;
+    position: relative;
+    text-align: center;
+}
+
+.aibs-endstats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(12px, 2.4vw, 32px);
+    justify-content: center;
+    margin-block: 4px;
+}
+
+.aibs-endstat {
+    align-items: center;
+    background: var(--aibs-surface-alt);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 8.5em;
+    padding: 12px 18px;
+}
+
+
+
+/* The closing card: the verdict, not a full stop.
+   It was a heading and two buttons, so a learner reached the end of the whole activity and
+   had nothing to read there - while the result they earned sat on the second page of nine.
+   The figures are already in the debrief payload; this is where they belong as well, because
+   this is the screen someone is looking at when they decide whether it was worth doing. */
+.aibs-deckend-body {
+    align-items: center;
+    /* The confetti layer is inset:0 absolute, so it needs a positioned ancestor or it
+       measures itself against whatever further up the page happens to be positioned - which
+       it did, spilling 46px past each edge of the card at every width. The other finish
+       card had position:relative and overflow:hidden for exactly this reason; this one was
+       given the markup and not the containing block. */
+    overflow: hidden;
+    position: relative;
+    text-align: center;
+}
+
+.aibs-endstats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(12px, 2.4vw, 32px);
+    justify-content: center;
+    margin-block: 4px;
+}
+
+.aibs-endstat {
+    align-items: center;
+    background: var(--aibs-surface-alt);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 8.5em;
+    padding: 12px 18px;
+}
+
+/* On a phone the three stats took the card past the fold, which is the one rule this
+   product does not bend. Squeezing them into three columns instead was worse: "Decision
+   quality" does not fit in a third of 380px, so the labels ran over each other and the
+   figures sat on top of them.
+
+   Each stat becomes one row instead - the figure, then what it is, reading across. Three
+   short rows are a third of the height of three stacked cards and nothing has to fit into
+   a column too narrow to hold it. */
+@media (max-width: 600px) {
+    .aibs-endstats {
+        align-self: stretch;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .aibs-endstat {
+        align-items: baseline;
+        flex-direction: row;
+        gap: 10px;
+        justify-content: space-between;
+        min-width: 0;
+        padding: 8px 14px;
+        text-align: start;
+    }
+
+    .aibs-endstat-value {
+        font-size: var(--aibs-text-stat);
+        order: 2;
+    }
+
+    .aibs-endstat-label {
+        min-width: 0;
+        order: 1;
+    }
+}
+
+.aibs-endstat-value {
+    color: var(--aibs-accent);
+    font-size: var(--aibs-text-display);
+    font-weight: var(--aibs-weight-figure);
+    line-height: var(--aibs-leading-tight);
+}
+
+/* The outcome is a word, not a figure, and at display size it wrapped out of its card. */
+.aibs-endstat-outcome {
+    font-size: var(--aibs-text-h3);
+    text-wrap: balance;
+}
+
+.aibs-endstat-label {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-label);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+/* On a phone the three stats took the card past the fold, which is the one rule this
+   product does not bend. Two attempts at squeezing them sideways made it worse - "Decision
+   quality" does not fit in a third of 380px, so the figures ended up on top of the labels.
+   Neither attempt had any effect in any case: the block sat ABOVE the base rules for the
+   value and the label, so those won on source order and the media query was dead text.
+   A media query has no extra specificity - it has to come last.
+
+   One column, each stat a row reading label then figure. A grid track is the width of its
+   container whatever the parent's alignment is doing, which is what both flex attempts
+   kept losing. */
+@media (max-width: 600px) {
+    .aibs-endstats {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+    }
+
+    .aibs-endstat {
+        align-items: center;
+        flex-direction: row;
+        gap: 10px;
+        justify-content: space-between;
+        min-width: 0;
+        padding: 8px 14px;
+        text-align: start;
+    }
+
+    .aibs-endstat-value {
+        font-size: var(--aibs-text-stat);
+        order: 2;
+        white-space: nowrap;
+    }
+
+    .aibs-endstat-label {
+        min-width: 0;
+        order: 1;
+    }
+
+    /* The outcome is a phrase, not a figure. nowrap is right for "100%" and "3" and wrong
+       for "Strong outcome", which ran straight out of its row. */
+    .aibs-endstat-outcome {
+        font-size: var(--aibs-text-small);
+        text-align: end;
+        white-space: normal;
+    }
+}
+
+/* On a phone the deck arrows were taking a quarter of the screen.
+   The stage reserves 46px of padding on each side so the arrows can sit beside the card
+   without covering it. At 1440px that is three per cent of the width and invisible; at
+   380px it is 92px - a quarter of the screen - and every deck slide in the product was
+   rendering into about 208px because of it. The lesson deck and the debrief both.
+
+   Below the threshold the arrows go under the deck instead, where they are easier to hit
+   with a thumb than a 34px target pinned against the screen edge, and the card gets the
+   width back. */
+@media (max-width: 600px) {
+    .path-mod-aibranchedscenario .aibs-deck-stage,
+    .aibs-deck-stage {
+        padding-inline: 0;
+    }
+
+    .path-mod-aibranchedscenario .aibs-deck-nav,
+    .aibs-deck-nav {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        padding-block-start: 12px;
+    }
+
+    .path-mod-aibranchedscenario .aibs-deck-nav .aibs-iconbtn,
+    .aibs-deck-nav .aibs-iconbtn {
+        inset-inline: auto;
+        position: static;
+        transform: none;
     }
 }

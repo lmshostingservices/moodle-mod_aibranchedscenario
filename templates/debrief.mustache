@@ -79,7 +79,7 @@
 
     <div class="aibs-deck-stage">
 
-        <section class="aibs-card aibs-deckslide aibs-slide aibs-outcome {{outcomeclass}} {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide">
+        <section class="aibs-card aibs-deckslide aibs-slide aibs-outcome {{outcomeclass}} {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" data-audio="{{outcomeaudiourl}}">
             {{#hasimage}}
                 <div class="aibs-scene">
                     <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
@@ -140,7 +140,7 @@
         </section>
 
         {{#journeypages}}
-            <section class="aibs-card aibs-deckslide aibs-slide aibs-journey {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" hidden>
+            <section class="aibs-card aibs-deckslide aibs-slide aibs-journey {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" data-audio="{{pageaudiourl}}" hidden>
             {{#hasimage}}
                 <div class="aibs-scene">
                     <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
@@ -181,7 +181,7 @@
             </section>
         {{/journeypages}}
 
-        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" hidden>
+        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" data-audio="{{whatmatteredaudiourl}}" hidden>
             {{#hasimage}}
                 <div class="aibs-scene">
                     <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
@@ -224,7 +224,7 @@
         {{/hascritical}}
 
         {{#haspractice}}
-            <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" hidden>
+            <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" data-audio="{{practiceaudiourl}}" hidden>
             {{#hasimage}}
                 <div class="aibs-scene">
                     <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
@@ -252,7 +252,7 @@
             under the practice points now, and the actions that used to need a page of their
             own sit at the bottom of this one. }}
         {{#hastakeaways}}
-            <section class="aibs-card aibs-deckslide aibs-slide aibs-lastpage {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" hidden>
+            <section class="aibs-card aibs-deckslide aibs-slide aibs-lastpage {{^hasimage}}aibs-noscene{{/hasimage}}" data-region="deckslide" data-audio="{{takeawaysaudiourl}}" hidden>
             {{#hasimage}}
                 <div class="aibs-scene">
                     <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
@@ -273,29 +273,66 @@
                         </article>
                     {{/takeaways}}
                 </div>
-                {{> mod_aibranchedscenario/debriefactions }}
-                            </div>
+            </div>
             </section>
         {{/hastakeaways}}
 
-        {{! With no takeaways there is nowhere else for the actions to go, so they take the
-            last page rather than being lost. This is the only case where a closing page is
-            drawn at all - it used to be drawn always, telling a learner they had reached the
-            end of something they could see they had reached the end of. }}
-        {{^hastakeaways}}
-            <section class="aibs-card aibs-deckslide aibs-slide aibs-lastpage aibs-deckend {{^hasimage}}aibs-noscene{{/hasimage}}"
-                     data-region="deckslide" hidden>
+        {{! The closing card, always.
+            It used to be drawn ONLY when a scenario had no takeaways - the reasoning being
+            that a page saying "you have reached the end" tells a learner something they can
+            already see. True of that page, and it meant that every normal scenario, which
+            does have takeaways, simply stopped on a list with no ending at all: no
+            completion, no result, and the Try again button buried under the last takeaway.
+            A scenario that ends without closing leaves someone pressing the arrow to find
+            out whether there is more. So the page stays - and earns itself by carrying the
+            verdict rather than an announcement. }}
+        <section class="aibs-card aibs-deckslide aibs-slide aibs-lastpage aibs-deckend {{^hasimage}}aibs-noscene{{/hasimage}}"
+                 data-region="deckslide" hidden>
             {{#hasimage}}
                 <div class="aibs-scene">
                     <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy">
                 </div>
             {{/hasimage}}
-            <div class="aibs-node-body">
-                <h3 class="aibs-h3">{{#str}} debriefend, mod_aibranchedscenario {{/str}}</h3>
+            {{! The last thing a learner sees, and it was a heading and two buttons.
+                A scenario that ends without saying so leaves someone clicking the arrow to
+                check whether there is more. It closes on the verdict instead: the ending
+                they earned, how well they decided, and how many decisions it took - all of
+                which the debrief already carried and none of which it repeated at the end,
+                so the result was on page two of nine and nothing was on page nine. }}
+            <div class="aibs-node-body aibs-deckend-body">
+                <span class="aibs-finish-burst" data-region="confetti" aria-hidden="true"></span>
+                <span class="aibs-finish-mark" aria-hidden="true">
+                    <svg viewBox="0 0 96 96" focusable="false">
+                        <circle class="aibs-finish-ring" cx="48" cy="48" r="42" fill="none"
+                                stroke="currentColor" stroke-width="3"/>
+                        <path class="aibs-finish-tick" d="M30 49.5 42.5 62 66.5 36" fill="none"
+                              stroke="currentColor" stroke-width="5" stroke-linecap="round"
+                              stroke-linejoin="round"/>
+                    </svg>
+                </span>
+                <h3 class="aibs-h3">{{#str}} attemptfinished, mod_aibranchedscenario {{/str}}</h3>
+
+                <div class="aibs-endstats">
+                    {{#outcomelabel}}
+                        <div class="aibs-endstat">
+                            <span class="aibs-endstat-value aibs-endstat-outcome">{{outcomelabel}}</span>
+                            <span class="aibs-endstat-label">{{#str}} endstat:outcome, mod_aibranchedscenario {{/str}}</span>
+                        </div>
+                    {{/outcomelabel}}
+                    <div class="aibs-endstat">
+                        <span class="aibs-endstat-value" data-region="endscore">{{score}}%</span>
+                        <span class="aibs-endstat-label">{{#str}} endstat:quality, mod_aibranchedscenario {{/str}}</span>
+                    </div>
+                    <div class="aibs-endstat">
+                        <span class="aibs-endstat-value">{{decisions}}</span>
+                        <span class="aibs-endstat-label">{{#str}} endstat:decisions, mod_aibranchedscenario {{/str}}</span>
+                    </div>
+                </div>
+
+                <p class="aibs-prose">{{#str}} debriefendlead, mod_aibranchedscenario {{/str}}</p>
                 {{> mod_aibranchedscenario/debriefactions }}
-                            </div>
-            </section>
-        {{/hastakeaways}}
+            </div>
+        </section>
 
     </div>
 

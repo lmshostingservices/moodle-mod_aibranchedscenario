@@ -614,5 +614,37 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091258, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091259) {
+        // Release 1.47.0 changes no schema. Screens made of record cards use the card again
+        // rather than a reading measure, the decision records sit two across, and the
+        // opening situation is narrated.
+        upgrade_mod_savepoint(true, 2026091259, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091260) {
+        // Release 1.48.0 changes no schema. The ending and the whole debrief are narrated;
+        // regenerate an activity's media to pick up the clips they now need.
+        upgrade_mod_savepoint(true, 2026091260, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091261) {
+        // Release 1.49.0 changes no schema. Every scenario now closes on a card that says
+        // so and carries the result, rather than stopping on a list of takeaways.
+        upgrade_mod_savepoint(true, 2026091261, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091262) {
+        // Release 1.50.0 changes no schema. The closing card celebrates: confetti in the
+        // product's own palette and a short synthesised chime, both of which stay out of
+        // the way of anyone who asked for less motion or turned narration off.
+        upgrade_mod_savepoint(true, 2026091262, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091263) {
+        // Release 1.51.0 changes no schema. It removes 1,197 duplicated lines from the
+        // stylesheet and repairs the closing card and the decks on a phone.
+        upgrade_mod_savepoint(true, 2026091263, 'aibranchedscenario');
+    }
+
     return true;
 }

@@ -191,6 +191,7 @@ class Player {
         this.frameHeight = 0;
         this.frameMeasured = false;
         this.strings = {};
+        this.fanfarePlayed = false;
         this.busy = false;
     }
 
@@ -732,12 +733,22 @@ class Player {
                     signalclass: 'aibs-signal-' + entry.signal,
                     hasfeedback: entry.feedbackparas.length > 0,
                 })), 2),
+                outcomeaudiourl: response.outcomeaudiourl || '',
+                whatmatteredaudiourl: response.whatmatteredaudiourl || '',
+                practiceaudiourl: response.practiceaudiourl || '',
+                takeawaysaudiourl: response.takeawaysaudiourl || '',
             });
             this.hideRegion(SELECTORS.node);
             this.hideRegion(SELECTORS.consequence);
             await this.render(SELECTORS.debrief, 'mod_aibranchedscenario/debrief', context);
-            // The debrief is read, not listened to: none of its slides carries audio, so
-            // starting the deck also puts the control into its "nothing here" state.
+            // The debrief used to be read and not listened to - a decision taken here and
+            // never stated anywhere a teacher could see it. A learner who turned narration
+            // on heard every screen of the scenario and then silence for the half of the
+            // product that explains what just happened. Its slides carry audio now, and the
+            // deck plays each slide's clip as it is shown. Stopping the node's clip here
+            // is right - it should not run on into the debrief - and is all that happens:
+            // stopAudio() halts what is playing and sets no flag, so the deck's own clips
+            // start normally.
             this.stopAudio();
             // The deck's own reveal runs each slide's arrivals as it is shown; animating
             // the skill bars here ran them against a slide that was still hidden.
@@ -764,6 +775,10 @@ class Player {
         for (let start = 0; start < items.length; start += size) {
             const slice = items.slice(start, start + size);
             pages.push({
+                // The clip for a decision already exists - it is the one played on the
+                // consequence screen when the learner made that choice. The page plays the
+                // first of them, so the record of a decision has the voice the moment had.
+                pageaudiourl: (slice.find((entry) => entry.audiourl) || {}).audiourl || '',
                 first: start + 1,
                 last: start + slice.length,
                 decisions: slice,
@@ -825,6 +840,15 @@ class Player {
         });
         // Whatever this slide animates, it animates now that it can be seen.
         this.revealSlide(slides[wanted]);
+
+        // The scenario is over, and the card that says so is on screen. The confetti is
+        // already guarded against reduced motion and against running twice; the sound is
+        // guarded by the learner's own narration setting, because somebody who turned the
+        // voice off did not ask for a chime instead.
+        if (slides[wanted].classList.contains('aibs-deckend')) {
+            this.dropConfetti(slides[wanted]);
+            this.playFanfare();
+        }
 
         this.showPosition(wanted + 1, slides.length, this.strings.deckposition);
         const prev = deck.querySelector('[data-action="deckprev"]');
@@ -1538,8 +1562,64 @@ class Player {
      *
      * @returns {void}
      */
-    dropConfetti() {
-        const layer = this.root.querySelector('[data-region="confetti"]');
+    /**
+     * A short rising chime when the scenario closes.
+     *
+     * Synthesised rather than loaded: three notes from an oscillator is a few lines, and a
+     * sound file would be one more asset to ship, to serve through pluginfile and to get
+     * wrong in a theme that blocks media. It is quiet, it is under half a second, and it
+     * plays once.
+     *
+     * Silent for anybody who turned narration off - a learner who did not want a voice did
+     * not ask for a chime instead - and for anybody who asked for reduced motion, since the
+     * request is for less going on rather than specifically for less movement. Any browser
+     * that refuses to make a sound without a gesture simply does not make one; nothing here
+     * is load-bearing.
+     *
+     * @returns {void}
+     */
+    playFanfare() {
+        const reduced = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!this.audioEnabled || this.muted || reduced || this.fanfarePlayed) {
+            return;
+        }
+        this.fanfarePlayed = true;
+        const Ctor = window.AudioContext || window.webkitAudioContext;
+        if (!Ctor) {
+            return;
+        }
+        try {
+            const ctx = new Ctor();
+            // A major triad, arpeggiated. It resolves upward, which is what makes it read
+            // as an ending rather than as a notification.
+            [523.25, 659.25, 783.99].forEach((frequency, step) => {
+                const at = ctx.currentTime + (step * 0.11);
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(frequency, at);
+                // Shaped rather than switched: an abrupt start or stop on a sine is a click.
+                gain.gain.setValueAtTime(0.0001, at);
+                gain.gain.exponentialRampToValueAtTime(0.09, at + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.34);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start(at);
+                osc.stop(at + 0.36);
+            });
+            window.setTimeout(() => {
+                if (ctx.close) {
+                    ctx.close();
+                }
+            }, 900);
+        } catch (error) {
+            // A browser that will not open an audio context is not a reason to fail here.
+            this.fanfarePlayed = true;
+        }
+    }
+
+    dropConfetti(scope) {
+        const layer = (scope || this.root).querySelector('[data-region="confetti"]');
         const reduced = window.matchMedia
             && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (!layer || reduced || layer.dataset.done === '1') {

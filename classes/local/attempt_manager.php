@@ -686,6 +686,9 @@ class attempt_manager {
                 'signal'      => $chosen['signal'],
                 'consequence' => $chosen['consequence'],
                 'feedback'    => $chosen['feedback'],
+                // Carried so the debrief can find the clip already recorded for this
+                // choice rather than a second one being generated for the same words.
+                'choiceid'    => $chosen['id'],
                 'principle'   => $this->principle_title($chosen['principleid']),
             ];
         }

@@ -49,6 +49,15 @@ class media_manager {
     /** @var int Item ids for the opening lesson start here, clear of the node indexes. */
     const PRINCIPLE_ITEMID_BASE = 900;
 
+    /** @var int Item id base for the debrief's own screens. */
+    const DEBRIEF_ITEMID_BASE = 700;
+
+    /** @var int Item id for the opening situation's clip. Above every node index, below the principles. */
+    const OPENING_ITEMID = 800;
+
+    /** @var string The key the opening situation's clip is stored and looked up under. */
+    const OPENING_KEY = 'opening';
+
     /** @var int Largest media file accepted from the provider, in bytes. */
     const MAX_FILE_BYTES = 12582912;
 
@@ -146,13 +155,34 @@ class media_manager {
         $filename = $key . '.' . $extension;
 
         $fs = get_file_storage();
-        $fs->delete_area_files_select(
+
+        // Replace the file being written, and nothing else.
+        //
+        // This deleted every file sharing the item id, and every asset belonging to one
+        // node shares one - so each write destroyed the one before it. A node's scene was
+        // deleted by its crisis variant; its narration was deleted by the speaker's line,
+        // which was deleted by the first choice clip, which was deleted by the second. One
+        // image and one narration survived per node, and the survivor was whichever was
+        // written last: a choice clip. The node's own narration never survived at all.
+        //
+        // Measured on a seven-node scenario: fifteen narration clips generated and paid
+        // for, seven files left, and not one of them the narration a learner hears when the
+        // screen opens. It looked exactly like narration that had never been generated.
+        //
+        // The comment on the principle clips already said storing a file clears whatever
+        // shares its item id - that was known, worked around for the principles by giving
+        // each its own id, and left in place for everything else.
+        $existing = $fs->get_file(
             $this->context->id,
             'mod_aibranchedscenario',
             $filearea,
-            '= :itemid',
-            ['itemid' => $itemid]
+            $itemid,
+            '/',
+            $filename
         );
+        if ($existing) {
+            $existing->delete();
+        }
 
         $fs->create_file_from_string([
             'contextid' => $this->context->id,
@@ -244,6 +274,18 @@ class media_manager {
         // the same reason every other screen is: a learner who is listening rather than
         // skim-reading arrives at the first decision knowing what they are being asked to
         // do. The principles are few - never more than eight - so this is a small bill.
+        // The opening situation is the first screen a learner sees and the only one that was
+        // never narrated. It is not a node, so the loop below never reached it, and the
+        // deck slide had no audio attribute to play one from even if it had. A learner who
+        // turned narration on was met with silence, then heard every screen after it -
+        // which reads as the narration being broken rather than as one screen missing.
+        if ($wantsaudio) {
+            $counts['narrationswanted']++;
+            if ($this->generate_opening_narration($provider, $definition, $scenario->scenariolang, $voice)) {
+                $counts['narrations']++;
+            }
+        }
+
         if ($wantsaudio) {
             foreach ($definition['principles'] as $position => $principle) {
                 $counts['narrationswanted']++;
@@ -277,6 +319,16 @@ class media_manager {
                 }
             }
             if ($node['type'] === 'outcome') {
+                // The ending was the one screen in the scenario deliberately left silent:
+                // narration was skipped for outcome nodes, so a learner listening the whole
+                // way through arrived at the result of every decision they had made and
+                // heard nothing. It is the screen the scenario exists to deliver.
+                if ($wantsaudio) {
+                    $counts['narrationswanted']++;
+                    if ($this->generate_narration($provider, $node, $scenario->scenariolang, $voice, $index)) {
+                        $counts['narrations']++;
+                    }
+                }
                 $index++;
                 continue;
             }
@@ -320,6 +372,39 @@ class media_manager {
                 }
             }
             $index++;
+        }
+
+        // The debrief was read, not listened to - a decision taken in the player and never
+        // stated anywhere a teacher could see it. A learner who turned narration on heard
+        // every screen of the scenario and then nothing at all for the half of the product
+        // that explains what just happened. These screens are the same for every attempt,
+        // so one clip each covers them.
+        if ($wantsaudio) {
+            $debrief = (array)($definition['debrief'] ?? []);
+            $sections = [
+                'whatmattered' => self::lines_text($debrief['whatmattered'] ?? []),
+                'practice'     => self::lines_text($debrief['practice'] ?? []),
+                'takeaways'    => self::takeaways_text($definition['takeaways'] ?? []),
+            ];
+            $slot = 0;
+            foreach ($sections as $name => $text) {
+                $slot++;
+                if (trim($text) === '') {
+                    continue;
+                }
+                $counts['narrationswanted']++;
+                $made = $this->generate_section_narration(
+                    $provider,
+                    $text,
+                    $scenario->scenariolang,
+                    $voice,
+                    self::DEBRIEF_ITEMID_BASE + $slot,
+                    'debrief_' . $name
+                );
+                if ($made) {
+                    $counts['narrations']++;
+                }
+            }
         }
 
         // The reasons travel with the counts, so both routes record them without either
@@ -466,6 +551,128 @@ class media_manager {
      * @param string $voice Voice identifier.
      * @param int $position Zero based position, used as the file item id.
      * @return bool True when audio was stored.
+     */
+    /**
+     * Narrate the opening situation.
+     *
+     * Reads the role the learner is taking and the situation they are walking into, in that
+     * order, because that is the order the screen presents them.
+     *
+     * @param provider $provider The generation provider.
+     * @param array $definition The scenario definition.
+     * @param string $language Scenario language.
+     * @param string $voice Narrator voice.
+     * @return bool Whether a clip was stored.
+     */
+    public function generate_opening_narration(
+        provider $provider,
+        array $definition,
+        string $language,
+        string $voice
+    ): bool {
+        $parts = [(string)($definition['role'] ?? ''), (string)($definition['hook'] ?? '')];
+        $text = trim(implode("\n\n", array_filter($parts, static function ($part) {
+            return trim($part) !== '';
+        })));
+        if ($text === '') {
+            return false;
+        }
+        try {
+            $result = $provider->generate_speech(\core_text::substr($text, 0, 4500), $voice, $language);
+            $this->store(
+                self::AREA_NARRATION,
+                self::OPENING_ITEMID,
+                self::OPENING_KEY,
+                $result['data'],
+                $result['mimetype']
+            );
+            return true;
+        } catch (generation_exception $e) {
+            $this->note_failure((string)$e->errorcode);
+            mtrace('Opening situation narration skipped: ' . $e->errorcode);
+            return false;
+        }
+    }
+
+    /**
+     * Join a list of debrief lines into one piece of narration.
+     *
+     * @param array $lines Plain strings.
+     * @return string
+     */
+    protected static function lines_text(array $lines): string {
+        $clean = [];
+        foreach ($lines as $line) {
+            $line = trim((string)$line);
+            if ($line !== '') {
+                $clean[] = rtrim($line, '.') . '.';
+            }
+        }
+        return implode(' ', $clean);
+    }
+
+    /**
+     * Join the takeaways into one piece of narration, heading then body.
+     *
+     * @param array $takeaways Each with a heading and a body.
+     * @return string
+     */
+    protected static function takeaways_text(array $takeaways): string {
+        $parts = [];
+        foreach ($takeaways as $takeaway) {
+            $heading = trim((string)($takeaway['heading'] ?? ''));
+            $body = trim((string)($takeaway['body'] ?? ''));
+            $line = trim($heading === '' ? $body : rtrim($heading, '.') . '. ' . $body);
+            if ($line !== '') {
+                $parts[] = $line;
+            }
+        }
+        return implode(' ', $parts);
+    }
+
+    /**
+     * Narrate one screen of the debrief.
+     *
+     * @param provider $provider The generation provider.
+     * @param string $text What the screen says.
+     * @param string $language Scenario language.
+     * @param string $voice Narrator voice.
+     * @param int $itemid Item id for this clip.
+     * @param string $key The key it is stored and looked up under.
+     * @return bool Whether a clip was stored.
+     */
+    public function generate_section_narration(
+        provider $provider,
+        string $text,
+        string $language,
+        string $voice,
+        int $itemid,
+        string $key
+    ): bool {
+        $text = trim($text);
+        if ($text === '') {
+            return false;
+        }
+        try {
+            $result = $provider->generate_speech(\core_text::substr($text, 0, 4500), $voice, $language);
+            $this->store(self::AREA_NARRATION, $itemid, $key, $result['data'], $result['mimetype']);
+            return true;
+        } catch (generation_exception $e) {
+            $this->note_failure((string)$e->errorcode);
+            mtrace('Debrief narration skipped: ' . $e->errorcode);
+            return false;
+        }
+    }
+
+    /**
+     * Narrate one principle of the opening lesson.
+     *
+     * @param provider $provider The generation provider.
+     * @param array $principle The principle, with its title, summary, example and pitfall.
+     * @param string $language Scenario language.
+     * @param string $voice Narrator voice.
+     * @param int $position Its position in the lesson, which gives the clip its item id.
+     * @return bool Whether a clip was stored.
      */
     public function generate_principle_narration(
         provider $provider,

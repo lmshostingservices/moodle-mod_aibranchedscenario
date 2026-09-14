@@ -507,10 +507,22 @@ class helper {
             ];
         }
 
+        // The clip for each decision already exists: it is the one played on the
+        // consequence screen when the learner made that choice, stored under the choice's
+        // own id. The debrief was not asking for it, so the record of a decision was silent
+        // while the moment it describes had a voice.
+        $cm = get_coursemodule_from_instance('aibranchedscenario', (int)$scenario->id, 0, false, IGNORE_MISSING);
+        $narration = [];
+        if ($cm) {
+            $revision = $manager->get_revision();
+            $narration = self::media_urls(context_module::instance($cm->id), $revision)['narration'];
+        }
+
         $journey = [];
         foreach ($manager->build_journey($attempt) as $step) {
             $step['consequenceparas'] = self::paragraph_list($step['consequence']);
             $step['feedbackparas'] = self::paragraph_list($step['feedback']);
+            $step['audiourl'] = (string)($narration[$step['choiceid'] ?? ''] ?? '');
             $journey[] = $step;
         }
 
@@ -524,6 +536,11 @@ class helper {
             'outcomelabel' => $attempt->outcome !== ''
                 ? get_string('outcome:' . $attempt->outcome, 'mod_aibranchedscenario') : '',
             'outcometitle' => $outcomenode['title'] ?? '',
+            // The ending, and the three debrief screens that are the same every attempt.
+            'outcomeaudiourl'  => (string)($narration[$outcomenode['id'] ?? ''] ?? ''),
+            'whatmatteredaudiourl' => (string)($narration['debrief_whatmattered'] ?? ''),
+            'practiceaudiourl' => (string)($narration['debrief_practice'] ?? ''),
+            'takeawaysaudiourl' => (string)($narration['debrief_takeaways'] ?? ''),
             'outcomeparas'  => self::paragraph_list($outcomenode['summary'] ?? ''),
             'score'        => round((float)$attempt->score, 1),
             'decisions'    => (int)($state['decisions'] ?? 0),
@@ -560,6 +577,10 @@ class helper {
             'outcome'      => new external_value(PARAM_ALPHA, 'Outcome band reached'),
             'outcomelabel' => new external_value(PARAM_TEXT, 'Translated outcome band label'),
             'outcometitle' => new external_value(PARAM_TEXT, 'Title of the outcome node'),
+            'outcomeaudiourl' => new external_value(PARAM_URL, 'Narration for the ending, or empty'),
+            'whatmatteredaudiourl' => new external_value(PARAM_URL, 'Narration for what mattered, or empty'),
+            'practiceaudiourl' => new external_value(PARAM_URL, 'Narration for applying it, or empty'),
+            'takeawaysaudiourl' => new external_value(PARAM_URL, 'Narration for the takeaways, or empty'),
             'outcomeparas'  => self::paragraphs_structure('Outcome summary as plain text; escape before use as HTML'),
             'score'        => new external_value(PARAM_FLOAT, 'Decision quality as a percentage'),
             'decisions'    => new external_value(PARAM_INT, 'Number of decisions taken'),
@@ -584,6 +605,8 @@ class helper {
                     'feedback'        => new external_value(PARAM_TEXT, 'Instructional feedback'),
                     'feedbackparas'    => self::paragraphs_structure('Feedback as plain text; escape before use as HTML'),
                     'principle'       => new external_value(PARAM_TEXT, 'Decision principle tested'),
+                    'choiceid'        => new external_value(PARAM_ALPHANUMEXT, 'The choice this record is of'),
+                    'audiourl'        => new external_value(PARAM_URL, 'Narration for this decision, or empty'),
                 ])
             ),
             'whatmattered' => new external_multiple_structure(
