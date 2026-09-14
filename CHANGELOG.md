@@ -2,6 +2,44 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.61.0] - 2026-09-14
+
+### Fixed
+- **A scenario whose last decision named no successor was rejected whole.** An assistant
+  writing five decision nodes states `next` on the ones with an obvious successor and omits
+  it on the LAST one, where there is no later stage to name - which is precisely the node
+  that has to reach an ending. The scenario failed with "Choice A on node n5 does not lead
+  anywhere" followed by all three endings being unreachable, and the teacher who pasted it
+  could do nothing about it: the fault was in the model's output and the only person who
+  could fix it was the person who wrote the prompt. A choice with no stated successor now
+  means "carry on", which is what the automatic target already means, so the last node's
+  choices carry the learner to the ending they earned. A successor that is stated but does
+  not exist is still a fault - that is a typo, not an omission.
+
+### Changed
+- **The prompt now shows a scenario terminating.** The skeleton had one decision node and
+  three outcome nodes that nothing pointed at, so it never demonstrated reaching an ending -
+  and a model copies the example. It shows `n1` and `n5`, with `n5`'s three choices naming
+  the three endings.
+- **The prompt no longer contradicts itself.** The skeleton's last decision was `n2` at stage
+  2 - the same id and stage as the worked example, which points at `n3`. One prompt, two
+  different `n2`s, with opposite jobs.
+- **The rule is stated as well as shown**: every choice carries `next`, and the last decision
+  node's choices name an outcome id or use `__auto__`.
+- Removed a claim the code no longer makes ("a document whose choices all lead nowhere is
+  rejected in full"). A rule the reader can disprove is a rule they stop trusting.
+- **Two rules were printed twice** in one prompt, nearly verbatim - 427 characters of a budget
+  that has to carry twenty-five rules. The concrete spelling examples (`-ise` not `-ize`)
+  moved into the shared content standard, which means the **paid route now gets them too**;
+  it had been receiving the vaguer half of that rule.
+- The prompt is 415 characters shorter and carries more.
+
+### Added
+- Harness checks that render the whole prompt and read it as a model would, rather than
+  reading the PHP that builds it: the shape is valid JSON, its last decision reaches the
+  endings, no node in it collides with the worked example, no rule is stated twice, and no
+  rule claims a rejection that no longer happens.
+
 ## [v1.60.0] - 2026-09-14
 
 ### Added

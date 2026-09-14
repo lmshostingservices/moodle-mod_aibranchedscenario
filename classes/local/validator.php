@@ -830,8 +830,25 @@ class validator {
             // disagree about whether the automatic target is a legal destination.
             $nextid = $this->link($rawchoice['next'] ?? '');
             if ($nextid === '') {
-                $a = (object)['node' => $id, 'letter' => $letters[$position]];
-                $this->fail(get_string('error:choicenonext', 'mod_aibranchedscenario', $a));
+                // A choice that names no successor means "carry on", which is exactly what
+                // the automatic target means - so it is read that way rather than rejected.
+                //
+                // It was rejected, and it rejected the whole scenario with it. An assistant
+                // writing five decision nodes states "next" on the ones with an obvious
+                // successor and omits it on the LAST one, where there is no later stage to
+                // name - which is precisely the node that has to reach an ending. The
+                // scenario then failed with "choice A on node n5 does not lead anywhere"
+                // followed by all three endings being unreachable, and a teacher who pasted
+                // it had no way to act on that: the fault was in the model's output and the
+                // only person who could fix it was the person who wrote the prompt.
+                //
+                // Read as automatic, the last node's choices carry the learner to the
+                // ending they earned, which is what was meant. Where a later stage does
+                // exist the automatic target finds it, so nothing that used to work
+                // changes. A target that is stated but does not exist is still a fault -
+                // that is a typo, not an omission, and silently redirecting it would hide
+                // a broken branch.
+                $nextid = schema::auto_target();
             }
 
             $node['choices'][] = [

@@ -711,5 +711,12 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091472, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091473) {
+        // Release 1.61.0 changes no schema. A choice that names no successor is read as
+        // "carry on" rather than rejecting the scenario, and the pasted prompt no longer
+        // contradicts itself about what the last decision node is.
+        upgrade_mod_savepoint(true, 2026091473, 'aibranchedscenario');
+    }
+
     return true;
 }

@@ -99,11 +99,24 @@ class content_standard {
             'variety' => [
                 'short' => 'Write every word in the spelling variety of the language field, '
                     . 'whatever the source uses.',
+                // The concrete detail used to live only in the paste route's own rule
+                // list, stated a second time beside this one - so the prompt printed the
+                // same instruction twice, and the PAID route, which is built from this
+                // standard alone, got the vaguer half of it. "Use that variety's spelling"
+                // is a principle a model can agree with and still write "organize"; the
+                // examples are what actually change the output. They belong here, where
+                // both routes read them.
                 'long'  => '- Write EVERY word of the scenario in the language named in '
                     . '"language", using that variety\'s spelling, punctuation and idiom '
                     . 'throughout - titles, situations, choices, consequences, feedback, '
                     . 'debrief, all of it. The source content\'s own spelling does not decide '
-                    . 'this and must not be copied.',
+                    . 'this and must not be copied: a teacher who chose en-AU gets Australian '
+                    . 'spelling even if the material they pasted was written in the United '
+                    . 'States. For en-AU and en-GB that means -ise not -ize (finalise, '
+                    . 'organise, recognise), -our not -or (behaviour, favour), -re not -er '
+                    . '(centre), and travelled, practise as the verb, programme for a plan. '
+                    . 'For en-US it means the opposite. Never mix the two inside one '
+                    . 'scenario.',
             ],
             // The single biggest lever on whether a debrief teaches anything.
             'mechanism' => [

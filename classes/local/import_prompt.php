@@ -60,9 +60,9 @@ class import_prompt {
             'ONE DECISION NODE, WRITTEN OUT',
             '',
             'This shows the register and the spread of choices. Do not reuse its people, '
-                . 'its place or its wording. Note that every choice carries "next" - a '
-                . 'choice without one leads nowhere, and a document whose choices all lead '
-                . 'nowhere is rejected in full. It is abbreviated in one respect only: '
+                . 'its place or its wording. Note that every choice carries "next", and '
+                . 'that "__auto__" is a legal value meaning "whatever comes next". It is '
+                . 'abbreviated in one respect only: '
                 . 'every choice in your own document also needs "principleid", "effects" '
                 . 'and "skills", as the shape above shows. A choice with no "skills" '
                 . 'scores zero for all four, which makes the decision count for nothing.',
@@ -109,13 +109,17 @@ class import_prompt {
             '- Every principle carries an "id", a "title", a "summary", an "example" and a '
                 . '"pitfall". All five are shown to the learner before the scenario starts.',
             '- "tone" is one of: ' . $tones . '. "complexity" is one of: ' . $complexities . '.',
-            '- No choice may be obviously correct on its face. Each should be what a reasonable '
-                . 'person would do given a different reading of the situation.',
             '- "imageprompt" describes the scene for an illustrator. Never ask for text, '
                 . 'lettering, logos, identifiable real people or visible injury.',
             '- Every "id" is lowercase letters, digits, hyphens and underscores only, '
                 . 'starts with a letter or digit, and is at most 64 characters. Ids with '
                 . 'spaces, dots or capitals are rejected and the node is dropped.',
+            '- EVERY choice carries "next". It is one of: the id of a node at a later '
+                . 'stage, the id of an outcome node, or "__auto__" to let the activity pick '
+                . 'the next stage and the earned ending. The LAST decision node is the one '
+                . 'that matters here - its choices have no later stage to point at, so each '
+                . 'one names an outcome id or uses "__auto__". Leaving "next" off the last '
+                . 'node is the commonest way a scenario ends up with no reachable ending.',
             '- Links only ever point forward, to a later stage or to an outcome node. '
                 . 'The graph must contain no loop back to an earlier node and every node '
                 . 'must be reachable from "startnode". A scenario failing either is '
@@ -137,16 +141,6 @@ class import_prompt {
                 . 'anyone else. Give each a "gender" of male, female or neutral: the '
                 . 'illustrator uses it to keep the same person recognisable from one '
                 . 'frame to the next. Give no age and no ethnicity.',
-            '- Write EVERY word of the scenario in the language named in "language", using '
-                . 'that variety\'s spelling, punctuation and idiom throughout - titles, '
-                . 'situations, choices, consequences, feedback, debrief, all of it. The '
-                . 'source content\'s own spelling does not decide this and must not be '
-                . 'copied: a teacher who chose en-AU gets Australian spelling even if the '
-                . 'material they pasted was written in the United States. For en-AU and '
-                . 'en-GB that means -ise not -ize (finalise, organise, recognise), -our not '
-                . '-or (behaviour, favour), -re not -er (centre), and travelled, practise '
-                . 'as the verb, programme for a plan. For en-US it means the opposite. '
-                . 'Never mix the two inside one scenario.',
             '',
             'WHAT MAKES IT GOOD',
             '',
@@ -265,6 +259,49 @@ class import_prompt {
                         'situation' => 'The same moment with the tension already high',
                         'facilitatorspeech' => 'What they say when it has gone that far',
                         'challenge' => 'The question put to the learner now',
+                    ],
+                ],
+                [
+                    // n5, not n2. The worked example below is ALSO n2, at stage 2, and its
+                    // choices point at n3 - so a skeleton node sharing that id and that
+                    // stage told the model two contradictory things about the same node:
+                    // "n2 continues the story" and "n2 is the last decision". Numbering it
+                    // 5 removes the contradiction and, at the same time, shows the shape
+                    // the rules demand - five decisions, the last one reaching the endings
+                    // - which the skeleton never demonstrated at all.
+                    'id' => 'n5', 'type' => 'decision', 'stage' => 5,
+                    'title' => 'The LAST decision. n2, n3 and n4 look like n1; only this '
+                        . 'one is different, because its choices reach the endings',
+                    'situation' => 'What is happening now',
+                    'challenge' => 'The question put to the learner?',
+                    'choices' => [
+                        [
+                            'id' => 'n5_a', 'text' => 'The choice that earns the best ending',
+                            'signal' => 'positive', 'consequence' => 'What happens next',
+                            'feedback' => 'What this told us', 'principleid' => 'p1',
+                            'effects' => ['engagement' => 5, 'trust' => 5, 'tension' => -5],
+                            'skills' => ['presence' => 2, 'adaptability' => 1, 'empathy' => 1, 'clarity' => 2],
+                            'tags' => ['closes-well'],
+                            'next' => 'end_strong',
+                        ],
+                        [
+                            'id' => 'n5_b', 'text' => 'The choice that half works',
+                            'signal' => 'neutral', 'consequence' => 'What happens next',
+                            'feedback' => 'What this told us', 'principleid' => 'p1',
+                            'effects' => ['engagement' => 0, 'trust' => 0, 'tension' => 0],
+                            'skills' => ['presence' => 1, 'adaptability' => 1, 'empathy' => 0, 'clarity' => 1],
+                            'tags' => ['partial'],
+                            'next' => 'end_mixed',
+                        ],
+                        [
+                            'id' => 'n5_c', 'text' => 'The choice that costs',
+                            'signal' => 'negative', 'consequence' => 'What happens next',
+                            'feedback' => 'What this told us', 'principleid' => 'p1',
+                            'effects' => ['engagement' => -5, 'trust' => -10, 'tension' => 15],
+                            'skills' => ['presence' => 0, 'adaptability' => 0, 'empathy' => 0, 'clarity' => 1],
+                            'tags' => ['misses-the-point'],
+                            'next' => 'end_highrisk',
+                        ],
                     ],
                 ],
                 [
