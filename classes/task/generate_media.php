@@ -67,14 +67,50 @@ class generate_media extends \core\task\adhoc_task {
             return;
         }
 
+        // A job record, which this task never wrote.
+        //
+        // The generation route records every run as a job, and the whole reporting chain
+        // hangs off that: the wizard polls it, get_job_status turns a short count into
+        // "3 of 14 illustrations", and a failure is stored where a site owner can read it.
+        // Media on the IMPORT route runs here instead - and here wrote nothing. So a paste
+        // route scenario that came back with no pictures and no voice produced no job, no
+        // count, no error, and nothing in any log at the site's normal debug level. There
+        // was no way to answer "why" except by guessing, which is what happened.
+        $job = $DB->insert_record('aibranchedscenario_jobs', (object)[
+            'scenarioid'   => (int)$scenario->id,
+            'userid'       => (int)$this->get_userid(),
+            'status'       => generator::JOB_RUNNING,
+            'jobtype'      => 'media',
+            'requestjson'  => json_encode(['nodes' => count($definition['nodes'] ?? [])]),
+            'modelused'    => '',
+            'timecreated'  => time(),
+            'timemodified' => time(),
+        ]);
+
         $generator = new generator();
         $media = new media_manager($context);
         $counts = $media->generate_for_definition($generator->get_provider(), $scenario, $definition);
+        $failures = $media->failures();
 
         mtrace(
             'Activity ' . $scenario->id . ' media: '
-                . $counts['images'] . ' images, ' . $counts['narrations'] . ' narrations.'
+                . $counts['images'] . ' of ' . $counts['imageswanted'] . ' images, '
+                . $counts['narrations'] . ' of ' . $counts['narrationswanted'] . ' narrations.'
+                . ($failures ? ' Refused: ' . implode(', ', $failures) . '.' : '')
         );
+
+        // Nothing asked for and nothing made is a success. Something asked for and none of
+        // it made is a failure, and it is recorded as one with the reasons the service
+        // gave, so the next person to ask why has an answer instead of a hypothesis.
+        $wanted = (int)$counts['imageswanted'] + (int)$counts['narrationswanted'];
+        $made = (int)$counts['images'] + (int)$counts['narrations'];
+        $DB->update_record('aibranchedscenario_jobs', (object)[
+            'id'           => $job,
+            'status'       => ($wanted > 0 && $made === 0) ? generator::JOB_ERROR : generator::JOB_READY,
+            'resultjson'   => json_encode(['media' => $counts]),
+            'errormsg'     => $failures ? implode(', ', array_slice($failures, 0, 6)) : null,
+            'timemodified' => time(),
+        ]);
 
         // Media made after publishing used to be lost, permanently.
         //

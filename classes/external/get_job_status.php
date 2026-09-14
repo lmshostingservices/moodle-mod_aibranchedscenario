@@ -63,17 +63,37 @@ class get_job_status extends external_api {
         $definition = scenario_manager::get_working_definition($resolved['scenario']);
 
         // A run where every image failed used to look exactly like a complete one.
+        //
+        // Two things were still missing from this. It counted illustrations and not
+        // narration, so a scenario that came back completely silent - every clip refused -
+        // reported nothing at all, which is half of what was actually reported broken. And
+        // it gave a number without a reason: "3 of 14" sends the next person guessing,
+        // where "3 of 14, insufficientcredits" ends the question.
         $media = '';
         $result = json_decode((string)$job->resultjson, true);
-        if (is_array($result) && isset($result['media']['imageswanted'])) {
-            $made = (int)$result['media']['images'];
-            $wanted = (int)$result['media']['imageswanted'];
+        if (is_array($result) && isset($result['media'])) {
+            $counts = (array)$result['media'];
+            $made = (int)($counts['images'] ?? 0) + (int)($counts['narrations'] ?? 0);
+            $wanted = (int)($counts['imageswanted'] ?? 0) + (int)($counts['narrationswanted'] ?? 0);
             if ($wanted > 0 && $made < $wanted) {
                 $media = get_string(
                     'mediaincomplete',
                     'mod_aibranchedscenario',
                     (object)['made' => $made, 'wanted' => $wanted]
                 );
+                // Reasons are the service's own error identifiers, already reduced to a
+                // strict character set where they were recorded. Shown as they are: a site
+                // owner can act on "insufficientcredits" and cannot act on "some failed".
+                $refused = array_values(array_filter((array)($counts['refused'] ?? []), 'is_string'));
+                if ($refused) {
+                    $media .= ' ' . get_string(
+                        'mediarefused',
+                        'mod_aibranchedscenario',
+                        implode(', ', array_map(static function ($code) {
+                            return clean_param($code, PARAM_ALPHANUMEXT);
+                        }, array_slice($refused, 0, 6)))
+                    );
+                }
             }
         }
 

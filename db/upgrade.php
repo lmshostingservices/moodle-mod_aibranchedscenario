@@ -608,5 +608,11 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091257, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091258) {
+        // Release 1.46.0 changes no schema. Media that cannot be made now says why, on
+        // both routes, instead of failing silently and leaving no trace anywhere.
+        upgrade_mod_savepoint(true, 2026091258, 'aibranchedscenario');
+    }
+
     return true;
 }

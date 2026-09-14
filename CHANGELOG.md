@@ -2,6 +2,51 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.46.0] - 2026-09-14
+
+### Fixed — media could fail completely, on either route, and leave no trace anywhere
+
+Reported as "no images or voiceover was generated at all" on the paste route. The root cause
+is not one fault but four, and all four are mine. Together they made the symptom impossible
+to diagnose from the outside — which is why the first response was to guess at cron.
+
+**1. Every failure was swallowed into silence.** Five separate `catch` blocks in
+`media_manager` funnelled every refused illustration and every refused clip into
+`debugging(..., DEBUG_DEVELOPER)` — which writes *nothing at all* on a production site. A run
+in which the service refused all fourteen requests finished "successfully", reported zero,
+and left no record anywhere a site owner would ever look. Each failure now records the
+service's own error identifier and mtraces at normal level.
+
+**2. The import route wrote no job record.** The whole reporting chain hangs off the job: the
+wizard polls it, `get_job_status` turns a count into "3 of 14", a failure is stored where it
+can be read. Generation writes one. The media task on the **import** route wrote none, so
+none of that machinery ever ran for a pasted scenario. It writes one now, and records nothing
+made against something wanted as a failure rather than a success.
+
+**3. The status check counted illustrations and not narration.** A scenario that came back
+completely silent — every clip refused — reported nothing at all, which is half of exactly
+what was reported broken. It counts both now, and says what the service refused rather than
+only how many are missing.
+
+**4. The teacher was never told media was still coming.** The import service returns how many
+illustrations and clips were queued, and **nothing read it**. So a teacher who pasted a
+scenario in landed on a review page with no pictures, no sound and no indication any were on
+their way — media is made by a background task minutes later. That is indistinguishable from
+a scenario that failed, which is what it was reported as. The page now says so.
+
+### Fixed — a failed media run destroyed the media that was already there
+
+`clear_working_media()` ran *before* the first request. A run in which the service refused
+everything therefore deleted the existing pictures and narration and put nothing in their
+place — so trying again to fix an activity made it strictly worse. The old set is now cleared
+at the moment the first new asset is ready to replace it, and not before.
+
+### What this does and does not fix
+
+It does not make media appear where the service is refusing it. **It makes the reason
+visible** — on both routes, in the job record, in the cron log, and on the teacher's screen.
+The underlying refusal is now answerable rather than a guess.
+
 ## [v1.45.0] - 2026-09-13
 
 ### Fixed — a slide with no picture had six different left edges

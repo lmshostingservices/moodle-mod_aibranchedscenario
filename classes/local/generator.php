@@ -368,6 +368,15 @@ class generator {
      * @return void
      */
     public function finish_scenario_job(stdClass $job, array $definition, array $media = []): void {
+        // The scenario itself succeeded, so the job is ready either way - a teacher can
+        // publish a scenario whose pictures did not come. But the reasons the media was
+        // refused are recorded rather than dropped: this used to report "3 of 14
+        // illustrations" and nothing whatsoever about why the other eleven were missing,
+        // which is a fact without an explanation and sends the next person guessing.
+        $refused = array_values(array_filter((array)($media['refused'] ?? []), 'is_string'));
+        if ($refused) {
+            $job->errormsg = implode(', ', array_slice($refused, 0, 6));
+        }
         $this->finish_job($job, [
             'stats' => $definition['stats'],
             'media' => $media,

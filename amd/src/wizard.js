@@ -92,12 +92,20 @@ class Wizard {
         const keys = [
             'saved', 'generationqueued', 'generationrunning', 'generationready',
             'published', 'error:generic', 'nosuggestion', 'unsavedchanges',
-            'fillingfields', 'promptcopied', 'restore:nothing',
+            'fillingfields', 'promptcopied', 'restore:nothing', 'mediaqueued',
         ];
         const values = await getStrings(keys.map((key) => ({key, component: 'mod_aibranchedscenario'})));
         keys.forEach((key, index) => {
             this.strings[key] = values[index];
         });
+
+        // An import hands the media to a background task, so the review page it lands on
+        // has no pictures and no sound until cron has run. Saying so is the difference
+        // between "it is still being made" and "it is broken", and the page said nothing.
+        const queued = Number(new URL(window.location.href).searchParams.get('media') || 0);
+        if (queued > 0) {
+            Toast.show(this.strings.mediaqueued.replace('{$a}', String(queued)), 'info');
+        }
 
         this.root.addEventListener('click', (event) => {
             const target = event.target.closest('[data-action]');
@@ -1096,6 +1104,15 @@ class Wizard {
                 // a wizard they have just bypassed.
                 const url = new URL(window.location.href);
                 url.searchParams.set('step', String(this.stepCount));
+                // The service tells us how many illustrations and clips were queued, and
+                // nothing ever read it. So a teacher who pasted a scenario in landed on a
+                // review page with no pictures, no sound and no indication that any were
+                // coming - the media is made by a background task minutes later. It looked
+                // exactly like a scenario that had failed to produce any, which is what it
+                // was reported as.
+                if (response.mediaqueued > 0) {
+                    url.searchParams.set('media', String(response.mediaqueued));
+                }
                 window.location.assign(url.toString());
             } else {
                 this.showError({message: response.problems});

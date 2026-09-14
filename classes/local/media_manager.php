@@ -137,6 +137,12 @@ class media_manager {
         if ($key === '') {
             throw new generation_exception('error:mediakey');
         }
+        // The old set goes when the first of the new set is ready to take its place, so a
+        // run that fails at the first request leaves the activity exactly as it found it.
+        if (!$this->cleared) {
+            $this->clear_working_media();
+            $this->cleared = true;
+        }
         $filename = $key . '.' . $extension;
 
         $fs = get_file_storage();
@@ -159,6 +165,41 @@ class media_manager {
 
         return $filename;
     }
+
+    /** @var string[] Why each asset that failed, failed. Reasons only, never content. */
+    protected $failures = [];
+
+    /** @var bool Whether the working area has been cleared for this run yet. */
+    protected $cleared = false;
+
+    /**
+     * Record why one asset could not be made.
+     *
+     * Every one of these used to go to debugging() at DEVELOPER level, which writes
+     * nothing at all on a production site. So a run in which the service refused every
+     * single request finished "successfully", reported zero of fourteen, and left no
+     * trace anywhere a site owner would ever look. The scenario simply had no pictures
+     * and no voice, and nothing explained why.
+     *
+     * @param string $code A generation_exception error code. Never a message, never content.
+     * @return void
+     */
+    protected function note_failure(string $code): void {
+        $code = clean_param($code, PARAM_ALPHANUMEXT);
+        if ($code !== '' && !in_array($code, $this->failures, true)) {
+            $this->failures[] = $code;
+        }
+    }
+
+    /**
+     * The distinct reasons this run could not make what it was asked for.
+     *
+     * @return string[]
+     */
+    public function failures(): array {
+        return $this->failures;
+    }
+
 
     /**
      * Generate every scene image and narration clip a definition calls for.
@@ -187,7 +228,12 @@ class media_manager {
             return $blank;
         }
 
-        $this->clear_working_media();
+        // Clearing used to happen here, before a single request had been made. A run in
+        // which the service refused everything therefore deleted the pictures and the
+        // narration that were already there and put nothing in their place - so trying
+        // again to fix an activity made it worse. The old set is cleared at the moment the
+        // first new asset is ready to replace it, and not before.
+        $this->cleared = false;
 
         $source = scenario_manager::get_source($scenario);
         $style = $source['imagestyle'] ?? 'cinematic';
@@ -276,6 +322,11 @@ class media_manager {
             $index++;
         }
 
+        // The reasons travel with the counts, so both routes record them without either
+        // having to know they exist. A count of zero against a want of fourteen is a
+        // question; the same count with "insufficientcredits" beside it is an answer.
+        $counts['refused'] = $this->failures;
+
         return $counts;
     }
 
@@ -309,7 +360,8 @@ class media_manager {
             $this->store(self::AREA_SCENE, $index, $key, $result['data'], $result['mimetype']);
             return true;
         } catch (generation_exception $e) {
-            debugging('Scene image generation skipped: ' . $e->errorcode, DEBUG_DEVELOPER);
+            $this->note_failure((string)$e->errorcode);
+            mtrace('Scene image generation skipped: ' . $e->errorcode);
             return false;
         }
     }
@@ -360,7 +412,8 @@ class media_manager {
             $this->store(self::AREA_NARRATION, $index, $node['id'], $result['data'], $result['mimetype']);
             return true;
         } catch (generation_exception $e) {
-            debugging('Narration generation skipped: ' . $e->errorcode, DEBUG_DEVELOPER);
+            $this->note_failure((string)$e->errorcode);
+            mtrace('Narration generation skipped: ' . $e->errorcode);
             return false;
         }
     }
@@ -452,7 +505,8 @@ class media_manager {
             );
             return true;
         } catch (generation_exception $e) {
-            debugging('Opening lesson narration skipped: ' . $e->errorcode, DEBUG_DEVELOPER);
+            $this->note_failure((string)$e->errorcode);
+            mtrace('Opening lesson narration skipped: ' . $e->errorcode);
             return false;
         }
     }
@@ -485,7 +539,8 @@ class media_manager {
             $this->store(self::AREA_NARRATION, $index, $node['id'] . '_said', $result['data'], $result['mimetype']);
             return true;
         } catch (generation_exception $e) {
-            debugging('Character line generation skipped: ' . $e->errorcode, DEBUG_DEVELOPER);
+            $this->note_failure((string)$e->errorcode);
+            mtrace('Character line generation skipped: ' . $e->errorcode);
             return false;
         }
     }
@@ -534,7 +589,8 @@ class media_manager {
             $this->store(self::AREA_NARRATION, $index, $choice['id'], $result['data'], $result['mimetype']);
             return true;
         } catch (generation_exception $e) {
-            debugging('Consequence narration generation skipped: ' . $e->errorcode, DEBUG_DEVELOPER);
+            $this->note_failure((string)$e->errorcode);
+            mtrace('Consequence narration generation skipped: ' . $e->errorcode);
             return false;
         }
     }
