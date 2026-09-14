@@ -60,20 +60,34 @@ class player implements \renderable, \templatable {
     }
 
     /**
-     * The opening lesson, one principle to a slide.
+     * The frame the scenario opens on.
      *
-     * A learner who is told the principles in a bulleted list has read them and learned
-     * nothing. Each one gets its own screen with the words to actually use and the
-     * plausible-sounding mistake it prevents, a picture from the scenario itself so the
-     * lesson is set where the story is, and its own narration.
+     * It used to borrow the FIRST LESSON SLIDE'S picture, so the screen a learner meets
+     * first and the screen immediately after it showed the same photograph - the same fault
+     * the debrief had, on the two slides where it is most obvious because they are
+     * consecutive. It takes the frame of the node the scenario actually opens on, which is
+     * what the opening situation describes.
      *
-     * The pictures are the scenes already generated for the scenario, taken in order and
-     * cycled if there are more principles than scenes. Nothing extra is generated.
-     *
-     * @param array|null $definition Published definition.
-     * @param \stdClass|null $revision Published revision.
-     * @return array Template context.
+     * @param array|mixed $definition The validated scenario definition.
+     * @param stdClass|null $revision The published revision.
+     * @return string The scene URL, or an empty string.
      */
+    protected function opening_scene($definition, $revision): string {
+        if (!is_array($definition) || !$revision) {
+            return '';
+        }
+        $start = (string)($definition['startnode'] ?? '');
+        if ($start === '') {
+            return '';
+        }
+        $media = new media_manager($this->context);
+        $scenes = $media->urls_for_revision(
+            media_manager::AREA_REVISION_SCENE,
+            (int)$revision->revision
+        );
+        return (string)($scenes[$start] ?? '');
+    }
+
     /**
      * The URL of the opening situation's narration, if it was made.
      *
@@ -236,7 +250,14 @@ class player implements \renderable, \templatable {
             'principles'   => is_array($definition) ? array_values($definition['principles']) : [],
             'hasprinciples' => is_array($definition) && !empty($definition['principles']),
             'lessonslides' => $lessonslides,
-            'openingimage' => $lessonslides ? (string)$lessonslides[0]['imageurl'] : '',
+            // The opening slide used to borrow the FIRST LESSON SLIDE'S picture, so the
+            // screen a learner meets first and the screen immediately after it showed the
+            // same photograph - the same fault the debrief had, on the two slides where it
+            // is most obvious because they are consecutive. It takes the frame of the node
+            // the scenario actually opens on, which is what the opening situation
+            // describes; the lesson slides keep theirs.
+            'openingimage' => $this->opening_scene($definition, $revision)
+                ?: ($lessonslides ? (string)$lessonslides[0]['imageurl'] : ''),
             // The opening situation has a clip of its own. It was being generated and
             // published and then never asked for: this slide is not a node, so nothing in
             // the node payload covered it, and its article carried no audio attribute to

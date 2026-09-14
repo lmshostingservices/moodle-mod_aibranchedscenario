@@ -99,16 +99,41 @@ class generate_media extends \core\task\adhoc_task {
                 . ($failures ? ' Refused: ' . implode(', ', $failures) . '.' : '')
         );
 
-        // Nothing asked for and nothing made is a success. Something asked for and none of
-        // it made is a failure, and it is recorded as one with the reasons the service
-        // gave, so the next person to ask why has an answer instead of a hypothesis.
+        // A run that made SOME of what was asked for used to be recorded as a success.
+        //
+        // Only a run that made nothing at all counted as a failure, so a scenario that
+        // wanted forty clips and twenty pictures and produced twelve of them was filed as
+        // "ready" - and the teacher was told nothing, because from the plugin's point of
+        // view nothing had gone wrong. What they got instead was a scenario where some
+        // slides spoke and some did not, some had pictures and some did not, with no
+        // pattern to it and nothing anywhere saying why. Every report of "no voiceover on
+        // this slide" is that, and it looked like a player fault for days because the only
+        // record of it said the media was fine.
+        //
+        // Made everything: ready. Made nothing: failed. Made some of it: also failed - it
+        // is not ready, and calling it ready is the part that hid it.
         $wanted = (int)$counts['imageswanted'] + (int)$counts['narrationswanted'];
         $made = (int)$counts['images'] + (int)$counts['narrations'];
+        $short = $wanted - $made;
+        $note = $failures ? implode(', ', array_slice($failures, 0, 6)) : null;
+        if ($short > 0) {
+            // The count goes in the message as well as the reasons, because "insufficient
+            // credits" on its own does not say how much of the scenario is missing.
+            $note = get_string(
+                'media:incomplete',
+                'mod_aibranchedscenario',
+                (object)[
+                    'made'   => $made,
+                    'wanted' => $wanted,
+                    'why'    => $note ?: get_string('media:nowhy', 'mod_aibranchedscenario'),
+                ]
+            );
+        }
         $DB->update_record('aibranchedscenario_jobs', (object)[
             'id'           => $job,
-            'status'       => ($wanted > 0 && $made === 0) ? generator::JOB_ERROR : generator::JOB_READY,
+            'status'       => ($wanted > 0 && $short > 0) ? generator::JOB_ERROR : generator::JOB_READY,
             'resultjson'   => json_encode(['media' => $counts]),
-            'errormsg'     => $failures ? implode(', ', array_slice($failures, 0, 6)) : null,
+            'errormsg'     => $note,
             'timemodified' => time(),
         ]);
 

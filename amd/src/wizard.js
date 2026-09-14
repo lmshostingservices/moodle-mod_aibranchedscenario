@@ -83,6 +83,7 @@ class Wizard {
         this.stepCount = root.querySelectorAll(SELECTORS.step).length;
         this.strings = {};
         this.busy = false;
+        this.leaving = false;
         this.dirty = false;
     }
 
@@ -129,6 +130,15 @@ class Wizard {
         // through an import abandons a scenario half-written; leaving mid-way through a
         // generation abandons credits that have already been spent.
         window.addEventListener('beforeunload', (event) => {
+            // A navigation the wizard performs ITSELF is not someone leaving. Holding the
+            // page while work is in flight was right; what it could not tell apart was the
+            // learner closing the tab mid-import from the import finishing and sending them
+            // to the review step - so a successful save ended in the browser's own "Leave
+            // site?" dialog, on top of the dialog the wizard had just shown, asking a
+            // teacher to confirm a navigation they never asked for and did not cause.
+            if (this.leaving) {
+                return undefined;
+            }
             if (!this.busy && !this.dirty) {
                 return undefined;
             }
@@ -1024,6 +1034,7 @@ class Wizard {
             const response = await this.call('restore_draft', {});
             if (response.restored) {
                 this.dirty = false;
+                this.leaving = true;
                 window.location.reload();
                 return true;
             }
@@ -1081,6 +1092,7 @@ class Wizard {
                     {text: this.strings['work:media'], state: 'doing'},
                 ]);
                 this.dirty = false;
+                this.leaving = true;
                 window.location.reload();
                 return true;
             }
@@ -1268,6 +1280,7 @@ class Wizard {
                 // The dialog stays up through the navigation. Clearing it first would
                 // show the teacher an idle form for the moment before the page changes,
                 // which reads as the import having done nothing.
+                this.leaving = true;
                 window.location.assign(url.toString());
                 return true;
             }

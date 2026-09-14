@@ -312,8 +312,12 @@
                         {{! The deck plays each slide's own clip as it is shown. This one had no
                             attribute to play from, so the first thing a learner heard was the
                             second slide. }}
-                        <article class="aibs-card aibs-deckslide aibs-slide" data-region="deckslide"
-                                 data-audio="{{openingaudio}}">
+                        {{! Says so when it has no picture, like every other slide. Without
+                            it an opening with no frame kept the two-column silhouette and
+                            drew the words into half a card with the other half empty. }}
+                        <article class="aibs-card aibs-deckslide aibs-slide
+                                 {{^openingimage}}aibs-noscene{{/openingimage}}"
+                                 data-region="deckslide" data-audio="{{openingaudio}}">
                             {{#openingimage}}
                                 <div class="aibs-scene">
                                     <img src="{{openingimage}}" alt="" class="aibs-scene-img" loading="lazy">

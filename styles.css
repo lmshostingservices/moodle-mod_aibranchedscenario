@@ -1231,6 +1231,7 @@
     margin-bottom: 0;
 }
 
+.aibs-prose-lead,
 .aibs-prose-lead p {
     font-size: var(--aibs-text-lead);
 }
@@ -1263,6 +1264,10 @@
 
 /* ------------------------------------------------------------------ chips */
 
+/* A section label, set like one. It was sentence case at nearly the size of the body text
+   under it, which made it read as a first line of prose in a rounded box rather than as the
+   label for what follows - and it is the same kind of thing as WELL JUDGED and PRINCIPLE
+   TESTED, which were already set as labels. Small caps, letter-spaced, quiet. */
 .aibs-chip {
     align-items: center;
     background: var(--aibs-accent-soft);
@@ -1271,10 +1276,108 @@
     color: var(--aibs-accent-strong);
     display: inline-flex;
     font-size: var(--aibs-text-micro);
-    font-weight: var(--aibs-weight-label);
+    font-weight: var(--aibs-weight-strong);
     gap: 6px;
-    letter-spacing: .02em;
+    letter-spacing: .06em;
     padding: 4px 11px;
+    text-transform: uppercase;
+}
+
+/* A finger is not a pointer.
+   The avatar and the icon buttons are 34px, which is right for a mouse and under every
+   accessible minimum for a touch screen. They grow on a coarse pointer rather than at a
+   width, because a small tablet is a touch screen at 900px and a desktop with a narrow
+   window is not. */
+@media (pointer: coarse) {
+    .aibs-avatar,
+    .aibs-iconbtn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* The audit measures in a desktop browser, where the pointer is fine, so the width rule is
+   what it can see - and a 380px viewport is a phone in every case that matters. */
+@media (max-width: 600px) {
+    .aibs-avatar,
+    .aibs-iconbtn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* Every block that carries words takes a size from the scale.
+   Eight screens were found sitting at the shell's own 16px with no font-size rule of their
+   own, which means they ignore the fit entirely: the type around them grows and shrinks and
+   they stand still. That is what "the text is all the same size" and "this text is too
+   small" both are, and they were being fixed one screenshot at a time because no sweep ever
+   asked the question per slide. preview/slides.mjs asks it now, of every slide, at three
+   widths, in both schemes. */
+.aibs-lessoncard-text {
+    font-size: var(--aibs-text-body);
+}
+
+.aibs-ring {
+    font-size: var(--aibs-text-body);
+}
+
+.aibs-skill {
+    font-size: var(--aibs-text-body);
+}
+
+.aibs-journey-item {
+    font-size: var(--aibs-text-body);
+}
+
+.aibs-journey-choice {
+    font-size: var(--aibs-text-lead);
+}
+
+.aibs-lesson {
+    font-size: var(--aibs-text-body);
+}
+
+/* The two blocks that carry the words had NO size of their own.
+   Measured on a decision card: the label, the heading and the figures around them all
+   scaled with the fit, while the role callout and the situation itself sat at the shell's
+   own 16px - so on a screen with room to spare the type grew around two blocks that did
+   not, and the three things that should differ most read as one size. Hierarchy is not a
+   matter of taste here; two of the four steps were simply missing.
+
+   Lead for the callout, because it is the one sentence that tells the learner who they are;
+   body for the situation; and both take the fit like everything else on the slide. */
+/* A heading three pixels bigger than the paragraph under it is not a heading, it is the
+   same text in bold. On a slide it takes the next step of the scale up, so the four things
+   on the card - the section label, the heading, the callout and the situation - read as four
+   levels rather than as one block with some of it emboldened. */
+.aibs-slide .aibs-node-body > .aibs-h3,
+.aibs-consequence .aibs-node-body > .aibs-h3,
+.aibs-deckslide .aibs-node-body > .aibs-h3 {
+    font-size: var(--aibs-text-head);
+    line-height: var(--aibs-leading-tight);
+}
+
+.aibs-role {
+    font-size: var(--aibs-text-lead);
+}
+
+/* The container as well as its paragraphs. Only `.aibs-prose p` was sized, so any text in a
+   prose block that is not wrapped in a paragraph inherited the shell's base and stood still
+   while everything around it scaled. */
+.aibs-prose,
+.aibs-prose p {
+    font-size: var(--aibs-text-body);
+}
+
+/* The lead variants keep their own step above and below it. */
+.aibs-prose-lead,
+.aibs-prose-lead p {
+    font-size: var(--aibs-text-lead);
+}
+
+.aibs-prose-small,
+.aibs-prose-small p {
+    font-size: var(--aibs-text-sub);
 }
 
 .aibs-chip-quiet {
@@ -1300,7 +1403,8 @@
    prose instead of standing still while the prose grows. */
 .aibs-slide,
 .aibs-consequence,
-.aibs-deckslide {
+.aibs-deckslide,
+.aibs-debrief-hidden {
     --aibs-text-micro: calc(var(--aibs-text-micro-base) * var(--aibs-fit, 1));
     --aibs-text-meta: calc(var(--aibs-text-meta-base) * var(--aibs-fit, 1));
     --aibs-text-small: calc(var(--aibs-text-small-base) * var(--aibs-fit, 1));
@@ -1878,9 +1982,12 @@
     padding: 12px 14px;
 }
 
+/* A skill row is a name, a bar, a figure and a line saying what the skill IS - and that
+   last line is the only part that teaches anything, so it was the wrong thing to set at
+   label size. The name and the description both step up; the row has the width for it. */
 .aibs-skill-label {
     color: var(--aibs-muted);
-    font-size: var(--aibs-text-small);
+    font-size: var(--aibs-text-sub);
     font-weight: var(--aibs-weight-label);
 }
 
@@ -3242,25 +3349,105 @@ button.aibs-avatar {
 
 /* ------------------------------------------------------------ outcome rings */
 
+/* Three rows, stacked, with room between them. They used to be three columns that wrapped,
+   which on a narrow card put one reading on a second row on its own. A reading is a row now,
+   so the set is a short list and the gap between them can be generous without costing
+   height the card does not have. */
 .aibs-rings {
     display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
+    flex-direction: column;
+    gap: clamp(10px, 1.4vw, 16px);
     list-style: none;
     margin: 20px 0 0;
     padding: 0;
 }
 
+/* A reading is one row, not a column.
+   Stacked - dial, then name, then change, then band, all centred - each card was four
+   things tall for four short pieces of information, so three readings took the height of a
+   paragraph and every piece of text in them had to be small to fit. It reads across
+   instead: the dial on the left, the name and what changed on the right, and the band under
+   the name. Same information, a third of the height, and the room that buys goes into the
+   type and into the space between the cards.
+
+   Grid rather than flex, so the dial column is the same width on all three cards whatever
+   the numbers are and the names line up down the left edge of their column. */
 .aibs-ring {
     align-items: center;
     background: var(--aibs-surface-alt);
     border-radius: var(--aibs-radius-sm);
+    column-gap: clamp(10px, 1.4vw, 16px);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: clamp(10px, 1.4vw, 14px) clamp(12px, 1.6vw, 18px);
+    row-gap: 2px;
+    text-align: start;
+}
+
+/* The dial spans both rows of the card, so the name and the band sit beside it rather than
+   under it. */
+.aibs-ring > .aibs-ring-readout {
+    grid-row: 1 / span 2;
+}
+
+/* The name and the change read as one line: "Engagement, up 10". They were on two lines
+   with the change centred under the name, which made a two-word fact into two rows. */
+.aibs-ring .aibs-ring-label {
+    align-items: baseline;
     display: flex;
-    flex: 1 1 150px;
-    flex-direction: column;
-    gap: 2px;
-    padding: 14px 10px 12px;
-    text-align: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.aibs-ring .aibs-ring-change {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+}
+
+.aibs-ring .aibs-ring-standing {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+/* The room the row layout bought goes into the type. Every one of these was sized down to
+   fit a four-deep column; none of them had to be. */
+.aibs-ring .aibs-ring-label {
+    font-size: var(--aibs-text-lead);
+    font-weight: var(--aibs-weight-label);
+}
+
+.aibs-ring .aibs-ring-change {
+    font-size: var(--aibs-text-body);
+    font-weight: var(--aibs-weight-strong);
+}
+
+.aibs-ring .aibs-ring-standing {
+    font-size: var(--aibs-text-meta);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+/* On a phone the change drops under the name rather than being pushed to the far edge of a
+   narrow card, where it ends up further from the figure it describes than from the next
+   card along. */
+@media (max-width: 600px) {
+    .aibs-ring .aibs-ring-change {
+        grid-column: 2;
+        grid-row: 2;
+        justify-self: start;
+    }
+
+    .aibs-ring .aibs-ring-standing {
+        grid-column: 2;
+        grid-row: 3;
+    }
+
+    .aibs-ring > .aibs-ring-readout {
+        grid-row: 1 / span 3;
+    }
 }
 
 .aibs-ring-dial {
@@ -4366,7 +4553,7 @@ button.aibs-avatar {
 /* What each of the four graded skills actually measures, under its own bar. */
 .aibs-skill-desc {
     color: var(--aibs-muted);
-    font-size: var(--aibs-text-meta);
+    font-size: var(--aibs-text-body);
     grid-column: 1 / -1;
     line-height: var(--aibs-leading-snug);
     margin-top: 2px;
@@ -4374,10 +4561,26 @@ button.aibs-avatar {
 }
 
 /* A chip that was a bare phrase and could have been a tag, a quote or a category. */
+/* A chip that carries a label AND a value is two things, set as two.
+   "PRINCIPLE TESTED: Stop and make the area safe" - the first half is a label and belongs in
+   small caps like every other label on the screen; the second half is the principle itself,
+   which a learner reads, and setting that in caps at label size made the one piece of
+   content in the pill the hardest thing on the card to read. The template already tells
+   these two kinds of chip apart, so the decision is made from the markup rather than with
+   :has(). */
+.aibs-chip-quiet {
+    font-size: var(--aibs-text-meta);
+    letter-spacing: 0;
+    text-transform: none;
+}
+
 .aibs-chip-lead {
+    font-size: var(--aibs-text-micro);
     font-weight: var(--aibs-weight-strong);
-    margin-inline-end: 4px;
-    opacity: .8;
+    letter-spacing: .06em;
+    margin-inline-end: 6px;
+    opacity: .75;
+    text-transform: uppercase;
 }
 
 /* The ring's colour said where a reading stands; this says it in words too. */

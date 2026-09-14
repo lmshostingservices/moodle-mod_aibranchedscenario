@@ -691,5 +691,25 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091469, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091470) {
+        // Release 1.58.0 changes no schema. Type hierarchy, the reading cards laid out as
+        // rows, and the wizard no longer tripping the browser's own leave-page dialog on a
+        // navigation it performed itself.
+        upgrade_mod_savepoint(true, 2026091470, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091471) {
+        // Release 1.59.0 changes no schema. A media run that finished only part of the set
+        // is no longer recorded as ready, which is what hid every report of a slide with no
+        // picture or no narration.
+        upgrade_mod_savepoint(true, 2026091471, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091472) {
+        // Release 1.60.0 changes no schema. The per-slide quality audit found thirteen
+        // faults on screens no sweep had ever looked at, and they are fixed here.
+        upgrade_mod_savepoint(true, 2026091472, 'aibranchedscenario');
+    }
+
     return true;
 }

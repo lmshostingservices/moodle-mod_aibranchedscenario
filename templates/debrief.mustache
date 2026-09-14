@@ -332,11 +332,17 @@
                                   stroke-linejoin="round"/>
                         {{/endgood}}
                         {{#endwarn}}
-                            <path class="aibs-finish-tick" d="M48 29 27 66h42z" fill="none"
-                                  stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
-                            <path d="M48 44v9" fill="none" stroke="currentColor" stroke-width="5"
-                                  stroke-linecap="round"/>
-                            <circle class="aibs-finish-dot" cx="48" cy="60" r="2.8" fill="currentColor"/>
+                            {{! Sized to sit inside the ring rather than through it: the
+                                first triangle was 42 units wide in a circle of radius 42,
+                                so its corners crossed the stroke and the mark read as two
+                                shapes colliding rather than as one caution sign. }}
+                            <path class="aibs-finish-tick" d="M48 33 65 62H31Z" fill="none"
+                                  stroke="currentColor" stroke-width="4.5"
+                                  stroke-linejoin="round"/>
+                            <path d="M48 44v7" fill="none" stroke="currentColor"
+                                  stroke-width="4.5" stroke-linecap="round"/>
+                            <circle class="aibs-finish-dot" cx="48" cy="57" r="2.4"
+                                    fill="currentColor"/>
                         {{/endwarn}}
                         {{#endbad}}
                             <path class="aibs-finish-tick" d="M34 34 62 62M62 34 34 62" fill="none"

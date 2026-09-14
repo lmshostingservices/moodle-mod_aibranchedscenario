@@ -2,6 +2,84 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.60.0] - 2026-09-14
+
+### Added
+- **A per-slide quality audit** - `preview/slides.mjs`. The existing sweeps check the page;
+  this checks every rule against every slide, one slide at a time, at three widths and in
+  both schemes, and names the slide when it fails. The faults that kept reaching a learner
+  were never "the page is broken" - they were "this one screen is missing the thing every
+  other screen has", which a page-wide sweep reports as zero.
+
+### Fixed
+Thirteen faults, all found by that audit on its first run, on screens nothing had checked:
+
+- **Eight screens had text that ignored the fit** - the opening lesson cards, the ring
+  labels, the skill rows, the decision records and all three lesson lists. Each had no
+  font-size rule of its own, so it sat at the shell's 16px while the type around it grew and
+  shrank. That is what "the text is all the same size" and "this text is too small" both
+  were, and they were being fixed one screenshot at a time because no sweep asked the
+  question per slide. Asking "is it 16px" cannot answer it either: `--aibs-text-body`
+  resolves to exactly 16px at rest, so a sized block and an unsized one look identical
+  standing still. The audit sets the fit to 1.4 and reads it back.
+- **The prose container was unsized**, only its paragraphs - so any text in a prose block not
+  wrapped in a paragraph stood still.
+- **The withheld-debrief screen was outside the scaled selector list entirely**, so nothing
+  on it moved with the fit.
+- **Tap targets of 34px** on the avatar and the icon buttons. 44px on a coarse pointer.
+- **The opening slide borrowed the first lesson slide's picture**, so the screen a learner
+  meets first and the screen immediately after it showed the same photograph - on the two
+  slides where it is most obvious, because they are consecutive. It takes the frame of the
+  node the scenario opens on.
+- **The opening slide never said it had no picture**, so an opening with no frame kept the
+  two-column silhouette and drew the words into half a card with the other half empty.
+
+## [v1.59.0] - 2026-09-14
+
+### Fixed
+- **A media run that finished only part of the set was recorded as a success.** Only a run
+  that made NOTHING counted as a failure, so a scenario asking for forty clips and twenty
+  pictures that produced twelve of them was filed as "ready" - and the teacher was told
+  nothing, because from the plugin's point of view nothing had gone wrong. What they got was
+  a scenario where some slides spoke and some did not, some had pictures and some did not,
+  with no pattern to it and nothing anywhere saying why. Every "no voiceover on this slide"
+  report was that, and it read as a player fault for days because the only record of it said
+  the media was fine. A short run is now recorded as a failure, and the message says how much
+  of the set is missing as well as why - "Only 12 of 60 pictures and clips were made, so some
+  slides have no picture or no narration. Generate the media again to finish the set."
+- The caution mark on the closing card was drawn 42 units wide inside a ring of radius 42, so
+  its corners crossed the stroke and it read as two shapes colliding rather than one sign.
+
+## [v1.58.0] - 2026-09-14
+
+### Fixed
+- **Saving a pasted scenario ended in the browser's own "Leave site?" dialog.** The guard
+  that holds the page while work is in flight could not tell a teacher closing the tab
+  mid-import from the import FINISHING and sending them to the review step - so a successful
+  save asked them to confirm a navigation they never asked for, on top of the dialog the
+  wizard had just shown. A navigation the wizard performs itself now declares itself first.
+- **Two of the four type steps on a slide were missing.** The role callout and the situation
+  itself had no font-size rule at all, so they sat at the shell's own 16px while the label,
+  the heading and the figures around them scaled with the fit - the three things that should
+  differ most read as one size. Worse, it inverted: the consequence, set in the lead scale,
+  came out SMALLER than the feedback panel under it whenever the fit stepped down. Every
+  block now takes a size from the scale, and a slide heading takes a real step above the
+  paragraph rather than being the same text in bold.
+
+### Changed
+- **The three readings are rows, not columns.** Dial, name, change and band stacked four deep
+  meant three readings took the height of a paragraph and every piece of text in them had to
+  be small to fit. A reading reads across now - dial left, name and change right, band under
+  the name - which is a third of the height, and the room that buys goes into the type and
+  the space between the cards. On a phone the change drops to its own line rather than being
+  pushed to the far edge of a narrow card.
+- Section labels are set as labels: small caps, letter-spaced. A chip that carries a label
+  AND a value keeps the value readable - "PRINCIPLE TESTED" is a label, the principle itself
+  is content, and setting both in caps at label size made the one piece of content in the
+  pill the hardest thing on the card to read.
+- The skill rows' descriptions take body size. That line is the only part of the row that
+  teaches anything, so label size was the wrong choice for it.
+
 ## [v1.57.0] - 2026-09-14
 
 ### Fixed
