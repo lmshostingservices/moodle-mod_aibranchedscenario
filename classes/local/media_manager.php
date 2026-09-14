@@ -369,6 +369,26 @@ class media_manager {
                     ) {
                         $counts['narrations']++;
                     }
+                    // The same choice read a second time, as the debrief records it.
+                    //
+                    // The record page reuses the consequence clip, which reads what followed
+                    // and why it mattered - and never says WHICH decision it followed from.
+                    // A learner listening to their own record therefore heard five outcomes
+                    // with no decisions attached to them, while the heading and the choice
+                    // they actually took sat on screen unread. The card is read whole.
+                    $counts['narrationswanted']++;
+                    if (
+                        $this->generate_record_narration(
+                            $provider,
+                            $node,
+                            $choice,
+                            $scenario->scenariolang,
+                            $voice,
+                            $index
+                        )
+                    ) {
+                        $counts['narrations']++;
+                    }
                 }
             }
             $index++;
@@ -381,6 +401,49 @@ class media_manager {
         // so one clip each covers them.
         if ($wantsaudio) {
             $debrief = (array)($definition['debrief'] ?? []);
+            // The three list pages are read one item at a time, so each item has a clip of
+            // its own rather than the page having a single recording of the whole list. The
+            // page can then pace itself: a card arrives, the picture behind it changes, the
+            // clip for THAT item plays with the card marked, and the next arrives when it
+            // finishes. One clip for five items can only be played at a list already
+            // entirely on screen, which is a wall of text with a voice over it.
+            $scripted = [
+                'lesson'   => array_values((array)($debrief['whatmattered'] ?? [])),
+                'critical' => array_values((array)($debrief['criticaldecisions'] ?? [])),
+                'practice' => array_values((array)($debrief['practice'] ?? [])),
+                // A takeaway is a heading and a body, so the clip reads both: the heading
+                // alone is a label, and the body alone is advice with nothing to hang it on.
+                'takeaway' => array_values(array_map(
+                    static function ($takeaway) {
+                        return trim(trim((string)($takeaway['heading'] ?? ''), " .") . '. '
+                            . (string)($takeaway['body'] ?? ''));
+                    },
+                    (array)($definition['takeaways'] ?? [])
+                )),
+            ];
+            $bucket = 0;
+            foreach ($scripted as $name => $items) {
+                $bucket++;
+                foreach ($items as $position => $item) {
+                    $text = trim((string)$item);
+                    if ($text === '') {
+                        continue;
+                    }
+                    $counts['narrationswanted']++;
+                    $made = $this->generate_section_narration(
+                        $provider,
+                        $text,
+                        $scenario->scenariolang,
+                        $voice,
+                        self::DEBRIEF_ITEMID_BASE + ($bucket * 20) + $position,
+                        'debrief_' . $name . '_' . $position
+                    );
+                    if ($made) {
+                        $counts['narrations']++;
+                    }
+                }
+            }
+
             $sections = [
                 'whatmattered' => self::lines_text($debrief['whatmattered'] ?? []),
                 'practice'     => self::lines_text($debrief['practice'] ?? []),
@@ -800,6 +863,74 @@ class media_manager {
         } catch (generation_exception $e) {
             $this->note_failure((string)$e->errorcode);
             mtrace('Character line generation skipped: ' . $e->errorcode);
+            return false;
+        }
+    }
+
+    /**
+     * Read one card of the decision record: the moment, the choice, and what followed.
+     *
+     * The record page used to play the consequence clip - which reads what followed and why
+     * it mattered, and never says which decision it followed from. So a learner listening to
+     * their own record heard five outcomes with no decisions attached to them, while the
+     * heading and the choice they actually took sat on the screen unread.
+     *
+     * Its own clip, because a record card is a different thing from a consequence screen:
+     * one is "here is what just happened", the other is "this is what you decided, and this
+     * is what it did". The components are properties of the node and the choice, not of the
+     * attempt, so it can be generated once per revision like everything else.
+     *
+     * @param provider $provider Generation provider.
+     * @param array $node The node the choice belongs to.
+     * @param array $choice Normalised choice.
+     * @param string $language BCP-47 language code.
+     * @param string $voice Voice identifier.
+     * @param int $index Zero based node index, used as the file item id.
+     * @return bool True when audio was stored.
+     */
+    public function generate_record_narration(
+        provider $provider,
+        array $node,
+        array $choice,
+        string $language,
+        string $voice,
+        int $index
+    ): bool {
+        $lang = self::label_lang($language);
+        $parts = [];
+        $title = trim((string)($node['title'] ?? ''));
+        if ($title !== '') {
+            $parts[] = rtrim($title, '.') . '.';
+        }
+        $took = trim((string)($choice['text'] ?? ''));
+        if ($took !== '') {
+            $parts[] = get_string('recordyouchose', 'mod_aibranchedscenario', null, $lang)
+                . ' ' . $took;
+        }
+        $parts[] = trim((string)($choice['consequence'] ?? ''));
+        if (trim((string)($choice['feedback'] ?? '')) !== '') {
+            $parts[] = get_string('whythismattered', 'mod_aibranchedscenario', null, $lang)
+                . '. ' . (string)$choice['feedback'];
+        }
+        $text = trim(implode("\n\n", array_filter($parts, static function ($part) {
+            return trim((string)$part) !== '';
+        })));
+        if ($text === '') {
+            return false;
+        }
+        try {
+            $result = $provider->generate_speech(\core_text::substr($text, 0, 4500), $voice, $language);
+            $this->store(
+                self::AREA_NARRATION,
+                $index,
+                'record_' . $choice['id'],
+                $result['data'],
+                $result['mimetype']
+            );
+            return true;
+        } catch (generation_exception $e) {
+            $this->note_failure((string)$e->errorcode);
+            mtrace('Decision record narration generation skipped: ' . $e->errorcode);
             return false;
         }
     }

@@ -2,6 +2,108 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.57.0] - 2026-09-14
+
+### Fixed
+- **The decision record never said which decision it was recording.** Each card played the
+  consequence clip - which reads what followed and why it mattered, and never names the
+  decision it followed from - so a learner listening to their own record heard five outcomes
+  with no decisions attached to them, while the heading and the choice they had actually
+  taken sat on screen unread. Each card now has a clip of its own that reads the whole card:
+  the moment, "You chose: ...", what followed, and why it mattered. A revision generated
+  before this still falls back to the consequence clip it has, so nothing goes silent.
+
+## [v1.56.0] - 2026-09-14
+
+### Changed
+- **The four list pages of the debrief are played, not shown.** Lessons learnt, critical
+  decisions, how to apply this and key takeaways each arrived whole - five cards in a grid
+  with one recording of the entire list read over the top, which is a wall of text with a
+  voice somewhere behind it and no way to tell which line is being read. Each page now plays
+  itself: a card floats up, the picture beside it changes to the frame from that part of the
+  scenario, that card's own clip reads it with the card marked, and the next arrives when the
+  clip finishes. The list is one column, because cards arriving side by side have no order to
+  arrive in. Everything is in the markup either way - with narration off, muted, reduced
+  motion asked for, or a browser that refuses to play, the whole list is simply shown.
+- **One mark per band on the closing card.** It was a tick or an exclamation, keyed to
+  whether the run was flawless - which drew a green exclamation mark on a strong outcome: a
+  warning in the colour of a success, telling a learner two contradictory things at once. A
+  tick when it went well, a caution when it was mixed, a cross when it cost.
+- **The celebration is for a run that went well, not only a flawless one.** 88.8% and a
+  strong outcome is a result worth marking; a closing card sitting in silence after one reads
+  as the product having missed what happened. The tick still belongs to a flawless run only -
+  the two answer different questions.
+- The deck takes its arrow away at the end rather than greying it. A disabled arrow is a
+  control that cannot do anything, sitting where a learner expects one that can.
+
+### Fixed
+- The three figures on the closing card did not line up: the outcome pill sat higher than the
+  numerals beside it and its label sat lower than theirs, so the row read as three separate
+  things. They are a grid with equal tracks now - values on one line, labels on another,
+  whatever shape the value is - and the pill may take two lines rather than forcing the row
+  wider than the card.
+- The decision-quality figure stayed accent blue on a banded card: the banded rules tied on
+  specificity with a later single-class rule the same element carries.
+- The closing sentence took the lead size and the fit together, which on a card with room to
+  spare made the one instruction on the page larger than the heading above it.
+- On a phone the three closing figures stayed in a row: the container had become a grid and
+  the phone rule was still speaking flex to it.
+
+## [v1.55.0] - 2026-09-14
+
+### Changed
+- **The card being read out loud now says so.** A page that reads two cards one after the
+  other gave a learner no way to tell which one they were hearing - two cards, one voice, and
+  the reader left matching the words to the column by guesswork. The card being read wears
+  the lift the pointer already gives it, plus a soft accent ring, and carries `aria-current`
+  so a screen reader is told the same thing rather than being left with the problem in sound.
+  It is driven by the clip queue, so it is right by construction rather than by a second
+  piece of bookkeeping that can drift.
+- **The imagery now has an emotional temperature that rises across the set.** The three
+  endings differed only in lighting - a strong one read "resolved and under control, people
+  at ease in their posture", which describes calm, not success: nobody in it is pleased and
+  nothing has closed, so a learner who scored 89% was shown a quiet office. Each ending is
+  now a moment with people reacting in it - the handshake just released and someone laughing,
+  or the room after everyone has gone - and the decision frames ramp from cool through
+  warming to hot, named as behaviour a camera can see rather than as adjectives. What is
+  felt is what is kept; a set held at one temperature gives a learner nothing to feel.
+- **The skills page is heard as well as seen.** Four bars filling in silence was the barest
+  screen in the product; it now reports its own band in the same voice the consequence cues
+  use, taken from the class the bars already carry rather than worked out a second time.
+- **A neutral consequence is no longer silent.** It was skipped on the reasoning that nothing
+  much had happened - but the learner made a decision and it neither helped nor cost, which
+  is a result, and a screen that reports a result in silence reports it as nothing at all.
+- **The type fills a screen that has room to spare.** Only five of the ten sizes in the scale
+  could be scaled at all, so on a card with space left over the prose grew and the label, the
+  ring name, the figure and every heading beside it stood still - which is the fault a learner
+  reports as "why is all the text so small with all the room you have". Every size in the
+  scale now has a base the fit multiplies, and the ceiling is a third larger rather than half
+  again, which uses the room without letting body copy overtake its own heading.
+- **The two consequence cues no longer sound alike.** They were two quiet sine notes a third
+  apart - near-identical shapes at near-identical volume, separated only by direction. Well
+  judged is a major triad that builds and arrives, with a fifth underneath for body. Costly is
+  thicker, slightly detuned and falls: firm rather than punishing, because this is a learner
+  being told a decision cost something, not a buzzer telling them off.
+- **The options answer the pointer.** Crossing a lettered option plays a short, quiet blip,
+  pitched a step higher down the list so moving through them is a small scale rather than the
+  same note four times. Once per arrival, silent on touch devices where hover arrives with the
+  tap, and silent for anyone who turned narration off, muted the player or asked for reduced
+  motion - like every other sound the player makes.
+
+### Fixed
+- **A page of the decision record read one card and stopped.** The debrief puts two decisions
+  on a page and each has its own clip, but the page was handed
+  `slice.find((entry) => entry.audiourl)` - the FIRST decision with a recording - so the
+  second card was never read, on any page. A slide now carries a queue of clips and plays
+  them in order, without re-holding Continue between them; one clip that will not load no
+  longer silences the rest of the page.
+- **The spoken line was read out twice.** The character's own recording was chained onto the
+  end of the narration so a learner listening straight through would hear it - but the
+  narrator's clip already reads the quoted line as part of the situation, so the same words
+  played twice in two different voices, one after the other. The avatar plays it, which is
+  what a control is for; and because it is now optional it no longer holds Continue either,
+  which would have locked the screen for anyone who never pressed it.
+
 ## [v1.54.0] - 2026-09-14
 
 ### Changed

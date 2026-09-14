@@ -87,7 +87,17 @@ class Player {
      *
      * @type {Number}
      */
-    static MAX_FIT = 1.5;
+    /**
+     * The ceiling on the type scale.
+     *
+     * 1.5 filled the frame, which was the point - but at half again the body copy on a
+     * sparse screen overtook its own heading and the card read as a large-print edition
+     * rather than as a well-set one. A third larger uses the room without breaking the
+     * relationship between the sizes in the scale.
+     *
+     * @var {Number}
+     */
+    static MAX_FIT = 1.3;
 
     /**
      * The smallest the type is allowed to get while a screen is being fitted.
@@ -171,6 +181,7 @@ class Player {
         this.narrationDone = true;
         this.speechDone = true;
         this.cueContext = null;
+        this.hoverRow = null;
         this.attemptId = 0;
         this.nextSeq = 1;
         this.step = 0;
@@ -247,6 +258,23 @@ class Player {
                 this.refreshFullscreenButton();
             });
         });
+
+        // Delegated, because the options are re-rendered on every screen: a listener bound
+        // to the rows themselves would be bound to rows that no longer exist by the second
+        // decision.
+        this.root.addEventListener('pointerover', (event) => {
+            const row = event.target.closest
+                ? event.target.closest('[data-action="choose"]')
+                : null;
+            if (row) {
+                this.playHover(row);
+            } else {
+                this.hoverRow = null;
+            }
+        });
+        this.root.addEventListener('pointerleave', () => {
+            this.hoverRow = null;
+        }, true);
 
         this.root.addEventListener('click', (event) => {
             const target = event.target.closest('[data-action]');
@@ -735,6 +763,12 @@ class Player {
                 outcomeclass: 'aibs-outcome-' + response.outcome,
                 endtone: endband.tone,
                 endperfect: endperfect,
+                // One mark per band: a tick when it went well, a caution when it was mixed,
+                // a cross when it cost. A green exclamation mark is a warning drawn in the
+                // colour of a success, which tells a learner two contradictory things.
+                endgood: endband.tone === 'aibs-tone-good',
+                endwarn: endband.tone === 'aibs-tone-warn',
+                endbad: endband.tone === 'aibs-tone-bad',
                 endverdict: this.strings[verdictkey] || '',
                 hassourceconnection: response.sourceconnectionparas.length > 0,
                 hascritical: response.criticaldecisions.length > 0,
@@ -825,7 +859,12 @@ class Player {
                 // The clip for a decision already exists - it is the one played on the
                 // consequence screen when the learner made that choice. The page plays the
                 // first of them, so the record of a decision has the voice the moment had.
-                pageaudiourl: (slice.find((entry) => entry.audiourl) || {}).audiourl || '',
+                // The page used to be handed ONE url - `.find()` on the first decision that
+                // had a clip - so a page holding two decisions read one of them and
+                // stopped. The clips travel on the cards instead, which fixes that and buys
+                // something else: the player knows which card each clip belongs to, so the
+                // card being read can say so on screen.
+                pageaudiourl: '',
                 first: start + 1,
                 last: start + slice.length,
                 decisions: slice,
@@ -897,8 +936,13 @@ class Player {
         // and a chime for it, which reads as the product not having understood what
         // happened. The card says so itself now - it carries aibs-endperfect only when
         // every decision was the best one available.
+        // The tick is reserved for a flawless run and the celebration is not the same
+        // question: 88.8% and a strong outcome is a result worth marking, and a closing
+        // card that sits in silence after one reads as the product having missed what
+        // happened. The mark says "not every decision was the best available"; the
+        // confetti and the chime say "you did well", and both are true at once.
         if (slides[wanted].classList.contains('aibs-deckend')
-                && slides[wanted].classList.contains('aibs-endperfect')) {
+                && slides[wanted].classList.contains('aibs-tone-good')) {
             this.dropConfetti(slides[wanted]);
             this.playFanfare();
         }
@@ -906,16 +950,30 @@ class Player {
         this.showPosition(wanted + 1, slides.length, this.strings.deckposition);
         const prev = deck.querySelector('[data-action="deckprev"]');
         const next = deck.querySelector('[data-action="decknext"]');
+        // A disabled arrow at the end of the deck is a control that cannot do anything,
+        // sitting where a learner expects one that can. It is taken away rather than
+        // greyed: there is nothing after the last page, and saying so by leaving a dead
+        // button there says it badly.
         if (prev) {
             prev.disabled = wanted === 0;
+            prev.hidden = wanted === 0;
         }
         if (next) {
             next.disabled = wanted === slides.length - 1;
+            next.hidden = wanted === slides.length - 1;
         }
 
         // A slide may carry its own narration - the opening lesson does, the debrief does
         // not - and the control follows whichever it is.
-        this.playAudio(slides[wanted].dataset.audio || '', '');
+        // A slide may be one recording or several: the decision record puts two cards on a
+        // page, each with a clip of its own. They are collected in the order they are read
+        // in, so the queue and the cards stay in step and the card being read can be marked
+        // on screen.
+        if (slides[wanted].dataset.script) {
+            this.runScript(slides[wanted]);
+        } else {
+            this.playAudio(this.slideClips(slides[wanted]), '');
+        }
         this.fitSlide();
         const heading = slides[wanted].querySelector('h3, h4, p');
         if (heading) {
@@ -1737,6 +1795,41 @@ class Player {
         slide.dataset.aibsRevealed = '1';
         this.animateSkillBars(slide);
         this.animateScore(slide);
+        // Every screen that delivers a result should be heard as well as seen. The skills
+        // page is the one that says how the learner actually handled it - four bars filling
+        // in silence - and it was the barest screen in the product: no sound, no cue, four
+        // numbers and a paragraph. It now reports itself the same way a consequence does,
+        // in the same voice, banded against the same thresholds the bars are coloured by.
+        this.soundSlide(slide);
+    }
+
+    /**
+     * Let a debrief page say how it went, out loud.
+     *
+     * @param {HTMLElement} slide The slide being revealed.
+     * @returns {void}
+     */
+    soundSlide(slide) {
+        if (!slide) {
+            return;
+        }
+        // The bars carry their own band in a class, put there by the same banding function
+        // that colours them - so the sound is taken from the data rather than worked out a
+        // second time and left to drift away from what is on screen.
+        const bars = [...slide.querySelectorAll('[class*="aibs-tone-"]')];
+        if (!bars.length) {
+            return;
+        }
+        const band = (name) => bars.filter(
+            (bar) => bar.className.indexOf('aibs-tone-' + name) !== -1
+        ).length;
+        if (band('bad')) {
+            this.playCue('negative');
+        } else if (band('warn')) {
+            this.playCue('neutral');
+        } else if (band('good')) {
+            this.playCue('positive');
+        }
     }
 
     /**
@@ -2142,8 +2235,78 @@ class Player {
      * @param {String} signal positive, neutral or negative.
      * @returns {void}
      */
+    /**
+     * A small sound when the pointer crosses an option.
+     *
+     * The lettered options are the one place on the screen where a learner is deciding, and
+     * they were silent - the card lifted and nothing else happened. A short, quiet, rising
+     * blip under the hover makes the row feel like something you are choosing rather than
+     * text you are reading past, which is most of what makes an interface feel answerable.
+     *
+     * Deliberately small: forty milliseconds, low gain, one note, and never repeated while
+     * the pointer sits on the same row. It is confirmation, not a notification - the moment
+     * it becomes something you notice, it is something you resent.
+     *
+     * Silent for anyone who turned narration off, muted the player, or asked for reduced
+     * motion, on the same reasoning as every other sound the player makes. Also silent for
+     * a pointer that is not really a pointer: a touch device fires a hover on the way to a
+     * tap, so the blip would arrive with the press rather than before it.
+     *
+     * @param {HTMLElement} row The option the pointer has entered.
+     * @returns {void}
+     */
+    playHover(row) {
+        const reduced = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!this.audioEnabled || this.muted || reduced || !row || row.disabled) {
+            return;
+        }
+        if (window.matchMedia && !window.matchMedia('(hover: hover)').matches) {
+            return;
+        }
+        // One blip per arrival, not one per pointermove.
+        if (this.hoverRow === row) {
+            return;
+        }
+        this.hoverRow = row;
+        const Context = window.AudioContext || window.webkitAudioContext;
+        if (!Context) {
+            return;
+        }
+        try {
+            if (!this.cueContext) {
+                this.cueContext = new Context();
+            }
+            const ctx = this.cueContext;
+            if (ctx.state === 'suspended' && ctx.resume) {
+                ctx.resume();
+            }
+            // The pitch steps up the list, so moving down the options is a little scale
+            // rather than the same note four times. It is the difference between a control
+            // that acknowledges you and one that beeps.
+            const rows = [...this.root.querySelectorAll('[data-action="choose"]')];
+            const step = Math.max(0, rows.indexOf(row));
+            const at = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(587.33 * Math.pow(1.0595, step * 2), at);
+            gain.gain.setValueAtTime(0.0001, at);
+            gain.gain.exponentialRampToValueAtTime(0.05, at + 0.008);
+            gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.09);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(at);
+            osc.stop(at + 0.11);
+        } catch (e) {
+            this.cueContext = null;
+        }
+    }
+
     playCue(signal) {
-        if (!this.audioEnabled || this.muted || signal === 'neutral') {
+        const reduced = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!this.audioEnabled || this.muted || reduced) {
             return;
         }
         const Context = window.AudioContext || window.webkitAudioContext;
@@ -2158,21 +2321,69 @@ class Player {
             if (ctx.state === 'suspended' && ctx.resume) {
                 ctx.resume();
             }
-            // Rising major third for a good screen, falling minor third for a costly one.
-            const notes = signal === 'positive' ? [523.25, 659.25] : [392.0, 311.13];
-            notes.forEach((frequency, index) => {
-                const at = ctx.currentTime + (index * 0.13);
+            // Two quiet sine notes a third apart said "something happened" and very little
+            // about what. A learner should know which of the two screens they are on before
+            // they have read a word, and the two cues should not be near-identical shapes at
+            // near-identical volume separated only by direction.
+            //
+            // Well judged: a major triad climbing C-E-G, each note held under the next so
+            // the chord builds rather than ticks, with a fifth underneath for body. It
+            // resolves upward and it arrives - that is what reads as having got it right.
+            //
+            // Costly: two notes falling a minor sixth onto a flattened tone, thicker and
+            // slightly detuned so it has an edge to it. Firm, not punishing: this is a
+            // learner being told a decision cost something, not a buzzer telling them off.
+            // Neutral used to be silent, on the reasoning that nothing much had happened.
+            // Something had: the learner made a decision and it neither helped nor cost -
+            // which is a result, and a screen that reports a result in silence reports it
+            // as nothing at all. It gets a voice of its own: two notes on the same pitch,
+            // going nowhere, which is exactly what a neutral outcome is.
+            if (signal === 'neutral') {
+                const at = ctx.currentTime;
+                [0, 0.13].forEach((offset) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = 440;
+                    gain.gain.setValueAtTime(0.0001, at + offset);
+                    gain.gain.exponentialRampToValueAtTime(0.12, at + offset + 0.015);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, at + offset + 0.22);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(at + offset);
+                    osc.stop(at + offset + 0.25);
+                });
+                return;
+            }
+            const positive = signal === 'positive';
+            const voices = positive
+                ? [
+                    {f: 523.25, at: 0, hold: 0.5, gain: 0.17, type: 'triangle'},
+                    {f: 659.25, at: 0.1, hold: 0.42, gain: 0.17, type: 'triangle'},
+                    {f: 783.99, at: 0.2, hold: 0.44, gain: 0.19, type: 'triangle'},
+                    {f: 261.63, at: 0, hold: 0.6, gain: 0.08, type: 'sine'},
+                ]
+                : [
+                    {f: 392.0, at: 0, hold: 0.3, gain: 0.17, type: 'triangle'},
+                    {f: 392.0 * 1.004, at: 0, hold: 0.3, gain: 0.09, type: 'triangle'},
+                    {f: 246.94, at: 0.14, hold: 0.46, gain: 0.19, type: 'triangle'},
+                    {f: 246.94 * 0.996, at: 0.14, hold: 0.46, gain: 0.1, type: 'sine'},
+                ];
+            voices.forEach((voice) => {
+                const at = ctx.currentTime + voice.at;
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.value = frequency;
+                osc.type = voice.type;
+                osc.frequency.value = voice.f;
+                // Shaped rather than switched: an abrupt start or stop is a click, and a
+                // click is the one sound nobody reads as meaning anything.
                 gain.gain.setValueAtTime(0.0001, at);
-                gain.gain.exponentialRampToValueAtTime(0.13, at + 0.02);
-                gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.26);
+                gain.gain.exponentialRampToValueAtTime(voice.gain, at + 0.015);
+                gain.gain.exponentialRampToValueAtTime(0.0001, at + voice.hold);
                 osc.connect(gain);
                 gain.connect(ctx.destination);
                 osc.start(at);
-                osc.stop(at + 0.3);
+                osc.stop(at + voice.hold + 0.03);
             });
         } catch (e) {
             // A browser that will not make a sound is not a reason to stop the scenario.
@@ -2187,6 +2398,191 @@ class Player {
      * @param {String} speechurl The character's own line, or an empty string.
      * @returns {void}
      */
+    /**
+     * Play the next recording on a screen that carries more than one.
+     *
+     * Kept apart from playAudio() deliberately: playAudio sets up a screen - it stops what
+     * was playing, works out the queue, holds the way on and resets the button. Advancing
+     * within a screen must do none of that, or each card on the decision record would
+     * re-hold the Continue it had just released and reset the control the learner is
+     * watching.
+     *
+     * @param {String} url The next clip.
+     * @returns {void}
+     */
+    playQueued(url) {
+        if (this.audio) {
+            this.audio.pause();
+            this.audio.src = '';
+        }
+        this.audio = new Audio(url);
+        this.audio.muted = this.muted;
+        this.markReading(url);
+        this.audio.addEventListener('ended', () => {
+            if (this.audioQueue && this.audioQueue.length && !this.muted) {
+                this.playQueued(this.audioQueue.shift());
+                return;
+            }
+            this.narrationDone = true;
+            this.markReading('');
+            this.releaseWayOn();
+            this.refreshAudioButton();
+        });
+        this.audio.addEventListener('error', () => {
+            // One clip that will not load must not silence the rest of the page.
+            if (this.audioQueue && this.audioQueue.length) {
+                this.playQueued(this.audioQueue.shift());
+                return;
+            }
+            this.narrationDone = true;
+            this.releaseWayOn();
+            this.refreshAudioButton();
+        });
+        const started = this.audio.play();
+        if (started && typeof started.catch === 'function') {
+            started.catch(() => {
+                this.narrationDone = true;
+                this.releaseWayOn();
+                this.refreshAudioButton();
+            });
+        }
+        this.refreshAudioButton();
+    }
+
+    /**
+     * Every recording on a slide, in the order the slide is read in.
+     *
+     * @param {HTMLElement} slide The slide being shown.
+     * @returns {String} Pipe-separated clip urls.
+     */
+    /**
+     * Play a list page as a sequence rather than showing it as a list.
+     *
+     * A page of five lessons used to arrive whole, with one recording of the whole list
+     * read over the top of it - a wall of text with a voice somewhere behind it, and no way
+     * for a learner to know which line was being read. It is played instead: one card
+     * floats up, the picture beside it changes to the frame from that part of the scenario,
+     * that card's own clip reads it with the card marked, and the next arrives when the
+     * clip finishes.
+     *
+     * Everything is in the markup either way. With narration off, muted, reduced motion
+     * asked for, or a browser that will not play, every card is simply shown at once - the
+     * choreography is an enhancement and never the only way to read the page.
+     *
+     * @param {HTMLElement} slide The scripted slide.
+     * @returns {void}
+     */
+    runScript(slide) {
+        const cards = [...slide.querySelectorAll('.aibs-script-item')];
+        if (!cards.length) {
+            return;
+        }
+        const image = slide.querySelector('[data-region="scriptimage"]');
+        const reduced = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const play = this.audioEnabled && !this.muted && !reduced
+            && cards.some((card) => card.dataset.audio);
+
+        // Stepping back onto a page that has already run shows it finished rather than
+        // replaying it, which would make the deck feel like it was reloading.
+        if (slide.dataset.scriptDone === '1' || !play) {
+            cards.forEach((card) => card.classList.add('aibs-is-in'));
+            slide.dataset.scriptDone = '1';
+            this.playAudio('', '');
+            return;
+        }
+        slide.dataset.scriptDone = '1';
+        cards.forEach((card) => card.classList.remove('aibs-is-in'));
+        this.stopAudio();
+        this.holdWayOn();
+
+        let at = 0;
+        const step = () => {
+            if (at >= cards.length) {
+                this.markReading('');
+                this.narrationDone = true;
+                this.releaseWayOn();
+                this.refreshAudioButton();
+                return;
+            }
+            const card = cards[at];
+            at++;
+            card.classList.add('aibs-is-in');
+            // The frame changes with the card, so the picture is about the line being read
+            // rather than being one photograph the whole page sits next to.
+            if (image && card.dataset.image && image.src !== card.dataset.image) {
+                image.classList.remove('aibs-is-loaded');
+                image.src = card.dataset.image;
+                window.requestAnimationFrame(() => image.classList.add('aibs-is-loaded'));
+            }
+            if (!card.dataset.audio) {
+                window.setTimeout(step, 900);
+                return;
+            }
+            this.markReading(card.dataset.audio);
+            this.audio = new Audio(card.dataset.audio);
+            this.audio.muted = this.muted;
+            const onward = () => {
+                // A short beat between cards, so the page reads as paced rather than as a
+                // recording that was cut too tight.
+                window.setTimeout(step, 420);
+            };
+            this.audio.addEventListener('ended', onward);
+            this.audio.addEventListener('error', onward);
+            const started = this.audio.play();
+            if (started && typeof started.catch === 'function') {
+                started.catch(() => {
+                    // Autoplay refused: show the page rather than leaving it half drawn
+                    // behind a recording that is never going to start.
+                    cards.forEach((one) => one.classList.add('aibs-is-in'));
+                    this.markReading('');
+                    this.narrationDone = true;
+                    this.releaseWayOn();
+                    this.refreshAudioButton();
+                });
+            }
+            this.refreshAudioButton();
+        };
+        step();
+    }
+
+    slideClips(slide) {
+        if (!slide) {
+            return '';
+        }
+        const clips = [slide.dataset.audio || ''];
+        slide.querySelectorAll('[data-region="readable"][data-audio]').forEach((card) => {
+            clips.push(card.dataset.audio || '');
+        });
+        return clips.filter(Boolean).join('|');
+    }
+
+    /**
+     * Mark the card currently being read, and unmark everything else.
+     *
+     * A page that reads two cards one after the other gave a learner no way to tell which
+     * one they were hearing - two cards, one voice, and the reader left matching the words
+     * to the column by guesswork. The card being read wears the same lift the pointer gives
+     * it, which is a state the product already uses to mean "this one", so nothing new has
+     * to be learned to read it.
+     *
+     * @param {String} url The clip now playing.
+     * @returns {void}
+     */
+    markReading(url) {
+        this.root.querySelectorAll('[data-region="readable"]').forEach((card) => {
+            const on = Boolean(url) && card.dataset.audio === url;
+            card.classList.toggle('aibs-is-reading', on);
+            // Announced, not just coloured: a learner using a screen reader is told which
+            // card is being read rather than being left with the same problem in sound.
+            if (on) {
+                card.setAttribute('aria-current', 'true');
+            } else {
+                card.removeAttribute('aria-current');
+            }
+        });
+    }
+
     playAudio(url, speechurl) {
         // First, before any of the early exits below. Whatever is playing belongs to the
         // screen being left, and it has to stop whether or not the screen being arrived at
@@ -2194,10 +2590,19 @@ class Player {
         // narration muted, both early returns skipped the stop and the previous reading
         // carried on over the new card.
         this.stopAudio();
-        this.audioUrl = url || '';
+        // A screen may carry more than one recording - the decision record puts two cards
+        // on a page and each has a clip of its own - so the url is a queue, pipe separated,
+        // and a screen with one clip is simply a queue of one.
+        this.audioQueue = String(url || '').split('|').filter(Boolean);
+        this.audioUrl = this.audioQueue.shift() || '';
         this.speechUrl = speechurl || '';
         this.narrationDone = !this.audioUrl;
-        this.speechDone = !this.speechUrl;
+        // The spoken line no longer gates the way on. It is played by pressing the avatar,
+        // so holding Continue until it had been heard would hold it until the learner
+        // happened to notice a control they may never press - which is a locked screen with
+        // no explanation. The narration is what the screen waits for; the line is an extra
+        // the learner can take or leave.
+        this.speechDone = true;
         if (!this.audioEnabled) {
             this.narrationDone = true;
             this.speechDone = true;
@@ -2217,24 +2622,26 @@ class Player {
         }
         this.stopAudio();
         this.audio = new Audio(this.audioUrl);
+        this.markReading(this.audioUrl);
         this.audio.addEventListener('ended', () => {
+            // The next card on this page, if there is one, before anything is released:
+            // the page is not finished being read until every clip on it has been.
+            if (this.audioQueue && this.audioQueue.length && !this.muted) {
+                const next = this.audioQueue.shift();
+                this.audioUrl = next;
+                this.playQueued(next);
+                return;
+            }
             this.narrationDone = true;
             // The screen is read in two voices, one after the other.
             //
-            // A line spoken by a named character is deliberately left out of the
-            // narrator's clip - it has one of its own, in that character's voice, which is
-            // what stops a scenario sounding like one person reading a play aloud. But
-            // nothing ever played that second clip: it was reachable only by noticing the
-            // avatar and pressing it. So a learner listening straight through heard the
-            // title, the situation and the question, and never the line in the middle of
-            // them, which is the part the scene turns on.
-            //
-            // The avatar still works and still marks itself played; this is what happens
-            // when nobody presses anything.
-            if (this.speechUrl && !this.speechDone && !this.muted) {
-                this.playSpeech(this.root.querySelector('[data-action="speak"]'));
-                return;
-            }
+            // The spoken line used to be chained on here, on the reasoning that a learner
+            // listening straight through would otherwise never hear it. That reasoning was
+            // right about the problem and wrong about the fix: the narrator's clip for a
+            // scene ALREADY reads the quoted line as part of the situation, so chaining the
+            // character's own recording after it played the same words twice in two
+            // different voices, one after the other. The avatar is what plays it - it is a
+            // control, and pressing it is what a control is for.
             this.releaseWayOn();
         });
         // A clip that dies half way through fires error, not ended. Without this the way
@@ -2490,6 +2897,9 @@ class Player {
             this.audio.pause();
             this.audio = null;
         }
+        // Nothing is being read, so nothing wears the mark. Leaving it behind would point
+        // at a card the learner is no longer hearing, which is worse than not pointing.
+        this.markReading('');
         if (window.speechSynthesis) {
             window.speechSynthesis.cancel();
         }

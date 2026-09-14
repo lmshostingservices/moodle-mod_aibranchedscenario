@@ -110,10 +110,21 @@
     --aibs-text-sub-base: .9375rem;
     --aibs-text-body-base: 1rem;
     --aibs-text-lead-base: 1.0625rem;
+    /* The other half of the scale never had a base at all, so it could not be scaled: a
+       label, a ring name, a stat and every heading on a slide were fixed rem values while
+       the prose beside them grew and shrank with the fit. The result is the fault a learner
+       actually reports - "why is all the text so small" on a screen with room to spare -
+       because the prose DID grow and the six things around it did not, so the card read as
+       one paragraph surrounded by fine print. Every size in the scale has a base. */
+    --aibs-text-small-base: .875rem;
+    --aibs-text-title-base: 1.1875rem;
+    --aibs-text-head-base: 1.5rem;
+    --aibs-text-stat-base: 1.75rem;
+    --aibs-text-display-base: 2.25rem;
 
     --aibs-text-micro: var(--aibs-text-micro-base);
     --aibs-text-meta: var(--aibs-text-meta-base);
-    --aibs-text-small: .875rem;
+    --aibs-text-small: var(--aibs-text-small-base);
     /* The other half of the scale. Below this line the file used to hold .92, .95, 1.02,
        1.04, 1.05, 1.06, 1.16, 1.18, 1.7, 1.9 and 2.3rem - eleven sizes, several of them
        a hundredth of a rem apart, which is a difference no eye can see and no rule can
@@ -122,10 +133,10 @@
     --aibs-text-sub: var(--aibs-text-sub-base);
     --aibs-text-body: var(--aibs-text-body-base);
     --aibs-text-lead: var(--aibs-text-lead-base);
-    --aibs-text-title: 1.1875rem;
-    --aibs-text-head: 1.5rem;
-    --aibs-text-stat: 1.75rem;
-    --aibs-text-display: 2.25rem;
+    --aibs-text-title: var(--aibs-text-title-base);
+    --aibs-text-head: var(--aibs-text-head-base);
+    --aibs-text-stat: var(--aibs-text-stat-base);
+    --aibs-text-display: var(--aibs-text-display-base);
     /* One weight for a label. 650 and 700 are indistinguishable on a static font stack,
        which is what Moodle's default theme ships, so half the hierarchy was invisible. */
     --aibs-weight-label: 600;
@@ -1292,9 +1303,14 @@
 .aibs-deckslide {
     --aibs-text-micro: calc(var(--aibs-text-micro-base) * var(--aibs-fit, 1));
     --aibs-text-meta: calc(var(--aibs-text-meta-base) * var(--aibs-fit, 1));
+    --aibs-text-small: calc(var(--aibs-text-small-base) * var(--aibs-fit, 1));
     --aibs-text-sub: calc(var(--aibs-text-sub-base) * var(--aibs-fit, 1));
     --aibs-text-body: calc(var(--aibs-text-body-base) * var(--aibs-fit, 1));
     --aibs-text-lead: calc(var(--aibs-text-lead-base) * var(--aibs-fit, 1));
+    --aibs-text-title: calc(var(--aibs-text-title-base) * var(--aibs-fit, 1));
+    --aibs-text-head: calc(var(--aibs-text-head-base) * var(--aibs-fit, 1));
+    --aibs-text-stat: calc(var(--aibs-text-stat-base) * var(--aibs-fit, 1));
+    --aibs-text-display: calc(var(--aibs-text-display-base) * var(--aibs-fit, 1));
 }
 
 /* ------------------------------------------------------------------- node */
@@ -1916,6 +1932,75 @@
     }
 }
 
+/* A scripted page: the picture on the left, the list down the right, one card at a time.
+   These four pages used to arrive whole - five cards in a 2x2-and-one grid with a single
+   recording of the entire list played over them, which is a wall of text with a voice
+   somewhere behind it and no way to tell which line is being read. They are played instead.
+
+   The list is ONE column here, not two: the cards arrive one after another and a pair
+   arriving side by side has no order to arrive in. It is also what makes each card read as
+   a beat rather than as a tile in a grid. */
+.aibs-scripted .aibs-script-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Half a column, ranged left, so a short lesson is a short card. A card stretched to the
+   full width for two words is mostly empty card, and five of them is a page of boxes. */
+.aibs-scripted .aibs-script-item {
+    align-self: start;
+    max-width: 100%;
+}
+
+/* Arriving. The card is drawn from below and fades in - the transform is what carries the
+   movement, so nothing reflows as it lands and the cards below it do not jump. */
+.aibs-scripted .aibs-script-item {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity .38s var(--aibs-ease), transform .38s var(--aibs-ease),
+        box-shadow .2s var(--aibs-ease);
+}
+
+.aibs-scripted .aibs-script-item.aibs-is-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* The frame beside them changes with the card. It fades rather than switching, because a
+   photograph that cuts on a voice reads as a fault rather than as a change of subject. */
+.aibs-script-scene .aibs-scene-img {
+    transition: opacity .45s var(--aibs-ease);
+}
+
+/* A takeaway is a heading and a body, so its card holds both, stacked. */
+.aibs-script-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.aibs-script-heading {
+    color: var(--aibs-text);
+    display: block;
+}
+
+/* Nothing floats in and nothing fades; the page is simply there, which is the same page
+   without the choreography. The JS makes the same decision for the audio, so a learner who
+   asked for less going on gets the list rather than a silent slideshow. */
+@media (prefers-reduced-motion: reduce) {
+    .aibs-scripted .aibs-script-item {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .aibs-script-scene .aibs-scene-img {
+        transition: none;
+    }
+}
+
 /* The review pages carry no picture, so their lists take the whole card.
    Every page of the debrief used to repeat the SAME outcome photograph down its left half:
    the lessons, the practice points, the takeaways and the decision record all showed the
@@ -1936,6 +2021,27 @@
         align-items: start;
         column-gap: clamp(14px, 1.6vw, 24px);
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* The card being read out loud.
+   A page that reads two cards one after the other gave a learner no way to tell which one
+   they were hearing: two cards, one voice, and the reader left matching the words to the
+   column by guesswork. It wears the lift the pointer already gives a card - a state this
+   product uses everywhere to mean "this one" - plus a soft ring in the accent so it reads
+   at a glance without introducing a colour that means something else.
+
+   Deliberately not a colour change to the card's own surface: these cards are banded, and
+   repainting one would say the decision went differently rather than that it is being
+   read. */
+[data-region="readable"].aibs-is-reading {
+    box-shadow: var(--aibs-shadow-hover), 0 0 0 2px var(--aibs-accent-border);
+    transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-region="readable"].aibs-is-reading {
+        transform: none;
     }
 }
 
@@ -4429,19 +4535,15 @@ button.aibs-avatar {
 /* The result the learner is waiting for was accent blue on every run, beside a grey pill
    that named the ending in sentence case. The pill bands from the section's outcome class
    the same way the outcome page's does, and the figure bands from the score. */
-.aibs-endstat-outcome {
-    white-space: nowrap;
-}
-
-.aibs-deckend.aibs-tone-good .aibs-endstat-score {
+.aibs-deckend.aibs-tone-good .aibs-endstat-value.aibs-endstat-score {
     color: var(--aibs-positive);
 }
 
-.aibs-deckend.aibs-tone-warn .aibs-endstat-score {
+.aibs-deckend.aibs-tone-warn .aibs-endstat-value.aibs-endstat-score {
     color: var(--aibs-warn);
 }
 
-.aibs-deckend.aibs-tone-bad .aibs-endstat-score {
+.aibs-deckend.aibs-tone-bad .aibs-endstat-value.aibs-endstat-score {
     color: var(--aibs-negative);
 }
 
@@ -5098,12 +5200,21 @@ button.aibs-avatar:focus-visible {
     text-align: center;
 }
 
+/* Three tiles, one row, and the three figures on one line as each other.
+   The outcome is a pill and the other two are numerals, so laying them out as a flex row
+   let each tile size itself: the pill sat higher than the figures beside it and its label
+   sat lower than theirs, which reads as three separate things rather than as one row of
+   results. A grid with equal tracks and stretched tiles puts the values on one line and the
+   labels on another, whatever shape the value happens to be. */
 .aibs-endstats {
-    display: flex;
-    flex-wrap: wrap;
+    align-items: stretch;
+    display: grid;
     gap: clamp(12px, 2.4vw, 32px);
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
     justify-content: center;
     margin-block: 4px;
+    width: 100%;
 }
 
 .aibs-endstat {
@@ -5111,11 +5222,26 @@ button.aibs-avatar:focus-visible {
     background: var(--aibs-surface-alt);
     border: 1px solid var(--aibs-border);
     border-radius: var(--aibs-radius-sm);
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    /* The value takes the row, whatever height it needs; the label always sits on the
+       second row. That is what keeps the three labels on one line as each other. */
+    grid-template-rows: 1fr auto;
+    justify-items: center;
     gap: 2px;
     min-width: 8.5em;
     padding: 12px 18px;
+}
+
+/* The value centres in its row, so a pill two lines tall and a figure one line tall still
+   share a centre line. */
+.aibs-endstat > .aibs-endstat-value {
+    align-self: center;
+}
+
+/* The outcome pill may take two lines rather than forcing the row wider than the card. */
+.aibs-endstat-outcome {
+    text-wrap: balance;
+    white-space: normal;
 }
 
 /* The closing sentence was the smallest text on the last screen a learner sees.
@@ -5125,7 +5251,7 @@ button.aibs-avatar:focus-visible {
    so it takes the lead size, and a measure of its own so that a card which is now the full
    width of the frame does not run it edge to edge. */
 .aibs-deckend-body > .aibs-prose {
-    font-size: var(--aibs-text-lead);
+    font-size: var(--aibs-text-body);
     margin-inline: auto;
     max-width: 56ch;
 }
@@ -5141,12 +5267,18 @@ button.aibs-avatar:focus-visible {
 @media (max-width: 600px) {
     .aibs-endstats {
         align-self: stretch;
-        flex-direction: column;
+        /* The row above is a grid now, so `flex-direction: column` said nothing here and
+           the three stats stayed in a row on a 380px screen. Stacking is a change of flow
+           direction, in the language the container actually speaks. */
+        grid-auto-flow: row;
         gap: 8px;
     }
 
     .aibs-endstat {
         align-items: baseline;
+        /* One row each: the figure, then what it is, reading across. Three short rows are a
+           third of the height of three stacked cards. */
+        display: flex;
         flex-direction: row;
         gap: 10px;
         justify-content: space-between;

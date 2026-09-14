@@ -668,5 +668,28 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091466, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091467) {
+        // Release 1.55.0 changes no schema. The type scale now fills a screen that has room
+        // to spare, the two consequence cues are told apart by ear, the options answer the
+        // pointer, and the spoken line plays when its control is pressed rather than being
+        // read out twice.
+        upgrade_mod_savepoint(true, 2026091467, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091468) {
+        // Release 1.56.0 changes no schema. The four list pages of the debrief are played
+        // as sequences rather than shown as lists, which needs one narration clip per item
+        // - regenerate an activity's media to pick them up.
+        upgrade_mod_savepoint(true, 2026091468, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091469) {
+        // Release 1.57.0 changes no schema. Each card of the decision record is read as a
+        // whole card - the moment, the decision taken, what followed and why it mattered -
+        // by a clip of its own, so regenerate an activity's media to pick them up. An older
+        // revision without them falls back to the consequence clip it already has.
+        upgrade_mod_savepoint(true, 2026091469, 'aibranchedscenario');
+    }
+
     return true;
 }

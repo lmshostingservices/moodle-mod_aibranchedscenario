@@ -255,6 +255,57 @@ class helper {
     }
 
     /**
+     * One list page's items, each carrying the clip that reads it and the frame behind it.
+     *
+     * @param mixed $items The list as the debrief holds it.
+     * @param string $key The narration key prefix for this list.
+     * @param array $narration Node key to narration URL.
+     * @param array $scene Node key to scene URL.
+     * @return array
+     */
+    public static function scripted_items($items, string $key, array $narration, array $scene): array {
+        $frames = array_values(array_map('strval', $scene));
+        $count = count($frames);
+        $out = [];
+        foreach (array_values((array)$items) as $index => $text) {
+            // A frame each, and each list starts from a different point in the set, so the
+            // lessons and the practice points are not illustrated by the same five pictures
+            // in the same order.
+            $frame = '';
+            if ($count) {
+                $frame = (string)$frames[($index + (strlen($key) % $count)) % $count];
+            }
+            $out[] = [
+                'text'     => (string)$text,
+                'audiourl' => (string)($narration['debrief_' . $key . '_' . $index] ?? ''),
+                'imageurl' => $frame,
+                'number'   => $index + 1,
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * The shape one scripted list returns.
+     *
+     * @param string $what What the list holds, for the description.
+     * @return external_multiple_structure
+     */
+    public static function scripted_shape(string $what): external_multiple_structure {
+        return new external_multiple_structure(
+            new external_single_structure([
+                'text'     => new external_value(PARAM_TEXT, 'The item'),
+                'audiourl' => new external_value(PARAM_URL, 'Clip reading it, or empty'),
+                'imageurl' => new external_value(PARAM_URL, 'Frame shown behind it, or empty'),
+                'number'   => new external_value(PARAM_INT, 'Its position, one based'),
+            ]),
+            $what . ', each with the clip that reads it and the frame behind it',
+            VALUE_DEFAULT,
+            []
+        );
+    }
+
+    /**
      * The external description of a narrative field returned as plain paragraphs.
      *
      * @param string $description Human readable description of the field.
@@ -525,7 +576,13 @@ class helper {
         foreach ($manager->build_journey($attempt) as $step) {
             $step['consequenceparas'] = self::paragraph_list($step['consequence']);
             $step['feedbackparas'] = self::paragraph_list($step['feedback']);
-            $step['audiourl'] = (string)($narration[$step['choiceid'] ?? ''] ?? '');
+            // The record card has a clip of its own that reads the whole card - the moment,
+            // the decision taken, what followed and why it mattered. It used to borrow the
+            // consequence clip, which says what followed and never says which decision it
+            // followed from, so the heading and the choice on the screen went unread. An
+            // older revision has no record clip, so the consequence one still stands in.
+            $step['audiourl'] = (string)($narration['record_' . ($step['choiceid'] ?? '')]
+                ?? $narration[$step['choiceid'] ?? ''] ?? '');
             $journey[] = $step;
         }
 
@@ -564,6 +621,30 @@ class helper {
             'radar'        => $radar,
             'journey'      => $journey,
             'whatmattered' => array_values($debrief['whatmattered']),
+            // The three list pages are played as sequences rather than shown as lists, so
+            // each item travels with the clip that reads it and the frame that goes behind
+            // it. The frames are the scenario's own scenes - the pictures the learner
+            // already walked through, which is what makes a lesson land as something they
+            // were there for rather than as a line of advice.
+            'lessons'   => self::scripted_items($debrief['whatmattered'], 'lesson', $narration, $scene),
+            'criticals' => self::scripted_items($debrief['criticaldecisions'], 'critical', $narration, $scene),
+            'practices' => self::scripted_items($debrief['practice'], 'practice', $narration, $scene),
+            'takeawaycards' => array_values(array_map(
+                static function ($takeaway, $index) use ($narration, $scene) {
+                    $frames = array_values(array_map('strval', $scene));
+                    $count = count($frames);
+                    return [
+                        'heading'  => (string)($takeaway['heading'] ?? ''),
+                        'body'     => (string)($takeaway['body'] ?? ''),
+                        'bodyparas' => self::paragraph_list((string)($takeaway['body'] ?? '')),
+                        'audiourl' => (string)($narration['debrief_takeaway_' . $index] ?? ''),
+                        'imageurl' => $count ? (string)$frames[($index + 3) % $count] : '',
+                        'number'   => $index + 1,
+                    ];
+                },
+                array_values((array)($definition['takeaways'] ?? [])),
+                array_keys(array_values((array)($definition['takeaways'] ?? [])))
+            )),
             'criticaldecisions' => array_values($debrief['criticaldecisions']),
             'practice'     => array_values($debrief['practice']),
             'sourceconnection' => $debrief['sourceconnection'],
@@ -595,6 +676,22 @@ class helper {
             'outcometitle' => new external_value(PARAM_TEXT, 'Title of the outcome node'),
             'outcomeaudiourl' => new external_value(PARAM_URL, 'Narration for the ending, or empty'),
             'whatmatteredimageurl' => new external_value(PARAM_URL, 'Picture for the lessons page, or empty'),
+            'lessons' => self::scripted_shape('The lessons'),
+            'criticals' => self::scripted_shape('The critical decisions'),
+            'practices' => self::scripted_shape('The practice points'),
+            'takeawaycards' => new external_multiple_structure(
+                new external_single_structure([
+                    'heading'   => new external_value(PARAM_TEXT, 'Takeaway heading'),
+                    'body'      => new external_value(PARAM_TEXT, 'Takeaway body'),
+                    'bodyparas' => self::paragraphs_structure('Takeaway body as paragraphs'),
+                    'audiourl'  => new external_value(PARAM_URL, 'Clip reading it, or empty'),
+                    'imageurl'  => new external_value(PARAM_URL, 'Frame behind it, or empty'),
+                    'number'    => new external_value(PARAM_INT, 'Its position, one based'),
+                ]),
+                'The takeaways, each with the clip that reads it and the frame behind it',
+                VALUE_DEFAULT,
+                []
+            ),
             'criticalimageurl' => new external_value(PARAM_URL, 'Picture for the critical decisions page, or empty'),
             'practiceimageurl' => new external_value(PARAM_URL, 'Picture for the practice page, or empty'),
             'takeawaysimageurl' => new external_value(PARAM_URL, 'Picture for the takeaways page, or empty'),

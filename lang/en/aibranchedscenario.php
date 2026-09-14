@@ -329,6 +329,7 @@ $string['work:writing'] = 'Writing the scenario';
 $string['work:built'] = 'Built {$a->nodes} decision points';
 $string['work:mediaqueued'] = 'Queued {$a} illustrations - they arrive in the background';
 $string['work:done'] = 'Done';
+$string['recordyouchose'] = 'You chose:';
 $string['publishdone:title'] = 'Your scenario is live';
 $string['publishdone:lead'] = 'Learners on this course can now work through it. To see exactly what they will see, switch the course to student view.';
 $string['publishdone:close'] = 'Back to the wizard';

@@ -662,19 +662,38 @@ class image_prompt {
         if ((string)($node['type'] ?? '') === 'outcome') {
             return self::outcome_mood((string)($node['outcome'] ?? 'mixed'));
         }
+        // The emotional temperature rises across the set, and every rung is named as
+        // behaviour a camera can see rather than as an adjective. A set of frames held at
+        // one constant temperature - politely professional from the first to the last -
+        // gives a learner nothing to feel, and what is not felt is not kept. A scenario is
+        // a situation getting harder; the pictures should show it getting harder.
+        //
+        // "Tense" is an adjective, and a model renders an adjective as the training mean.
+        // "A jaw set and a pen held still over a page nobody is writing on" is a photograph.
         if ($crisis) {
-            return 'The moment has escalated. Tight framing, people close together, urgency in '
-                . 'posture and gesture, harder shadows. Tense but not violent, and nobody is hurt.';
+            return 'HOTTEST POINT OF THE SET. It has gone off: someone half out of their '
+                . 'chair, a palm up to stop the other person talking, another looking away '
+                . 'with their jaw set, a third watching the two of them rather than the '
+                . 'papers. Tight framing, people close together, harder shadows. Tense but '
+                . 'not violent, nobody hurt and nobody shouting into a face.';
         }
         if ((int)($node['stage'] ?? 1) <= 1) {
             // Words like "outwardly ordinary", "routine work continuing" and "steady light"
-            // were
-            // asking for a boring picture with flat light, and receiving one.
-            return 'Nothing has gone wrong yet and everyone is still being reasonable, which '
-                . 'is what makes it worth looking at.';
+            // were asking for a boring picture with flat light, and receiving one.
+            return 'COOL, AND THAT IS THE POINT. Nothing has gone wrong yet and everyone is '
+                . 'still being reasonable - open posture, easy eye contact, coats still over '
+                . 'the backs of chairs. One person is fractionally ahead of the others: a '
+                . 'small readable flicker of concern nobody else in the room has noticed.';
         }
-        return 'It has been building for a while. Attention has narrowed onto the people who '
-            . 'have to decide and the room has gone quieter around them.';
+        if ((int)($node['stage'] ?? 1) === 2) {
+            return 'WARMING. The first real friction is showing: a smile held a beat too '
+                . 'long, arms folding, someone leaning in to interrupt and thinking better '
+                . 'of it, a pen held still over a page nobody is writing on.';
+        }
+        return 'HOT, AND STILL CIVIL. It has been building for a while and everyone is '
+            . 'working to keep it professional, which is visibly costing them: shoulders up, '
+            . 'a hand flat on the table, one person sitting very still, the room gone quiet '
+            . 'around the two who have to decide.';
     }
 
     /**
@@ -684,13 +703,40 @@ class image_prompt {
      * @return string
      */
     protected static function outcome_mood(string $band): string {
+        // These used to describe temperature and nothing else - "resolved and under control,
+        // people at ease in their posture, work proceeding safely" for a strong ending. That
+        // is a description of CALM, not of success: nobody in it is pleased, nothing has
+        // closed, no one is reacting to anything. A model given it draws a quiet office, and
+        // a learner who has just scored 89% is shown a quiet office.
+        //
+        // An ending is the emotional event the whole scenario has been building to, and it
+        // is the frame most likely to be remembered, because what is felt is what is kept.
+        // So each band is a MOMENT with people in it reacting, not a lighting note.
+        //
+        // The celebration is deliberately workplace-safe. A raised glass is one obvious way
+        // to draw a closed deal and the wrong default for a product whose scenarios include
+        // clinical, youth and safety-critical settings - and for the learners in them, for
+        // whom alcohol at work is the opposite of the lesson. Relief reads just as warmly
+        // through hands, faces and posture.
         $moods = [
-            'strong'   => 'The situation is resolved and under control. Open framing, lighter and '
-                . 'calmer, people at ease in their posture, work proceeding safely.',
-            'mixed'    => 'Resolved, but late and at a cost. Neutral framing, flat even light, '
-                . 'the aftermath of something that took longer than it should have.',
-            'highrisk' => 'The consequence has landed. Cooler light, harder shadow, the aftermath '
-                . 'of something that went wrong. Sober and serious; show no injury and no blood.',
+            'strong'   => 'THE MOMENT IT LANDS. The decision has worked and everyone in the '
+                . 'frame knows it: a handshake just released and the hands still apart, one '
+                . 'person laughing with their head back, another sitting back with their '
+                . 'shoulders finally down, papers being gathered up rather than argued over, '
+                . 'cups raised or set down for the first time in an hour. Warm, open, the '
+                . 'brightest frame of the set. Genuine relief and pleasure on real faces - not '
+                . 'a posed celebration and not applause to camera.',
+            'mixed'    => 'IT CLOSED AND NOBODY IS PLEASED. It is settled, late, and it cost '
+                . 'more than it should have: one person already packing their bag while '
+                . 'another is still talking, a thin polite smile that does not reach the eyes, '
+                . 'no eye contact across the table, a hand rubbing the back of a neck. Flat '
+                . 'even light. Tired rather than angry.',
+            'highrisk' => 'THE COST HAS LANDED. The room after the others have gone: one '
+                . 'person alone at the table with the papers still spread where they were '
+                . 'left, a chair pushed back and turned away, a phone face-down and unanswered, '
+                . 'their hand over their mouth or flat on the table. Cooler light, harder '
+                . 'shadow, the coldest frame of the set. Sober and serious - no injury, no '
+                . 'blood, nobody humiliated.',
         ];
         return $moods[$band] ?? $moods['mixed'];
     }
