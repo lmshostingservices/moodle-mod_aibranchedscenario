@@ -2,6 +2,28 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.67.0] - 2026-09-15
+
+**Anyone on v1.65.0 or v1.66.0 should upgrade immediately.** On those two releases a pasted
+scenario produced no pictures and no narration at all.
+
+### Fixed
+- **The budget check introduced in v1.65.0 refused the media on every realistic scenario.**
+  The cost was worked out by multiplying the quota tariff - five credits an image, five a
+  clip - by the real number of pictures and clips. A scenario with fourteen scenes and
+  sixty-eight clips came to 410 credits against a default daily budget of 400, so the check
+  refused it, the media was never queued, and the teacher got a scenario with nothing on
+  it. The tariff exists to stop one teacher monopolising a shared budget with autocomplete
+  requests; it is not what anything costs. The media is now priced at the published price -
+  50 credits for pictures, 50 for narration, the same numbers a teacher is quoted - so it
+  does not grow with the size of the scenario and two full scenarios still fit in a day. No
+  price a customer pays has changed.
+
+  The check that should have caught this did not exist: the budget check was added with
+  tests for its mechanism and none for its result. The harness now prices a real scenario's
+  real media against the shipped default budget and fails if it does not fit, so no
+  arrangement of tariff and budget can quietly make the product unusable again.
+
 ## [v1.66.0] - 2026-09-15
 
 ### Fixed

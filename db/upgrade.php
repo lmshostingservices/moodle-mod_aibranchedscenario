@@ -755,5 +755,12 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091478, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091479) {
+        // Release 1.67.0 changes no schema. The media budget check uses the published price
+        // of the media instead of a per-item sum, which had put an ordinary scenario over
+        // the whole daily budget and refused its pictures and narration outright.
+        upgrade_mod_savepoint(true, 2026091479, 'aibranchedscenario');
+    }
+
     return true;
 }

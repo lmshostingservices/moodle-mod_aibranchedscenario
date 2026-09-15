@@ -103,8 +103,13 @@ class generator {
         foreach ($mediajobs as $mediajob) {
             $result = json_decode((string)$mediajob->resultjson, true);
             $made = is_array($result) ? (array)($result['media'] ?? []) : [];
-            $spent += (int)($made['images'] ?? 0) * (int)($tariff['image'] ?? 1);
-            $spent += (int)($made['narrations'] ?? 0) * (int)($tariff['speech'] ?? 1);
+            // The PUBLISHED price of the media, not a per-item sum. Multiplying the quota
+            // tariff by the real number of pictures and clips put a single ordinary
+            // scenario over the whole daily budget on its own.
+            $spent += schema::media_price(
+                (int)($made['images'] ?? 0) > 0,
+                (int)($made['narrations'] ?? 0) > 0
+            );
         }
 
         $counts = $DB->get_records_sql(

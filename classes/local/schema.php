@@ -391,6 +391,29 @@ class schema {
     }
 
     /**
+     * What the media for one scenario costs, in credits.
+     *
+     * This is the published price, not a per-item sum. A media run was briefly budgeted by
+     * multiplying the QUOTA tariff - five credits an image, five a clip - by the real
+     * number of pictures and clips a scenario asks for. Those tariff numbers exist to stop
+     * one teacher monopolising a shared daily budget with autocomplete requests; they are
+     * not what anything costs. A fourteen-scene scenario with sixty-eight clips came to 410
+     * against a default budget of 400, so every realistic scenario was refused and a
+     * teacher who pasted one got no pictures and no narration at all.
+     *
+     * A scenario with both is 200 credits, of which the media is 100. That is the number.
+     *
+     * @param bool $withimages Whether scene images are being generated.
+     * @param bool $withvoice Whether narration is being generated.
+     * @return int Credits.
+     */
+    public static function media_price(bool $withimages, bool $withvoice): int {
+        $pricing = self::pricing();
+        return ($withimages ? (int)$pricing['images'] : 0)
+            + ($withvoice ? (int)$pricing['voice'] : 0);
+    }
+
+    /**
      * Format an amount of money for display.
      *
      * @param float $amount Amount in whole currency units.

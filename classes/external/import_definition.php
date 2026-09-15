@@ -140,8 +140,11 @@ class import_definition extends external_api {
                 && get_config('mod_aibranchedscenario', 'allowaudio');
             $images = $wantsimages ? image_prompt::count_images($clean) : 0;
             $clips = $wantsaudio ? media_manager::count_narrations($clean) : 0;
-            $tariff = schema::tariff();
-            $cost = $images * (int)($tariff['image'] ?? 1) + $clips * (int)($tariff['speech'] ?? 1);
+            // The published price of the media for one scenario. It was briefly the quota
+            // tariff multiplied by the real counts, which came to more than the whole daily
+            // budget for any scenario worth publishing - so the budget check refused every
+            // paste and the teacher got no pictures and no narration.
+            $cost = schema::media_price($images > 0, $clips > 0);
 
             try {
                 // ONE MEDIA RUN AT A TIME, which the generate route has always enforced and
