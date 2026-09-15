@@ -148,9 +148,17 @@ class media_manager {
         }
         // The old set goes when the first of the new set is ready to take its place, so a
         // run that fails at the first request leaves the activity exactly as it found it.
-        if (!$this->cleared) {
-            $this->clear_working_media();
-            $this->cleared = true;
+        //
+        // Cleared PER AREA, not both at once. Clearing both meant that regenerating with
+        // images turned off deleted every scene image the activity already had - assets
+        // that had been generated and paid for - on the first narration clip written. The
+        // run then reported success, because with images off it had asked for none and made
+        // none, and the next publish produced a scenario with no pictures. A run that is
+        // not making pictures has no business deleting them.
+        if (empty($this->cleared[$filearea])) {
+            $fs = get_file_storage();
+            $fs->delete_area_files($this->context->id, 'mod_aibranchedscenario', $filearea);
+            $this->cleared[$filearea] = true;
         }
         $filename = $key . '.' . $extension;
 
@@ -199,8 +207,8 @@ class media_manager {
     /** @var string[] Why each asset that failed, failed. Reasons only, never content. */
     protected $failures = [];
 
-    /** @var bool Whether the working area has been cleared for this run yet. */
-    protected $cleared = false;
+    /** @var bool[] Which working areas have been cleared for this run, keyed by area. */
+    protected $cleared = [];
 
     /**
      * Record why one asset could not be made.
@@ -263,7 +271,7 @@ class media_manager {
         // narration that were already there and put nothing in their place - so trying
         // again to fix an activity made it worse. The old set is cleared at the moment the
         // first new asset is ready to replace it, and not before.
-        $this->cleared = false;
+        $this->cleared = [];
 
         $source = scenario_manager::get_source($scenario);
         $style = $source['imagestyle'] ?? 'cinematic';
@@ -715,7 +723,7 @@ class media_manager {
      * @param array $lines Plain strings.
      * @return string
      */
-    protected static function lines_text(array $lines): string {
+    public static function lines_text(array $lines): string {
         $clean = [];
         foreach ($lines as $line) {
             $line = trim((string)$line);
@@ -732,7 +740,7 @@ class media_manager {
      * @param array $takeaways Each with a heading and a body.
      * @return string
      */
-    protected static function takeaways_text(array $takeaways): string {
+    public static function takeaways_text(array $takeaways): string {
         $parts = [];
         foreach ($takeaways as $takeaway) {
             $heading = trim((string)($takeaway['heading'] ?? ''));
@@ -986,13 +994,84 @@ class media_manager {
     }
 
     /**
+     * How many narration clips a definition will ask for.
+     *
+     * The paste route needed this to know what a run will cost BEFORE it starts, which is
+     * what a quota check is. It mirrors the loop in generate_for_definition() exactly, and
+     * mirroring is a thing that drifts - so the harness runs a real generation and asserts
+     * this number equals the narrationswanted that run reports. If the two ever disagree,
+     * the build fails rather than the billing.
+     *
+     * @param array $definition The validated scenario definition.
+     * @return int
+     */
+    public static function count_narrations(array $definition): int {
+        // The opening situation, then one for each principle taught before the scenario.
+        $count = 1 + count((array)($definition['principles'] ?? []));
+
+        foreach ((array)($definition['nodes'] ?? []) as $node) {
+            $count++;
+            if (($node['type'] ?? '') === 'outcome') {
+                continue;
+            }
+            if (self::has_own_voice($node)) {
+                $count++;
+            }
+            // A single-choice beat's consequence is filler and never gets a clip. Every
+            // branch of a real decision gets two: the consequence, and the same choice read
+            // again on the decision record.
+            $choices = (array)($node['choices'] ?? []);
+            if (count($choices) > 1) {
+                $count += count($choices) * 2;
+            }
+        }
+
+        $debrief = (array)($definition['debrief'] ?? []);
+        // The three list pages and the takeaways are read an item at a time.
+        $items = array_merge(
+            array_values((array)($debrief['whatmattered'] ?? [])),
+            array_values((array)($debrief['criticaldecisions'] ?? [])),
+            array_values((array)($debrief['practice'] ?? [])),
+            array_values((array)($definition['takeaways'] ?? []))
+        );
+        foreach ($items as $item) {
+            $text = is_array($item)
+                ? trim(trim((string)($item['heading'] ?? ''), " .") . '. ' . (string)($item['body'] ?? ''))
+                : trim((string)$item);
+            if ($text !== '') {
+                $count++;
+            }
+        }
+
+        // And one clip for each whole section that has anything in it.
+        $sections = [
+            self::lines_text($debrief['whatmattered'] ?? []),
+            self::lines_text($debrief['practice'] ?? []),
+            self::takeaways_text($definition['takeaways'] ?? []),
+        ];
+        foreach ($sections as $text) {
+            if (trim($text) !== '') {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
      * Copy the working-copy media into the immutable areas for a published revision.
      *
+     * Returns the number of files that reached the revision, because that is the only
+     * count that means anything to a learner. It used to return nothing, so the one step
+     * that decides whether a picture is ever seen was also the one step that reported
+     * nothing about itself.
+     *
      * @param int $revisionnumber The revision number being published.
-     * @return void
+     * @return int Files copied into the revision areas.
      */
-    public function publish_media(int $revisionnumber): void {
+    public function publish_media(int $revisionnumber): int {
         $fs = get_file_storage();
+        $copied = 0;
         $pairs = [
             self::AREA_SCENE     => self::AREA_REVISION_SCENE,
             self::AREA_NARRATION => self::AREA_REVISION_NARRATION,
@@ -1007,17 +1086,49 @@ class media_manager {
                 'itemid, filepath, filename',
                 false
             );
+            // A clash here used to throw, and the throw was the worst part of it.
+            //
+            // The working areas are keyed by node position, so two files can legitimately
+            // share a name at different positions; this copy flattens them onto one item
+            // id. The validator now stops that being created, but scenarios published
+            // before it did still hold the clash, and on those a raw exception took out
+            // the teacher's publish and - on the import route - escaped the ad-hoc task,
+            // which Moodle retried forever, regenerating and re-billing the whole set on
+            // every attempt.
+            //
+            // A file that cannot be copied is skipped and left out of the count, so the
+            // caller's "did this reach the learner" check reports it instead. Losing one
+            // clip is a fault worth reporting. Looping on a paid API is not a fault, it is
+            // a bill.
             foreach ($files as $file) {
-                $fs->create_file_from_storedfile([
+                $target = [
                     'contextid' => $this->context->id,
                     'component' => 'mod_aibranchedscenario',
                     'filearea'  => $to,
                     'itemid'    => $revisionnumber,
                     'filepath'  => '/',
                     'filename'  => $file->get_filename(),
-                ], $file);
+                ];
+                // Not reported through debugging(): at DEVELOPER level that writes nothing
+                // on a production site, which is how media failures vanished for days. The
+                // count this method returns is the report, and the caller turns a shortfall
+                // into a recorded job failure.
+                $exists = $fs->file_exists(
+                    $this->context->id,
+                    'mod_aibranchedscenario',
+                    $to,
+                    $revisionnumber,
+                    '/',
+                    $file->get_filename()
+                );
+                if ($exists) {
+                    continue;
+                }
+                $fs->create_file_from_storedfile($target, $file);
+                $copied++;
             }
         }
+        return $copied;
     }
 
     /**

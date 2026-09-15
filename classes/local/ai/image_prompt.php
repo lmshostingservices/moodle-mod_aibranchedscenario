@@ -16,6 +16,7 @@
 
 namespace mod_aibranchedscenario\local\ai;
 
+use mod_aibranchedscenario\local\media_manager;
 use mod_aibranchedscenario\local\schema;
 
 /**
@@ -892,6 +893,28 @@ class image_prompt {
                 $count++;
             }
         }
+
+        // The four debrief pages are drawn too, and were not counted.
+        //
+        // Each of them gets a frame briefed from its own words - that is what stopped every
+        // debrief page redrawing the picture the scenario opened on. The estimate was
+        // written before those existed and never caught up, so a teacher was quoted four
+        // pictures fewer than the run makes, and every figure built on this number was
+        // short by the same four. Found by checking the estimate against what a real run
+        // asks for rather than against itself.
+        $debrief = (array)($definition['debrief'] ?? []);
+        $pages = [
+            media_manager::lines_text($debrief['whatmattered'] ?? []),
+            media_manager::lines_text($debrief['criticaldecisions'] ?? []),
+            media_manager::lines_text($debrief['practice'] ?? []),
+            media_manager::takeaways_text($definition['takeaways'] ?? []),
+        ];
+        foreach ($pages as $text) {
+            if (trim($text) !== '') {
+                $count++;
+            }
+        }
+
         return $count;
     }
 }

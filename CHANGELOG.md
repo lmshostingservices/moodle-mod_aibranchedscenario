@@ -2,6 +2,144 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.66.0] - 2026-09-15
+
+### Fixed
+- **Two pasted imports minutes apart corrupted each other.** Moodle only de-duplicates a
+  queued task while it is still queued; once the first media run is going it has left the
+  queue, so pasting a corrected version a few minutes later started a second run alongside
+  it. The second run's first write cleared the working area the first was still filling,
+  both then copied into the same revision, and the teacher was charged twice for a result
+  that was neither version. The generate route has always refused a second run while one is
+  in flight; the paste route now does too. The guard expires after an hour, so one crashed
+  run cannot lock a teacher out of their own pictures.
+- **An edit made while a generation was running was lost from both the draft and the undo.**
+  The undo copy was written from the activity record the caller had been holding since
+  before the run started, so a teacher who fixed a typo during a seven-minute generation had
+  that edit overwritten - reasonably - and then found Restore draft put back a version that
+  had never existed. The undo copy is now read from the database at the moment it is
+  written.
+- **A message the teacher needed to read was thrown away.** The wizard navigates to the
+  review step the instant an import succeeds, so a successful import that had something to
+  say - the media was held, and why - lost the message in the page change. The teacher
+  landed on a review page with no pictures and no reason given, which is the exact
+  experience this run of fixes exists to end. The page now waits when there is something to
+  read.
+
+## [v1.65.0] - 2026-09-15
+
+### Fixed
+- **The pasted-prompt route spent without being budgeted.** Generating a scenario checks
+  the site's daily credit budget before it spends anything. Pasting one checked nothing,
+  and the single job it recorded was weighed at one credit however much it made - so a run
+  of fourteen pictures and sixty-eight narration clips counted the same as one autocomplete
+  suggestion. A teacher could paste scenarios all day and never reach a limit their site
+  had set. The cost is now worked out from the definition before the run starts, checked
+  against the budget, and each run is charged for every picture and clip it actually made.
+  The scenario itself still imports when the budget will not cover the media, because
+  pasting costs nothing and throwing away the teacher's work would help no one - the media
+  is held and the teacher is told why.
+- **The cost estimate was four pictures short on every scenario.** Each of the four debrief
+  pages is drawn with its own picture, and the estimate was written before those existed
+  and never caught up. Every figure built on that number - what a teacher is quoted before
+  a run, and now what the budget is charged - was short by the same four. The check that
+  was supposed to catch this asserted the estimate equalled nodes plus crisis frames, which
+  is exactly what the estimate already calculated: a test built from the same assumption as
+  the code cannot test the assumption. It is now checked against what a real run asks for.
+
+## [v1.64.0] - 2026-09-15
+
+Found by auditing the v1.63.0 fix rather than by a report. None of this had been seen on a
+live site yet; all of it was reachable.
+
+### Fixed
+- **Two nodes offering a choice with the same id made publishing throw.** A node's picture
+  is stored under its node id, its crisis frame under `<nodeid>_crisis`, and a choice's
+  narration under its choice id - and publishing flattens those onto one item id per
+  revision. Choice ids were only checked for uniqueness within their own node, so a
+  scenario whose decisions all offered "escalate", "wait" and "document" - which is what an
+  assistant writes when the options mean the same thing at each stage - produced two files
+  with one name. The teacher's publish died with a raw exception, and on the import route
+  that exception escaped the scheduled task, which Moodle then retried indefinitely,
+  regenerating and re-billing every image and clip on each attempt. Media filenames are now
+  unique across the whole scenario, including against node names a choice has not reached
+  yet.
+- **Publishing a scenario that already holds such a clash no longer throws.** The file that
+  cannot be copied is left out of the published count, so it is reported as media that did
+  not reach the learner. Losing one clip is a fault worth reporting; looping on a paid API
+  is a bill.
+- **The generation route never copied its media into the published revision at all.** It
+  was left alone when the import route was fixed, on the strength of a comment saying
+  generation always finishes before anyone publishes. That holds the first time a scenario
+  is published and fails when a teacher regenerates one that is already live: the new
+  pictures and clips land in the working area, nothing copies them across, and learners keep
+  what was there before while the wizard reports a complete run. Both routes now re-read the
+  activity and publish their media the same way.
+- **A media failure could overwrite a more useful one.** A run short because the service
+  refused part of it, which then also failed to publish, replaced "insufficient credits" -
+  which a site owner can act on - with a consequence of it. The first reason stands.
+- **A teacher who had simply not published yet was recorded as a failure.** That state is
+  normal and self-healing, since publishing collects the media by itself. It is noted rather
+  than raised, so no permanent red mark is left on a job that resolved a minute later.
+
+## [v1.63.0] - 2026-09-15
+
+### Fixed
+- **Every picture and every clip generated after a teacher pressed Publish was stranded
+  where no learner could reach it.** The media task takes its copy of the activity record
+  before generation begins, generation runs for minutes - seven of them on a scenario with
+  fourteen scenes and sixty-eight clips - and the teacher publishes within seconds of
+  pasting, because the scenario is sitting right there looking finished. The task then
+  asked its seven-minute-old copy of the record whether anything was published, was told
+  no, and held media that had in fact been published the whole time. It did this silently,
+  and recorded the run as ready, because generation had genuinely succeeded: every file
+  existed, just not anywhere a learner reads. The activity record is now re-read before
+  that decision is made.
+
+  The bigger the scenario the wider the window, which is why this worsened with each
+  release and looked like a new fault every time instead of the same one every time. A
+  scenario whose media is already stranded is recovered by publishing it again.
+- **Three of the four ways the media task can finish left the job reading "ready" with the
+  media unreachable.** Fixing only the seven-minute window would have left the reporting
+  able to hide the next fault the same way it hid this one, so the decision is now made
+  once, at the end, from the number of files that actually reached the revision. A teacher
+  who has not published yet is told the media is ready and waiting; a teacher who changed
+  the scenario after asking for media is told it is held back rather than shown on the
+  wrong screens.
+- **A media run could report "ready" on a scenario with nothing on screen.** The count
+  measured what the service returned, not what reached the learner, so the one step that
+  decides whether a picture is ever seen was the one step that reported nothing about
+  itself. `publish_media()` now says how many files reached the revision, and a run whose
+  work did not arrive is recorded as a failure with the number and the reason.
+
+## [v1.62.0] - 2026-09-14
+
+### Fixed
+- **An empty picture frame on the debrief's scripted pages.** The four scripted pages drew
+  their scene column whether or not there was a frame to put in it, so a scenario published
+  without images - or one whose media run finished short - showed a grey box with a broken
+  picture mark in it beside the words. The column is now drawn only when the page has a
+  frame, and the slide is told it has none, which is the same signal every other screen
+  already uses to take the full width.
+- **The takeaway cards read a size too small.** Their bodies were set at the sub scale,
+  which is the size labels and captions use, while the same words on every other screen are
+  body text. They are body text here too, and the scripted heading takes the lead size, so
+  the page carries a hierarchy instead of three flavours of small.
+- **The caution mark on the closing card was drawn half-finished.** The stroke pattern that
+  animates the mark into place was measured against the tick, which is 53 units long. The
+  caution triangle is 101 and the cross is 79, so both stopped part-way and stayed there -
+  a triangle with a corner missing on every amber outcome. Every mark now declares its own
+  length, so the pattern means the same thing on all four of them.
+
+### Changed
+- **The review page is re-rendered from the real templates on every sweep.** It was built
+  once and then read for two days: every browser sweep in this repository was measuring
+  markup that no longer existed and reporting the faults it had just been asked to look for
+  as fixed. A sweep only proves what it loads, so what it loads is now built first.
+- The per-slide audit gained two rules, each from a fault a screenshot found first: a
+  picture frame with nothing in it, and an animated mark whose path is not normalised
+  against the pattern that draws it.
+
 ## [v1.61.0] - 2026-09-14
 
 ### Fixed

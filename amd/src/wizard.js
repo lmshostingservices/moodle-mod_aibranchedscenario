@@ -1263,6 +1263,18 @@ class Wizard {
                         state: response.mediaqueued > 0 ? 'done' : 'todo'},
                 ]);
                 this.dirty = false;
+                // The import can succeed and still have something the teacher must read:
+                // the media is held when it would take the account past its daily budget,
+                // or when a run for this activity is already going. Navigating straight on
+                // would replace this page before that message was ever on screen, and the
+                // teacher would land on a review page with no pictures and no reason given
+                // - which is the exact experience this whole chain of fixes exists to stop.
+                // The scenario is imported either way; the page waits.
+                if (response.problems) {
+                    this.showError({message: response.problems});
+                    this.setBusy(false);
+                    return true;
+                }
                 // An import produces a finished scenario, so the teacher belongs at the
                 // step where it is reviewed and published rather than back at the top of
                 // a wizard they have just bypassed.

@@ -75,12 +75,38 @@ class generate_scenario extends adhoc_task {
         }
 
         $counts = [];
+        // Declared before the try: the context lookup can fail, and the publish step below
+        // must not be handed an undefined variable when it does.
+        $media = null;
         try {
             $context = context_module::instance($cmid);
             $media = new media_manager($context);
             $counts = $media->generate_for_definition($generator->get_provider(), $scenario, $definition);
         } catch (\moodle_exception $e) {
             mtrace('Course module context unavailable; media skipped.');
+        }
+
+        // Media generated for an ALREADY PUBLISHED activity had nowhere to go.
+        //
+        // This task was written on the assumption that generation always finishes before
+        // anyone publishes, so publish_media() at publish time would collect everything.
+        // That holds the first time. It does not hold when a teacher regenerates a
+        // scenario that is already live: the new pictures and clips land in the working
+        // area, publish_media() is never called again, and learners keep seeing the old
+        // revision's media - or none - while the wizard reports a complete run. It is the
+        // same fault the import route had, reached a different way, and it was missed
+        // because the comment explaining why this route was safe was believed rather than
+        // tested.
+        //
+        // The activity is re-read for the same reason it is re-read there: $scenario was
+        // fetched before a run that takes minutes, and a record that old cannot be asked
+        // what is published now.
+        $fresh = $DB->get_record('aibranchedscenario', ['id' => $scenario->id], '*', IGNORE_MISSING);
+        $live = $fresh ? scenario_manager::get_current_revision($fresh) : null;
+        if ($media && $live && generate_media::same_scenes($live->scenariojson, $definition)) {
+            $copied = $media->publish_media((int)$live->revision);
+            mtrace('Scenario ' . $scenario->id . ' media copied into revision '
+                . $live->revision . ' (' . $copied . ' files).');
         }
 
         // Only now is the job finished. Until this point the wizard keeps showing

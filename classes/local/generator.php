@@ -83,20 +83,45 @@ class generator {
 
         $tariff = schema::tariff();
         $refunded = $DB->sql_like('errormsg', ':refunded', false, false);
+
+        // A media run is ONE job row covering every picture and every clip in a scenario.
+        //
+        // Weighted per row like everything else it came to the '?? 1' fallback below - one
+        // credit for a run that makes sixty-eight speech calls and fourteen images. On the
+        // paste route, where the media run is the whole of the spend, that made the daily
+        // quota meaningless: a teacher could paste scenarios all day and never reach it.
+        // These rows are weighed by what they actually made, recorded in resultjson, and
+        // excluded from the count below so they are not also counted at one apiece.
+        $spent = 0;
+        $mediajobs = $DB->get_records_select(
+            'aibranchedscenario_jobs',
+            'userid = :userid AND timecreated > :since AND jobtype = :media',
+            ['userid' => $userid, 'since' => time() - DAYSECS, 'media' => 'media'],
+            '',
+            'id, resultjson'
+        );
+        foreach ($mediajobs as $mediajob) {
+            $result = json_decode((string)$mediajob->resultjson, true);
+            $made = is_array($result) ? (array)($result['media'] ?? []) : [];
+            $spent += (int)($made['images'] ?? 0) * (int)($tariff['image'] ?? 1);
+            $spent += (int)($made['narrations'] ?? 0) * (int)($tariff['speech'] ?? 1);
+        }
+
         $counts = $DB->get_records_sql(
             'SELECT jobtype, COUNT(id) AS total
                FROM {aibranchedscenario_jobs}
               WHERE userid = :userid AND timecreated > :since
+                AND jobtype <> :media
                 AND NOT (status = :errored AND ' . $refunded . ')
            GROUP BY jobtype',
             [
                 'userid'   => $userid,
                 'since'    => time() - DAYSECS,
+                'media'    => 'media',
                 'errored'  => self::JOB_ERROR,
                 'refunded' => 'error:servicefailed%',
             ]
         );
-        $spent = 0;
         foreach ($counts as $row) {
             $spent += (int)$row->total * (int)($tariff[$row->jobtype] ?? 1);
         }
@@ -111,8 +136,22 @@ class generator {
      * @throws generation_exception
      */
     public function check_quota(int $userid, string $operation = provider::OP_SCENARIO): void {
-        global $DB;
+        $this->check_credits($userid, (int)(schema::tariff()[$operation] ?? 1));
+    }
 
+    /**
+     * Check the per-user daily budget against a cost in credits.
+     *
+     * Most operations are one job at a fixed price, so check_quota() names the operation
+     * and looks the price up. A media run is priced by what it will make, which is known
+     * from the definition before it starts, so it says the number instead.
+     *
+     * @param int $userid User id.
+     * @param int $cost Credits this piece of work will spend.
+     * @return void
+     * @throws generation_exception
+     */
+    public function check_credits(int $userid, int $cost): void {
         $quota = (int)get_config('mod_aibranchedscenario', 'dailyquota');
         if ($quota <= 0) {
             return;
@@ -123,10 +162,8 @@ class generator {
         // ten suggestions, so a teacher hit a limit of forty after three or four presses
         // of a button that spends about thirty credits in total. Each job is now
         // weighted by what the service charges for it.
-        $tariff = schema::tariff();
         $spent = $this->spend_since($userid);
 
-        $cost = (int)($tariff[$operation] ?? 1);
         if ($spent + $cost > $quota) {
             throw new generation_exception('error:quotaexceeded', (object)[
                 'quota' => $quota,

@@ -158,16 +158,109 @@ class generate_media extends \core\task\adhoc_task {
         // mattering. The guard is that the published revision has to be the same
         // definition this media was made for - otherwise a draft that has moved on
         // would put its pictures onto the revision learners are still playing.
+        // The activity record is RE-READ here, and that is the whole of this fix.
+        //
+        // $scenario was fetched before generation started. Generation takes minutes - on a
+        // scenario with fourteen scenes and sixty-eight clips it takes seven of them - and
+        // the teacher publishes within seconds of pasting, because the scenario is sitting
+        // right there looking finished. So by the time this line is reached the row in the
+        // database says "published, revision 1" and the copy this task is holding still
+        // says "draft, revision 0".
+        //
+        // get_current_revision() reads status and revision off the record it is handed. It
+        // was handed the stale one, saw a draft, and returned null - so this returned, and
+        // every picture and every clip stayed in the working area where no learner can
+        // reach it. Nothing failed, nothing was logged, and the job was recorded ready,
+        // because from the task's point of view it had generated everything it was asked
+        // for and there was simply nothing published to copy it into.
+        //
+        // The bigger the scenario, the wider the window - which is why this got steadily
+        // worse as the scenarios got longer and looked like a fault in the new code each
+        // time rather than the same fault every time.
+        // EVERY path out of here reports what a learner can reach.
+        //
+        // The job used to be written once, above, from a count of what the service
+        // returned - and then this block could take any of four exits without touching it
+        // again. Three of those exits leave the media unreachable, and all three left the
+        // job reading "ready", which is exactly the blindness that hid the seven-minute
+        // window for six releases. Fixing only the window would have left the reporting
+        // able to hide the next one.
+        //
+        // So the decision is made once, at the end, from the number of files that actually
+        // reached the revision. $held() is used for the exits where that number is zero
+        // and the reason is known.
+        // Two rules this closure exists to keep, both of them faults I put here first and
+        // found auditing my own work rather than from a report.
+        //
+        // It NEVER OVERWRITES AN EXISTING FAILURE. A run can be short because the service
+        // refused half of it and then also fail to publish; writing the second reason over
+        // the first would replace "insufficient credits" - which a site owner can act on -
+        // with a consequence of it. The first reason is the actionable one and it stays.
+        //
+        // AND NOT EVERY HELD RUN IS A FAILURE. A teacher who has not published yet is in a
+        // perfectly normal state, and publishing collects this media by itself, so marking
+        // that as an error would leave a permanent red mark on a job that healed a minute
+        // later. It is recorded, because a site owner reading the table should be able to
+        // see where the media went, but it is not raised: get_job_status() shows a message
+        // only on a failed job, so a note on a ready one is stored and stays quiet.
+        $alreadyfailed = $short > 0 && $wanted > 0;
+        $held = function (
+            string $why,
+            bool $isfailure,
+            array $a = []
+        ) use (
+            $DB,
+            $job,
+            $made,
+            $alreadyfailed
+        ): void {
+            if ($alreadyfailed) {
+                return;
+            }
+            $DB->update_record('aibranchedscenario_jobs', (object)[
+                'id'           => $job,
+                'status'       => $isfailure ? generator::JOB_ERROR : generator::JOB_READY,
+                'errormsg'     => get_string($why, 'mod_aibranchedscenario', (object)($a + ['made' => $made])),
+                'timemodified' => time(),
+            ]);
+        };
+
+        $scenario = $DB->get_record('aibranchedscenario', ['id' => $scenario->id], '*', IGNORE_MISSING);
+        if (!$scenario) {
+            return;
+        }
         $revision = scenario_manager::get_current_revision($scenario);
         if (!$revision) {
+            // Not an error in itself - a teacher may simply not have published yet, and
+            // publishing will collect this media. It is only worth a note, and only when
+            // there is media sitting there to collect.
+            mtrace('Activity ' . $scenario->id . ' is not published; media held in the working area.');
+            if ($made > 0) {
+                $held('media:notpublished', false);
+            }
             return;
         }
         if (!self::same_scenes($revision->scenariojson, $definition)) {
             mtrace('Activity ' . $scenario->id . ' has published a different definition; media held.');
+            if ($made > 0) {
+                $held('media:defmoved', true);
+            }
             return;
         }
-        $media->publish_media((int)$revision->revision);
+        $published = $media->publish_media((int)$revision->revision);
         mtrace('Activity ' . $scenario->id . ' media copied into revision ' . $revision->revision . '.');
+
+        // Counting what was generated was measuring the wrong thing. Every file of the
+        // v1.61 scenario was generated successfully and the job said "ready" - correctly,
+        // by that measure - while the activity a learner opened had nothing in it. A count
+        // that can read "ready" on a scenario with no pictures on screen is not a report,
+        // so publication is now part of what ready means.
+        if ($made - (int)$published > 0) {
+            $held('media:unpublished', true, [
+                'published' => (int)$published,
+                'revision'  => (int)$revision->revision,
+            ]);
+        }
     }
 
     /**
@@ -188,7 +281,7 @@ class generate_media extends \core\task\adhoc_task {
      * @param array $working The definition the media was generated for.
      * @return bool
      */
-    protected static function same_scenes(string $publishedjson, array $working): bool {
+    public static function same_scenes(string $publishedjson, array $working): bool {
         $published = json_decode($publishedjson, true);
         if (!is_array($published)) {
             return false;

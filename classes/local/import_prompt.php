@@ -262,7 +262,7 @@ class import_prompt {
                     ],
                 ],
                 [
-                    // n5, not n2. The worked example below is ALSO n2, at stage 2, and its
+                    // This is n5, not n2. The worked example below is ALSO n2, at stage 2, and its
                     // choices point at n3 - so a skeleton node sharing that id and that
                     // stage told the model two contradictory things about the same node:
                     // "n2 continues the story" and "n2 is the last decision". Numbering it

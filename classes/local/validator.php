@@ -657,6 +657,30 @@ class validator {
         $out = [];
         $seen = [];
         $index = 0;
+
+        // EVERY MEDIA FILENAME IN A SCENARIO HAS TO BE UNIQUE ACROSS THE WHOLE SCENARIO.
+        //
+        // A node's picture is stored as <nodeid>, its crisis frame as <nodeid>_crisis, and
+        // a choice's narration as <choiceid> - all in one file area per kind. Choice ids
+        // were only checked for uniqueness WITHIN their own node, so two nodes both
+        // offering "escalate" produced two files called escalate.mp3. Publishing flattens
+        // the area, and the second copy throws: the teacher's publish died with a raw
+        // exception, and on the import route the exception escaped the ad-hoc task, which
+        // Moodle then retried forever - regenerating and re-billing every image and clip on
+        // every attempt. An assistant writing five decision nodes reuses ids like
+        // "escalate", "wait" or "a" across all of them without a second thought.
+        //
+        // Node ids are collected first, so a choice can never take the name of a node that
+        // has not been reached yet either.
+        $taken = [];
+        foreach ($raw as $rawnode) {
+            $nodeid = is_array($rawnode) ? $this->identifier($rawnode['id'] ?? '') : '';
+            if ($nodeid !== '') {
+                $taken[] = $nodeid;
+                $taken[] = $nodeid . '_crisis';
+            }
+        }
+
         foreach ($raw as $rawnode) {
             $index++;
             if (!is_array($rawnode)) {
@@ -673,7 +697,7 @@ class validator {
                 continue;
             }
             $seen[] = $id;
-            $out[] = $this->normalise_node($rawnode, $id, $principleids, $voices);
+            $out[] = $this->normalise_node($rawnode, $id, $principleids, $voices, $taken);
         }
         return $out;
     }
@@ -686,7 +710,13 @@ class validator {
      * @param string[] $principleids Valid principle identifiers.
      * @return array
      */
-    protected function normalise_node(array $raw, string $id, array $principleids, array $voices = []): array {
+    protected function normalise_node(
+        array $raw,
+        string $id,
+        array $principleids,
+        array $voices = [],
+        array &$taken = []
+    ): array {
         $type = schema::in_list($raw['type'] ?? '', schema::nodetypes()) ? $raw['type'] : 'decision';
 
         $node = [
@@ -794,17 +824,19 @@ class validator {
         }
 
         $letters = ['A', 'B', 'C', 'D'];
-        $seenchoices = [];
         $position = 0;
         foreach (array_slice($rawchoices, 0, schema::MAX_CHOICES) as $rawchoice) {
             if (!is_array($rawchoice)) {
                 continue;
             }
+            // Checked against every id already used anywhere in this scenario, not just
+            // within this node. A clash falls back to the node's own name plus the choice
+            // letter, which is unique by construction.
             $choiceid = $this->identifier($rawchoice['id'] ?? '') ?: ($id . '_' . strtolower($letters[$position]));
-            if (in_array($choiceid, $seenchoices, true)) {
+            if (in_array($choiceid, $taken, true)) {
                 $choiceid = $id . '_' . strtolower($letters[$position]);
             }
-            $seenchoices[] = $choiceid;
+            $taken[] = $choiceid;
 
             $text = $this->text($rawchoice['text'] ?? '', 400);
             if ($text === '') {

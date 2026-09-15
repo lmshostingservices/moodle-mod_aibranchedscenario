@@ -21,8 +21,12 @@ use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
 use mod_aibranchedscenario\local\ai\credentials;
+use mod_aibranchedscenario\local\ai\generation_exception;
 use mod_aibranchedscenario\local\ai\image_prompt;
+use mod_aibranchedscenario\local\generator;
+use mod_aibranchedscenario\local\media_manager;
 use mod_aibranchedscenario\local\scenario_manager;
+use mod_aibranchedscenario\local\schema;
 use mod_aibranchedscenario\local\validation_exception;
 use mod_aibranchedscenario\local\validator;
 
@@ -114,20 +118,69 @@ class import_definition extends external_api {
         // ran only inside the generation task. A teacher who drafted the scenario
         // elsewhere and pasted it in still wants the illustrations, and the definition
         // they pasted carries an imageprompt for every node.
+        // THE MEDIA A PASTED SCENARIO ASKS FOR IS CHARGED LIKE ANY OTHER MEDIA.
+        //
+        // It was not. queue_scenario() checks the daily budget before it spends anything;
+        // this route checked nothing, and the one job row it wrote was weighed at a single
+        // credit however much it made. So the generate button was budgeted and the paste
+        // box was free, and a teacher could paste scenarios all day without ever reaching
+        // the limit their site had set. The cost is known before the run starts, because
+        // it is the number of pictures and clips the definition asks for.
+        //
+        // The scenario itself still imports: pasting costs nothing, validating costs
+        // nothing, and refusing the whole import over the media would throw away work the
+        // teacher did elsewhere. Only the media is held, and the teacher is told why
+        // rather than left with a scenario that quietly never illustrates itself.
         $media = 0;
+        $problems = '';
         if (self::wants_media($resolved['scenario']) && credentials::are_configured()) {
-            $task = new \mod_aibranchedscenario\task\generate_media();
-            $task->set_custom_data((object)['cmid' => (int)$params['cmid']]);
-            $task->set_userid((int)$USER->id);
-            \core\task\manager::queue_adhoc_task($task, true);
-            $media = image_prompt::count_images($clean);
+            $wantsimages = !empty($resolved['scenario']->enableimages)
+                && get_config('mod_aibranchedscenario', 'allowimages');
+            $wantsaudio = !empty($resolved['scenario']->enableaudio)
+                && get_config('mod_aibranchedscenario', 'allowaudio');
+            $images = $wantsimages ? image_prompt::count_images($clean) : 0;
+            $clips = $wantsaudio ? media_manager::count_narrations($clean) : 0;
+            $tariff = schema::tariff();
+            $cost = $images * (int)($tariff['image'] ?? 1) + $clips * (int)($tariff['speech'] ?? 1);
+
+            try {
+                // ONE MEDIA RUN AT A TIME, which the generate route has always enforced and
+                // this one never did.
+                //
+                // queue_adhoc_task() de-duplicates only while a task is still QUEUED. Once
+                // the first one is running it has left the queue, so pasting a corrected
+                // version a few minutes later starts a second run alongside it. The second
+                // run's first write clears the working area the first is still filling,
+                // both then copy into the same revision, and the teacher is charged twice
+                // for a result that is neither version.
+                //
+                // A run is only treated as in flight for an hour. Blocking on a job record
+                // forever would mean one crashed run locks a teacher out of their own
+                // pictures with no way back except the database.
+                if (self::media_in_flight((int)$resolved['scenario']->id)) {
+                    throw new generation_exception('error:mediainflight');
+                }
+                (new generator())->check_credits((int)$USER->id, $cost);
+                $task = new \mod_aibranchedscenario\task\generate_media();
+                $task->set_custom_data((object)['cmid' => (int)$params['cmid']]);
+                $task->set_userid((int)$USER->id);
+                \core\task\manager::queue_adhoc_task($task, true);
+                $media = $images;
+            } catch (generation_exception $e) {
+                $problems = $e->errorcode === 'error:mediainflight'
+                    ? get_string('media:inflight', 'mod_aibranchedscenario')
+                    : get_string('media:overbudget', 'mod_aibranchedscenario', (object)[
+                        'images' => $images,
+                        'clips'  => $clips,
+                    ]);
+            }
         }
 
         return [
             'imported'  => true,
             'nodecount' => (int)($clean['stats']['nodecount'] ?? 0),
             'mediaqueued' => $media,
-            'problems'  => '',
+            'problems'  => $problems,
         ];
     }
 
@@ -148,6 +201,28 @@ class import_definition extends external_api {
             ),
             'problems'  => new external_value(PARAM_TEXT, 'Validation problems when the import was rejected'),
         ]);
+    }
+
+    /**
+     * Is a media run for this activity already under way?
+     *
+     * @param int $scenarioid Activity instance id.
+     * @return bool
+     */
+    protected static function media_in_flight(int $scenarioid): bool {
+        global $DB;
+        return $DB->record_exists_select(
+            'aibranchedscenario_jobs',
+            'scenarioid = :sid AND jobtype = :type AND status IN (:queued, :running)
+               AND timecreated > :since',
+            [
+                'sid'     => $scenarioid,
+                'type'    => 'media',
+                'queued'  => generator::JOB_QUEUED,
+                'running' => generator::JOB_RUNNING,
+                'since'   => time() - HOURSECS,
+            ]
+        );
     }
 
     /**

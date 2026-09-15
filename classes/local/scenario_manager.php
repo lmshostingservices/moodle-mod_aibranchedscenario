@@ -98,9 +98,19 @@ class scenario_manager {
         // Keep the copy this replaces, so one generation or import can be undone. An
         // hour of hand editing used to disappear on a single click of Generate with no
         // warning and nothing to go back to.
+        //
+        // WHAT IT REPLACES IS READ FROM THE DATABASE, not from the record handed in.
+        //
+        // Generation calls this at the end of a run that takes minutes, holding an activity
+        // record fetched before the run started. A teacher who fixed a typo while waiting
+        // had that edit overwritten by the finishing generation - normal enough - but
+        // previousjson was then written from the pre-edit copy the caller was holding, so
+        // the edit was gone from BOTH slots and Restore draft put back a version that had
+        // never existed. The undo has to preserve what was actually there a moment ago.
+        $current = $DB->get_field('aibranchedscenario', 'scenariojson', ['id' => $scenario->id]);
         $update = (object)[
             'id'           => $scenario->id,
-            'previousjson' => $scenario->scenariojson ?? null,
+            'previousjson' => $current !== false ? $current : ($scenario->scenariojson ?? null),
             'scenariojson' => $encoded,
             'timemodified' => time(),
         ];

@@ -718,5 +718,42 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091473, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091474) {
+        // Release 1.62.0 changes no schema. The debrief no longer draws an empty picture
+        // frame on a scripted page that has no generated scene, the takeaway cards read at
+        // body size, and every outcome mark is normalised so it draws in full.
+        upgrade_mod_savepoint(true, 2026091474, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091475) {
+        // Release 1.63.0 changes no schema. The media task re-reads the activity before it
+        // decides where its work goes, so media finished after the teacher published is no
+        // longer stranded in the working area where no learner can reach it.
+        upgrade_mod_savepoint(true, 2026091475, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091476) {
+        // Release 1.64.0 changes no schema. Media filenames are unique across a whole
+        // scenario, publishing survives a clash left by one that is not, and the generation
+        // route copies its media into the published revision the same way the import route
+        // does.
+        upgrade_mod_savepoint(true, 2026091476, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091477) {
+        // Release 1.65.0 changes no schema. Media on the pasted-prompt route is charged
+        // against the daily budget like media on the generate route, and the cost estimate
+        // counts the four debrief pictures it had been leaving out.
+        upgrade_mod_savepoint(true, 2026091477, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091478) {
+        // Release 1.66.0 changes no schema. The pasted-prompt route will not start a second
+        // media run beside a running one, the undo copy is read from the database rather
+        // than from a record held since before a long run, and a held media run is put in
+        // front of the teacher instead of being navigated past.
+        upgrade_mod_savepoint(true, 2026091478, 'aibranchedscenario');
+    }
+
     return true;
 }

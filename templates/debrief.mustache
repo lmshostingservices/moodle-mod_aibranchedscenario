@@ -189,12 +189,17 @@
             that clip finishes. The whole list is in the markup either way, so a learner with
             narration off - or a browser that will not play - simply sees the list. The
             choreography is an enhancement, never the only way in. }}
-        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons aibs-scripted"
+        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons aibs-scripted {{^lessons.0.imageurl}}aibs-noscene{{/lessons.0.imageurl}}"
                  data-region="deckslide" data-script="1" hidden>
-            <div class="aibs-scene aibs-script-scene">
-                <img src="{{lessons.0.imageurl}}" alt="" class="aibs-scene-img" loading="lazy"
-                     data-region="scriptimage">
-            </div>
+            {{! Guarded. It rendered unconditionally, so a page whose frames were never
+                generated drew an empty grey column with a broken-image mark in the corner -
+                the two-column silhouette held open by nothing. }}
+            {{#lessons.0.imageurl}}
+                <div class="aibs-scene aibs-script-scene">
+                    <img src="{{lessons.0.imageurl}}" alt="" class="aibs-scene-img" loading="lazy"
+                         data-region="scriptimage">
+                </div>
+            {{/lessons.0.imageurl}}
             <div class="aibs-node-body">
                 <h3 class="aibs-h3">{{#str}} whatmattered, mod_aibranchedscenario {{/str}}</h3>
                 <ul class="aibs-lesson-list aibs-script-list">
@@ -218,12 +223,17 @@
             that clip finishes. The whole list is in the markup either way, so a learner with
             narration off - or a browser that will not play - simply sees the list. The
             choreography is an enhancement, never the only way in. }}
-        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons aibs-scripted"
+        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons aibs-scripted {{^criticals.0.imageurl}}aibs-noscene{{/criticals.0.imageurl}}"
                  data-region="deckslide" data-script="1" hidden>
-            <div class="aibs-scene aibs-script-scene">
-                <img src="{{criticals.0.imageurl}}" alt="" class="aibs-scene-img" loading="lazy"
-                     data-region="scriptimage">
-            </div>
+            {{! Guarded. It rendered unconditionally, so a page whose frames were never
+                generated drew an empty grey column with a broken-image mark in the corner -
+                the two-column silhouette held open by nothing. }}
+            {{#criticals.0.imageurl}}
+                <div class="aibs-scene aibs-script-scene">
+                    <img src="{{criticals.0.imageurl}}" alt="" class="aibs-scene-img" loading="lazy"
+                         data-region="scriptimage">
+                </div>
+            {{/criticals.0.imageurl}}
             <div class="aibs-node-body">
                 <h3 class="aibs-h3">{{#str}} decisionsthatchanged, mod_aibranchedscenario {{/str}}</h3>
                 <ul class="aibs-lesson-list aibs-script-list">
@@ -244,12 +254,17 @@
             that clip finishes. The whole list is in the markup either way, so a learner with
             narration off - or a browser that will not play - simply sees the list. The
             choreography is an enhancement, never the only way in. }}
-        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons aibs-scripted"
+        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons aibs-scripted {{^practices.0.imageurl}}aibs-noscene{{/practices.0.imageurl}}"
                  data-region="deckslide" data-script="1" hidden>
-            <div class="aibs-scene aibs-script-scene">
-                <img src="{{practices.0.imageurl}}" alt="" class="aibs-scene-img" loading="lazy"
-                     data-region="scriptimage">
-            </div>
+            {{! Guarded. It rendered unconditionally, so a page whose frames were never
+                generated drew an empty grey column with a broken-image mark in the corner -
+                the two-column silhouette held open by nothing. }}
+            {{#practices.0.imageurl}}
+                <div class="aibs-scene aibs-script-scene">
+                    <img src="{{practices.0.imageurl}}" alt="" class="aibs-scene-img" loading="lazy"
+                         data-region="scriptimage">
+                </div>
+            {{/practices.0.imageurl}}
             <div class="aibs-node-body">
                 <h3 class="aibs-h3">{{#str}} applyitinpractice, mod_aibranchedscenario {{/str}}</h3>
                 <ul class="aibs-lesson-list aibs-script-list">
@@ -274,12 +289,17 @@
             that clip finishes. The whole list is in the markup either way, so a learner with
             narration off - or a browser that will not play - simply sees the list. The
             choreography is an enhancement, never the only way in. }}
-        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons aibs-scripted"
+        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons aibs-scripted {{^takeawaycards.0.imageurl}}aibs-noscene{{/takeawaycards.0.imageurl}}"
                  data-region="deckslide" data-script="1" hidden>
-            <div class="aibs-scene aibs-script-scene">
-                <img src="{{takeawaycards.0.imageurl}}" alt="" class="aibs-scene-img" loading="lazy"
-                     data-region="scriptimage">
-            </div>
+            {{! Guarded. It rendered unconditionally, so a page whose frames were never
+                generated drew an empty grey column with a broken-image mark in the corner -
+                the two-column silhouette held open by nothing. }}
+            {{#takeawaycards.0.imageurl}}
+                <div class="aibs-scene aibs-script-scene">
+                    <img src="{{takeawaycards.0.imageurl}}" alt="" class="aibs-scene-img" loading="lazy"
+                         data-region="scriptimage">
+                </div>
+            {{/takeawaycards.0.imageurl}}
             <div class="aibs-node-body">
                 <h3 class="aibs-h3">{{#str}} takeaways, mod_aibranchedscenario {{/str}}</h3>
                 <ul class="aibs-lesson-list aibs-script-list">
@@ -289,7 +309,11 @@
                             <span class="aibs-lesson-mark" aria-hidden="true">{{number}}</span>
                             <span class="aibs-script-body">
                                 <span class="aibs-h4 aibs-script-heading">{{heading}}</span>
-                                <span class="aibs-prose aibs-prose-small">{{body}}</span>
+                                {{! Body size, not "small". These cards have a column of
+                                    their own on a scripted page and are read one at a time,
+                                    so the compact size a dense list needed made the only
+                                    text on screen the smallest text in the product. }}
+                                <span class="aibs-prose">{{body}}</span>
                             </span>
                         </li>
                     {{/takeawaycards}}
@@ -327,7 +351,7 @@
                         <circle class="aibs-finish-ring" cx="48" cy="48" r="42" fill="none"
                                 stroke="currentColor" stroke-width="3"/>
                         {{#endgood}}
-                            <path class="aibs-finish-tick" d="M30 49.5 42.5 62 66.5 36" fill="none"
+                            <path class="aibs-finish-tick" pathLength="56" d="M30 49.5 42.5 62 66.5 36" fill="none"
                                   stroke="currentColor" stroke-width="5" stroke-linecap="round"
                                   stroke-linejoin="round"/>
                         {{/endgood}}
@@ -336,7 +360,7 @@
                                 first triangle was 42 units wide in a circle of radius 42,
                                 so its corners crossed the stroke and the mark read as two
                                 shapes colliding rather than as one caution sign. }}
-                            <path class="aibs-finish-tick" d="M48 33 65 62H31Z" fill="none"
+                            <path class="aibs-finish-tick" pathLength="56" d="M48 33 65 62H31Z" fill="none"
                                   stroke="currentColor" stroke-width="4.5"
                                   stroke-linejoin="round"/>
                             <path d="M48 44v7" fill="none" stroke="currentColor"
@@ -345,7 +369,7 @@
                                     fill="currentColor"/>
                         {{/endwarn}}
                         {{#endbad}}
-                            <path class="aibs-finish-tick" d="M34 34 62 62M62 34 34 62" fill="none"
+                            <path class="aibs-finish-tick" pathLength="56" d="M34 34 62 62M62 34 34 62" fill="none"
                                   stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
                         {{/endbad}}
                     </svg>

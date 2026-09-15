@@ -2091,6 +2091,8 @@
 .aibs-script-heading {
     color: var(--aibs-text);
     display: block;
+    /* A card read on its own carries its heading at a size that leads the body under it. */
+    font-size: var(--aibs-text-lead);
 }
 
 /* Nothing floats in and nothing fades; the page is simply there, which is the same page
@@ -4764,6 +4766,11 @@ button.aibs-avatar {
     animation: aibs-draw .5s var(--aibs-ease) forwards;
 }
 
+/* The dash pattern is tuned for the tick, which is 53 units long. The caution triangle is
+   101 and the cross 79, so the same dasharray drew barely half the triangle and stopped -
+   a mark permanently half finished, which reads as a rendering fault rather than as a
+   caution sign. Every mark declares pathLength="56" in the markup, which normalises any
+   geometry to that length, so one dash pattern is correct for all three. */
 .aibs-finish-tick {
     stroke-dasharray: 56;
     stroke-dashoffset: 56;
