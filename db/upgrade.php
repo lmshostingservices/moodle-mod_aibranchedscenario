@@ -807,5 +807,13 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091485, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091486) {
+        // Release 1.80.0 changes no schema. A milestone number for the first release
+        // intended for the Moodle Marketplace: 1.80 rather than 1.8, because 1.8 sorts
+        // below the 1.73 it follows and would read as a downgrade everywhere the release
+        // string is compared.
+        upgrade_mod_savepoint(true, 2026091486, 'aibranchedscenario');
+    }
+
     return true;
 }

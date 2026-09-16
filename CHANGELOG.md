@@ -2,6 +2,37 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.80.0] - 2026-09-16
+
+A milestone number rather than a change: the first release prepared for the Moodle
+Marketplace. Numbered 1.80.0 rather than 1.8.0 because 1.8 sorts below the 1.73 it follows,
+and would read as a downgrade in the listing and in anything that compares release strings.
+
+Everything in 1.73.0 and below is included. What this release is made of, in one place:
+
+- **The illustrations were rebuilt.** Every screen that carries words is illustrated from
+  its own words, including the principles taught before the scenario starts. Briefs are one
+  described photograph rather than a page of contradictory stage directions, every frame
+  states the exposure it must come back at, all six visual treatments work as chosen, and a
+  character described once keeps their appearance across the set.
+- **Media reaches learners.** A run that finishes after an activity is published copies its
+  work across by itself; a run whose work did not arrive is reported with the numbers rather
+  than recorded as ready.
+- **The learner side was audited for the first time.** A resumed attempt is played and
+  graded on the same revision, scale grading works, the grade maximum survives a backup,
+  every path that removes an attempt updates completion, erasure clears the grade and the
+  tick, and a run the learner walked away from no longer spends an attempt.
+- **Nineteen content rules**, carried by both authoring routes, including the one that
+  matters most to a registered training organisation: never invent legislation.
+
+Verified on Moodle 4.4, 4.5 and 5.2: 1,696 harness checks, 45 unit tests, CodeSniffer clean,
+a real command-line upgrade from 2026091264, and six browser sweeps with no findings.
+
+**Not verified: a live generation.** No release this week has been tested against the real
+service; every one was verified against a stub that always succeeds. One real end-to-end run
+- pictures, narration, publish, play it through as a learner - is the outstanding item
+before this goes on sale.
+
 ## [v1.73.0] - 2026-09-16
 
 **Anyone running this in a course with grades or completion should upgrade.** Five faults
