@@ -673,11 +673,36 @@ class validator {
         // Node ids are collected first, so a choice can never take the name of a node that
         // has not been reached yet either.
         $taken = [];
+        // The other five families of media filename, which this did not reserve.
+        //
+        // It covered node ids, crisis frames and choice ids - two of the seven things
+        // media_manager writes into those file areas. A node legitimately called
+        // "debrief_practice" collides with the debrief page's picture; one called "opening"
+        // collides with the opening narration; a choice called "n1_said" collides with node
+        // n1's spoken line; a choice called "record_x" collides with the record clip for a
+        // choice called "x". A collision is not a cosmetic problem here: publishing drops
+        // the second file, so one screen silently gets another screen's picture or another
+        // screen's voice.
+        $taken[] = 'opening';
+        foreach (['whatmattered', 'criticaldecisions', 'practice', 'takeaways'] as $page) {
+            $taken[] = 'debrief_' . $page;
+        }
+        foreach ($principleids as $principleid) {
+            $taken[] = 'lesson_' . $principleid;
+        }
+
         foreach ($raw as $rawnode) {
             $nodeid = is_array($rawnode) ? $this->identifier($rawnode['id'] ?? '') : '';
             if ($nodeid !== '') {
                 $taken[] = $nodeid;
                 $taken[] = $nodeid . '_crisis';
+                $taken[] = $nodeid . '_said';
+            }
+            foreach ((array)($rawnode['choices'] ?? []) as $rawchoice) {
+                $choiceid = is_array($rawchoice) ? $this->identifier($rawchoice['id'] ?? '') : '';
+                if ($choiceid !== '') {
+                    $taken[] = 'record_' . $choiceid;
+                }
             }
         }
 

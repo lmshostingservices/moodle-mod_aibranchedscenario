@@ -28,16 +28,28 @@ use mod_aibranchedscenario\local\schema;
  * different Sam, a different time of day. That reads as broken rather than atmospheric,
  * and it is the single thing that most undermines a scenario visually.
  *
- * So every brief is built from the same four parts, in the same order:
+ * So every brief describes ONE PHOTOGRAPH, in plain prose, in one paragraph:
  *
- *   1. A series anchor, identical in every scene of a scenario. Same location, same
- *      light, same lens. This is what makes the set hang together.
- *   2. The people actually present, described from the scenario's own character
- *      records, so a person looks like themselves each time they appear.
- *   3. The moment: what is happening, and how it should feel, derived from where the
- *      scene sits in the story and whether it is a crisis or an ending.
- *   4. Direction the model needs and a learner should never see - no lettering, no
- *      logos, nobody recognisable.
+ *   - what kind of picture it is, in the medium the teacher chose;
+ *   - how the moment should feel, as behaviour a camera can see;
+ *   - the setting, who is in shot, what is happening in the scenario's own words, and
+ *     the line somebody is saying;
+ *   - then fixed text the trim cannot reach: the continuity statement, the cast sheet,
+ *     the chosen treatment, the teacher's own direction, the light, and the short list
+ *     of what must not be in the picture.
+ *
+ * It used to be a page of labelled stage-direction blocks - a series anchor, a lighting
+ * rig, a mood heading in capitals, a composition, a staging note - and it contradicted
+ * itself: one sentence asked for "the room dark around them" and another for "nothing
+ * crushed to black"; one asked for "arms folding" and another forbade "folded arms". A
+ * model given contradictory instructions resolves them by disregarding most of what it was
+ * told, which is why adding more direction made the pictures worse. Direction is not the
+ * same thing as more words.
+ *
+ * The order matters as much as the content. Everything that must survive is appended AFTER
+ * the length trim, because whatever sits at the end of the trimmable part is the first
+ * thing discarded - which is how the cast sheet, the treatment and the teacher's direction
+ * were being thrown away on exactly the scenes long enough to need them.
  *
  * Composition is deterministic: the same node always yields the same brief, so
  * regenerating one scene cannot quietly change the look of the set.
@@ -114,8 +126,14 @@ class image_prompt {
         $framecount = max(1, substr_count($people, ';') + ($people !== '' ? 1 : 0));
         // A model renders nouns. This one line is the difference between a photograph of a
         // fee dispute and a photograph of a meeting room.
+        // Read from the CRISIS text when this is the crisis frame. It was always read from
+        // the calm version, so the frame whose situation is "the machine is screaming and
+        // people have stepped back" was given the prop belonging to the quiet scene before
+        // it.
         $object = self::focal_object(
-            (string)($node['situation'] ?? '') . ' ' . (string)($node['challenge'] ?? '') . ' '
+            $situation . ' '
+            . (string)($crisis && !empty($node['crisisvariant']['challenge'])
+                ? $node['crisisvariant']['challenge'] : ($node['challenge'] ?? '')) . ' '
             . implode(' ', array_map(static function ($choice) {
                 return (string)($choice['text'] ?? '');
             }, (array)($node['choices'] ?? [])))
@@ -174,7 +192,7 @@ class image_prompt {
 
         // The scenario's own words for what is happening, as prose rather than as a field.
         $what = trim(preg_replace('/\s+/u', ' ', $situation));
-        $what = $what !== '' ? \core_text::substr($what, 0, 700) : '';
+        $what = $what !== '' ? self::clip($what, 700) : '';
 
         // THE LINE SOMEBODY IS SAYING, which the rewrite dropped.
         //
@@ -196,7 +214,7 @@ class image_prompt {
         // picture as a speech bubble or a caption. The words stay, the marks come off.
         $saidline = $speech !== ''
             ? 'One of them is saying, in substance: '
-                . self::sentence(self::dequote(\core_text::substr($speech, 0, 240)))
+                . self::sentence(self::dequote(self::clip($speech, 240)))
                 . ' Show them mid-sentence with the others listening and reacting. '
             : '';
 
@@ -214,48 +232,150 @@ class image_prompt {
         // Labelled, so the teacher's own words are visibly the last word on content rather
         // than running into the sentence before them.
         $teacherline = $teacher !== ''
-            ? 'Additional direction: ' . self::sentence(\core_text::substr($teacher, 0, 300)) . ' '
+            ? 'Additional direction: '
+                . self::sentence(self::dequote(self::clip($teacher, 300))) . ' '
             : '';
 
-        $body = 'A realistic professional workplace training photograph. '
-            . rtrim(self::feel($node, $crisis), '.') . '. '
+        // WHAT MUST SURVIVE A TRIM GOES AFTER IT, NOT BEFORE IT.
+        //
+        // The cast sheet, the treatment and the teacher's own direction were written into
+        // the body - which is the only part fit() is allowed to cut - and they were written
+        // at the END of it, so they were the first three things discarded. On any wordy
+        // node the set came back in mixed styles, the characters were free to change
+        // appearance, and the teacher's direction was silently ignored. Every one of those
+        // is documented three comments above as the thing that must not be lost.
+        //
+        // They are part of the fixed tail now. Only the narrative prose is trimmable, which
+        // is what the priority ladder was always supposed to mean.
+        $body = self::opener($style) . ' '
+            . rtrim(self::feel($node, $crisis, $definition), '.') . '. '
             . 'The setting is ' . rtrim($setting, '.') . '. '
             . $cast
             . ($what !== '' ? 'What is happening: ' . self::sentence(self::dequote($what)) . ' ' : '')
             . $saidline
             . (($object !== '' && self::wants_prop($node))
                 ? rtrim(trim($object), '.') . '. ' : '')
-            . 'The same room and the same people as the other photographs in this set, so '
-            . 'they read as one continuous series. '
+            . '';
+
+        // Continuity, cast and treatment: fixed, and phrased so they do not assert more
+        // than is true. "The same people" used to be stated on every frame while each frame
+        // named a different subset of them, and an instruction the rest of the prompt
+        // contradicts teaches a model that the whole paragraph is soft.
+        $fixed = 'The same place and the same treatment as the other images in this set, so '
+            . 'they read as one continuous series. Only the people named above appear in '
+            . 'this frame. '
             . $sheet
             . 'Treatment, identical in every frame of the set: '
             . rtrim(self::style_phrase($style), '.') . '. ';
 
-        // The tail every frame carries, in the order a photographer would say it: how it
-        // should look, then the short list of what must not be in it.
-        // Three things went out of this tail in the rewrite that had to come back.
-        //
-        // "No visible text" on its own reads as "remove the paperwork", and the paperwork
-        // is half of what makes a workplace photograph look like work - so it says what it
-        // actually means: present, but not readable. Violence was named in the old safety
-        // line and had been reduced to "no distress", which is not the same promise. And
-        // the treatment was dropped entirely on the reasoning that it travels in its own
-        // field - true, but it is also what holds twelve separately generated frames
-        // together as one set, and it costs one clause.
-        $tail = 'Natural expressions, diverse everyday workers, soft natural lighting, '
-            . 'bright and well-exposed with faces plainly visible. Landscape orientation, '
-            . 'clean composition with some negative space for text. Realistic and authentic, '
-            . 'not a posed stock photograph - nobody looking at the camera. '
+        // How it should look, then what must not be in it. The look clause follows the
+        // treatment: telling a noir frame it wants "soft natural lighting", or an oil
+        // painting that it is "a realistic photograph", is the same self-contradiction the
+        // rewrite existed to remove, reintroduced as fixed text.
+        $tail = $fixed . $teacherline . self::look($style) . ' '
             . 'Paperwork, screens and signage may be present but turned away or out of focus '
-            . 'so that no text is readable. No captions, watermarks, logos or brand marks. '
-            . 'No identifiable or real people. Adults in ordinary workplace clothing, no '
-            . 'children, no weapons, no violence and no injury.';
+            . 'so that no text is readable. No captions, subtitles, watermarks, logos or '
+            . 'brand marks. Do not depict any real or identifiable person, and do not '
+            . 'imitate any living person\'s likeness. Everyone shown is an adult dressed as '
+            . 'the scenario describes: no children or young people, no nudity, no weapons, '
+            . 'no violence, no injury and no medical procedure shown in detail. '
+            . 'Workplace-appropriate for adult vocational learners.';
 
-        $prompt = self::fit(
-            $body . $teacherline,
-            self::MAX_PROMPT - \core_text::strlen($tail) - 1
-        );
+        $prompt = self::fit($body, self::MAX_PROMPT - \core_text::strlen($tail) - 1);
         return trim($prompt . ' ' . $tail);
+    }
+
+    /**
+     * How the frame is announced, in the medium the teacher actually chose.
+     *
+     * Every brief opened "A realistic professional workplace training photograph" whatever
+     * the style, and closed with "Realistic and authentic" - so a teacher who chose
+     * watercolour, illustration or oil had a photograph asserted twice against their
+     * chosen treatment, in fixed text, while the treatment clause itself was the part the
+     * trim removed. Four of the six paid styles could not work.
+     *
+     * @param string $style One of the plugin's image styles.
+     * @return string
+     */
+    protected static function opener(string $style): string {
+        $openers = [
+            'illustration' => 'A professional workplace training illustration.',
+            'watercolour'  => 'A watercolour illustration for workplace training.',
+            'oil'          => 'An oil painting for workplace training.',
+            'noir'         => 'A black and white workplace training photograph.',
+        ];
+        return $openers[$style] ?? 'A realistic professional workplace training photograph.';
+    }
+
+    /**
+     * The look clause, which must agree with the treatment rather than fight it.
+     *
+     * "Soft natural lighting, bright and well-exposed" was stated on every frame including
+     * the noir one, whose whole treatment is hard directional light and deep shadow. The
+     * exposure floor is still stated everywhere, because an image a learner cannot read
+     * teaches nothing - but it is stated in terms the chosen medium can honour.
+     *
+     * @param string $style One of the plugin's image styles.
+     * @return string
+     */
+    protected static function look(string $style): string {
+        $common = 'Natural expressions, diverse everyday workers. Landscape orientation, '
+            . 'clean composition with quiet space around the subject. Nobody posing for the '
+            . 'camera and nobody looking at it.';
+        $light = [
+            'noir' => 'Hard directional light as the treatment describes, with every face '
+                . 'still clearly readable and no part of the subject lost in black.',
+            'oil' => 'Even gallery lighting, every face clearly readable.',
+            'illustration' => 'Clear even light, every face clearly readable.',
+            'watercolour' => 'Clear even light, every face clearly readable.',
+        ];
+        $default = 'Soft natural lighting, bright and well-exposed, every face clearly '
+            . 'visible and nothing crushed to black.';
+        return ($light[$style] ?? $default) . ' ' . $common;
+    }
+
+    /**
+     * Does this text mention that name as a word in its own right?
+     *
+     * @param string $haystack Lowercased text to search.
+     * @param string $name Lowercased name or first name.
+     * @return bool
+     */
+    protected static function names_someone(string $haystack, string $name): bool {
+        $name = trim($name);
+        if ($name === '') {
+            return false;
+        }
+        return preg_match('/\b' . preg_quote($name, '/') . '\b/u', $haystack) === 1;
+    }
+
+    /**
+     * Take at most this many characters, and stop at a word.
+     *
+     * The situation, the spoken line and the teacher's direction were each cut at a fixed
+     * character count and then had a full stop put on the end, so a long one arrived as
+     * "...situationsentencefragmen." - which is not a shorter instruction, it is a sentence
+     * the model has to guess the end of, and guessing is what produces the generic frame.
+     * The same reasoning the trim at the end of the brief already used, applied where the
+     * cutting actually happens.
+     *
+     * @param string $text Text to shorten.
+     * @param int $max Character ceiling.
+     * @return string
+     */
+    protected static function clip(string $text, int $max): string {
+        $text = trim($text);
+        if (\core_text::strlen($text) <= $max) {
+            return $text;
+        }
+        $cut = \core_text::substr($text, 0, $max);
+        // Character offsets throughout: strrpos() returns bytes, and mixing the two is why
+        // the sentence-boundary guard did nothing at all on any non-Latin script.
+        $space = \core_text::strrpos($cut, ' ');
+        if ($space !== false && $space > (int)($max * 0.5)) {
+            $cut = \core_text::substr($cut, 0, $space);
+        }
+        return rtrim($cut, " ,;:-");
     }
 
     /**
@@ -265,7 +385,15 @@ class image_prompt {
      * @return string
      */
     protected static function dequote(string $text): string {
-        return trim((string)preg_replace('/["\x{201C}\x{201D}\x{2018}\x{2019}]/u', '', $text));
+        // U+2019 is the typographic APOSTROPHE as well as a closing single quote, and it is
+        // what every assistant-written scenario uses. Stripping it turned "I don't think
+        // we're ready" into "I dont think were ready" - the scenario's own words, mangled,
+        // in a paid request. Only paired quotation marks come off; the apostrophe stays.
+        return trim((string)preg_replace(
+            '/["\x{201C}\x{201D}\x{00AB}\x{00BB}\x{201E}\x{300C}\x{300D}]/u',
+            '',
+            $text
+        ));
     }
 
     /**
@@ -320,114 +448,69 @@ class image_prompt {
      * @param bool $crisis Whether this is the crisis variant.
      * @return string
      */
-    protected static function feel(array $node, bool $crisis): string {
-        // A LESSON SLIDE IS NOT A DECISION SLIDE.
+    protected static function feel(array $node, bool $crisis, array $definition = []): string {
+        // WHO IS IN IT, AND WHERE.
         //
-        // These screens come before the scenario starts and teach the principle the whole
-        // thing is built on. Handed the decision-slide wording, a slide headed "Log a fault
-        // before the next shift" was illustrated as "one of them beginning to notice that
-        // something is not right" - the problem, not the practice. The picture beside a
-        // rule should show the rule being followed, because that is the image a learner
-        // carries into the decisions that follow.
+        // Every branch of this used to say "colleagues", "workmate" and "the room". A
+        // scenario set on a packing line was told "nothing urgent left in the room"; a
+        // scenario with one character was told "colleagues" and, from the prop clause,
+        // "on the surface between them". The plural and the room were asserted as fixed
+        // text over whatever the scenario actually was.
+        $cast = count((array)($definition['characters'] ?? []))
+            + (!empty($definition['facilitator']['name']) ? 1 : 0);
+        $alone = $cast === 1;
+        $who = $alone ? 'A worker' : 'Workers';
+        $are = $alone ? 'is' : 'are';
+
+        // A lesson slide teaches the rule; it should show the rule being kept.
         if (strpos((string)($node['id'] ?? ''), 'lesson_') === 0) {
-            return 'A workplace colleague doing this part of the job properly and without '
-                . 'fuss, while a workmate nearby sees them do it';
+            return $alone
+                ? 'A worker doing this part of the job properly and without fuss'
+                : 'A worker doing this part of the job properly and without fuss, while a '
+                    . 'workmate nearby sees them do it';
         }
         // A debrief page is a summary, not a moment in the story.
         if (strpos((string)($node['id'] ?? ''), 'debrief_') === 0) {
-            return 'Colleagues in a calm workplace setting after the event, talking it over '
-                . 'evenly, nothing urgent left in the room';
+            return $alone
+                ? 'A worker at the end of the day, thinking the whole thing over calmly'
+                : 'Workers talking the whole thing over calmly afterwards, nothing urgent '
+                    . 'left between them';
         }
         if ((string)($node['type'] ?? '') === 'outcome') {
             $outcome = (string)($node['outcome'] ?? 'mixed');
             if ($outcome === 'strong') {
-                return 'The closing moment of the set: colleagues at the end of a difficult '
-                    . 'conversation that has gone well, visibly relieved and in agreement, '
+                return 'The closing moment of the set: ' . lcfirst($who) . ' at the end of a '
+                    . 'difficult conversation that has gone well, visibly relieved, '
                     . 'people who know it worked';
             }
             if ($outcome === 'highrisk') {
                 return 'The closing moment of the set: the aftermath of a conversation that '
-                    . 'has gone badly, serious and subdued, nobody quite looking at anyone '
-                    . 'else';
+                    . 'has gone badly. ' . $who . ' ' . $are . ' serious and subdued, nobody '
+                    . 'quite looking at anyone else';
             }
-            return 'The closing moment of the set: colleagues at the end of a conversation '
-                . 'with the matter only partly settled, thoughtful and undecided';
+            return 'The closing moment of the set: ' . lcfirst($who) . ' at the end of a '
+                . 'conversation with the matter only partly settled, thoughtful and undecided';
         }
         if ($crisis) {
-            return 'Colleagues in the middle of a tense workplace disagreement, one of them '
-                . 'holding a hand up to pause the other, everyone concentrating hard';
+            return $alone
+                ? 'A worker at the worst moment of this, concentrating hard, the situation '
+                    . 'having got away from them'
+                : 'Workers in the middle of a tense disagreement at work, one of them '
+                    . 'holding a hand up to pause the other, everyone concentrating hard';
         }
         if ((int)($node['stage'] ?? 1) <= 1) {
-            return 'Colleagues in a calm, everyday work conversation, one of them beginning '
-                . 'to notice that something is not right';
+            return $alone
+                ? 'A worker going about an ordinary task, just beginning to notice that '
+                    . 'something is not right'
+                : 'Workers in a calm, everyday exchange at work, one of them beginning to '
+                    . 'notice that something is not right';
         }
-        return 'Colleagues working through a difficult workplace conversation, attentive and '
-            . 'serious, the first real disagreement showing';
+        return $alone
+            ? 'A worker working through a difficult call, attentive and serious'
+            : 'Workers working through a difficult conversation at work, attentive and '
+                . 'serious, the first real disagreement showing';
     }
 
-    /**
-     * The part of the brief that is identical for every scene in a scenario.
-     *
-     * @param array $definition The whole scenario.
-     * @param string $style Image style key.
-     * @return string
-     */
-    protected static function series_anchor(array $definition, string $style): string {
-        $setting = trim((string)($definition['setting'] ?? ''));
-        // An anchor that promises "the same lighting" is contradicted a few sentences
-        // later by the crisis and outcome moods, which deliberately harden the light,
-        // and "the same people" is contradicted by naming only whoever is in this scene.
-        // An instruction the rest of the prompt overrides teaches a model that the whole
-        // paragraph is soft, so this says exactly what does and does not change.
-        // Two hundred characters explaining the INTENT of the continuity rules to a thing
-        // that has no use for intent - in a budget where every character not spent on what
-        // is physically in front of the camera is a character the model fills in from the
-        // training mean, and the training mean for "meeting room, professionals" IS the
-        // stock photograph. The invariants are stated once, as facts.
-        $anchor = 'One frame from a single continuous photographic set: the same place, the '
-            . 'same occasion, the same people, the same light and the same treatment in every '
-            . 'frame. Only the people named below appear in this frame.';
-        if ($setting !== '') {
-            // Capped, for the same reason the cast records are: a location description that
-            // runs to a paragraph spends the budget that the object, the light and the hands
-            // need, and the frame that comes back is an extremely well specified room with
-            // nothing happening in it.
-            $anchor .= ' Location, unchanged throughout: '
-                . \core_text::substr($setting, 0, 220) . '.';
-        }
-        // It is no use insisting that the time of day and the light are the same in every
-        // frame without ever saying what they are. Told only to keep them constant, a model
-        // picks afresh each time and the set arrives in six different lightings - which is
-        // exactly the fault the anchor exists to prevent. They are named here, and derived
-        // from the scenario rather than chosen at random, so the same scenario asks for the
-        // same light every time it is generated.
-        // The light is chosen from the SETTING and ramped by stage, per frame, so it is
-        // built in moment() rather than pinned here. A rig that contradicts its own
-        // location - west windows on a night shift - is resolved by the model rendering
-        // neither convincingly, and that mush is what reads back as poor lighting.
-
-        // Asking for people "in the middle third" is a written request for the centred,
-        // symmetrical
-        // stock frame - it forbids the asymmetry, the negative space and the foreground
-        // occlusion that are most of what separates a directed picture from a stock one.
-        // The shape of the frame is worth fixing; where people stand in it is the
-        // composition's business, and the composition is chosen per scene below.
-        $anchor .= ' Shot in landscape, wider than it is tall.';
-        $anchor .= ' Visual treatment, unchanged throughout: ' . self::style_phrase($style) . '.';
-        // The cast sheet goes in EVERY frame's brief, whether or not this particular scene
-        // happens to mention a person by name. It did not before: a character was described
-        // only when their name appeared in that node's own prose, so a lawyer called Mark -
-        // established in scene one, named in scene one - was simply absent from the brief
-        // for scene three, and the model, told to draw a lawyer with nothing said about
-        // which one, drew a different person. Continuity cannot be asserted by a sentence
-        // promising "the same recurring cast" while the description of that cast comes and
-        // goes; it has to be the same description every time, present every time.
-        $sheet = self::cast_sheet($definition);
-        if ($sheet !== '') {
-            $anchor .= ' ' . $sheet;
-        }
-        return $anchor;
-    }
 
     /**
      * Every person this scenario can show, described identically in every frame's brief.
@@ -471,32 +554,6 @@ class image_prompt {
             . 'hair and clothing: ' . implode('; ', $people) . '. No substitutions.';
     }
 
-    /**
-     * The hour and the light for this scenario's whole set of images.
-     *
-     * The anchor promises every frame shares a time of day and a source of light, and never
-     * said what either was, so each frame was free to invent its own and a set came back in
-     * six different lightings. One of five is chosen from the scenario's own title and
-     * setting, which means it is stable: regenerate the same scenario and the light does not
-     * move. It is a hash rather than a choice because there is nothing in the definition that
-     * honestly says what time of day it is, and inventing a field for it would be a bigger
-     * promise than the picture needs.
-     *
-     * @param array $definition The whole scenario.
-     * @return string
-     */
-    protected static function light_for(array $definition): string {
-        $lights = [
-            'mid-morning, daylight through windows on one side of the room',
-            'early afternoon, flat overhead daylight with the blinds half drawn',
-            'late afternoon, low warm daylight from one end of the room',
-            'early evening, overhead interior lighting with the windows dark',
-            'first thing in the morning, thin cool daylight and the lights still on',
-        ];
-        $seed = (string)($definition['title'] ?? '') . '|' . (string)($definition['setting'] ?? '');
-        $index = hexdec(substr(md5($seed === '|' ? 'aibs' : $seed), 0, 4)) % count($lights);
-        return $lights[$index];
-    }
 
     /**
      * Describe the people who appear in this scene.
@@ -530,7 +587,15 @@ class image_prompt {
             }
             $name = \core_text::strtolower($character['name']);
             $first = preg_split('/\s+/u', $name)[0];
-            if (strpos($haystack, $name) !== false || ($first !== '' && strpos($haystack, $first) !== false)) {
+            // MATCHED AS WORDS, NOT AS SUBSTRINGS.
+            //
+            // A plain strpos() put Mark, Ana and Bill in a frame whose text read "the
+            // billing report was marked up during the analysis" and named none of them:
+            // mark is inside marked, ana inside analysis, bill inside billing. Sam is
+            // inside sample, Ed inside edited, Al inside also. The frame then showed three
+            // people who are not in that scene, described in full, which is worse than
+            // showing nobody.
+            if (self::names_someone($haystack, $name) || self::names_someone($haystack, $first)) {
                 $candidates[] = $character;
             }
         }
@@ -586,77 +651,6 @@ class image_prompt {
         return implode('; ', $described);
     }
 
-    /**
-     * Describe what is happening and how the frame should feel.
-     *
-     * @param array $node The node.
-     * @param string $situation The prose for this scene.
-     * @param bool $crisis Whether this is the crisis variant.
-     * @return string
-     */
-    protected static function moment(array $node, string $situation, bool $crisis): string {
-        $action = self::condense($situation);
-        $type = (string)($node['type'] ?? 'decision');
-        $stage = (int)($node['stage'] ?? 1);
-
-        // A numeral in an image brief invites a slate, a corner caption or a strip
-        // number, which the direction forbids, and the number was not even reliable:
-        // branch nodes share a stage, so a set could contain three "Frame 2"s.
-        $shot = $type === 'outcome'
-            ? 'This is the closing moment of the set.'
-            : ($stage <= 1 ? 'This is an early moment in the set.' : 'This is a later moment in the set.');
-
-        // What a character says, and what the learner is being asked, are the two lines
-        // that make one scene different from the next. Briefing only the situation prose
-        // produced a set of interchangeable meeting-room pictures.
-        $spoken = self::condense((string)($node['facilitatorspeech'] ?? ''));
-        if ($crisis && !empty($node['crisisvariant']['facilitatorspeech'])) {
-            $spoken = self::condense((string)$node['crisisvariant']['facilitatorspeech']);
-        }
-        $said = $spoken !== ''
-            ? 'One person is saying, in substance: ' . $spoken
-                . ' Show them mid-sentence and the others reacting to it. '
-            : '';
-
-        $moment = trim((string)($node['title'] ?? ''));
-        $named = $moment !== '' ? 'This moment is ' . $moment . '. ' : '';
-
-        // The decision itself was never in the brief. A slide says a lawyer is being pushed
-        // on price while the client cares about timing, and offers three ways to answer it -
-        // and the picture was briefed from the opening two sentences alone, so it showed a
-        // meeting room. What the scene is ABOUT is the question and the options; they are
-        // the difference between one scene and the next, and they are what a learner is
-        // looking at when the picture is beside them.
-        $challenge = self::condense($crisis && !empty($node['crisisvariant']['challenge'])
-            ? (string)$node['crisisvariant']['challenge']
-            : (string)($node['challenge'] ?? ''));
-        $asked = $challenge !== ''
-            ? 'The question hanging over the room: ' . $challenge . ' ' : '';
-
-        // The options say what is actually at stake without ever being shown as words: they
-        // tell the model what the disagreement is over, which is what puts real tension into
-        // the posture and the eye-lines instead of a polite generic conference.
-        $options = [];
-        foreach ((array)($node['choices'] ?? []) as $choice) {
-            $line = trim((string)($choice['text'] ?? ''));
-            if ($line !== '') {
-                $options[] = self::condense($line);
-            }
-            if (count($options) >= 4) {
-                break;
-            }
-        }
-        // The three options were handed over as abstract propositions - "hold the price",
-        // "offer a discount" - and a model cannot photograph a proposition. It rendered the
-        // only concrete noun within reach, which is why a slide about a fee dispute came
-        // back as a meeting room. What the disagreement is OVER becomes an object on the
-        // table instead; the propositions themselves are dropped.
-        $stake = '';
-
-        return $shot . ' ' . $named
-            . ($action !== '' ? 'What is happening: ' . $action . ' ' : '')
-            . $said . $asked . $stake;
-    }
 
     /**
      * One physical object this scene is actually about.
@@ -682,308 +676,67 @@ class image_prompt {
         // about before the general ones.
         $objects = [
             'roster|rota|shift|cover|staffing'
-                => 'a laminated shift rota on the table, names rubbed out and rewritten',
+                => 'a laminated rota sheet on the table, its surface scuffed from repeated rubbing out',
             'invoice|fee|price|cost|budget|quote|discount|margin'
-                => 'a printed cost breakdown lying between them, one line ringed in biro',
+                => 'a printed spreadsheet lying face up, one row ringed in biro',
             'deadline|timing|delay|schedule|timeline|overdue|completion|handover'
-                => 'a wall planner behind them with one date circled and three crossings-out',
+                => 'a wall planner behind them, one square ringed in marker and several scored through',
             'contract|clause|draft|term|agreement|signature|sign'
-                => 'a thick draft agreement open flat, one clause flagged with a bent sticky note',
+                => 'a thick bound document open flat, one page flagged with a bent sticky note',
             'sample|batch|spec|tolerance|defect|faulty'
-                => 'a labelled sample bag set down between them, its label half peeled',
+                => 'a sealed sample bag set down on the surface, its tag half peeled away',
             'complaint|escalat|grievance|incident|report'
-                => 'a printed email folded in three and flattened out again on the table',
+                => 'a sheet of paper folded in three and flattened out again on the table',
             'audit|evidence|compliance|record|logbook'
-                => 'a ring binder open at a tabbed divider, one page turned back on itself',
+                => 'a ring binder open at a coloured tabbed divider, one page turned back on itself',
             'medication|patient|clinical|dose|chart'
-                => 'an observation chart clipped to a board, the top sheet curling',
+                => 'a printed chart clipped to a board, the top sheet curling at the corner',
             'training|competenc|assessment|learner|student'
-                => 'a marked-up assessment cover sheet with one box left unticked',
+                => 'a marked-up cover sheet on the desk, one tick box still empty',
             'safety|hazard|ppe|risk|injury|incident'
-                => 'a safety checklist on a clipboard, the last two lines blank',
+                => 'a checklist on a clipboard, the last two lines still blank',
             'machine|equipment|line|conveyor|plant|breakdown|maintenance'
-                => 'a maintenance log open on the bench, the last entry unfinished',
+                => 'a hardbacked log book open on the bench, the last line only part written',
         ];
+        // DESCRIBED BY SHAPE, NOT BY WHAT IT SAYS.
+        //
+        // Every one of these used to be identified by its lettering - "names rubbed out and
+        // rewritten", "one line ringed in biro", "one box left unticked" - in a brief whose
+        // closing instruction is that no text in the picture may be readable. A prop that
+        // can only be recognised by reading it is a prop that argues with the safety line,
+        // and the model resolves that by rendering legible text or by rendering neither.
+        // They are recognisable now by their form: a tab, a ring, a fold, an empty box.
         foreach ($objects as $pattern => $object) {
             if (preg_match('/\b(' . $pattern . ')/u', $haystack)) {
-                return 'On the surface between them: ' . $object
-                    . ', pushed halfway across and left there. ';
+                return self::prop_phrase($object);
             }
         }
         // No frame is left without an object. A model needs a noun, and "a meeting" is not
         // one - handed nothing physical it renders the training mean, which is the stock
         // photograph. A plain object beats no object every time, and it still gives the
         // scene a foreground, a place for hands to be, and something for eyes to go to.
-        return 'On the surface between them: a clipboard face-down beside a mug gone cold, '
-            . 'pushed halfway across and left there. ';
+        return self::prop_phrase('a clipboard face down beside a mug gone cold');
     }
 
     /**
-     * The lighting rig for this scenario, and how hard it falls in this frame.
+     * Put the object into the frame without assuming two people are sitting across a table.
      *
-     * It used to be one of five times of day picked by hashing the scenario, which put
-     * "late afternoon, low sun through west windows" on a night shift and flat warm
-     * shadows in a clinical room. A rig that contradicts its own location is resolved by
-     * the model rendering neither convincingly, and that mush is what reads back as poor
-     * lighting. The rig is chosen from the SETTING, so it can always be true of the place.
+     * "On the surface between them, pushed halfway across" described a decision moment with
+     * at least two people in it, and it was printed on single-person scenarios and on
+     * standing scenes alike.
      *
-     * The anchor has always promised that how hard the light falls changes from frame to
-     * frame, and nothing ever expressed that change, so a set arrived in ten identically
-     * lit frames. The contrast ramp is the dramatic arc - same window, same lamp, same
-     * palette, so continuity holds - and it costs about ninety characters.
-     *
-     * @param array $definition The whole scenario.
-     * @param array $node The node being drawn.
-     * @param bool $crisis Whether this is the escalated variant.
+     * @param string $object The object itself.
      * @return string
      */
-    protected static function lighting(array $definition, array $node, bool $crisis): string {
-        $where = \core_text::strtolower(
-            (string)($definition['setting'] ?? '') . ' ' . (string)($definition['title'] ?? '')
-        );
-        $rigs = [
-            'ward|clinic|hospital|theatre|surgery|laborator|pharmac'
-                => 'overhead fluorescent only; flat cool-green toplight; no shadows on the '
-                    . 'walls; faint reflections in the worktop',
-            'night|shift|depot|control room|dispatch'
-                => 'desk lamps and monitor glow warming the room against the window black; '
-                    . 'faces clearly lit by the screens they are working at; the room behind '
-                    . 'them readable rather than lost',
-            'warehouse|workshop|factory|plant|yard|site|garage'
-                => 'a single high skylight; a dusty shaft of light landing on the floor; '
-                    . 'everything outside the shaft in warm shade',
-            'atrium|lobby|foyer|reception|showroom|glazed'
-                => 'flat overcast daylight through a full-height glazed wall camera-right; '
-                    . 'soft, even and cool grey; no hard shadow anywhere',
-        ];
-        $rig = 'one bank of windows camera-left; daylight across the back wall; faces lit '
-            . 'from one side with the other side still open and readable';
-        foreach ($rigs as $pattern => $candidate) {
-            if (preg_match('/(' . $pattern . ')/u', $where)) {
-                $rig = $candidate;
-                break;
-            }
-        }
-
-        // THE RAMP CHANGES THE QUALITY OF THE LIGHT, NEVER HOW MUCH OF IT THERE IS.
-        //
-        // It used to darken the picture as the scenario got harder: only stage one was lit
-        // openly, everything after it was told the light had "gone harder", a crisis frame
-        // fell to "near black", and an ending that was not the strong one had the faces
-        // "dropped into the shadow side of the room". On a five-stage scenario that is one
-        // bright frame and eleven dark ones, which is why every picture came back gloomy.
-        //
-        // The tension was real and worth keeping - a set held at one temperature from first
-        // frame to last gives a learner nothing to feel. But tension is direction,
-        // contrast, framing and colour. It is not underexposure. A dark picture is not a
-        // dramatic picture; it is a picture a learner cannot read, and an unreadable
-        // picture teaches nothing, which is the whole reason these images exist.
-        $type = (string)($node['type'] ?? 'decision');
-        $stage = (int)($node['stage'] ?? 1);
-        if ($type === 'outcome') {
-            $ramp = ((string)($node['outcome'] ?? 'mixed')) === 'strong'
-                ? ' Warm, open and generous: the room feels bigger behind them.'
-                : ' Cooler and more separated, the warmth drained out of the palette - but '
-                    . 'the faces stay as bright as they were in the first frame.';
-        } else if ($crisis) {
-            $ramp = ' Hardest light of the set - crisp edges, strong modelling on every '
-                . 'face, the contrast high - and every face still clearly exposed.';
-        } else if ($stage <= 1) {
-            $ramp = ' Soft and even here, the shadows gentle.';
-        } else {
-            $ramp = ' The modelling is crisper now and the shadows have edges, at the same '
-                . 'overall brightness as the opening frame.';
-        }
-
-        // Stated on EVERY frame, and stated last, where a model weights it most. Whatever
-        // the rig and whatever the ramp, the picture comes back bright enough to read.
-        // Kept short deliberately. The first version of this ran to two hundred characters
-        // and, because the directed block is protected from trimming, it pushed that much
-        // narrative off the end instead - including the line that frames an ending as the
-        // closing shot of the set. Every word added here is a word taken from the scene.
-        $floor = ' Bright and well-exposed: faces clearly visible, shadows open, nothing '
-            . 'crushed to black.';
-
-        return 'Light, the same source in every frame: ' . $rig . '.' . $ramp . $floor;
+    protected static function prop_phrase(string $object): string {
+        return 'In the foreground, close enough to be part of the scene: ' . $object . '. ';
     }
 
-    /**
-     * How this frame is composed, chosen from what is in it rather than at random.
-     *
-     * The five composition lines were picked by hashing the node id, so the framing had no
-     * relationship to the content: an over-the-shoulder two-shot on a scene with one person
-     * in it, a wide establishing frame on the emotional turn. Randomness is not direction.
-     * Cast size and what kind of moment this is decide the shot; the hash only picks between
-     * variants that are all appropriate.
-     *
-     * Each line carries a focal length, a camera height and something in the foreground,
-     * because those three are what make a frame look directed rather than taken.
-     *
-     * @param array $node The node being drawn.
-     * @param int $people How many named people are in this frame.
-     * @return string
-     */
-    protected static function composition(array $node, int $people): string {
-        if ($people <= 1) {
-            $family = [
-                '85mm, camera just below eye height, waist-up, the subject on the left third '
-                    . 'looking into open space on the right; both hands in frame.',
-                '50mm, camera at seated eye height, the subject small against the window with '
-                    . 'the room dark around them; one hand resting on the table edge.',
-            ];
-        } else if ($people === 2) {
-            $family = [
-                '35mm, over the near person\'s shoulder; that shoulder is dark and out of '
-                    . 'focus and fills the left third; the other face is sharp on the right third.',
-                '50mm from one side of the table; both in profile, the empty space between '
-                    . 'them carrying the tension.',
-            ];
-        } else {
-            $family = [
-                '28mm from the corner of the room at seated eye height; the group forms a '
-                    . 'triangle; whoever is standing is cut off at the chin by the top edge.',
-                '24mm from the doorway, the dark edge of the doorframe running down the left '
-                    . 'of the frame; the group small in the lower half, the room above them.',
-            ];
-        }
-        $pick = $family[abs(crc32((string)($node['id'] ?? ''))) % count($family)];
-        if ((string)($node['type'] ?? '') !== 'outcome' && (int)($node['stage'] ?? 1) > 1) {
-            $pick .= ' Leave a wide empty space on the side the speaker is facing.';
-        }
-        return $pick;
-    }
 
-    /**
-     * The things a directed photograph has and a stock photograph does not.
-     *
-     * @return string
-     */
-    protected static function staging(): string {
-        return 'Hands are doing something specific rather than resting: one person leaning '
-            . 'forward on straight arms, palms flat; another turning a pen without looking at '
-            . 'it. Eyelines are deliberate: someone is watching the object on the table rather '
-            . 'than the person speaking. One small incongruous thing is in the room - a cycle '
-            . 'helmet on a chair, a coffee gone cold and skinned over. Not a stock photograph: '
-            . 'nobody looks at the camera, nobody smiles for it, no staged handshake, no folded '
-            . 'arms, no spotless glass boardroom.';
-    }
 
-    /**
-     * How this frame should feel, by where it sits in the story.
-     *
-     * It used to be the tail of the narrative block, which meant that on a wordy scene -
-     * or a scenario whose character records ran long - it was trimmed away along with the
-     * prose. That took the crisis direction with it: the one sentence saying the moment has
-     * escalated AND that nobody is hurt. Mood is direction about the photograph, not part
-     * of the story, so it travels with the light.
-     *
-     * @param array $node The node being drawn.
-     * @param bool $crisis Whether this is the escalated variant.
-     * @return string
-     */
-    protected static function mood(array $node, bool $crisis): string {
-        if ((string)($node['type'] ?? '') === 'outcome') {
-            return self::outcome_mood((string)($node['outcome'] ?? 'mixed'));
-        }
-        // The emotional temperature rises across the set, and every rung is named as
-        // behaviour a camera can see rather than as an adjective. A set of frames held at
-        // one constant temperature - politely professional from the first to the last -
-        // gives a learner nothing to feel, and what is not felt is not kept. A scenario is
-        // a situation getting harder; the pictures should show it getting harder.
-        //
-        // "Tense" is an adjective, and a model renders an adjective as the training mean.
-        // "A jaw set and a pen held still over a page nobody is writing on" is a photograph.
-        if ($crisis) {
-            return 'HOTTEST POINT OF THE SET. It has gone off: someone half out of their '
-                . 'chair, a palm up to stop the other person talking, another looking away '
-                . 'with their jaw set, a third watching the two of them rather than the '
-                . 'papers. Tight framing, people close together, high contrast. Tense but '
-                . 'not violent, nobody hurt and nobody shouting into a face.';
-        }
-        if ((int)($node['stage'] ?? 1) <= 1) {
-            // Words like "outwardly ordinary", "routine work continuing" and "steady light"
-            // were asking for a boring picture with flat light, and receiving one.
-            return 'COOL, AND THAT IS THE POINT. Nothing has gone wrong yet and everyone is '
-                . 'still being reasonable - open posture, easy eye contact, coats still over '
-                . 'the backs of chairs. One person is fractionally ahead of the others: a '
-                . 'small readable flicker of concern nobody else in the room has noticed.';
-        }
-        if ((int)($node['stage'] ?? 1) === 2) {
-            return 'WARMING. The first real friction is showing: a smile held a beat too '
-                . 'long, arms folding, someone leaning in to interrupt and thinking better '
-                . 'of it, a pen held still over a page nobody is writing on.';
-        }
-        return 'HOT, AND STILL CIVIL. It has been building for a while and everyone is '
-            . 'working to keep it professional, which is visibly costing them: shoulders up, '
-            . 'a hand flat on the table, one person sitting very still, the room gone quiet '
-            . 'around the two who have to decide.';
-    }
 
-    /**
-     * How an ending should look, by outcome band.
-     *
-     * @param string $band One of strong, mixed, highrisk.
-     * @return string
-     */
-    protected static function outcome_mood(string $band): string {
-        // These used to describe temperature and nothing else - "resolved and under control,
-        // people at ease in their posture, work proceeding safely" for a strong ending. That
-        // is a description of CALM, not of success: nobody in it is pleased, nothing has
-        // closed, no one is reacting to anything. A model given it draws a quiet office, and
-        // a learner who has just scored 89% is shown a quiet office.
-        //
-        // An ending is the emotional event the whole scenario has been building to, and it
-        // is the frame most likely to be remembered, because what is felt is what is kept.
-        // So each band is a MOMENT with people in it reacting, not a lighting note.
-        //
-        // The celebration is deliberately workplace-safe. A raised glass is one obvious way
-        // to draw a closed deal and the wrong default for a product whose scenarios include
-        // clinical, youth and safety-critical settings - and for the learners in them, for
-        // whom alcohol at work is the opposite of the lesson. Relief reads just as warmly
-        // through hands, faces and posture.
-        $moods = [
-            'strong'   => 'THE MOMENT IT LANDS. The decision has worked and everyone in the '
-                . 'frame knows it: a handshake just released and the hands still apart, one '
-                . 'person laughing with their head back, another sitting back with their '
-                . 'shoulders finally down, papers being gathered up rather than argued over, '
-                . 'cups raised or set down for the first time in an hour. Warm, open, the '
-                . 'brightest frame of the set. Genuine relief and pleasure on real faces - not '
-                . 'a posed celebration and not applause to camera.',
-            'mixed'    => 'IT CLOSED AND NOBODY IS PLEASED. It is settled, late, and it cost '
-                . 'more than it should have: one person already packing their bag while '
-                . 'another is still talking, a thin polite smile that does not reach the eyes, '
-                . 'no eye contact across the table, a hand rubbing the back of a neck. Flat '
-                . 'even light. Tired rather than angry.',
-            'highrisk' => 'THE COST HAS LANDED. The room after the others have gone: one '
-                . 'person alone at the table with the papers still spread where they were '
-                . 'left, a chair pushed back and turned away, a phone face-down and unanswered, '
-                . 'their hand over their mouth or flat on the table. Cooler light, harder '
-                . 'shadow, the coldest frame of the set. Sober and serious - no injury, no '
-                . 'blood, nobody humiliated.',
-        ];
-        return $moods[$band] ?? $moods['mixed'];
-    }
 
-    /**
-     * Direction the model needs and a learner should never see the result of.
-     *
-     * @return string
-     */
-    protected static function direction(): string {
-        // A blanket "no text anywhere" fought the props, and the best props are paper: it
-        // removed the
-        // ringed figure, the marked-up clause and the crossed-out date, which are the most
-        // concrete things a scene has. Paperwork is present and simply unreadable, so the
-        // object survives and no garbled letterforms appear.
-        return 'No legible text anywhere: paperwork, screens and signage are present but turned '
-            . 'away, cropped, or thrown far enough out of focus that nothing reads. No '
-            . 'captions, subtitles, watermarks, logos or brand marks. Do not depict any real, '
-            . 'identifiable or public person, and do not imitate any living person\'s likeness. '
-            . 'Everyone shown is an adult in ordinary workplace clothing: no children or young '
-            . 'people, no nudity, no weapons. No injury, no blood, no physical harm, and no '
-            . 'medical procedure shown in detail. Workplace-appropriate for adult vocational '
-            . 'learners.';
-    }
+
 
     /**
      * Reduce narrative prose to the action worth drawing.
@@ -1078,10 +831,15 @@ class image_prompt {
             // the generic frame. It falls back to the last full stop instead, so what
             // survives is whole.
             $cut = trim(\core_text::substr($prompt, 0, $max));
+            // Uses core_text::strrpos, not strrpos. The byte offset a plain strrpos() returns
+            // was being handed to a CHARACTER-indexed substr, so on any script with
+            // multi-byte characters the offset overshot the string, substr returned it
+            // unchanged, and the brief ended mid-word - which is the exact failure this
+            // code exists to prevent, silently switched off for every non-Latin language.
             $stop = max(
-                (int)strrpos($cut, '. '),
-                (int)strrpos($cut, '? '),
-                (int)strrpos($cut, '! ')
+                (int)\core_text::strrpos($cut, '. '),
+                (int)\core_text::strrpos($cut, '? '),
+                (int)\core_text::strrpos($cut, '! ')
             );
             if ($stop > (int)($max * 0.6)) {
                 $cut = \core_text::substr($cut, 0, $stop + 1);

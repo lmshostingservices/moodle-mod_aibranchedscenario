@@ -298,7 +298,7 @@ class media_manager {
         }
 
         if ($wantsaudio) {
-            foreach ($definition['principles'] as $position => $principle) {
+            foreach ((array)($definition['principles'] ?? []) as $position => $principle) {
                 $counts['narrationswanted']++;
                 $narrated = $this->generate_principle_narration(
                     $provider,
@@ -314,7 +314,13 @@ class media_manager {
         }
 
         $index = 0;
-        foreach ($definition['nodes'] as $node) {
+        // Guarded. The paste route is a second entry point into this method and a
+        // definition that skipped the validator would fatal here under PHP 8 rather than
+        // simply making no media.
+        foreach ((array)($definition['nodes'] ?? []) as $node) {
+            if (!is_array($node)) {
+                continue;
+            }
             if ($wantsimages) {
                 // Endings are given a frame too. The closing image is the one a learner
                 // is left looking at while they read what their decisions came to.
@@ -329,7 +335,7 @@ class media_manager {
                     }
                 }
             }
-            if ($node['type'] === 'outcome') {
+            if (($node['type'] ?? '') === 'outcome') {
                 // The ending was the one screen in the scenario deliberately left silent:
                 // narration was skipped for outcome nodes, so a learner listening the whole
                 // way through arrived at the result of every decision they had made and
@@ -366,7 +372,8 @@ class media_manager {
                 // decision point" - and is never worth a clip. Every branch of a real
                 // decision is recorded, because the consequence screen is half of what a
                 // learner reads and silence there reads as the narration being broken.
-                $branches = count($node['choices']) > 1 ? $node['choices'] : [];
+                $nodechoices = (array)($node['choices'] ?? []);
+                $branches = count($nodechoices) > 1 ? $nodechoices : [];
                 foreach ($branches as $choice) {
                     $counts['narrationswanted']++;
                     if (
@@ -500,6 +507,9 @@ class media_manager {
             $slot = 0;
             foreach (array_values((array)($definition['principles'] ?? [])) as $principle) {
                 $slot++;
+                if (!is_array($principle)) {
+                    continue;
+                }
                 $text = trim(implode(' ', array_filter([
                     (string)($principle['summary'] ?? ''),
                     (string)($principle['example'] ?? ''),
@@ -512,7 +522,7 @@ class media_manager {
                     $provider,
                     $definition,
                     [
-                        'id'        => 'lesson_' . (string)($principle['id'] ?? $slot),
+                        'id'        => 'lesson_' . self::principle_key($principle, $slot),
                         'title'     => (string)($principle['title'] ?? ''),
                         'situation' => $text,
                     ],
@@ -876,7 +886,7 @@ class media_manager {
             $this->store(
                 self::AREA_NARRATION,
                 self::PRINCIPLE_ITEMID_BASE + $position,
-                'lesson_' . $principle['id'],
+                'lesson_' . self::principle_key($principle, $position + 1),
                 $result['data'],
                 $result['mimetype']
             );
@@ -1103,6 +1113,23 @@ class media_manager {
         }
 
         return $count;
+    }
+
+    /**
+     * The media key for one principle's picture and clip.
+     *
+     * The picture used its id with a fallback to its position and the clip used the id with
+     * no fallback at all, so a principle without an id stored a picture under one name,
+     * threw on the narration, and left the player looking for a third. One function, both
+     * callers.
+     *
+     * @param array $principle The principle.
+     * @param int $position Its one-based position, used when it has no id.
+     * @return string
+     */
+    public static function principle_key(array $principle, int $position): string {
+        $id = trim((string)($principle['id'] ?? ''));
+        return $id !== '' ? $id : (string)$position;
     }
 
     /**

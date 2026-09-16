@@ -769,5 +769,20 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091480, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091481) {
+        // Release 1.69.0 changes no schema. The cast sheet, the chosen treatment and the
+        // teacher's own direction can no longer be trimmed away, and no frame is told it is
+        // a photograph when the teacher asked for a painting.
+        upgrade_mod_savepoint(true, 2026091481, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091482) {
+        // Release 1.70.0 changes no schema. The remaining findings from the image audit:
+        // names matched as words, props recognisable without reading them, the crisis frame
+        // briefed from the crisis text, media filenames reserved across all seven families,
+        // and the old composer's dead code removed.
+        upgrade_mod_savepoint(true, 2026091482, 'aibranchedscenario');
+    }
+
     return true;
 }

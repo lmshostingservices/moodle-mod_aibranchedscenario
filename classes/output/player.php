@@ -126,7 +126,21 @@ class player implements \renderable, \templatable {
             media_manager::AREA_REVISION_SCENE,
             (int)$revision->revision
         );
-        $fallback = array_values($scenes);
+        // A lesson slide with no picture of its own borrows a DECISION node's frame, never
+        // a debrief one. The fallback was array_values() of a map sorted by filename, and
+        // 'debrief_criticaldecisions' sorts first - so a principle with no picture was
+        // illustrated with the debrief's "decisions that changed things" photograph, which
+        // shows a learner the ending before the scenario has started.
+        $fallback = [];
+        foreach ($scenes as $key => $url) {
+            $borrowed = strpos((string)$key, 'debrief_') === 0
+                || strpos((string)$key, 'lesson_') === 0
+                || strpos((string)$key, 'end_') === 0;
+            if ($borrowed) {
+                continue;
+            }
+            $fallback[] = (string)$url;
+        }
         $narration = $media->urls_for_revision(
             media_manager::AREA_REVISION_NARRATION,
             (int)$revision->revision
@@ -137,7 +151,8 @@ class player implements \renderable, \templatable {
             // Its own picture where there is one. A scenario published before these were
             // generated has none, and borrowing a scene is still better than an empty
             // frame on the screens that open the activity.
-            $image = (string)($scenes['lesson_' . (string)($principle['id'] ?? '')] ?? '');
+            $key = media_manager::principle_key($principle, $position + 1);
+            $image = (string)($scenes['lesson_' . $key] ?? '');
             if ($image === '' && $fallback) {
                 $image = (string)$fallback[$position % count($fallback)];
             }
@@ -151,7 +166,7 @@ class player implements \renderable, \templatable {
                 'haspitfall'  => trim((string)($principle['pitfall'] ?? '')) !== '',
                 'imageurl'    => $image,
                 'hasimage'    => $image !== '',
-                'audiourl'    => (string)($narration['lesson_' . $principle['id']] ?? ''),
+                'audiourl'    => (string)($narration['lesson_' . $key] ?? ''),
             ];
         }
         return $slides;

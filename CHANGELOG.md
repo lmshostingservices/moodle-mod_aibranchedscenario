@@ -2,6 +2,97 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.70.0] - 2026-09-16
+
+The rest of the image audit - the findings that were real but not severe, which v1.69.0
+left alone.
+
+### Fixed
+- **People were put in frames they are not in.** Character names were matched as bare
+  substrings, so a scene reading "the billing report was marked up during the analysis"
+  put Mark, Ana and Bill in the picture - mark inside marked, ana inside analysis, bill
+  inside billing. Sam is inside sample, Ed inside edited, Al inside also. Names are matched
+  as whole words now.
+- **Every prop was described by text printed on it**, in a brief whose closing instruction
+  is that nothing in the picture may be readable: "names rubbed out and rewritten", "one
+  line ringed in biro", "one box left unticked". A prop that can only be recognised by
+  reading it argues with the safety line, and the model resolves that by rendering legible
+  text or by rendering neither. They are described by shape now - a tab, a ring, a fold, an
+  empty box.
+- **The crisis frame's prop was chosen from the calm version of the scene.** A frame whose
+  situation reads "the machine is screaming and people have stepped back" was given the
+  object belonging to the quiet moment before it.
+- **Three fields were cut mid-word and then had a full stop put on the end**, so a long
+  situation arrived as "...situationsentencefragmen." - not a shorter instruction, but a
+  sentence the model has to guess the end of. They stop at a word.
+- **The sentence-boundary guard did nothing at all in any non-Latin script.** It compared a
+  byte offset against a character-indexed cut, so for Japanese, Chinese, Korean, Greek,
+  Cyrillic or Arabic the offset overshot and the brief ended mid-word - the exact failure
+  that code exists to prevent, silently switched off for those languages.
+- **Five of the seven media filename families were unreserved.** Only node ids, crisis
+  frames and choice ids were checked for collisions. A node called "debrief_practice"
+  collided with the debrief page's picture, one called "opening" with the opening
+  narration, a choice called "n1_said" with node n1's spoken line. A collision means one
+  screen silently shows another screen's picture.
+- **A principle's picture and its narration were stored under different names**, and the
+  player looked for a third, on any principle without an id. One function decides the key
+  for all three now.
+- Definitions that reach the media loop without passing the validator - possible on the
+  pasted-prompt route - no longer fatal on a missing field.
+
+### Changed
+- **421 lines of unreachable code removed from the image composer**, along with the class
+  documentation describing how it used to work. Nine methods had no callers: the series
+  anchor, the lighting rig, the composition, the staging, the mood headings and the safety
+  direction. Anyone reading that file would have learned a design the plugin has not had
+  since the rewrite - and it hid the fact that the only non-office awareness in the file
+  sat in a method nothing called.
+- Five more audit checks were rewritten to test the requirement rather than the source
+  text they were pinned to, including one that asserted a set of mood headings in capitals
+  that a model would have rendered as text rather than read as direction.
+
+## [v1.69.0] - 2026-09-16
+
+Found by auditing v1.68.0 rather than by a report. Four of these were introduced by the
+v1.68.0 rewrite itself.
+
+### Fixed
+- **Four of the six image styles could not work.** Every brief opened "A realistic
+  professional workplace training photograph" and closed with "soft natural lighting,
+  bright and well-exposed", whatever the teacher had chosen - so watercolour, illustration
+  and oil were each told they were a photograph, twice, in text that could not be trimmed,
+  and noir was told to use soft natural light two sentences after its own treatment asked
+  for hard directional light and deep shadow. The opener and the look now follow the chosen
+  medium, and every one of them still states an exposure a learner can read.
+- **The cast sheet, the treatment and the teacher's own direction were the first three
+  things thrown away on any wordy scene.** They sat at the end of the trimmable part of the
+  brief, so a scenario with a long situation came back with the characters free to change
+  appearance between frames, the set in mixed styles, and the teacher's direction silently
+  ignored. All three are now fixed text that the trim cannot reach; only narrative prose is
+  trimmable, which is what the priority ladder was always meant to mean.
+- **The typographic apostrophe was being deleted as if it were a quotation mark.** "I don't
+  think we're ready" went to the image service as "I dont think were ready" - the scenario's
+  own words, mangled, in a paid request, and worse in any language that elides heavily.
+  Paired quotation marks still come off, because a quote in an image brief invites the model
+  to letter it into the picture.
+- **The teacher's own direction was the one field never stripped of quotes** - and it is the
+  one a human types freely, so "show a whiteboard reading STOP THE LINE" went through with
+  its quotation marks intact, in the same brief that forbids lettering.
+- **A lesson slide with no picture of its own borrowed a debrief photograph.** The fallback
+  walked the scene list in filename order and "debrief_criticaldecisions" sorts first, so a
+  learner could be shown the ending's imagery before the scenario had started. It borrows
+  only from the decision scenes now.
+- **Every frame assumed an office and at least two people.** A scenario with one character
+  was described as "colleagues", a packing line was told "nothing urgent left in the room",
+  and a lesson slide demanded a workmate the cast did not contain. The wording follows the
+  cast size now.
+- **Six safety clauses had been lost in the rewrite** and are restored: no nudity, no
+  medical procedure shown in detail, no imitation of a living person's likeness, no young
+  people, no subtitles, and the closing statement that the frame is workplace-appropriate
+  for adult vocational learners.
+- "Negative space for text" was asking a generative model for a caption block in the same
+  brief that forbids captions. It asks for quiet space around the subject instead.
+
 ## [v1.68.0] - 2026-09-16
 
 The images. All of it.
