@@ -792,5 +792,12 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091483, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091484) {
+        // Release 1.72.0 changes no schema. A rule the standard could not fit is now
+        // recorded against the scenario instead of being dropped silently, and the cast
+        // rule is ranked above the new craft rules so it is never the one dropped.
+        upgrade_mod_savepoint(true, 2026091484, 'aibranchedscenario');
+    }
+
     return true;
 }

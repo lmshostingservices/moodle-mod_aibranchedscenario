@@ -2,6 +2,31 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.72.0] - 2026-09-16
+
+Found by auditing v1.71.0 an hour after shipping it.
+
+### Fixed
+- **A rule the content standard could not fit was dropped silently.** `short_text()` has
+  always taken a by-reference list of the rules it had to leave out, and its own
+  documentation has always said the point of that list is so the caller can record what was
+  not stated. **No caller ever passed the argument.** The mechanism existed, produced
+  nothing, and was covered by a check that only asserted it *could* produce something. That
+  is the shape of every fault this plugin has had this week: a report with no reader. The
+  rules that could not be stated are now recorded against the scenario, so a site owner
+  comparing two scenarios of different quality can see that one of them was written to fewer
+  rules than the other.
+- **The cast rule was pushed out of the narrow field by the six rules added in v1.71.0.**
+  It is the rule that keeps a person the same person from one scene to the next, and every
+  illustration is briefed from the text it governs - so losing it costs both the prose and
+  the pictures. It now ranks with the rules watched to fail rather than with the craft ones,
+  and the compliance rule ranks above everything.
+
+### Note on the narrow path
+Where the service advertises a field of its own for the content standard - which is the path
+running on current sites - all nineteen rules are sent in full. The 2,000-character fallback
+field carries twelve of them and now says which seven it could not.
+
 ## [v1.71.0] - 2026-09-16
 
 ### Added

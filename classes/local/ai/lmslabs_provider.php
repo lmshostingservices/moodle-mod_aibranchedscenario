@@ -61,6 +61,9 @@ class lmslabs_provider implements provider {
     const MIN_GENERATE_CHARS = 50;
 
     /** @var int Most characters of source content the generate route accepts. */
+    /** @var string[] Rules the standard could not state on the last request, if any. */
+    protected static $lastdropped = [];
+
     const MAX_GENERATE_CHARS = 60000;
 
     /** @var int Fewest characters of source content the populate route accepts. */
@@ -170,7 +173,18 @@ class lmslabs_provider implements provider {
      * @return array Keys: model, provider, durationms, creditsused, creditsremaining, unlimited.
      */
     public function get_last_meta(): array {
-        return $this->lastmeta;
+        $meta = $this->lastmeta;
+        // Rules the standard could not fit travel with the job that they affected, so the
+        // record of what a scenario was asked to be is complete. Stored, not displayed: a
+        // teacher cannot act on it, and a site owner reading the job record can.
+        //
+        // Joined into a string rather than left as a list: sanitise_meta() keeps only
+        // scalars and nulls anything else, so a list here would have been stored as null -
+        // which is the same silent loss, one layer further down.
+        if (self::$lastdropped) {
+            $meta['standardnotstated'] = implode(', ', array_values(self::$lastdropped));
+        }
+        return $meta;
     }
 
     /** @var array The most recent request and response, redacted, for diagnostics. */
@@ -910,10 +924,26 @@ class lmslabs_provider implements provider {
         // Where the service takes a field of its own for the standard, none of that applies:
         // the standard goes there in full and this field is the teacher's words and the
         // cast, which is what it was always meant to hold.
+        // WHAT COULD NOT BE SAID IS RECORDED, because until now it was not.
+        //
+        // short_text() takes a by-reference list of the rules it had to drop, and its own
+        // docblock says the point of that list is so "the caller can say which rules this
+        // request relied on the service's own prompt for rather than stating itself". No
+        // caller ever passed the argument. So on the narrow path the standard quietly
+        // stated a subset and nothing anywhere recorded which subset - the same shape as
+        // every other fault this plugin has had this week: a mechanism that reports into
+        // nothing.
+        //
+        // It matters more now than it did. The standard has grown to nineteen rules and
+        // this field holds about twelve of them, so on a site where the service advertises
+        // no field of its own, seven rules are not being stated and a site owner had no way
+        // to know which.
         $ceiling = 2000;
+        $dropped = [];
         $standard = self::standard_budget('generate') > 0
             ? ''
-            : content_standard::short_text($ceiling - content_standard::TEACHER_FLOOR);
+            : content_standard::short_text($ceiling - content_standard::TEACHER_FLOOR, $dropped);
+        self::$lastdropped = $dropped;
         $blocks = $standard === '' ? [] : [$standard];
         foreach ([$castline, trim(implode("\n\n", $parts))] as $block) {
             if ($block === '') {

@@ -115,6 +115,16 @@ class content_standard {
                     . 'taught before the scenario starts, so they are the difference between '
                     . 'a learner who knows the principle and one who can use it.',
             ],
+            'cast' => [
+                'short' => 'Name the same cast in every scene; no unnamed stand-ins.',
+                'long'  => '- The scenario has a named cast, and every scene names the people '
+                    . 'in it. If Mark the lawyer is in scene one, scene three refers to Mark '
+                    . 'by name and not to "the lawyer" or "a colleague". Do not introduce a '
+                    . 'new unnamed person to do a job one of the named cast would do, and do '
+                    . 'not change anyone\'s role, seniority or gender part-way through. The '
+                    . 'illustrations are briefed from this text, so a scene that stops naming '
+                    . 'someone is a scene that gets a picture of a stranger.',
+            ],
             // Watched to fail: en-AU was chosen and American spelling came back.
             'variety' => [
                 'short' => 'Write every word in the spelling variety of the language field, '
@@ -203,16 +213,6 @@ class content_standard {
                     . 'it was a poor choice. One or two sentences, in the same voice as the '
                     . 'story, not praise, not a lecture, and never addressed to the learner '
                     . 'as a student.',
-            ],
-            'cast' => [
-                'short' => 'Name the same cast in every scene; no unnamed stand-ins.',
-                'long'  => '- The scenario has a named cast, and every scene names the people '
-                    . 'in it. If Mark the lawyer is in scene one, scene three refers to Mark '
-                    . 'by name and not to "the lawyer" or "a colleague". Do not introduce a '
-                    . 'new unnamed person to do a job one of the named cast would do, and do '
-                    . 'not change anyone\'s role, seniority or gender part-way through. The '
-                    . 'illustrations are briefed from this text, so a scene that stops naming '
-                    . 'someone is a scene that gets a picture of a stranger.',
             ],
             'motives' => [
                 'short' => 'Everyone else wants something of their own and has a reason for '

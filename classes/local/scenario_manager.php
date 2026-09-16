@@ -166,8 +166,13 @@ class scenario_manager {
      * @return array
      */
     protected static function sanitise_meta(array $meta): array {
+        // standardnotstated: the rules the content standard could not fit into the narrow
+        // instructions field on this request. Kept with the scenario because it is part of
+        // what this scenario was asked to be, and a site owner comparing two scenarios of
+        // different quality should be able to see that one of them was written to fewer
+        // rules than the other.
         $allowed = ['model', 'provider', 'durationms', 'timegenerated', 'promptversion', 'contractversion',
-            'sourcechars', 'nodecount', 'decisioncount'];
+            'sourcechars', 'nodecount', 'decisioncount', 'standardnotstated'];
         $out = [];
         foreach ($allowed as $key) {
             if (array_key_exists($key, $meta)) {
