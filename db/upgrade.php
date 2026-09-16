@@ -762,5 +762,12 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091479, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091480) {
+        // Release 1.68.0 changes no schema. The scene brief is rewritten as one described
+        // photograph, the lesson slides get pictures made from their own words, and no
+        // frame is asked to darken itself.
+        upgrade_mod_savepoint(true, 2026091480, 'aibranchedscenario');
+    }
+
     return true;
 }

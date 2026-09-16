@@ -52,6 +52,9 @@ class media_manager {
     /** @var int Item id base for the debrief's own screens. */
     const DEBRIEF_ITEMID_BASE = 700;
 
+    /** @var int Item ids for the pictures on the opening lesson slides start here. */
+    const LESSON_ITEMID_BASE = 900;
+
     /** @var int Item id for the opening situation's clip. Above every node index, below the principles. */
     const OPENING_ITEMID = 800;
 
@@ -474,6 +477,50 @@ class media_manager {
                 );
                 if ($made) {
                     $counts['narrations']++;
+                }
+            }
+        }
+
+        // THE LESSON SLIDES GET PICTURES OF THEIR OWN.
+        //
+        // They had none. The player took the Nth decision node's photograph and put it
+        // beside the Nth principle - principle one got node one's picture, principle two
+        // got node two's, wrapping round when it ran out. So a learner met a photograph of
+        // a scene they had not reached yet, next to words it had nothing to do with, and
+        // then met the same photograph again a minute later when they actually got there.
+        //
+        // These are the first screens in the activity and they are the ones teaching the
+        // principle the whole scenario is built on. A picture that does not belong to the
+        // words beside it is worse than no picture: it is something else for the learner to
+        // reconcile at the exact moment they are being asked to learn the rule.
+        //
+        // Briefed from the principle's own text, through the same builder every other
+        // frame uses, exactly as the debrief pages are.
+        if ($wantsimages) {
+            $slot = 0;
+            foreach (array_values((array)($definition['principles'] ?? [])) as $principle) {
+                $slot++;
+                $text = trim(implode(' ', array_filter([
+                    (string)($principle['summary'] ?? ''),
+                    (string)($principle['example'] ?? ''),
+                ])));
+                if ($text === '') {
+                    continue;
+                }
+                $counts['imageswanted']++;
+                $made = $this->generate_scene(
+                    $provider,
+                    $definition,
+                    [
+                        'id'        => 'lesson_' . (string)($principle['id'] ?? $slot),
+                        'title'     => (string)($principle['title'] ?? ''),
+                        'situation' => $text,
+                    ],
+                    $style,
+                    self::LESSON_ITEMID_BASE + $slot
+                );
+                if ($made) {
+                    $counts['images']++;
                 }
             }
         }

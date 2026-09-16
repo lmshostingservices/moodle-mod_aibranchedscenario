@@ -2,6 +2,51 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.68.0] - 2026-09-16
+
+The images. All of it.
+
+### Fixed
+- **Every picture after the first was asked to be darker than the one before it.** The
+  emotional ramp was built out of exposure: stage one was lit openly, every later stage was
+  told the light had "gone harder", a crisis frame fell to "near black", and an ending that
+  was not the strong one had the faces "dropped into the shadow side of the room". On a
+  five-stage scenario that is one bright frame and eleven dark ones. Tension is contrast,
+  framing and colour; it is not underexposure, and a picture a learner cannot read teaches
+  nothing. Every frame now states the exposure it must come back at, and the ramp changes
+  the quality of the light rather than how much of it there is.
+- **The brief contradicted itself, so the model ignored most of it.** One sentence asked for
+  "the room dark around them" and another for "nothing crushed to black"; one asked for
+  "arms folding" and another forbade "folded arms". Given contradictions a model resolves
+  them by disregarding the instructions, which is why adding more direction kept making the
+  pictures worse. The brief is now one paragraph describing the photograph that should
+  exist - about 1,300 characters rather than 2,800 - and it says each thing once.
+- **Most frames had no faces in them.** Where a scene named nobody the brief fell back to
+  "one worker, seen from behind or in three-quarter view, face not the subject of the
+  image". A learner remembers a person, not the back of a head.
+- **The lesson slides showed a photograph of a scene the learner had not reached yet.** The
+  player took the Nth decision node's picture and put it beside the Nth principle, wrapping
+  round when it ran out - so the screens that teach the rule the whole scenario is built on
+  were illustrated by something unrelated, and the same photograph turned up again a minute
+  later when the learner actually got there. Each principle now has a picture briefed from
+  its own words, through the same builder every other frame uses.
+- **The cost estimate was short again.** Adding the lesson pictures without adding them to
+  the count is the third time a picture has been added and not counted. The harness now
+  compares the estimate against what a real run asks for, which is what caught it.
+- Quoted speech went back into the brief as words rather than as a quotation, restoring a
+  decision this codebase had already made and this rewrite had broken: a quote inside an
+  image brief invites the model to letter it into the picture.
+- Borrowed scenario text is terminated as one sentence instead of having a full stop
+  appended to whatever it already ended with, which was producing "...ourselves?." and
+  quotation marks that never closed.
+
+### Changed
+- Sixteen audit checks were rewritten to test the requirement rather than the sentence that
+  used to carry it. They were pinned to exact wording - "carries a focal length and a camera
+  height", "says what hands are doing" - and a correct change turned them red while a
+  genuine regression in the same file would not have. One of them was asking a bad ending to
+  look like a good one and passing only because both carried the same heading.
+
 ## [v1.67.0] - 2026-09-15
 
 **Anyone on v1.65.0 or v1.66.0 should upgrade immediately.** On those two releases a pasted

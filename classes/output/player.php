@@ -115,10 +115,18 @@ class player implements \renderable, \templatable {
             return [];
         }
         $media = new media_manager($this->context);
-        $scenes = array_values($media->urls_for_revision(
+        // Keyed, not positional.
+        //
+        // This used to take array_values() of the scene map and hand principle N the Nth
+        // decision node's photograph, wrapping round when it ran out. Every lesson slide
+        // therefore showed a scene the learner had not reached yet, and showed it again
+        // properly a minute later. Each principle now has a frame of its own, briefed from
+        // its own words, and it is looked up by name.
+        $scenes = $media->urls_for_revision(
             media_manager::AREA_REVISION_SCENE,
             (int)$revision->revision
-        ));
+        );
+        $fallback = array_values($scenes);
         $narration = $media->urls_for_revision(
             media_manager::AREA_REVISION_NARRATION,
             (int)$revision->revision
@@ -126,7 +134,13 @@ class player implements \renderable, \templatable {
 
         $slides = [];
         foreach (array_values($definition['principles']) as $position => $principle) {
-            $image = $scenes ? (string)$scenes[$position % count($scenes)] : '';
+            // Its own picture where there is one. A scenario published before these were
+            // generated has none, and borrowing a scene is still better than an empty
+            // frame on the screens that open the activity.
+            $image = (string)($scenes['lesson_' . (string)($principle['id'] ?? '')] ?? '');
+            if ($image === '' && $fallback) {
+                $image = (string)$fallback[$position % count($fallback)];
+            }
             $slides[] = [
                 'number'      => $position + 1,
                 'title'       => (string)$principle['title'],

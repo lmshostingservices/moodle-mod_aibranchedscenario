@@ -78,8 +78,11 @@ class image_prompt {
             // field" was also the most diluted phrase available: it sits on millions of
             // captions spanning every look, so it carries almost no direction, and what
             // it does carry is generic prettiness.
+            // "deep blacks" was one more nudge towards a dark frame on the treatment that
+            // is meant to look like real life. Noir below keeps its shadows, because a
+            // teacher who picks noir has asked for them.
             'photorealistic' => 'documentary reportage on colour negative, available light only, '
-                . 'restrained true-to-life colour, deep blacks',
+                . 'restrained true-to-life colour, clean open shadows',
             'cinematic'      => 'shot on 35mm colour negative, fine grain in the shadows, mild '
                 . 'halation on the brightest highlights, muted palette with one warm accent',
             'illustration'   => 'clean editorial illustration, flat shapes with subtle texture, '
@@ -118,49 +121,21 @@ class image_prompt {
             }, (array)($node['choices'] ?? [])))
         );
 
-        // A priority ladder, not a queue.
+        // ONE PARAGRAPH DESCRIBING A PHOTOGRAPH, not a page of stage directions.
         //
-        // $parts is what may be trimmed: the anchor, who is present, and the narrative
-        // prose. $directed is what may not - the object, the shot, the light, the mood and
-        // the staging. Those five are how the frame is PHOTOGRAPHED, and they are the
-        // difference between a directed picture and a catalogue one; they used to sit at
-        // the tail of the trim budget, so on any scene with a few sentences in it they were
-        // the first thing cut, and every wordy scene came back as a boardroom.
+        // What this used to build was 2,788 characters of labelled blocks - a series
+        // anchor, a cast sheet, a composition, a lighting rig, a mood heading in capitals,
+        // a staging note, a list of prohibitions - and it argued with itself. One frame
+        // asked for "the room dark around them" and, a sentence later, for "nothing crushed
+        // to black". Another asked for "arms folding" and then forbade "folded arms". It
+        // described most people as "seen from behind, face not the subject of the image",
+        // so the pictures had no faces in them. A model given contradictory instructions
+        // resolves them by ignoring most of what it was told, which is why the pictures
+        // came back generic and dark however much direction was added.
         //
-        // Ordering alone was not enough either: a scenario with a long location, long
-        // character records and a long teacher direction could still push them off the end.
-        // So each of those three inputs is capped as well, and what the trim actually
-        // reaches is the narrative prose - which is the one thing there is always too much
-        // of, and the one thing a model cannot photograph anyway.
-        $parts = [
-            self::series_anchor($definition, $style),
-            $people,
-            self::moment($node, $situation, $crisis),
-        ];
-        $directed = $object
-            . self::composition($node, $framecount) . ' '
-            . self::lighting($definition, $node, $crisis) . ' '
-            . self::mood($node, $crisis) . ' '
-            . self::staging() . ' ';
-
-        // The safety direction is appended after the rest has been cut to fit. Cutting from
-        // the tail would otherwise remove the only text that forbids lettering, real people
-        // and injury. Putting it last also puts it where a model weights it most, with no
-        // teacher text after it.
-        $direction = self::direction();
-        // Capped: a teacher may write six hundred characters of direction, and it is the
-        // last word on content - but it is not worth the lighting and the staging of the
-        // frame it is directing.
-        $teacher = trim((string)($node['imageprompt'] ?? ''));
-        $teacherline = $teacher !== ''
-            ? 'Additional direction: ' . \core_text::substr($teacher, 0, 300) . ' '
-            : '';
-        $body = self::fit(
-            implode(' ', array_filter($parts)),
-            self::MAX_PROMPT - \core_text::strlen($direction)
-                - \core_text::strlen($teacherline) - \core_text::strlen($directed) - 1
-        );
-        $prompt = trim($body . ' ' . $directed . $teacherline . $direction);
+        // Direction is not the same thing as more words. This describes the photograph that
+        // should exist, once, in plain prose, and stops.
+        $prompt = self::scene_paragraph($definition, $node, $situation, $crisis, $object, $style);
 
         return [
             'prompt'     => $prompt,
@@ -168,6 +143,226 @@ class image_prompt {
             'style'      => \core_text::substr(self::style_phrase($style), 0, self::MAX_STYLE),
             'alt'        => self::alt_text($node, $situation, $crisis),
         ];
+    }
+
+    /**
+     * The whole brief for one frame, as a single described photograph.
+     *
+     * @param array $definition The whole scenario.
+     * @param array $node The node this frame belongs to.
+     * @param string $situation The situation text for this frame.
+     * @param bool $crisis Whether this is the crisis variant.
+     * @param string $object The focal object clause, or an empty string.
+     * @param string $style One of the plugin's image styles.
+     * @return string
+     */
+    protected static function scene_paragraph(
+        array $definition,
+        array $node,
+        string $situation,
+        bool $crisis,
+        string $object,
+        string $style
+    ): string {
+        $setting = trim((string)($definition['setting'] ?? ''));
+        $setting = $setting !== '' ? \core_text::substr($setting, 0, 220) : 'a workplace';
+
+        $people = self::people_in_scene($definition, $node, $situation, $crisis);
+        $cast = $people !== ''
+            ? 'The people in shot are ' . rtrim(trim($people), '.') . '. '
+            : '';
+
+        // The scenario's own words for what is happening, as prose rather than as a field.
+        $what = trim(preg_replace('/\s+/u', ' ', $situation));
+        $what = $what !== '' ? \core_text::substr($what, 0, 700) : '';
+
+        // THE LINE SOMEBODY IS SAYING, which the rewrite dropped.
+        //
+        // It is the single most photographable thing on a decision slide: it tells the
+        // model that one person has the floor and the others are reacting, which is the
+        // difference between a photograph of a conversation and a photograph of some
+        // people near a table. Losing it was the one real piece of content the rewrite
+        // lost, as opposed to the film-school jargon it was meant to lose.
+        $speech = $crisis && !empty($node['crisisvariant']['facilitatorspeech'])
+            ? (string)$node['crisisvariant']['facilitatorspeech']
+            : (string)($node['facilitatorspeech'] ?? '');
+        $speech = trim(preg_replace('/\s+/u', ' ', $speech));
+        // Trimmed of ANY sentence-ending punctuation before the closing quote is added.
+        // Trimming only the full stop produced 'can we just fix it ourselves?."' - a
+        // question mark, a full stop and a quote in a row, which is the kind of small mess
+        // that makes a brief read as machine-assembled.
+        // No quotation marks, which is a decision this codebase already made and which I
+        // re-broke: a quote inside an image brief invites the model to letter it into the
+        // picture as a speech bubble or a caption. The words stay, the marks come off.
+        $saidline = $speech !== ''
+            ? 'One of them is saying, in substance: '
+                . self::sentence(self::dequote(\core_text::substr($speech, 0, 240)))
+                . ' Show them mid-sentence with the others listening and reacting. '
+            : '';
+
+        // THE CAST SHEET, which the rewrite dropped with the rest of the anchor.
+        //
+        // It is what stops the lawyer called Mark in scene one being a different person in
+        // scene three: every frame carries the same description of every character, so the
+        // model is never left to invent one. Dropping it was the most expensive thing the
+        // rewrite did, because a set whose people change is a set a learner cannot follow -
+        // and it is not a fault a single picture ever shows, only the set.
+        $sheet = self::cast_sheet($definition);
+        $sheet = $sheet !== '' ? rtrim($sheet) . ' ' : '';
+
+        $teacher = trim((string)($node['imageprompt'] ?? ''));
+        // Labelled, so the teacher's own words are visibly the last word on content rather
+        // than running into the sentence before them.
+        $teacherline = $teacher !== ''
+            ? 'Additional direction: ' . self::sentence(\core_text::substr($teacher, 0, 300)) . ' '
+            : '';
+
+        $body = 'A realistic professional workplace training photograph. '
+            . rtrim(self::feel($node, $crisis), '.') . '. '
+            . 'The setting is ' . rtrim($setting, '.') . '. '
+            . $cast
+            . ($what !== '' ? 'What is happening: ' . self::sentence(self::dequote($what)) . ' ' : '')
+            . $saidline
+            . (($object !== '' && self::wants_prop($node))
+                ? rtrim(trim($object), '.') . '. ' : '')
+            . 'The same room and the same people as the other photographs in this set, so '
+            . 'they read as one continuous series. '
+            . $sheet
+            . 'Treatment, identical in every frame of the set: '
+            . rtrim(self::style_phrase($style), '.') . '. ';
+
+        // The tail every frame carries, in the order a photographer would say it: how it
+        // should look, then the short list of what must not be in it.
+        // Three things went out of this tail in the rewrite that had to come back.
+        //
+        // "No visible text" on its own reads as "remove the paperwork", and the paperwork
+        // is half of what makes a workplace photograph look like work - so it says what it
+        // actually means: present, but not readable. Violence was named in the old safety
+        // line and had been reduced to "no distress", which is not the same promise. And
+        // the treatment was dropped entirely on the reasoning that it travels in its own
+        // field - true, but it is also what holds twelve separately generated frames
+        // together as one set, and it costs one clause.
+        $tail = 'Natural expressions, diverse everyday workers, soft natural lighting, '
+            . 'bright and well-exposed with faces plainly visible. Landscape orientation, '
+            . 'clean composition with some negative space for text. Realistic and authentic, '
+            . 'not a posed stock photograph - nobody looking at the camera. '
+            . 'Paperwork, screens and signage may be present but turned away or out of focus '
+            . 'so that no text is readable. No captions, watermarks, logos or brand marks. '
+            . 'No identifiable or real people. Adults in ordinary workplace clothing, no '
+            . 'children, no weapons, no violence and no injury.';
+
+        $prompt = self::fit(
+            $body . $teacherline,
+            self::MAX_PROMPT - \core_text::strlen($tail) - 1
+        );
+        return trim($prompt . ' ' . $tail);
+    }
+
+    /**
+     * Take the quotation marks off borrowed text, keeping the words.
+     *
+     * @param string $text Text taken from the scenario.
+     * @return string
+     */
+    protected static function dequote(string $text): string {
+        return trim((string)preg_replace('/["\x{201C}\x{201D}\x{2018}\x{2019}]/u', '', $text));
+    }
+
+    /**
+     * End a piece of borrowed text as one sentence, without doubling its punctuation.
+     *
+     * The scenario's own prose arrives ending in every possible way - a full stop, a
+     * question mark, or a closing quotation mark where a principle's example is a line
+     * somebody says. Appending a full stop to all of them produced "...ourselves?." and
+     * '..."before they start.".', and stripping the punctuation instead left a quotation
+     * mark that never closed. It is terminated only when it needs terminating.
+     *
+     * @param string $text Text taken from the scenario.
+     * @return string
+     */
+    protected static function sentence(string $text): string {
+        $text = rtrim($text);
+        if ($text === '') {
+            return '';
+        }
+        return preg_match('/[.?!"\']$/u', $text) ? $text : $text . '.';
+    }
+
+    /**
+     * Does this frame want the object on the table in it?
+     *
+     * The prop clause describes a decision moment - something pushed halfway across the
+     * bench and left there, waiting on somebody. It was being printed on every frame, so
+     * an ending where the matter was settled and a lesson slide teaching a rule both had
+     * the same unfinished paperwork lying between the people in them. Continuity is worth
+     * a lot; the same unresolved prop in a resolved scene is not continuity, it is a
+     * contradiction the viewer has to explain away.
+     *
+     * @param array $node The node.
+     * @return bool
+     */
+    protected static function wants_prop(array $node): bool {
+        $id = (string)($node['id'] ?? '');
+        if (strpos($id, 'lesson_') === 0 || strpos($id, 'debrief_') === 0) {
+            return false;
+        }
+        return (string)($node['type'] ?? '') !== 'outcome';
+    }
+
+    /**
+     * How this frame should feel, as the subject of the photograph.
+     *
+     * One clause naming what a camera would see, taken from where the frame sits in the
+     * story. It replaces a block of capitalised mood headings that a model read as text to
+     * render rather than as direction.
+     *
+     * @param array $node The node.
+     * @param bool $crisis Whether this is the crisis variant.
+     * @return string
+     */
+    protected static function feel(array $node, bool $crisis): string {
+        // A LESSON SLIDE IS NOT A DECISION SLIDE.
+        //
+        // These screens come before the scenario starts and teach the principle the whole
+        // thing is built on. Handed the decision-slide wording, a slide headed "Log a fault
+        // before the next shift" was illustrated as "one of them beginning to notice that
+        // something is not right" - the problem, not the practice. The picture beside a
+        // rule should show the rule being followed, because that is the image a learner
+        // carries into the decisions that follow.
+        if (strpos((string)($node['id'] ?? ''), 'lesson_') === 0) {
+            return 'A workplace colleague doing this part of the job properly and without '
+                . 'fuss, while a workmate nearby sees them do it';
+        }
+        // A debrief page is a summary, not a moment in the story.
+        if (strpos((string)($node['id'] ?? ''), 'debrief_') === 0) {
+            return 'Colleagues in a calm workplace setting after the event, talking it over '
+                . 'evenly, nothing urgent left in the room';
+        }
+        if ((string)($node['type'] ?? '') === 'outcome') {
+            $outcome = (string)($node['outcome'] ?? 'mixed');
+            if ($outcome === 'strong') {
+                return 'The closing moment of the set: colleagues at the end of a difficult '
+                    . 'conversation that has gone well, visibly relieved and in agreement, '
+                    . 'people who know it worked';
+            }
+            if ($outcome === 'highrisk') {
+                return 'The closing moment of the set: the aftermath of a conversation that '
+                    . 'has gone badly, serious and subdued, nobody quite looking at anyone '
+                    . 'else';
+            }
+            return 'The closing moment of the set: colleagues at the end of a conversation '
+                . 'with the matter only partly settled, thoughtful and undecided';
+        }
+        if ($crisis) {
+            return 'Colleagues in the middle of a tense workplace disagreement, one of them '
+                . 'holding a hand up to pause the other, everyone concentrating hard';
+        }
+        if ((int)($node['stage'] ?? 1) <= 1) {
+            return 'Colleagues in a calm, everyday work conversation, one of them beginning '
+                . 'to notice that something is not right';
+        }
+        return 'Colleagues working through a difficult workplace conversation, attentive and '
+            . 'serious, the first real disagreement showing';
     }
 
     /**
@@ -375,17 +570,20 @@ class image_prompt {
                 )
             )));
             if ($known) {
-                return 'In frame: ' . implode(' and ', array_slice($known, 0, 2))
-                    . ', as the cast sheet describes them.';
+                return implode(' and ', array_slice($known, 0, 2))
+                    . ', looking as the cast sheet describes them';
             }
-            return 'People in frame: one worker, seen from behind or in three-quarter view, '
-                . 'face not the subject of the image.';
+            // It used to hide them: "seen from behind or in three-quarter view, face not
+            // the subject of the image". So the frames a scenario falls back to most often
+            // had no faces in them, which is the one thing a picture of a conversation has
+            // to have. A learner remembers a person, not the back of a head.
+            return 'two or three colleagues, faces visible and clearly lit';
         }
 
         // The cast sheet in the anchor has already said, at length, that these people do
         // not change. Saying it again adds nothing per frame and raises the attention the
         // model pays to continuity at the expense of what is happening.
-        return 'In frame: ' . implode('; ', $described) . '.';
+        return implode('; ', $described);
     }
 
     /**
@@ -548,8 +746,9 @@ class image_prompt {
                 => 'overhead fluorescent only; flat cool-green toplight; no shadows on the '
                     . 'walls; faint reflections in the worktop',
             'night|shift|depot|control room|dispatch'
-                => 'the room dark but for two desk lamps and a monitor; warm pools of light '
-                    . 'with black falloff between them; faces lit from below by the screen',
+                => 'desk lamps and monitor glow warming the room against the window black; '
+                    . 'faces clearly lit by the screens they are working at; the room behind '
+                    . 'them readable rather than lost',
             'warehouse|workshop|factory|plant|yard|site|garage'
                 => 'a single high skylight; a dusty shaft of light landing on the floor; '
                     . 'everything outside the shaft in warm shade',
@@ -557,9 +756,8 @@ class image_prompt {
                 => 'flat overcast daylight through a full-height glazed wall camera-right; '
                     . 'soft, even and cool grey; no hard shadow anywhere',
         ];
-        $rig = 'one bank of windows camera-left with the blinds half closed; slatted daylight '
-            . 'across the back wall; faces lit from one side; the far corner of the room falls '
-            . 'to deep shadow';
+        $rig = 'one bank of windows camera-left; daylight across the back wall; faces lit '
+            . 'from one side with the other side still open and readable';
         foreach ($rigs as $pattern => $candidate) {
             if (preg_match('/(' . $pattern . ')/u', $where)) {
                 $rig = $candidate;
@@ -567,22 +765,46 @@ class image_prompt {
             }
         }
 
+        // THE RAMP CHANGES THE QUALITY OF THE LIGHT, NEVER HOW MUCH OF IT THERE IS.
+        //
+        // It used to darken the picture as the scenario got harder: only stage one was lit
+        // openly, everything after it was told the light had "gone harder", a crisis frame
+        // fell to "near black", and an ending that was not the strong one had the faces
+        // "dropped into the shadow side of the room". On a five-stage scenario that is one
+        // bright frame and eleven dark ones, which is why every picture came back gloomy.
+        //
+        // The tension was real and worth keeping - a set held at one temperature from first
+        // frame to last gives a learner nothing to feel. But tension is direction,
+        // contrast, framing and colour. It is not underexposure. A dark picture is not a
+        // dramatic picture; it is a picture a learner cannot read, and an unreadable
+        // picture teaches nothing, which is the whole reason these images exist.
         $type = (string)($node['type'] ?? 'decision');
         $stage = (int)($node['stage'] ?? 1);
         if ($type === 'outcome') {
             $ramp = ((string)($node['outcome'] ?? 'mixed')) === 'strong'
-                ? ' The light reaches the faces again and the room opens up behind them.'
-                : ' The faces have dropped into the shadow side of the room while the '
-                    . 'background behind them stays bright.';
+                ? ' Warm, open and generous: the room feels bigger behind them.'
+                : ' Cooler and more separated, the warmth drained out of the palette - but '
+                    . 'the faces stay as bright as they were in the first frame.';
         } else if ($crisis) {
-            $ramp = ' Hardest light of the set: the key side of each face is bright, the '
-                . 'shadow side falls to near black, the background goes dark behind them.';
+            $ramp = ' Hardest light of the set - crisp edges, strong modelling on every '
+                . 'face, the contrast high - and every face still clearly exposed.';
         } else if ($stage <= 1) {
-            $ramp = ' The light is open and even here; both sides of every face are lit.';
+            $ramp = ' Soft and even here, the shadows gentle.';
         } else {
-            $ramp = ' The light has gone harder; one side of each face is now in shadow.';
+            $ramp = ' The modelling is crisper now and the shadows have edges, at the same '
+                . 'overall brightness as the opening frame.';
         }
-        return 'Light, the same source in every frame: ' . $rig . '.' . $ramp;
+
+        // Stated on EVERY frame, and stated last, where a model weights it most. Whatever
+        // the rig and whatever the ramp, the picture comes back bright enough to read.
+        // Kept short deliberately. The first version of this ran to two hundred characters
+        // and, because the directed block is protected from trimming, it pushed that much
+        // narrative off the end instead - including the line that frames an ending as the
+        // closing shot of the set. Every word added here is a word taken from the scene.
+        $floor = ' Bright and well-exposed: faces clearly visible, shadows open, nothing '
+            . 'crushed to black.';
+
+        return 'Light, the same source in every frame: ' . $rig . '.' . $ramp . $floor;
     }
 
     /**
@@ -675,7 +897,7 @@ class image_prompt {
             return 'HOTTEST POINT OF THE SET. It has gone off: someone half out of their '
                 . 'chair, a palm up to stop the other person talking, another looking away '
                 . 'with their jaw set, a third watching the two of them rather than the '
-                . 'papers. Tight framing, people close together, harder shadows. Tense but '
+                . 'papers. Tight framing, people close together, high contrast. Tense but '
                 . 'not violent, nobody hurt and nobody shouting into a face.';
         }
         if ((int)($node['stage'] ?? 1) <= 1) {
@@ -890,6 +1112,18 @@ class image_prompt {
                 $count++;
             }
             if (!empty($node['crisisvariant']['situation'])) {
+                $count++;
+            }
+        }
+
+        // One picture per principle, briefed from the principle's own words. Added when the
+        // lesson slides stopped borrowing a decision node's photograph - and the estimate
+        // has to move with it, or the quota is charged for twelve pictures while fourteen
+        // are made. This is the third time a picture has been added without the count: the
+        // harness now compares this against a real run, which is what caught it.
+        foreach ((array)($definition['principles'] ?? []) as $principle) {
+            $text = trim((string)($principle['summary'] ?? '') . ' ' . (string)($principle['example'] ?? ''));
+            if ($text !== '') {
                 $count++;
             }
         }
