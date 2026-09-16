@@ -334,6 +334,7 @@ $string['media:incomplete'] = 'Only {$a->made} of {$a->wanted} pictures and clip
 $string['media:nowhy'] = 'the run did not finish';
 $string['media:inflight'] = 'The scenario was imported, but its pictures and narration were not started: a media run for this activity is already under way. Wait for it to finish, then generate the media again from the activity settings.';
 $string['error:mediainflight'] = 'A media run for this activity is already under way.';
+$string['error:attemptunplayable'] = 'That attempt cannot be continued because the scenario it was started on is no longer available. It has been set aside so you can begin again.';
 $string['media:overbudget'] = 'The scenario was imported, but its {$a->images} pictures and {$a->clips} narration clips were not made: they would take this account past its daily generation budget. Ask an administrator to raise the budget, or generate the media tomorrow from the activity settings.';
 $string['media:notpublished'] = '{$a->made} pictures and clips are ready and waiting, but this activity has not been published, so no learner can see any of them yet. Publish the activity to put the media in front of learners.';
 $string['media:defmoved'] = 'The {$a->made} pictures and clips made for this scenario do not match the version that is published, because the scenario was changed after they were requested. They are held back rather than shown on the wrong screens. Generate the media again for the current version.';

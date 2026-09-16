@@ -2,6 +2,52 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.73.0] - 2026-09-16
+
+**Anyone running this in a course with grades or completion should upgrade.** Five faults
+on the learner-facing side, none of which had ever been looked at: every audit check in this
+plugin had been written from a fault reported in generation, media or layout.
+
+### Fixed
+- **A resumed attempt was played on one version of the scenario and graded on another.**
+  Starting an attempt resolved the *current* published revision and showed the learner its
+  wording; submitting a choice resolved the *attempt's* revision and scored against that
+  one. A learner who came back after the teacher republished read one version of a choice
+  and was marked on a different one - different consequence, different skill values, and
+  pictures belonging to a scene the node no longer described. Nothing reported it, because
+  both halves worked exactly as written. Attempts have always been pinned to their own
+  revision; only this one entry point forgot.
+- **An attempt could become permanently unplayable.** Where the node a learner was sitting
+  on was missing from their revision, the activity threw an error every time they opened it
+  - and on a scenario allowing one attempt they could never finish it, never abandon it and
+  never be graded. That attempt is now released so they can begin again.
+- **A scale grade was silently discarded, and a perfect run recorded as zero.** Moodle
+  stores a chosen scale as a negative number, and the grade item only handled positive
+  ones - so the scale became a hundred-point value item and the learner's percentage was
+  multiplied by a negative maximum. The teacher saw every learner fail. Scales now produce
+  a scale grade item and the learner's percentage is mapped onto the scale's own items.
+- **A scale this activity grades against could be deleted underneath it.** The plugin never
+  answered Moodle's "is this scale in use" question, so the answer was always no.
+- **Backup left out the grade maximum**, so restoring an activity reset it to the install
+  default of 100 - and the first grade push then rewrote the gradebook item from that wrong
+  number, turning a 25-point activity into a 100-point one and multiplying every learner's
+  mark by four. A backup that silently changes grades is worse than one that fails.
+- **No path that removes an attempt updated completion.** The delete-attempt service, the
+  teacher report, the course reset and the privacy provider all recalculated the grade and
+  left the completion state exactly where it was. A teacher who removed an attempt left the
+  learner ticked complete with no attempts and no grade - and **a learner who exercised
+  their right to erasure kept their mark in the gradebook and the tick saying they had
+  finished**, two records of that learner surviving the request in tables the provider
+  reports as cleared.
+- **Abandoned runs spent the attempt allowance.** Replay abandons the open attempt to start
+  a fresh one, and every row counted - so a learner who restarted twice to re-read the
+  opening had used all three of their attempts and finished none of them. No grade, no
+  completion, and nothing on screen explaining where their attempts went.
+
+### Changed
+- Twelve audit checks added for the learner-facing surface: attempts, grades, scales,
+  backup, completion and erasure. There were none.
+
 ## [v1.72.0] - 2026-09-16
 
 Found by auditing v1.71.0 an hour after shipping it.

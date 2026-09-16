@@ -65,7 +65,9 @@ class delete_attempt extends external_api {
         }
 
         attempt_manager::delete_attempt((int)$attempt->id);
-        aibranchedscenario_update_grades($resolved['scenario'], (int)$attempt->userid);
+        // Grade AND completion: removing an attempt used to leave the learner ticked
+        // complete with no attempts and no grade.
+        helper::recalculate_for_user($resolved['scenario'], (int)$attempt->userid);
 
         return ['deleted' => true];
     }

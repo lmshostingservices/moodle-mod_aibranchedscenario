@@ -49,7 +49,12 @@ class backup_aibranchedscenario_activity_structure_step extends backup_activity_
             'scenariojson', 'sourcejson', 'generationmeta', 'revision',
             'maxattempts', 'allowreplay', 'showdebrief', 'showtimeline', 'showmetrics',
             'enableaudio', 'requirelisten', 'bandgreen', 'bandred',
-            'enableimages', 'grademethod',
+            // 'grade' was missing from this list. install.xml defaults it to 100, so every
+            // restore reset a teacher's chosen maximum - and the first grade push then
+            // rewrote the gradebook item from that wrong value, turning a 25-point activity
+            // into a 100-point one and multiplying every learner's mark by four. A backup
+            // that silently changes grades is worse than one that fails.
+            'enableimages', 'grade', 'grademethod',
             'completionfinish', 'completionminscore',
             'timecreated', 'timemodified',
         ]);

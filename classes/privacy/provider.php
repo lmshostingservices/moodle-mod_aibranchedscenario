@@ -341,6 +341,29 @@ class provider implements
         self::delete_attempts_select('scenarioid = :scenarioid', ['scenarioid' => $cm->instance]);
         $DB->delete_records('aibranchedscenario_attempts', ['scenarioid' => $cm->instance]);
         $DB->delete_records('aibranchedscenario_jobs', ['scenarioid' => $cm->instance]);
+        self::finish_erasure((int)$cm->instance, 0);
+    }
+
+    /**
+     * Finish an erasure: the grade and the completion state, not just the rows.
+     *
+     * The three delete methods removed attempts, events and jobs and stopped there. A
+     * learner who asked to be forgotten kept their mark in the gradebook and the tick that
+     * says they completed the activity - two records OF that learner, in tables this
+     * provider reports as cleared, surviving the request. Deleting the evidence and leaving
+     * the conclusion is not erasure.
+     *
+     * @param int $scenarioid Activity instance id.
+     * @param int $userid The learner, or 0 for everyone in the activity.
+     * @return void
+     */
+    protected static function finish_erasure(int $scenarioid, int $userid): void {
+        global $DB;
+        $scenario = $DB->get_record('aibranchedscenario', ['id' => $scenarioid], '*', IGNORE_MISSING);
+        if (!$scenario) {
+            return;
+        }
+        \mod_aibranchedscenario\external\helper::recalculate_for_user($scenario, $userid);
     }
 
     /**
@@ -372,6 +395,7 @@ class provider implements
             self::delete_attempts_select('scenarioid = :scenarioid AND userid = :userid', $params);
             $DB->delete_records('aibranchedscenario_attempts', $params);
             $DB->delete_records('aibranchedscenario_jobs', $params);
+            self::finish_erasure((int)$cm->instance, $userid);
         }
     }
 
@@ -413,6 +437,9 @@ class provider implements
             "scenarioid = :scenarioid AND userid $insql",
             $params
         );
+        foreach ($userids as $erased) {
+            self::finish_erasure((int)$cm->instance, (int)$erased);
+        }
     }
 
     /**

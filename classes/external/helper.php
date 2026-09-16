@@ -532,6 +532,52 @@ class helper {
     }
 
     /**
+     * Recalculate the grade AND the completion state for one learner.
+     *
+     * Everything that removes an attempt needs this and nothing had it. Three delete paths,
+     * the module delete, the course reset and the privacy provider all pushed grades and
+     * left completion exactly where it was - so a learner whose attempt was deleted, or who
+     * exercised their right to erasure, kept the tick that says they finished a scenario
+     * they now have no attempts at. On a privacy request that is a record of the learner
+     * surviving the request in a table the provider reports as cleared.
+     *
+     * Safe to call when there is no course module - during a course delete, for instance -
+     * and when completion is off.
+     *
+     * @param stdClass $scenario Activity instance.
+     * @param int $userid The learner, or 0 for everyone in the activity.
+     * @return void
+     */
+    public static function recalculate_for_user(stdClass $scenario, int $userid): void {
+        global $CFG, $DB;
+        require_once($CFG->dirroot . '/mod/aibranchedscenario/lib.php');
+
+        aibranchedscenario_update_grades($scenario, $userid);
+
+        $cm = get_coursemodule_from_instance(
+            'aibranchedscenario',
+            (int)$scenario->id,
+            (int)$scenario->course,
+            false,
+            IGNORE_MISSING
+        );
+        if (!$cm) {
+            return;
+        }
+        $course = $DB->get_record('course', ['id' => (int)$scenario->course], '*', IGNORE_MISSING);
+        if (!$course) {
+            return;
+        }
+        $completion = new completion_info($course);
+        if (!$completion->is_enabled($cm)) {
+            return;
+        }
+        // COMPLETION_UNKNOWN makes Moodle ask the module again rather than trusting the
+        // stored state, which is the point: the stored state is what is wrong.
+        $completion->update_state($cm, COMPLETION_UNKNOWN, $userid);
+    }
+
+    /**
      * Build the debrief payload for a finished attempt.
      *
      * @param stdClass $scenario Activity instance.

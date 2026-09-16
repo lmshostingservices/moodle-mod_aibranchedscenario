@@ -185,12 +185,45 @@ class attempt_manager {
      * @param int $userid User id.
      * @return int
      */
+    /**
+     * Put one attempt beyond use, without starting another.
+     *
+     * Needed where an attempt cannot be played at all - a node missing from its own
+     * revision - so the learner is not left holding something that can never finish and
+     * can never be replaced.
+     *
+     * @param stdClass $attempt The attempt.
+     * @return void
+     */
+    public function abandon_attempt(stdClass $attempt): void {
+        global $DB;
+        if ($attempt->status !== self::STATUS_INPROGRESS) {
+            return;
+        }
+        $attempt->status = self::STATUS_ABANDONED;
+        $attempt->timemodified = time();
+        $DB->update_record('aibranchedscenario_attempts', $attempt);
+    }
+
     public function count_user_attempts(int $userid): int {
         global $DB;
-        return $DB->count_records('aibranchedscenario_attempts', [
-            'scenarioid' => $this->scenario->id,
-            'userid'     => $userid,
-        ]);
+        // ABANDONED ATTEMPTS DO NOT COUNT.
+        //
+        // This counted every row, and Replay abandons the open attempt to start a fresh
+        // one - so a learner who restarted twice to re-read the opening had spent all three
+        // of their attempts and finished none of them. No grade, no completion, and nothing
+        // on screen explaining where their attempts went. What the setting means to a
+        // teacher is how many times a learner may GO THROUGH the scenario, not how many
+        // times they may press a button.
+        return $DB->count_records_select(
+            'aibranchedscenario_attempts',
+            'scenarioid = :sid AND userid = :uid AND status <> :abandoned',
+            [
+                'sid' => $this->scenario->id,
+                'uid' => $userid,
+                'abandoned' => self::STATUS_ABANDONED,
+            ]
+        );
     }
 
     /**

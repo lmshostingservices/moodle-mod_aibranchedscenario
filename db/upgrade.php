@@ -799,5 +799,13 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091484, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091485) {
+        // Release 1.73.0 changes no schema. Five faults on the learner-facing side: a
+        // resumed attempt graded on the wrong revision, a scale grade discarded, the grade
+        // maximum missing from backup, completion left behind by every delete path
+        // including erasure, and abandoned runs spending the attempt allowance.
+        upgrade_mod_savepoint(true, 2026091485, 'aibranchedscenario');
+    }
+
     return true;
 }

@@ -31,6 +31,32 @@ use mod_aibranchedscenario\local\scenario_manager;
  * @param string $feature Constant representing the feature.
  * @return mixed True if the feature is supported, null otherwise.
  */
+/**
+ * Is a scale used by any instance of this activity?
+ *
+ * Moodle asks every module this before letting an administrator delete a scale. The
+ * function did not exist, so the answer was always "no" and a scale this activity grades
+ * against could be deleted underneath it - leaving every grade in every one of those
+ * activities pointing at nothing.
+ *
+ * @param int $scenarioid Instance id, or 0 for any instance.
+ * @param int $scaleid The scale.
+ * @return bool
+ */
+function aibranchedscenario_scale_used_anywhere($scaleid) {
+    global $DB;
+    if (empty($scaleid)) {
+        return false;
+    }
+    return $DB->record_exists_select('aibranchedscenario', 'grade = ?', [-(int)$scaleid]);
+}
+
+/**
+ * Whether the module supports a given feature.
+ *
+ * @param string $feature Constant representing the feature.
+ * @return mixed True if the feature is supported, null otherwise.
+ */
 function aibranchedscenario_supports($feature) {
     switch ($feature) {
         case FEATURE_MOD_INTRO:
@@ -222,10 +248,22 @@ function aibranchedscenario_grade_item_update($moduleinstance, $grades = null) {
         'grademin'  => 0,
     ];
 
+    // A SCALE IS A NEGATIVE GRADE VALUE, AND THIS USED TO IGNORE IT.
+    //
+    // The activity form offers Moodle's standard grade element, so a teacher can choose a
+    // scale, and Moodle stores that choice as the NEGATIVE scale id. This branched on
+    // "> 0" only, so a scale fell through to a hundred-point value item - and the grade
+    // calculation then multiplied the learner's percentage by a negative maximum, so a
+    // perfect run was pushed to the gradebook as a negative number and displayed as zero.
+    // The teacher saw every learner fail.
     if (empty($moduleinstance->grade) || (int)$moduleinstance->grade === 0) {
         $item['gradetype'] = GRADE_TYPE_NONE;
     } else if ((int)$moduleinstance->grade > 0) {
         $item['grademax'] = (int)$moduleinstance->grade;
+    } else {
+        $item['gradetype'] = GRADE_TYPE_SCALE;
+        $item['scaleid'] = -(int)$moduleinstance->grade;
+        unset($item['grademax'], $item['grademin']);
     }
 
     if ($grades === 'reset') {
@@ -280,6 +318,21 @@ function aibranchedscenario_get_user_grades($moduleinstance, $userid = 0) {
     if (empty($moduleinstance->grade)) {
         return null;
     }
+    // On a scale, the gradebook wants the INDEX of the item the learner reached - 1 for the
+    // lowest, up to the number of items - not a number out of a maximum. Mapping a
+    // percentage onto the scale is what "graded against a scale" means for an activity that
+    // scores a percentage internally.
+    $scaleitems = 0;
+    if ((int)$moduleinstance->grade < 0) {
+        $scale = $DB->get_record('scale', ['id' => -(int)$moduleinstance->grade], 'scale', IGNORE_MISSING);
+        if (!$scale) {
+            return null;
+        }
+        $scaleitems = count(explode(',', $scale->scale));
+        if ($scaleitems < 1) {
+            return null;
+        }
+    }
     $maxgrade = (float)$moduleinstance->grade;
 
     $params = ['scenarioid' => $moduleinstance->id];
@@ -296,9 +349,18 @@ function aibranchedscenario_get_user_grades($moduleinstance, $userid = 0) {
         if ($percent === null) {
             continue;
         }
+        if ($scaleitems > 0) {
+            // Evenly across the scale's items, and never below the first one: a learner who
+            // finished scored something, so the lowest item is the floor rather than zero,
+            // which on a scale means "no grade".
+            $index = (int)ceil($percent / 100 * $scaleitems);
+            $raw = min($scaleitems, max(1, $index));
+        } else {
+            $raw = round($percent / 100 * $maxgrade, 5);
+        }
         $grades[$id] = (object)[
             'userid'   => (int)$id,
-            'rawgrade' => round($percent / 100 * $maxgrade, 5),
+            'rawgrade' => $raw,
         ];
     }
 
@@ -352,6 +414,13 @@ function aibranchedscenario_reset_userdata($data) {
                 $full = $DB->get_record('aibranchedscenario', ['id' => $instance->id], '*', MUST_EXIST);
                 aibranchedscenario_grade_item_update($full, 'reset');
             }
+        }
+        // And the completion state, which a reset left behind: a course reset for a new
+        // cohort wiped every attempt and left last year's learners ticked complete on an
+        // activity with nothing in it.
+        foreach ($instances as $instance) {
+            $full = $DB->get_record('aibranchedscenario', ['id' => $instance->id], '*', MUST_EXIST);
+            \mod_aibranchedscenario\external\helper::recalculate_for_user($full, 0);
         }
     }
 

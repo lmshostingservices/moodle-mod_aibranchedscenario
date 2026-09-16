@@ -61,10 +61,10 @@ class lmslabs_provider implements provider {
     const MIN_GENERATE_CHARS = 50;
 
     /** @var int Most characters of source content the generate route accepts. */
+    const MAX_GENERATE_CHARS = 60000;
+
     /** @var string[] Rules the standard could not state on the last request, if any. */
     protected static $lastdropped = [];
-
-    const MAX_GENERATE_CHARS = 60000;
 
     /** @var int Fewest characters of source content the populate route accepts. */
     const MIN_POPULATE_CHARS = 20;

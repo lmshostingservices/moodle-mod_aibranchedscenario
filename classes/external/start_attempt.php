@@ -69,12 +69,33 @@ class start_attempt extends external_api {
             throw new \moodle_exception('error:replaynotallowed', 'mod_aibranchedscenario');
         }
 
+        // A RESUMED ATTEMPT IS PLAYED ON THE REVISION IT STARTED ON.
+        //
+        // This resolved the CURRENT revision and handed the learner its wording, while
+        // submit_choice resolved the ATTEMPT'S revision and scored against that one. A
+        // learner who came back after the teacher republished therefore read one version of
+        // a choice and was graded on another - a different consequence, different skill
+        // deltas, and pictures belonging to a scene the node no longer described. Nothing
+        // told anyone: both halves worked exactly as written.
+        //
+        // Attempts have always been pinned to their own revision; only this entry point
+        // forgot. The new attempt case still uses the current revision, because a new
+        // attempt starts on whatever is published now.
         $manager = attempt_manager::for_scenario($scenario);
         $attempt = $manager->start_or_resume((int)$USER->id, (bool)$params['forcenew']);
+        if ((int)$attempt->revisionid !== (int)$manager->get_revision()->id) {
+            $manager = attempt_manager::for_attempt($scenario, $attempt);
+        }
 
         $node = $manager->get_node($attempt->currentnode);
         if (!$node) {
-            throw new \moodle_exception('error:unknownnode', 'mod_aibranchedscenario');
+            // The node is gone from the attempt's own revision, which should not happen -
+            // a revision is immutable. If it ever does, the learner is holding an attempt
+            // that can never be played, never finished and never graded, and on a scenario
+            // with one attempt allowed they are stuck there permanently. It is abandoned so
+            // they can start again rather than being told to go away.
+            $manager->abandon_attempt($attempt);
+            throw new \moodle_exception('error:attemptunplayable', 'mod_aibranchedscenario');
         }
 
         $mediaurls = helper::media_urls($resolved['context'], $manager->get_revision());

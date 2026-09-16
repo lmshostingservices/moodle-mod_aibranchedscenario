@@ -82,7 +82,11 @@ if ($candelete) {
         require_sesskey();
         if ($attempt && (int)$attempt->scenarioid === (int)$moduleinstance->id) {
             attempt_manager::delete_attempt((int)$attempt->id);
-            aibranchedscenario_update_grades($moduleinstance, (int)$attempt->userid);
+            // Grade AND completion. See helper::recalculate_for_user().
+            \mod_aibranchedscenario\external\helper::recalculate_for_user(
+                $moduleinstance,
+                (int)$attempt->userid
+            );
             redirect(
                 $baseurl,
                 get_string('attemptdeleted', 'mod_aibranchedscenario'),
