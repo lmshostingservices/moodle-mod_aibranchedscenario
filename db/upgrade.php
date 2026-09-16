@@ -784,5 +784,13 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091482, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091483) {
+        // Release 1.71.0 changes no schema. Six rules added to the content standard, which
+        // both routes carry: never invent legislation, keep every concept concrete, write
+        // for an adult reading at work, avoid the AI register, vary the names, and stage
+        // every scene in the industry named rather than in the default meeting room.
+        upgrade_mod_savepoint(true, 2026091483, 'aibranchedscenario');
+    }
+
     return true;
 }

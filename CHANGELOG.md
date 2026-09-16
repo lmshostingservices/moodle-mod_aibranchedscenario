@@ -2,6 +2,44 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v1.71.0] - 2026-09-16
+
+### Added
+- **Six rules to the content standard, which both routes carry.** The standard grows from
+  4,436 to 7,600 characters, and the pasted prompt from 18,806 to 21,964.
+  - **Never invent legislation.** No regulation numbers, clause numbers, code or standard
+    references, penalties or legal duties that are not in the supplied material. This is a
+    product used by registered training organisations: a scenario citing a section number
+    that does not say what the scenario claims is a finding against the provider, not a
+    writing fault. Where the material does state a requirement, it is put in plain English
+    with what the rule says separated from what it means on the day. This rule sits first in
+    priority order, above every craft rule, so it survives even the narrowest request.
+  - **Every concept lands on something you could watch happen** - a behaviour, a sentence
+    spoken, a decision taken, a result that followed. "Use active listening" is abstract and
+    is wrong. If a paragraph could be moved into a scenario about a different job without
+    changing a word, it is too abstract to teach anything.
+  - **Write for an adult reading at work**, on a phone, possibly in their second language:
+    short sentences, everyday words, one idea per sentence, technical terms explained the
+    first time. Simple is not childish - the situations stay adult and the decisions stay
+    hard.
+  - **Do not write in the register a model defaults to** - no "In today's fast-paced
+    workplace", "It is important to note", "plays a crucial role", "By fostering a culture
+    of". A learner recognises it instantly and stops believing the scenario.
+  - **Vary the names**, and pick them to suit the workplace. John, Jane, Sarah, Alex and Sam
+    in every scenario is the clearest tell that nothing was written for that teacher in
+    particular.
+  - **Stage every scene in the industry named in "setting"** - a warehouse has deliveries,
+    pallets and a shift running late; a ward has handovers, charts and a bed that is needed.
+    The default meeting room is what comes back when the industry has not been thought
+    about.
+
+### Changed
+- **Two audit checks asserted that no rule is ever dropped from the standard**, which
+  stopped being possible the moment the standard outgrew the 1,500-character fallback field
+  the generate route uses where the service advertises no field of its own. They now check
+  what actually matters: that the compliance rule and the four rules watched to fail on live
+  sites are never the ones dropped, and that a drop is reported rather than silent.
+
 ## [v1.70.0] - 2026-09-16
 
 The rest of the image audit - the findings that were real but not severe, which v1.69.0

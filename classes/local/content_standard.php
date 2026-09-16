@@ -67,6 +67,26 @@ class content_standard {
      */
     public static function rules(): array {
         return [
+            // An invented regulation is the one fault here that can cost a customer their
+            // registration rather than just reading badly, so it sits with the rules that
+            // were watched to fail rather than with the craft ones.
+            'law' => [
+                'short' => 'Never invent legislation, regulation numbers, clause numbers, '
+                    . 'standards or legal duties. Where a legal duty is not in the supplied '
+                    . 'material, write what a worker must do in practice and name no law.',
+                'long'  => '- Never invent legislation, regulation numbers, clause numbers, '
+                    . 'code or standard references, penalties or legal duties. This is a '
+                    . 'training product used by registered training organisations, and a '
+                    . 'scenario that cites a section number which does not say what the '
+                    . 'scenario claims is a finding against the provider, not a writing '
+                    . 'fault. Where the supplied material states a requirement, put it in '
+                    . 'plain English and separate what the rule says from what it means on '
+                    . 'the day: "Workers must take reasonable care for their own safety and '
+                    . 'the safety of others. In practice, that means not carrying on with a '
+                    . 'task you can see is putting someone else at risk." Where the material '
+                    . 'does NOT state it, write what a worker should do and name no law, no '
+                    . 'act and no clause.',
+            ],
             // Watched to fail: the service returned the strongest option first every time.
             'position' => [
                 'short' => 'No option is obviously correct, and the strongest must not always '
@@ -204,6 +224,67 @@ class content_standard {
             'debrief' => [
                 'short' => 'The debrief names what mattered rather than repeating the story.',
                 'long'  => '- The debrief names what mattered rather than repeating the story.',
+            ],
+            'concrete' => [
+                'short' => 'Every principle, consequence and takeaway names a behaviour, a '
+                    . 'decision or a consequence a person could watch happen. No concept is '
+                    . 'left as an abstract explanation.',
+                'long'  => '- Every principle, every consequence and every takeaway lands on '
+                    . 'something someone could watch happen: a behaviour, a sentence spoken, '
+                    . 'a decision taken, a result that followed. No concept is left as an '
+                    . 'abstract explanation. "Use active listening" is abstract and is wrong. '
+                    . '"Let her finish, then say back the part you are not sure about - I '
+                    . 'understand the roster change is the problem, not the hours. Have I got '
+                    . 'that right?" is a behaviour and is right. If a paragraph could be '
+                    . 'moved into a scenario about a different job without changing a word, '
+                    . 'it is too abstract to teach anything.',
+            ],
+            'reading' => [
+                'short' => 'Write for an adult at work, not an academic: short sentences, '
+                    . 'everyday words, one idea per sentence. Explain any technical term in '
+                    . 'plain English the first time it appears.',
+                'long'  => '- Write for an adult reading at work, on a phone, possibly in '
+                    . 'their second language. Short sentences. Everyday words. One idea per '
+                    . 'sentence. Explain any technical or industry term in plain English the '
+                    . 'first time it appears. "Employees should utilise appropriate '
+                    . 'communication methodologies when managing interpersonal disputes" is '
+                    . 'wrong; "Workers should stay calm and be respectful when they disagree '
+                    . 'with someone" says the same thing and can be read. Simple is not the '
+                    . 'same as childish: the situations stay adult and the decisions stay '
+                    . 'hard.',
+            ],
+            'notai' => [
+                'short' => 'No AI register: never "In today\'s fast-paced workplace", "It is '
+                    . 'important to note", "plays a crucial role", "In conclusion", "By '
+                    . 'fostering a culture of", "navigating the complexities of".',
+                'long'  => '- Do not write in the register a model defaults to. Never use "In '
+                    . 'today\'s fast-paced workplace", "It is important to note", "plays a '
+                    . 'crucial role", "is essential for success", "In conclusion", "This '
+                    . 'comprehensive approach", "By fostering a culture of", "navigating the '
+                    . 'complexities of", or a sentence that opens by announcing what it is '
+                    . 'about to do. A learner recognises this register instantly and stops '
+                    . 'believing the scenario, and once they stop believing it the decisions '
+                    . 'stop mattering to them.',
+            ],
+            'cast-variety' => [
+                'short' => 'Vary the names. Not John, Jane, Sarah, Alex or Sam every time; '
+                    . 'use names that suit the workplace being described.',
+                'long'  => '- Vary the names, and pick them to suit the workplace being '
+                    . 'described rather than reaching for the same handful every time. John, '
+                    . 'Jane, Sarah, Alex and Sam in every scenario a teacher generates is the '
+                    . 'clearest tell that nothing was written for them in particular.',
+            ],
+            'industry' => [
+                'short' => 'Stage every scene in the industry named in "setting" - its work, '
+                    . 'its equipment, its pressures. Never the default meeting room.',
+                'long'  => '- Stage every scene in the industry named in "setting", using the '
+                    . 'work that is actually done there: a warehouse has deliveries, pallets, '
+                    . 'forklifts and a shift running late; a ward has handovers, charts, '
+                    . 'families and a bed that is needed; a kitchen has a service on, a docket '
+                    . 'rail and a delivery that is wrong. The default meeting room with '
+                    . 'people around a table is what comes back when the industry has not '
+                    . 'been thought about, and it is the single clearest sign the scenario '
+                    . 'could have been written for anyone.',
             ],
         ];
     }
