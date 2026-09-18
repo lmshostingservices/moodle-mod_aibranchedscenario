@@ -1,194 +1,369 @@
 # AI Branched Scenario
 
-An activity module for Moodle™ that turns pasted source content into a realistic
-branching scenario. Learners take a role inside a situation, make decisions that
-change what happens next, live with the consequences, and finish with a debrief
-that connects the experience back to the source material.
+Decision-based scenario training for Moodle™. AI Branched Scenario turns source
+material into a branching activity in which learners enter a situation, make
+decisions, see the consequences, and finish with a debrief tied back to the
+principles being taught.
 
-- **Component:** `mod_aibranchedscenario`
-- **Installation folder:** `mod/aibranchedscenario`
-- **Release:** 2.0.0
-- **Numeric version:** 2026091900
-- **Supported Moodle versions:** 4.4 to 5.2 (`$plugin->requires = 2024042200`)
-- **Licence:** GNU GPL v3 or later
+[Documentation](https://lms-labs.com/docs/ai-branched-scenario) ·
+[Source repository](https://github.com/lmshostingservices/moodle-mod_aibranchedscenario) ·
+[Report an issue](https://github.com/lmshostingservices/moodle-mod_aibranchedscenario/issues)
 
-## What it produces
+| Release detail | Value |
+| --- | --- |
+| Component | `mod_aibranchedscenario` |
+| Installation folder | `mod/aibranchedscenario` |
+| Release | **2.0.0** |
+| Numeric version | **2026091900** |
+| Moodle | **4.4–5.2** (`requires = 2024042200`, `supported = [404, 502]`) |
+| Maturity | Stable |
+| Licence | GNU GPL v3 or later |
 
-Generation does not produce a quiz. It produces a node graph:
+> **Release note:** This document describes v2.0.0. Updating documentation on the
+> default branch does not alter the immutable v2.0.0 tag or its published ZIP.
 
-- **Decision nodes** present a situation, an optional spoken line from a character,
-  and a direct question. Each offers two to four choices.
-- **Every choice names the node it leads to.** Different choices lead to different
-  places, and the story is written so branches reconverge at deliberate bottlenecks
-  rather than exploding into hundreds of paths.
-- **Outcome nodes** end the scenario in one of three bands: strong, mixed or high
-  risk. A choice may also target `__auto__`, in which case the server picks the
-  outcome band from the learner's accumulated decision quality.
-- **Crisis variants** let a node be rewritten when tension has climbed above 75, so
-  the same decision point reads differently for a learner who has let the situation
-  get away from them.
+## What learners experience
 
-Before writing anything, generation is asked to identify three to five **decision
-principles** in the source content, and the scenario is built around those. That is
-what stops a 3,000-word policy becoming a set of unconnected recall questions.
+Generation produces a validated node graph rather than a recall quiz.
 
-## Prerequisites
+1. **Principles first.** The scenario teaches three to eight decision principles.
+   Each can include a worked example—the words a learner might actually use—and a
+   pitfall that explains a plausible but ineffective response.
+2. **The opening situation.** The learner enters a role, setting, and immediate
+   problem.
+3. **A decision.** Each decision node presents **two to four choices**
+   (`MIN_CHOICES = 2`, `MAX_CHOICES = 4`).
+4. **The consequence.** The server records the choice before returning its
+   consequence and changes to Engagement, Trust, and Tension.
+5. **Escalation.** At tension 75 or above, a node can use its crisis variant.
+6. **Read-only review.** Back and forward controls let a learner revisit decisions
+   already taken. Review does not resubmit a choice or recalculate its score.
+7. **Debrief.** The ending presents the outcome, skill scores, decision journey,
+   lessons, critical decisions, practice guidance, and takeaways.
 
-- Moodle 4.4 or later, PHP 8.1 or later.
-- An LMS Labs Site ID and API key, supplied either by the
-  [AI Grader Central Config](https://lms-labs.com/docs/ai-central-config) plugin
-  (`local_aiconfig`) or by this plugin's own settings.
-- Available LMS Labs credits. Generation consumes credits; the exact tariff is set
-  and charged server side by LMS Labs, not by this plugin.
-- Moodle cron running. Scenario generation is queued as an ad-hoc task.
+Each choice names its next node. Branches can reconverge at intentional
+bottlenecks, and `__auto__` can advance to the next stage or select an ending from
+the learner's accumulated decision quality. The graph must be acyclic.
 
-The plugin contains **no AI provider credentials of any kind**. It never contacts
-OpenAI, Google or any other provider directly.
+## Two authoring routes
 
-## Installation
+Both routes use the same importer, validator, draft review, media pipeline, and
+player.
 
-1. Copy the `aibranchedscenario` folder into `mod/` in your Moodle installation, or
-   install the ZIP through *Site administration → Plugins → Install plugins*.
-2. Visit *Site administration → Notifications* to complete the database install.
-3. Configure the plugin at
-   *Site administration → Plugins → Activity modules → AI Branched Scenario*.
+### Route A: generate inside Moodle
+
+The wizard collects source content and the scenario shape: audience, learner role,
+setting, atmosphere, challenge, stakes, tone, complexity, decision count, opening
+readings, and a named cast. A teacher can fill fields from the source, generate a
+draft, edit it node by node, preview it, and publish it.
+
+This route requires LMS Labs credentials, credits, outbound access to the LMS Labs
+service, and working Moodle cron. Generation is queued as an ad-hoc task.
+
+### Route B: bring your own scenario
+
+The plugin supplies a structured prompt. A teacher can use an assistant of their
+choice, then paste the resulting JSON back into Moodle. The imported definition is
+validated exactly like an in-Moodle generation.
+
+Iteration inside the plugin is not charged for scenario-text generation on this
+route, but the external assistant may impose its own fees, limits, privacy terms,
+and data-processing conditions. Optional illustrations and narration generated
+through LMS Labs still consume the applicable media credits.
+
+## Review before publishing
+
+AI output requires human review. Structural validation ensures that the stored
+definition can be played; it does not establish instructional, legal, regulatory,
+or factual correctness.
+
+The draft review includes a **non-blocking quality advisory**. It can identify:
+
+- principles missing a worked example or pitfall;
+- duplicate or near-duplicate choices;
+- duplicate or near-duplicate consequences;
+- choices that all lead to the same target while scoring identically;
+- options whose skill scores do not vary;
+- a scenario with multiple decisions but only one outcome;
+- common spelling mismatches for the selected English variety;
+- pronouns that conflict with a named character's recorded gender;
+- debrief lists with fewer or more entries than the principles taught; and
+- internal skill names leaking into learner-facing scenario prose.
+
+The review also shows generated media and identifies missing pictures so they can
+be generated separately. These checks are advisory and deliberately do not block
+publishing. They are not a substitute for a teacher's full quality, accessibility,
+subject-matter, and cultural review. Cast-sheet and prompt controls support visual
+and voice consistency, but they cannot guarantee perfect cast consistency from a
+generative provider.
+
+Publishing creates an **immutable revision**. An attempt is pinned to the revision
+on which it started, so publishing a newer revision does not change the activity
+under a learner who is already part-way through it.
+
+## Illustrations and narration
+
+### Illustrations
+
+Six image treatments are available:
+
+- Photorealistic
+- Cinematic
+- Illustration
+- Watercolour
+- Noir
+- Oil
+
+Media is keyed to the screen or debrief entry for which it was generated. Opening,
+principle, node, crisis, reaction, outcome, and debrief media are looked up by their
+own keys. A missing image is not replaced with a borrowed opening, lesson, or scene
+image; that screen shows no image and the missing-media review identifies the gap.
+
+Image prompts carry the scenario's cast description and selected treatment.
+Generation instructions exclude readable text, captions, logos and brand marks,
+identifiable real people, children, injury, violence, and weapons. Provider output
+should still be reviewed before publication.
+
+### Narration
+
+Narration supports these 18 language and variety codes:
+
+`en-AU`, `en-GB`, `en-US`, `en-NZ`, `es-ES`, `fr-FR`, `de-DE`, `it-IT`,
+`pt-BR`, `nl-NL`, `hi-IN`, `id-ID`, `ja-JP`, `ko-KR`, `cmn-CN`, `ar-XA`,
+`vi-VN`, `th-TH`.
+
+Administrators can select narrator, male-character, and female-character voices.
+Character lines use the voice group selected from the character record; narration
+falls back to the narrator where no character applies. Generated clips and images
+are stored through Moodle's File API. Published activities play from Moodle's own
+stored files rather than fetching media from an AI provider at play time.
+
+## Credits and access
+
+The v2.0.0 pricing schema contains a 100-credit scenario base, 50 credits for
+illustrations, 50 credits for narration, and a rate of 10 credits per US dollar:
+
+| Generation bundle | Credits | Approximate USD |
+| --- | ---: | ---: |
+| Scenario only | **100** | **US$10** |
+| Scenario + illustrations | **150** | **US$15** |
+| Scenario + narration | **150** | **US$15** |
+| Scenario + illustrations + narration | **200** | **US$20** |
+
+Illustrations and narration are each a **flat 50-credit media component per
+scenario**, not a charge per image or per audio clip. Route B therefore costs 50
+credits for illustrations, 50 for narration, or 100 for both when those media are
+generated through LMS Labs.
+
+The plugin separately exposes operation weights for daily-allowance accounting.
+Those weights are not the published per-scenario price and must not be multiplied
+by the number of generated images or clips.
+
+A site administrator sets an **AI-credit allowance per user per rolling 24
+hours**. It is a credit budget, not the old “40 requests” counter; v2.0.0 ships with
+a default allowance of 400 credits, and `0` removes that local limit. A media job
+counts at the flat media price. Operations marked by the service as refunded are
+excluded from allowance spend.
+
+> **Refund caution:** The source defines how a response already marked as refunded
+> is reconciled locally. It does not promise that every failed or partial request
+> qualifies for a refund. Confirm current refund and support terms with LMS Labs
+> before repeating an uncertain charge.
+
+### One-time site access is separate
+
+**US$5 or 50 credits — ONE-TIME SITE ACCESS** is the Marketplace access option.
+It is distinct from credits consumed by authoring and media generation. Do not
+interpret the one-time site-access amount as an included generation bundle or a
+recurring authoring tariff.
+
+See the [Moodle Marketplace directory](https://marketplace.moodle.com/) for
+Marketplace availability; this README intentionally does not invent or imply a
+direct listing URL.
+
+## Requirements and installation
+
+### Requirements
+
+- Moodle 4.4 through 5.2.
+- The PHP version required by the chosen Moodle release.
+- An LMS Labs Site ID and API key, either from
+  [AI Grader Central Config](https://lms-labs.com/docs/ai-central-config)
+  (`local_aiconfig`) or from this plugin's settings.
+- Available LMS Labs credits for billable authoring operations.
+- Standard Moodle cron for queued generation.
+- Outbound HTTPS access to the configured LMS Labs API host for generation.
+
+The plugin stores no OpenAI, Google, Gemini, or other AI-provider credential.
+It authenticates to LMS Labs with the configured Site ID and API key.
+
+### Install
+
+1. Install the plugin ZIP through **Site administration → Plugins → Install
+   plugins**, or place the `aibranchedscenario` directory in
+   `mod/aibranchedscenario`.
+2. Visit **Site administration → Notifications** to complete installation.
+3. Open **Site administration → Plugins → Activity modules → AI Branched
+   Scenario** and configure the credentials and defaults.
+4. Ensure Moodle cron is running.
+
+A connection-status control is available on the settings page. It performs a live
+check when an administrator uses it; this README does not claim that any particular
+provider is currently accepting requests.
 
 ## Configuration
 
-The settings page shows which credentials are in use, where they came from, and the
-current credit balance. The API key is never displayed in full after saving and is
-never sent to the browser.
+The settings page reports which credential source is selected and can display the
+service balance returned by the configured endpoint. The saved API key is masked
+in the form.
 
-| Setting | Purpose |
+| Site setting | Purpose |
 | --- | --- |
-| Ignore Central Config | Force the plugin's own Site ID and API key even when Central Config is installed. |
-| Central Config component | Which component to read shared credentials from. Defaults to `local_aiconfig`. |
-| LMS Labs Site ID / API key | Fallback credentials used when Central Config is unavailable. |
-| LMS Labs API host | Only change this if you have been given a different endpoint. |
-| Request timeout | How long to wait for the service before giving up. |
-| Maximum source content | Characters of pasted content sent for one scenario. Default 60,000. |
-| Generation requests per user per day | Bounds accidental or runaway credit use. Default 40. |
-| Allow scene image / narration generation | Site-wide switches for the two optional media features. |
-| Generation job retention | How long job records are kept before the cleanup task removes them. |
+| Ignore Central Config | Use this plugin's own Site ID and API key even when Central Config is installed. |
+| Central Config component | Shared credential component; defaults to `local_aiconfig`. |
+| LMS Labs Site ID / API key | Plugin-level credentials when shared credentials are not used. |
+| LMS Labs API host | Service host; change only when instructed. |
+| Request timeout | Maximum wait for a service request. |
+| Maximum source content | Ceiling for pasted content; v2.0.0 schema maximum is 60,000 characters. |
+| AI credits per user per day | Rolling 24-hour credit allowance; default 400, `0` for no local limit. |
+| Allow illustrations / narration | Site-wide media-generation switches. |
+| Narrator / male / female voice | Voice defaults for generated narration. |
+| Default language, theme, and activity options | Values prefilled for new activities. |
+| Generation job retention | Days before old job records are cleaned up; default 30. |
 
-## Capabilities
+Per-activity options include illustrations, narration, timeline/progress display,
+Engagement/Trust/Tension readings, debrief display, maximum attempts, replay,
+grading method, completion on finish, and an optional minimum completion score.
+Point grades and Moodle scales are supported.
 
-| Capability | Default roles | Purpose |
-| --- | --- | --- |
-| `mod/aibranchedscenario:addinstance` | Editing teacher, Manager | Add the activity to a course. |
-| `mod/aibranchedscenario:view` | All, including Guest | See the activity page. |
-| `mod/aibranchedscenario:attempt` | Student | Work through the scenario. |
-| `mod/aibranchedscenario:manage` | Editing teacher, Manager | Author and edit scenarios. |
-| `mod/aibranchedscenario:publish` | Editing teacher, Manager | Publish a revision. |
-| `mod/aibranchedscenario:generate` | Editing teacher, Manager | Spend credits on AI generation. |
-| `mod/aibranchedscenario:viewreports` | Teacher, Editing teacher, Manager | See learner attempts. |
-| `mod/aibranchedscenario:deleteattempts` | Editing teacher, Manager | Delete attempts. |
+## Grading, attempts, and reporting
 
-Students receive `view` and `attempt` only. Consequences, feedback, unchosen
-branches and the answer graph are never sent to a learner's browser until the
-matching decision has actually been recorded on the server.
+- Decision quality is calculated on the server from recorded choices.
+- Four skill dimensions—Presence, Adaptability, Empathy, and Clarity—move by
+  `-2` to `+2` per decision and are normalised to a 0–100 score.
+- Grade aggregation can use the highest, last, first, or average attempt.
+- Completion can require finishing and can additionally require a minimum score.
+- A score supplied by a browser is not trusted.
+- A retried decision uses its sequence number to avoid recording the same choice
+  twice.
 
-## Authoring workflow
+The activity defines eight capabilities:
 
-1. **Source** — paste the policy, procedure or unit content. Optionally add a short
-   brief, then use *Fill the wizard from this content*.
-2. **The scene** — setting, atmosphere and the opening situation.
-3. **The challenge** — the central problem, why it is hard, and what is at stake.
-4. **The people** — the role the learner plays, and up to four characters.
-5. **Design** — number of decision points, tone, complexity, image style and the
-   opening engagement, trust and tension levels.
-6. **Build and publish** — generate, edit the generated text node by node, preview
-   as a learner, and publish.
+| Capability | Default purpose |
+| --- | --- |
+| `mod/aibranchedscenario:addinstance` | Add the activity. |
+| `mod/aibranchedscenario:view` | View the activity page. |
+| `mod/aibranchedscenario:attempt` | Make learner attempts. |
+| `mod/aibranchedscenario:manage` | Author and edit. |
+| `mod/aibranchedscenario:publish` | Publish revisions. |
+| `mod/aibranchedscenario:generate` | Use AI generation. |
+| `mod/aibranchedscenario:viewreports` | View learner reports. |
+| `mod/aibranchedscenario:deleteattempts` | Delete learner attempts. |
 
-Publishing creates an **immutable revision**. A learner who is part way through an
-attempt stays bound to the revision they started on, so republishing never changes
-a scenario underneath them.
-
-## Grading and completion
-
-- Decision quality is calculated server side from the recorded decisions. Each
-  decision moves four skill dimensions by -2 to +2, so a path of *N* decisions spans
-  -8*N* to +8*N*; that span is mapped onto 0–100.
-- The gradebook receives the first, last, highest or average attempt, as configured.
-- Activity completion supports "finish the scenario", optionally with a minimum
-  decision quality.
-- A score posted by a browser is never trusted; the browser never sends one.
+`deleteattempts` authorises deletion; it is **not** an export capability. Privacy
+exports are handled by Moodle's Privacy API and its own permissions and workflow.
 
 ## External services and data
 
-When a teacher generates a scenario, the plugin sends the following to LMS Labs
-(`https://lms-labs.com`):
+For authoring operations, the plugin can send LMS Labs:
 
-- the pasted source content and the authoring wizard values;
-- the site identifier and API key used to authenticate and account for credits;
-- the plugin's option lists and structural limits, so the service can constrain the
-  model to values this plugin will accept.
+- source content and wizard values supplied by the teacher;
+- the Site ID and API key used for authentication and credit accounting; and
+- option lists and structural limits used to constrain generated output.
 
-LMS Labs holds the AI provider credentials and passes the request to a contracted
-provider. **Learner attempt data is never sent off-site.** Optional scene images use
-LMS Labs' Gemini-first image path (currently `gemini-3.1-flash-image`); optional
-narration uses Google Chirp HD through LMS Labs.
+LMS Labs holds the downstream provider credentials. Learner attempt and decision
+data are not part of the generation payload described by the plugin. Generated
+responses are normalised and validated server-side before storage, and narrative
+content is rendered as text rather than trusted provider HTML.
 
-Everything the service returns is validated against a server-side schema before it
-is stored. Narrative content is stored and rendered as plain text — the plugin never
-renders provider or teacher HTML, and never executes generated JavaScript.
+The client and diagnostic paths are designed to avoid exposing raw provider errors
+and to redact credentials from recorded exchanges. This is a description of the
+plugin's controls, not an absolute guarantee of zero data leakage. Administrators
+must also assess Moodle configuration, hosting, logs, integrations, the LMS Labs
+service, any Route B assistant, and applicable provider terms.
 
 ## Privacy
 
-The plugin implements the Moodle Privacy API in full: metadata for every personal
-field it stores, export of real attempt content including the decision journey, and
-deletion for a context, a single user and an approved user list.
+The Moodle Privacy API metadata covers:
 
-Personal data stored: learner attempts, the individual decisions in each attempt,
-and a record of which teacher requested each generation. Deleting a user's data
-removes their attempts and decision log from this plugin. Data already processed by
-LMS Labs or a contracted provider is subject to that service's retention policy and
-cannot be deleted by Moodle.
+- learner attempts and their scores, state, outcome, and timestamps;
+- the per-decision event journey;
+- authoring/generation jobs; and
+- publisher attribution on immutable revisions.
+
+Approved exports include the user's real attempt journey, their generation-job
+records, and attribution for revisions they published.
+
+Approved erasure deletes matching attempt events, attempts, and generation jobs.
+It also recalculates or clears the affected grade and completion state. For a
+teacher's published revision, erasure removes the `createdby` attribution while
+retaining the revision itself, because active and historical attempts may still
+depend on that immutable activity content.
+
+Source content and Site ID transmitted to LMS Labs are declared as an external
+location. Data already processed outside Moodle is governed by the relevant
+service's retention and privacy terms and cannot be erased by Moodle's plugin
+provider alone.
 
 ## Backup and restore
 
-Activity configuration, published revisions and their media are always included.
-Learner attempts and their decision logs are included only when the backup includes
-user data. Course duplication produces a new activity without carrying learner
-attempts across.
-
-## Failure recovery
-
-- If generation fails, nothing is stored and the draft is untouched, so the teacher
-  can simply try again.
-- If the service times out, the job is marked failed with a plugin error identifier;
-  raw provider errors are never shown to a browser or written to logs.
-- If a learner's decision request is retried after a network failure, the sequence
-  number makes it idempotent — the same decision can never be recorded twice.
-- If credits run out, the teacher sees a clear message rather than a partial
-  scenario.
+Activity configuration, published revisions, and generated media are included in
+backup and restore. Learner attempts and decision events are included when the
+backup includes user data. Course duplication creates a new activity without
+carrying learner attempts into it.
 
 ## Accessibility
 
-Every choice and control is a real button reachable by keyboard, focus is moved to
-each new scene as the story advances, progress and outcomes are announced through
-live regions, colour is never the only signal, and the whole interface honours
-`prefers-reduced-motion`.
+Choices and controls use keyboard-reachable interactive elements, focus is moved
+as scenes change, live regions announce progress and outcomes, and colour is not
+the only status signal. The interface honours `prefers-reduced-motion`.
+Accessibility still depends on authored wording, generated media review, the
+Moodle theme, and the site's wider configuration.
 
-## Known limits
+## Failure handling
 
-- A scenario is capped at 60 nodes, four choices per decision, and 2 MB of stored
-  definition.
-- The node graph must be acyclic, so recovery is modelled as a forward path back to
-  the main line rather than a loop.
-- Teachers can edit all generated text; adding, removing or rewiring nodes by hand is
-  not offered in this release.
-- Manual authoring without any AI service configured is not supported in this
-  release; generation requires LMS Labs credentials.
+- Generation jobs run in the background and retain a readable plugin error state
+  when they fail.
+- A failed first media write leaves the previous media set in place.
+- Regenerating one media area does not intentionally delete the other.
+- A credit or allowance refusal is surfaced rather than represented as a completed
+  generation.
+- Missing media can be identified and generated without substituting an unrelated
+  image.
+
+## Technical limits
+
+- Scenario JSON contract version: `1`
+- Maximum stored definition: 2 MiB (`2,097,152` bytes)
+- Maximum nodes: `60`
+- Choices per decision: `2–4`
+- Maximum source content: `60,000` characters
+- Maximum quick-start brief: `6,000` characters
+- Maximum narrative string: `4,000` characters
+- Maximum short string: `255` characters
+- Maximum absolute skill delta per choice: `2`
+- Maximum absolute dynamics delta per choice: `40`
+- Crisis threshold: tension `75`
+- Graphs must be acyclic
+
+Teachers can edit generated text before publishing. v2.0.0 does not provide a
+general visual graph editor for manually adding, deleting, or rewiring arbitrary
+nodes.
 
 ## Development
 
-- JavaScript source lives in `amd/src`; built artefacts in `amd/build` must be
-  regenerated with the project's AMD build script after any source change.
-- `.github/workflows/ci.yml` runs moodle-plugin-ci.
-- `docs/LMS_LABS_ROUTE_CONTRACT.md` specifies the server routes this plugin calls,
-  and `docs/reference-server/` contains a reference implementation of them.
+- JavaScript source is in `amd/src`; built AMD artefacts are in `amd/build`.
+- Rebuild AMD artefacts after changing source JavaScript.
+- `.github/workflows/ci.yml` runs the plugin CI workflow.
+- `docs/LMS_LABS_ROUTE_CONTRACT.md` documents the LMS Labs route contract included
+  with the source package.
+
+No automated test-count claim is made here: counts can change by environment and
+should only be quoted with reproducible, release-specific evidence.
 
 ## Support
 
-LMS Hosting Services — <https://lms-labs.com>
+- Documentation: <https://lms-labs.com/docs/ai-branched-scenario>
+- Repository: <https://github.com/lmshostingservices/moodle-mod_aibranchedscenario>
+- Issues: <https://github.com/lmshostingservices/moodle-mod_aibranchedscenario/issues>
+- LMS Labs: <https://lms-labs.com>
