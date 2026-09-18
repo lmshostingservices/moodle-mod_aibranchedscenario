@@ -140,24 +140,33 @@ stored files rather than fetching media from an AI provider at play time.
 
 ## Credits and access
 
-The v2.0.0 pricing schema contains a 100-credit scenario base, 50 credits for
-illustrations, 50 credits for narration, and a rate of 10 credits per US dollar:
+> **Pricing reconciliation required before Marketplace submission:** The plugin's
+> displayed quotes and the current service billing implementation are not aligned.
+> The service code deducts 20 credits for scenario generation, 3 for field
+> population, 1 for a suggestion, and 5 for each image or narration request.
+> It does not implement the flat bundles below. These figures describe the inspected
+> implementation, not a new pricing approval. Confirm the charging model with LMS Labs
+> before purchasing generation credits.
 
-| Generation bundle | Credits | Approximate USD |
+The v2.0.0 plugin's pricing schema **quotes** a 100-credit scenario base, 50 credits
+for illustrations, 50 for narration, and 10 credits per US dollar:
+
+| Plugin-quoted bundle | Quoted credits | Approximate USD |
 | --- | ---: | ---: |
 | Scenario only | **100** | **US$10** |
 | Scenario + illustrations | **150** | **US$15** |
 | Scenario + narration | **150** | **US$15** |
 | Scenario + illustrations + narration | **200** | **US$20** |
 
-Illustrations and narration are each a **flat 50-credit media component per
-scenario**, not a charge per image or per audio clip. Route B therefore costs 50
-credits for illustrations, 50 for narration, or 100 for both when those media are
-generated through LMS Labs.
+The plugin quotes each media component at a flat 50 credits per scenario. Route B
+therefore displays 50 credits for illustrations, 50 for narration, or 100 for both.
+These are **plugin quotes, not verified service charges**: the server currently
+deducts 5 credits per image or narration request.
 
-The plugin separately exposes operation weights for daily-allowance accounting.
-Those weights are not the published per-scenario price and must not be multiplied
-by the number of generated images or clips.
+The plugin also exposes operation weights for local daily-allowance accounting.
+Do not confuse its local allowance or displayed quote with the server's actual
+balance debits. A flat bundle must not be promised until the billing implementation
+and quoted prices have been reconciled.
 
 A site administrator sets an **AI-credit allowance per user per rolling 24
 hours**. It is a credit budget, not the old “40 requests” counter; v2.0.0 ships with
@@ -172,14 +181,13 @@ excluded from allowance spend.
 
 ### One-time site access is separate
 
-**US$5 or 50 credits — ONE-TIME SITE ACCESS** is the Marketplace access option.
+**US$5 on the Moodle Marketplace OR 50 LMS Labs credits — ONE-TIME SITE ACCESS.**
 It is distinct from credits consumed by authoring and media generation. Do not
 interpret the one-time site-access amount as an included generation bundle or a
 recurring authoring tariff.
 
 See the [Moodle Marketplace directory](https://marketplace.moodle.com/) for
-Marketplace availability; this README intentionally does not invent or imply a
-direct listing URL.
+Marketplace availability.
 
 ## Requirements and installation
 
