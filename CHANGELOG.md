@@ -2,6 +2,40 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v2.0.1] - 2026-09-18
+
+Two faults a learner could see, both reported from a live site.
+
+### Screens are fitted again when the picture arrives
+
+**This is the non-fullscreen clipping.** The fit loop runs two animation frames after a
+screen renders. A scene photograph that had not finished loading by then contributed a
+different height to the layout than one that had — and when it arrived, nothing re-measured.
+The card stayed fitted to a layout that no longer existed, so the words at the bottom were
+cut off.
+
+It is exactly why fullscreen looked perfect and the page did not: entering fullscreen fires
+an event that fits the screen again, by which time the picture has loaded. The page view only
+ever fitted once, before the picture existed.
+
+Every browser sweep missed it because they all use an inline image that is already decoded,
+so the two-stage layout never happened. The screen is now re-fitted when its picture loads —
+and when one fails to load, because the space it was holding is the layout too.
+
+### The speaker pill is readable in dark mode
+
+The pill over the scene showing who is talking took its text colour from a token that
+**flips with the colour scheme**, while the dark scrim behind it is fixed. In dark mode that
+was near-black text on a near-black pill: an empty grey bar with a letter beside it.
+
+It has its own colour now, defined once and never redefined. A check enforces the general
+rule — a colour sitting on a fixed background cannot come from a token that changes with the
+page — across every scrim in the plugin.
+
+### Checks
+
+1,873, up from 1,865.
+
 ## [v2.0.0] - 2026-09-18
 
 A version number about the checking, not about the features.

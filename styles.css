@@ -66,6 +66,9 @@
     --aibs-negative-strong: #7a1710;
     /* Text on an accent fill. Eight hard-coded whites, three of them !important. */
     --aibs-on-accent: #fff;
+    /* Text on a scrim laid over a photograph. Always light, in every scheme, because the
+       scrim it sits on is always dark - see .aibs-speaker. */
+    --aibs-on-scrim: #fff;
     /* Sitting on a photograph rather than on the interface. This one does NOT flip with
        the scheme: the backdrop is the picture either way, and a dark ring on a dark photo
        disappears. It is a token so that it reads as deliberate rather than as a white
@@ -3245,13 +3248,22 @@ body.aibs-work-locked {
 /* Who is speaking, sitting on the picture they are in. */
 /* Nothing in here is allowed to set the card's width: on a 320px screen the fixed avatar
    made this row wider than the scene it sits on, and the page scrolled sideways. */
+/* A SCRIM OVER A PHOTOGRAPH IS ALWAYS DARK, SO ITS TEXT IS ALWAYS LIGHT.
+   This took its colour from --aibs-on-accent, which FLIPS WITH THE SCHEME - white on a
+   light page, near-black on a dark one. The background beside it is a fixed dark rgba that
+   does not
+   flip - so in dark mode the pill was near-black text on a near-black pill, and a learner
+   saw an empty grey bar with a letter in a circle beside it. Reported as "the dark grey
+   pill serves no purpose", which is exactly what an invisible label looks like.
+   A token that changes with the page cannot describe text sitting on a fixed dark scrim.
+   Its own token, defined once, not redefined for dark. */
 .aibs-speaker {
     align-items: center;
     min-width: 0;
     background: rgba(17, 22, 31, .62);
     border-radius: 999px;
     bottom: 12px;
-    color: var(--aibs-on-accent);
+    color: var(--aibs-on-scrim);
     display: flex;
     gap: 8px;
     inset-inline-start: 12px;

@@ -848,5 +848,14 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091900, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091901) {
+        // Release 2.0.1 changes no schema. Two faults a learner could see: a screen was
+        // never re-fitted after its picture arrived, which is why the page view clipped
+        // while fullscreen looked perfect; and the speaker pill's text followed a token that
+        // flips with the colour scheme while its background does not, so in dark mode it was
+        // near-black on near-black and read as an empty grey bar.
+        upgrade_mod_savepoint(true, 2026091901, 'aibranchedscenario');
+    }
+
     return true;
 }

@@ -2192,10 +2192,33 @@ class Player {
                 img.classList.add('aibs-is-loaded');
                 return;
             }
-            const done = () => img.classList.add('aibs-is-loaded');
+            // THE PICTURE CHANGES THE LAYOUT, SO THE SCREEN IS FITTED AGAIN WHEN IT ARRIVES.
+            //
+            // This used to add a CSS class for the fade and nothing else. fitSlide() runs two
+            // animation frames after a screen renders; a scene photograph that has not
+            // finished loading by then contributes a different height to the grid than one
+            // that has, and when it arrived NOTHING re-measured. The card was left fitted to
+            // a layout that no longer existed, and the words at the bottom - Continue, on the
+            // consequence - were cut off.
+            //
+            // It is exactly why fullscreen looked perfect and the page did not: entering
+            // fullscreen fires fullscreenchange, which calls fitSlide() again, by which time
+            // the picture HAS loaded. The page view only ever fitted once, before the picture
+            // existed. Every browser sweep missed it because they all use an inline data: URI
+            // that is already decoded, so the two-stage layout never happened.
+            //
+            // The frame is released as well as the type: the frame was measured against the
+            // same incomplete layout, and syncStickyOffset() hands back its cached answer
+            // forever once frameMeasured is set.
+            const done = () => {
+                img.classList.add('aibs-is-loaded');
+                this.frameMeasured = false;
+                this.fitSlide();
+            };
             img.addEventListener('load', done, {once: true});
             // A picture that never arrives must not leave a permanently invisible box
-            // where the learner expects one.
+            // where the learner expects one - and the space it was holding is now the
+            // layout the rest of the screen has to fit into, so this refits too.
             img.addEventListener('error', done, {once: true});
         });
     }
