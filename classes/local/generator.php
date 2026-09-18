@@ -93,10 +93,26 @@ class generator {
         // These rows are weighed by what they actually made, recorded in resultjson, and
         // excluded from the count below so they are not also counted at one apiece.
         $spent = 0;
+        // A REFUNDED MEDIA RUN SPENDS NOTHING, same as every other job type.
+        //
+        // This clause was missing. The non-media branch below excludes a run the service
+        // refunded; the media branch had no status filter at all, so a media run that
+        // failed - including one the service refused for insufficient credits and refunded
+        // in full - was still billed the whole 100 credits of a teacher's daily allowance,
+        // on the strength of whatever partial counts its resultjson happened to carry.
+        // Found by auditing the two branches against each other, which nothing did because
+        // the refund checks only ever exercised scenario, suggest and populate jobs.
         $mediajobs = $DB->get_records_select(
             'aibranchedscenario_jobs',
-            'userid = :userid AND timecreated > :since AND jobtype = :media',
-            ['userid' => $userid, 'since' => time() - DAYSECS, 'media' => 'media'],
+            'userid = :userid AND timecreated > :since AND jobtype = :media
+                AND NOT (status = :errored AND ' . $refunded . ')',
+            [
+                'userid'   => $userid,
+                'since'    => time() - DAYSECS,
+                'media'    => 'media',
+                'errored'  => self::JOB_ERROR,
+                'refunded' => 'error:servicefailed%',
+            ],
             '',
             'id, resultjson'
         );

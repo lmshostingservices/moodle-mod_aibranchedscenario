@@ -61,11 +61,30 @@ class media_manager {
     /** @var string The key the opening situation's clip is stored and looked up under. */
     const OPENING_KEY = 'opening';
 
+    /**
+     * @var string[] The outcome signals that earn a reaction frame of their own.
+     *
+     * The number of reaction frames per decision node is decided HERE and nowhere else, so
+     * trimming the picture bill is one edit rather than a hunt. All three is the film
+     * version: the consequence cuts to the face of whoever the decision landed on, and a
+     * relieved face, an unresolved one and a face wearing the cost are three different
+     * pictures. Reducing this to ['negative'] would keep the cut away from the decision -
+     * still a change of image - at a third of the cost.
+     */
+    const REACTION_SIGNALS = ['positive', 'neutral', 'negative'];
+
     /** @var int Largest media file accepted from the provider, in bytes. */
     const MAX_FILE_BYTES = 12582912;
 
     /** @var context_module Module context. */
     protected $context;
+
+    /**
+     * @var array|null Image keys this run is limited to, or null for every one.
+     *
+     * Set only by generate_missing_images(). Null means an ordinary full run.
+     */
+    protected $onlyimages = null;
 
     /**
      * Constructor.
@@ -324,13 +343,48 @@ class media_manager {
             if ($wantsimages) {
                 // Endings are given a frame too. The closing image is the one a learner
                 // is left looking at while they read what their decisions came to.
-                $counts['imageswanted']++;
+                //
+                // THE COUNTER IS GATED ON THE SAME ANSWER AS THE WORK.
+                //
+                // Every "wanted" increment in this walk used to happen before the gate, so a
+                // top-up that made four pictures reported twenty-seven wanted and four made
+                // - which the job record then filed as a failure, and the teacher was told
+                // their four-picture run had fallen twenty-three short. Found by running the
+                // top-up end to end rather than by reading it. A count of what was asked for
+                // has to be a count of what was asked for.
+                if ($this->wanted((string)$node['id'])) {
+                    $counts['imageswanted']++;
+                }
                 if ($this->generate_scene($provider, $definition, $node, $style, $index)) {
                     $counts['images']++;
                 }
                 if (!empty($node['crisisvariant']['situation'])) {
-                    $counts['imageswanted']++;
+                    if ($this->wanted($node['id'] . '_crisis')) {
+                            $counts['imageswanted']++;
+                    }
                     if ($this->generate_scene($provider, $definition, $node, $style, $index, true)) {
+                        $counts['images']++;
+                    }
+                }
+
+                // THE REACTION SHOT.
+                //
+                // The consequence screen used to show the decision's own photograph again.
+                // The reasoning written into the player was that the room has not changed
+                // because the learner chose something in it - which is true, and beside the
+                // point. The PEOPLE have changed, and the people are what the screen is
+                // about. A film does not hold on the wide shot while someone reacts; it
+                // cuts to the face.
+                //
+                // One frame per outcome signal the node actually uses, not one per choice:
+                // three choices usually resolve to positive, neutral and negative, and what
+                // a learner needs to see is the reaction to THAT rather than to the exact
+                // wording they picked.
+                foreach (self::signals_used($node) as $signal) {
+                    if ($this->wanted(self::reaction_key((string)$node['id'], $signal))) {
+                            $counts['imageswanted']++;
+                    }
+                    if ($this->generate_reaction($provider, $definition, $node, $style, $index, $signal)) {
                         $counts['images']++;
                     }
                 }
@@ -454,7 +508,9 @@ class media_manager {
                         $scenario->scenariolang,
                         $voice,
                         self::DEBRIEF_ITEMID_BASE + ($bucket * 20) + $position,
-                        'debrief_' . $name . '_' . $position
+                        // The same key as the picture for this entry, so one stem finds
+                        // the words, the picture and the voice for a single idea.
+                        self::debrief_key($name, $definition, $position)
                     );
                     if ($made) {
                         $counts['narrations']++;
@@ -517,7 +573,9 @@ class media_manager {
                 if ($text === '') {
                     continue;
                 }
-                $counts['imageswanted']++;
+                if ($this->wanted('lesson_' . self::principle_key($principle, $slot))) {
+                    $counts['imageswanted']++;
+                }
                 $made = $this->generate_scene(
                     $provider,
                     $definition,
@@ -542,44 +600,108 @@ class media_manager {
         // fix is not to remove it but to draw the right one: each of these pages gets a
         // frame briefed from its own text, through the same prompt builder every scene
         // uses, so it sits in the scenario's own world rather than beside it.
+        // ONE PICTURE PER DEBRIEF ENTRY, NOT PER PAGE.
+        //
+        // Each page used to get a single frame briefed from the whole page's text, so a
+        // "Lessons learnt" page with three lessons on it showed one photograph for all
+        // three - and, because the brief was the three lessons run together, a photograph
+        // of nothing in particular. The entries are what a learner reads one at a time;
+        // the page is only the container they arrive in.
+        //
+        // The keys match the NARRATION keys already generated above, item for item:
+        // debrief_lesson_0 is the picture for the clip debrief_lesson_0 reads. So the
+        // picture, the words and the voice for one idea travel together and can be looked
+        // up by one stem rather than reconciled by position at play time.
+        //
+        // The debrief now carries one entry per principle - see content_standard's
+        // debriefcount rule and quality_review::debrief_warnings - so lesson 1 is about
+        // principle 1, takeaway 1 is about principle 1, and the pictures follow the same
+        // spine. The principle's own title is passed into the brief so the frame is about
+        // the idea rather than about a sentence lifted out of context.
         if ($wantsimages) {
             $debrief = (array)($definition['debrief'] ?? []);
-            $pages = [
-                'whatmattered' => [
-                    get_string('whatmattered', 'mod_aibranchedscenario'),
-                    self::lines_text($debrief['whatmattered'] ?? []),
-                ],
-                'criticaldecisions' => [
-                    get_string('decisionsthatchanged', 'mod_aibranchedscenario'),
-                    self::lines_text($debrief['criticaldecisions'] ?? []),
-                ],
-                'practice' => [
-                    get_string('applyitinpractice', 'mod_aibranchedscenario'),
-                    self::lines_text($debrief['practice'] ?? []),
-                ],
-                'takeaways' => [
-                    get_string('takeaways', 'mod_aibranchedscenario'),
-                    self::takeaways_text($definition['takeaways'] ?? []),
-                ],
+            $principles = array_values((array)($definition['principles'] ?? []));
+            $entries = [
+                'lesson'   => array_values((array)($debrief['whatmattered'] ?? [])),
+                'critical' => array_values((array)($debrief['criticaldecisions'] ?? [])),
+                'practice' => array_values((array)($debrief['practice'] ?? [])),
+                'takeaway' => array_values(array_map(
+                    static function ($takeaway) {
+                        return trim(trim((string)($takeaway['heading'] ?? ''), " .") . '. '
+                            . (string)($takeaway['body'] ?? ''));
+                    },
+                    (array)($definition['takeaways'] ?? [])
+                )),
             ];
-            $slot = 0;
-            foreach ($pages as $name => $page) {
-                $slot++;
-                [$title, $text] = $page;
-                if (trim($text) === '') {
-                    continue;
+            $headings = [
+                'lesson'   => get_string('whatmattered', 'mod_aibranchedscenario'),
+                'critical' => get_string('decisionsthatchanged', 'mod_aibranchedscenario'),
+                'practice' => get_string('applyitinpractice', 'mod_aibranchedscenario'),
+                'takeaway' => get_string('takeaways', 'mod_aibranchedscenario'),
+            ];
+            $bucket = 0;
+            foreach ($entries as $name => $items) {
+                $bucket++;
+                foreach ($items as $position => $item) {
+                    $text = trim((string)$item);
+                    if ($text === '') {
+                        continue;
+                    }
+                    // The principle this entry closes the loop on, when the counts line up.
+                    // Where they do not - a short debrief, which quality_review reports -
+                    // the entry still gets its own frame, briefed from its own words.
+                    $principle = $principles[$position] ?? [];
+                    $title = trim((string)($principle['title'] ?? '')) !== ''
+                        ? (string)$principle['title']
+                        : $headings[$name];
+                    if ($this->wanted(self::debrief_key($name, $definition, $position))) {
+                            $counts['imageswanted']++;
+                    }
+                    $made = $this->generate_scene(
+                        $provider,
+                        $definition,
+                        [
+                            'id'        => self::debrief_key($name, $definition, $position),
+                            'title'     => $title,
+                            'situation' => $text,
+                        ],
+                        $style,
+                        self::DEBRIEF_ITEMID_BASE + ($bucket * 20) + $position
+                    );
+                    if ($made) {
+                        $counts['images']++;
+                    }
                 }
-                $counts['imageswanted']++;
+            }
+        }
+
+        // THE OPENING GETS AN ESTABLISHING FRAME OF ITS OWN.
+        //
+        // It used to show the start node's photograph. The start node IS the first
+        // decision, so a learner's first three screens - the opening situation, decision
+        // one, and the consequence of decision one - were the same photograph three times
+        // before they had made a second choice. Three identical frames in the first ten
+        // seconds is the product introducing itself as cheap.
+        //
+        // This frame is the place before anyone has done anything, briefed from the
+        // scenario's own setting and hook rather than from a node.
+        if ($wantsimages) {
+            $hook = trim((string)($definition['hook'] ?? ''));
+            $setting = trim((string)($definition['setting'] ?? ''));
+            if ($hook !== '' || $setting !== '') {
+                if ($this->wanted(self::OPENING_KEY)) {
+                    $counts['imageswanted']++;
+                }
                 $made = $this->generate_scene(
                     $provider,
                     $definition,
                     [
-                        'id'        => 'debrief_' . $name,
-                        'title'     => $title,
-                        'situation' => $text,
+                        'id'        => self::OPENING_KEY,
+                        'title'     => trim((string)($definition['title'] ?? '')),
+                        'situation' => trim($setting . ($setting !== '' ? '. ' : '') . $hook),
                     ],
                     $style,
-                    self::DEBRIEF_ITEMID_BASE + $slot
+                    self::OPENING_ITEMID
                 );
                 if ($made) {
                     $counts['images']++;
@@ -596,12 +718,412 @@ class media_manager {
     }
 
     /**
+     * Every image key a definition SHOULD have, and what each one illustrates.
+     *
+     * THE MAP.
+     *
+     * Until v1.81.0 images were filenames, and a filename is not a link. A key named a
+     * screen rather than an idea, so a picture could not follow its idea from the slide
+     * that taught it to the page that looked back at it - and nothing, anywhere, knew how
+     * many pictures a scenario was supposed to have. "You are four pictures short" was an
+     * unanswerable question.
+     *
+     * This is the contract. Everything derived from a principle carries that principle's
+     * position, so lesson 1, decision 1 and takeaway 1 belong together by construction
+     * rather than by something counting them into the same slot and hoping:
+     *
+     *   opening                  the place, before anyone has done anything
+     *   lesson_<principlekey>    where the idea is taught
+     *   <nodeid>                 the decision that tests it
+     *   <nodeid>_after_<signal>  the reaction, per outcome the node can produce
+     *   <nodeid>_crisis          the escalated variant
+     *   debrief_lesson_<n>       lessons learnt, entry n
+     *   debrief_critical_<n>     critical decisions, entry n
+     *   debrief_practice_<n>     how to apply this, entry n
+     *   debrief_takeaway_<n>     key takeaways, entry n
+     *
+     * The debrief keys match the NARRATION keys exactly, so one stem finds the picture, the
+     * words and the voice for a single idea.
+     *
+     * @param array $definition A validated definition.
+     * @return array Key to a short human description of what it illustrates.
+     */
+    public static function debrief_key(string $family, array $definition, int $position): string {
+        $principles = array_values((array)($definition['principles'] ?? []));
+        $principle = $principles[$position] ?? null;
+        // THE PRINCIPLE ID IS THE SPINE.
+        //
+        // These were positional - debrief_lesson_0 - which is "something counted them into
+        // the same slot and hoped", the exact phrase the plan used to describe what was
+        // wrong before. With the id in the key, lesson 1 and takeaway 1 belong to principle
+        // p1 by construction, and reordering the principles moves their pictures with them
+        // instead of silently reassigning every one.
+        //
+        // The position remains the fallback for the entries a short or long debrief leaves
+        // without a principle - those are reported by quality_review, and a key that cannot
+        // be built is worse than one built from a position.
+        if (is_array($principle) && trim((string)($principle['id'] ?? '')) !== '') {
+            return 'debrief_' . $family . '_' . self::principle_key($principle, $position + 1);
+        }
+        return 'debrief_' . $family . '_' . $position;
+    }
+
+    /**
+     * Every image key a definition SHOULD have, and what each one illustrates.
+     *
+     * See debrief_key() above for how a debrief entry's key is built.
+     *
+     * @param array $definition A validated definition.
+     * @return array Key to a short human description of what it illustrates.
+     */
+    public static function expected_image_map(array $definition): array {
+        $map = [];
+
+        if (
+            trim((string)($definition['hook'] ?? '')) !== ''
+                || trim((string)($definition['setting'] ?? '')) !== ''
+        ) {
+            $map[self::OPENING_KEY] = get_string('map:opening', 'mod_aibranchedscenario');
+        }
+
+        // One-based, like every other caller of principle_key(): the generator, the
+        // narration and the player all pass position + 1. This passed a zero-based index,
+        // which is masked today only because the validator always supplies a principle id
+        // so the positional fallback is never reached - an unvalidated definition would
+        // have made the map and the generator disagree on every lesson key, and no check
+        // would have failed.
+        $slot = 0;
+        foreach (array_values((array)($definition['principles'] ?? [])) as $principle) {
+            $slot++;
+            $text = trim((string)($principle['summary'] ?? '') . ' ' . (string)($principle['example'] ?? ''));
+            if ($text === '') {
+                continue;
+            }
+            $map['lesson_' . self::principle_key($principle, $slot)] = get_string(
+                'map:lesson',
+                'mod_aibranchedscenario',
+                trim((string)($principle['title'] ?? '')) ?: $slot
+            );
+        }
+
+        foreach ((array)($definition['nodes'] ?? []) as $node) {
+            if (!is_array($node) || trim((string)($node['id'] ?? '')) === '') {
+                continue;
+            }
+            $id = (string)$node['id'];
+            $title = trim((string)($node['title'] ?? '')) ?: $id;
+            if (trim((string)($node['situation'] ?? '')) !== '') {
+                $map[$id] = get_string('map:scene', 'mod_aibranchedscenario', $title);
+            }
+            if (!empty($node['crisisvariant']['situation'])) {
+                $map[$id . '_crisis'] = get_string('map:crisis', 'mod_aibranchedscenario', $title);
+            }
+            // The signals_used() helper is the single answer to "which reactions does this node
+            // earn": it already excludes a signal with nothing to brief a frame from, so
+            // the map, the cost estimate and the run cannot disagree.
+            foreach (self::signals_used($node) as $signal) {
+                $map[self::reaction_key($id, $signal)] = get_string(
+                    'map:reaction' . $signal,
+                    'mod_aibranchedscenario',
+                    $title
+                );
+            }
+        }
+
+        $debrief = (array)($definition['debrief'] ?? []);
+        $entries = [
+            'lesson'   => array_values((array)($debrief['whatmattered'] ?? [])),
+            'critical' => array_values((array)($debrief['criticaldecisions'] ?? [])),
+            'practice' => array_values((array)($debrief['practice'] ?? [])),
+            'takeaway' => array_values(array_map(
+                static function ($takeaway) {
+                    return trim(trim((string)($takeaway['heading'] ?? ''), " .") . '. '
+                        . (string)($takeaway['body'] ?? ''));
+                },
+                (array)($definition['takeaways'] ?? [])
+            )),
+        ];
+        foreach ($entries as $name => $items) {
+            foreach ($items as $position => $item) {
+                if (trim((string)$item) === '') {
+                    continue;
+                }
+                $map[self::debrief_key($name, $definition, $position)] = get_string(
+                    'map:debrief' . $name,
+                    'mod_aibranchedscenario',
+                    $position + 1
+                );
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * Is this image key one this run is making?
+     *
+     * Ordinarily yes: a full run makes every frame the definition calls for. A top-up run
+     * sets a list first, and then only the frames on that list are generated - which is what
+     * makes "you are four pictures short" a four-picture job rather than a rerun of the
+     * whole set at the whole price.
+     *
+     * The gate lives here, at the single point every image write passes through, rather than
+     * in the walk. A second walk that decided for itself which frames to make would be a
+     * second description of the map, and two descriptions drift the first time one is
+     * edited - which is the fault this whole exercise exists to stop repeating.
+     *
+     * @param string $key The image key about to be generated.
+     * @return bool True when this run should make it.
+     */
+    protected function wanted(string $key): bool {
+        if ($this->onlyimages === null) {
+            return true;
+        }
+        return isset($this->onlyimages[$key]);
+    }
+
+    /**
+     * Generate only the pictures a published revision is missing, and bill only for those.
+     *
+     * THE OTHER HALF OF THE RECONCILIATION.
+     *
+     * reconcile_images() answers "which slots are unfilled". Until this existed, that answer
+     * had nowhere to go: the only way to obtain a missing picture was
+     * generate_for_definition(), which regenerates every frame and charges the full media
+     * price. A teacher four pictures short paid for thirty.
+     *
+     * Three things make this safe to run against a live revision:
+     *
+     *   - the file area is NOT cleared, so the twenty-six pictures that are already there
+     *     are untouched. `cleared` is pre-marked for exactly that reason;
+     *   - narration is not touched at all, whatever the activity's settings say;
+     *   - the gate above means a frame absent from the list is never even briefed, so a
+     *     top-up cannot quietly redraw the set and change its look.
+     *
+     * Composition is deterministic - the same node always yields the same brief - so a
+     * frame regenerated on its own belongs to the same set as the ones around it.
+     *
+     * @param provider $provider Generation provider.
+     * @param \stdClass $scenario Activity instance.
+     * @param array $definition The published definition.
+     * @param string[] $keys The image keys to make, as reconcile_images() reported them.
+     * @return array Keys: images, imageswanted, narrations, narrationswanted.
+     */
+    public function generate_missing_images(
+        provider $provider,
+        \stdClass $scenario,
+        array $definition,
+        array $keys
+    ): array {
+        $blank = ['images' => 0, 'imageswanted' => 0, 'narrations' => 0, 'narrationswanted' => 0];
+        $keys = array_values(array_filter(array_map('strval', $keys), static function ($key) {
+            return trim($key) !== '';
+        }));
+        if (!$keys) {
+            return $blank;
+        }
+
+        // Only keys the map actually expects. A caller handing this a key the definition
+        // has no slot for would otherwise generate a file nothing can ever show, and bill
+        // for it - and the list arrives from a web service, so it is not the plugin's to
+        // trust.
+        $expected = self::expected_image_map($definition);
+        $keys = array_values(array_intersect($keys, array_keys($expected)));
+        if (!$keys) {
+            return $blank;
+        }
+
+        $topup = clone $scenario;
+        $topup->enableimages = 1;
+        $topup->enableaudio = 0;
+
+        $this->onlyimages = array_flip($keys);
+        // Pre-marked as already cleared, so store() leaves every existing picture alone.
+        // Without this the first top-up write would delete the whole area and a run meant
+        // to add four pictures would end with four.
+        $this->cleared = [self::AREA_SCENE => true, self::AREA_NARRATION => true];
+        try {
+            $counts = $this->generate_for_definition($provider, $topup, $definition);
+        } finally {
+            // Whatever happened, this manager goes back to being an ordinary one. A filter
+            // left set would silently make the next full run produce four pictures.
+            $this->onlyimages = null;
+        }
+        return $counts;
+    }
+
+    /**
+     * Compare the pictures a revision SHOULD have against the ones it HAS.
+     *
+     * The thing that makes "regenerate the missing ones" a lookup rather than a rerun.
+     * Before this existed there was no way to say a scenario was four pictures short,
+     * because nothing knew how many there should have been: a missing picture and a slot
+     * that never wanted one were indistinguishable, and the only remedy was to generate
+     * the whole set again and pay for it again.
+     *
+     * Three answers, and the third is the one nobody was looking for:
+     *
+     *   missing  - expected by the map, not in the file area. Regenerate exactly these.
+     *   orphaned - in the file area, not in the map. Left over from a definition that has
+     *              since been edited; costs nothing but tells you the map moved.
+     *   shared   - two keys resolving to the same stored file. This is the repetition
+     *              Jamie kept reporting, and it is the one state that looks fine in every
+     *              other check because every key resolves to a picture.
+     *
+     * @param array $definition A validated definition.
+     * @param int $revisionnumber The published revision.
+     * @return array Keys: missing (key => description), orphaned (string[]), shared (array).
+     */
+    public function reconcile_images(array $definition, int $revisionnumber): array {
+        $expected = self::expected_image_map($definition);
+        $have = $this->urls_for_revision(self::AREA_REVISION_SCENE, $revisionnumber);
+
+        $missing = [];
+        foreach ($expected as $key => $what) {
+            if (!isset($have[$key]) || trim((string)$have[$key]) === '') {
+                $missing[$key] = $what;
+            }
+        }
+
+        $orphaned = array_values(array_diff(array_keys($have), array_keys($expected)));
+
+        // Two keys pointing at one file. urls_for_revision keys by filename stem so this
+        // cannot happen through it today - but the player and the debrief both fall back to
+        // BORROWING another screen's frame when their own is missing, and that fallback is
+        // exactly how three consecutive screens ended up showing one photograph. Asked here
+        // so the answer exists rather than being inferred from a screenshot.
+        $byurl = [];
+        foreach ($have as $key => $url) {
+            $url = trim((string)$url);
+            if ($url === '') {
+                continue;
+            }
+            $byurl[$url][] = $key;
+        }
+        $shared = [];
+        foreach ($byurl as $keys) {
+            if (count($keys) > 1) {
+                $shared[] = $keys;
+            }
+        }
+
+        return ['missing' => $missing, 'orphaned' => $orphaned, 'shared' => $shared];
+    }
+
+    /**
+     * The outcome signals a node's choices actually lead to.
+     *
+     * A node with three choices that are all negative needs one reaction frame, not three,
+     * and a node whose choices span all three needs all three. Asked of the node rather
+     * than assumed, so the count is what the scenario earns rather than a flat multiplier
+     * on the bill.
+     *
+     * @param array $node A normalised node.
+     * @return string[] Distinct signals, in a stable order.
+     */
+    public static function signals_used(array $node): array {
+        if (($node['type'] ?? '') !== 'decision') {
+            return [];
+        }
+        $found = [];
+        foreach ((array)($node['choices'] ?? []) as $choice) {
+            $signal = (string)($choice['signal'] ?? '');
+            if (!in_array($signal, self::REACTION_SIGNALS, true) || in_array($signal, $found, true)) {
+                continue;
+            }
+            // A reaction frame is briefed FROM the consequence text, so a signal whose
+            // choices say nothing about what happened cannot produce one. Found by
+            // self-audit: this used to return the signal anyway, so a run would count a
+            // frame it was about to decline to make, while count_images - which does check
+            // the text - counted none. The estimate and the run would then disagree by one
+            // on any node with a wordless branch, and the harness check that compares them
+            // only passed because the fixture has consequence text everywhere.
+            //
+            // Asked once, here, so the map, the estimate and the run all read the same
+            // answer rather than three functions each deciding for themselves.
+            foreach ((array)($node['choices'] ?? []) as $sibling) {
+                if (
+                    (string)($sibling['signal'] ?? '') === $signal
+                        && trim((string)($sibling['consequence'] ?? '')) !== ''
+                ) {
+                    $found[] = $signal;
+                    break;
+                }
+            }
+        }
+        // A stable order, so the same node produces the same key set on every run and a
+        // reconciliation pass can compare two generations without sorting first.
+        return array_values(array_filter(
+            self::REACTION_SIGNALS,
+            static function ($signal) use ($found) {
+                return in_array($signal, $found, true);
+            }
+        ));
+    }
+
+    /**
+     * The key a node's reaction frame is stored under.
+     *
+     * @param string $nodeid The node.
+     * @param string $signal positive, neutral or negative.
+     * @return string
+     */
+    public static function reaction_key(string $nodeid, string $signal): string {
+        return $nodeid . '_after_' . $signal;
+    }
+
+    /**
+     * Generate and store one reaction frame for a node.
+     *
+     * @param provider $provider Generation provider.
+     * @param array $definition The whole scenario.
+     * @param array $node The decision node.
+     * @param string $style Treatment.
+     * @param int $index The node's item id.
+     * @param string $signal positive, neutral or negative.
+     * @return bool True when an image was stored.
+     */
+    public function generate_reaction(
+        provider $provider,
+        array $definition,
+        array $node,
+        string $style,
+        int $index,
+        string $signal
+    ): bool {
+        if (!$this->wanted(self::reaction_key((string)$node['id'], $signal))) {
+            return false;
+        }
+        $brief = image_prompt::for_reaction($definition, $node, $style, $signal);
+        if (trim($brief['prompt']) === '') {
+            return false;
+        }
+        try {
+            $result = $provider->generate_image($brief['prompt'], $brief['style'], $brief['scenetitle']);
+            $this->store(
+                self::AREA_SCENE,
+                $index,
+                self::reaction_key((string)$node['id'], $signal),
+                $result['data'],
+                $result['mimetype']
+            );
+            return true;
+        } catch (generation_exception $e) {
+            $this->note_failure((string)$e->errorcode);
+            mtrace('Reaction image generation skipped: ' . $e->errorcode);
+            return false;
+        }
+    }
+
+    /**
      * Generate and store the scene image for one node.
      *
      * @param provider $provider Generation provider.
+     * @param array $definition The whole scenario.
      * @param array $node Normalised node.
      * @param string $style Image style.
      * @param int $index Zero based node index, used as the file item id.
+     * @param bool $crisis Whether this is the crisis variant.
      * @return bool True when an image was stored.
      */
     public function generate_scene(
@@ -612,14 +1134,18 @@ class media_manager {
         int $index,
         bool $crisis = false
     ): bool {
+        $key = $crisis ? $node['id'] . '_crisis' : $node['id'];
+        if (!$this->wanted((string)$key)) {
+            return false;
+        }
         $brief = image_prompt::for_node($definition, $node, $style, $crisis);
         if (trim($brief['prompt']) === '') {
             return false;
         }
         // The crisis variant of a scene is its own frame, stored beside the calm one,
         // so a learner who has driven the tension up sees the escalated moment rather
-        // than the picture of the room before it went wrong.
-        $key = $crisis ? $node['id'] . '_crisis' : $node['id'];
+        // than the picture of the room before it went wrong. The key is worked out above,
+        // because the top-up gate has to know it before anything is generated.
         try {
             $result = $provider->generate_image($brief['prompt'], $brief['style'], $brief['scenetitle']);
             $this->store(self::AREA_SCENE, $index, $key, $result['data'], $result['mimetype']);
@@ -1133,6 +1659,66 @@ class media_manager {
     }
 
     /**
+     * Copy just the named pictures into a published revision, leaving the rest alone.
+     *
+     * publish_media() is a whole-set operation: it deletes the revision's area and refills
+     * it from the working copy. That is right at publish time and wrong for a top-up, where
+     * the working copy holds only the handful of frames just generated and the revision
+     * holds the twenty-six that were already fine. Using it here would replace a revision
+     * that was four pictures short with one that had four pictures.
+     *
+     * So this copies by name, replaces rather than deletes, and touches nothing it was not
+     * asked about.
+     *
+     * @param int $revisionnumber The revision being topped up.
+     * @param string[] $keys The image keys just generated.
+     * @return int Files that reached the revision.
+     */
+    public function publish_image_keys(int $revisionnumber, array $keys): int {
+        $wanted = array_flip(array_map('strval', $keys));
+        $fs = get_file_storage();
+        $copied = 0;
+        $files = $fs->get_area_files(
+            $this->context->id,
+            'mod_aibranchedscenario',
+            self::AREA_SCENE,
+            false,
+            'itemid, filepath, filename',
+            false
+        );
+        foreach ($files as $file) {
+            $name = $file->get_filename();
+            if (!isset($wanted[pathinfo($name, PATHINFO_FILENAME)])) {
+                continue;
+            }
+            $existing = $fs->get_file(
+                $this->context->id,
+                'mod_aibranchedscenario',
+                self::AREA_REVISION_SCENE,
+                $revisionnumber,
+                '/',
+                $name
+            );
+            if ($existing) {
+                // A top-up of a key that somehow already had a file replaces it rather than
+                // failing: the caller asked for this frame, and refusing here would leave a
+                // teacher pressing the button with nothing changing and no reason given.
+                $existing->delete();
+            }
+            $fs->create_file_from_storedfile([
+                'contextid' => $this->context->id,
+                'component' => 'mod_aibranchedscenario',
+                'filearea'  => self::AREA_REVISION_SCENE,
+                'itemid'    => $revisionnumber,
+                'filepath'  => '/',
+                'filename'  => $name,
+            ], $file);
+            $copied++;
+        }
+        return $copied;
+    }
+
+    /**
      * Copy the working-copy media into the immutable areas for a published revision.
      *
      * Returns the number of files that reached the revision, because that is the only
@@ -1271,17 +1857,6 @@ class media_manager {
             )->out(false);
         }
         return $out;
-    }
-
-    /**
-     * Remove all working-copy media, used when a scenario is regenerated.
-     *
-     * @return void
-     */
-    public function clear_working_media(): void {
-        $fs = get_file_storage();
-        $fs->delete_area_files($this->context->id, 'mod_aibranchedscenario', self::AREA_SCENE);
-        $fs->delete_area_files($this->context->id, 'mod_aibranchedscenario', self::AREA_NARRATION);
     }
 
     /**

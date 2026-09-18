@@ -45,6 +45,14 @@
     * deltas array One entry per metric, each with its ring geometry
     * finished bool Whether this was the last decision
     * continuelabel string Label for the continue button
+    * reviewing bool Whether this screen is being looked back at rather than lived
+    * canreviewback bool Whether there is an earlier decision to look back at
+    * canreviewforward bool Whether there is a later one to step forward to
+    * reviewposition string Where in the record this is, phrased
+    * reviewnote string The reminder that looking back changes nothing
+    * reviewbacklabel string Label for the back control
+    * reviewforwardlabel string Label for the forward control
+    * reviewreturnlabel string Label for the control that leaves review
 
     Example context (json):
     {
@@ -199,14 +207,62 @@
         </div>
     {{/hasfeedback}}
 
-    <div class="aibs-consequence-actions">
-        <button type="button" class="aibs-btn aibs-btn-primary" data-action="continue">
-            {{continuelabel}}
+    {{! Looking back at a decision already taken. Read only - there is no way to change an
+        answer from here, because undoing a consequence would make the score mean nothing.
+        The learner's position in the scenario is untouched while they look. }}
+    {{#reviewing}}
+        <p class="aibs-review-note">
             <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-                <path d="M4 10h11m-4.4-4.6L15.2 10l-4.6 4.6" fill="none" stroke="currentColor"
-                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="10" cy="10" r="7.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M10 6.2v4.6M10 13.4v.1" fill="none" stroke="currentColor"
+                      stroke-width="1.7" stroke-linecap="round"/>
             </svg>
-        </button>
+            <span>{{reviewposition}} &middot; {{reviewnote}}</span>
+        </p>
+    {{/reviewing}}
+
+    <div class="aibs-consequence-actions">
+        {{#canreviewback}}
+            <button type="button" class="aibs-btn aibs-btn-secondary" data-action="reviewback">
+                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <path d="M16 10H5m4.4-4.6L4.8 10l4.6 4.6" fill="none" stroke="currentColor"
+                          stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                {{reviewbacklabel}}
+            </button>
+        {{/canreviewback}}
+
+        {{#canreviewforward}}
+            <button type="button" class="aibs-btn aibs-btn-secondary" data-action="reviewforward">
+                {{reviewforwardlabel}}
+                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <path d="M4 10h11m-4.4-4.6L15.2 10l-4.6 4.6" fill="none" stroke="currentColor"
+                          stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        {{/canreviewforward}}
+
+        {{! One primary action, always, and it says what it does: on a live consequence it
+            moves the learner on; under review it puts them back where they were. Two
+            primary buttons on one screen is a question about which one to press. }}
+        {{#reviewing}}
+            <button type="button" class="aibs-btn aibs-btn-primary" data-action="reviewreturn">
+                {{reviewreturnlabel}}
+                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <path d="M4 10h11m-4.4-4.6L15.2 10l-4.6 4.6" fill="none" stroke="currentColor"
+                          stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        {{/reviewing}}
+        {{^reviewing}}
+            <button type="button" class="aibs-btn aibs-btn-primary" data-action="continue">
+                {{continuelabel}}
+                <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <path d="M4 10h11m-4.4-4.6L15.2 10l-4.6 4.6" fill="none" stroke="currentColor"
+                          stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        {{/reviewing}}
     </div>
     </div>
     </div>

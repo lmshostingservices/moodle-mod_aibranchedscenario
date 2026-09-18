@@ -2,6 +2,276 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v2.0.0] - 2026-09-18
+
+A version number about the checking, not about the features.
+
+This follows an audit of the whole plugin against a written list of **seventy-eight
+invariants** — the first time anything had counted all of them rather than the handful most
+recently worked on. The result was 17 proven, 39 partial, 22 unproven. This release is what
+that audit turned up, and what it took to close it.
+
+### Things that were reported as done and were not
+
+- **A service nothing called.** `reconcile_images()` could say which pictures a revision was
+  missing, and no code outside the test harness ever asked it. There is now a `topup_media`
+  service, a panel on the review page, and generation that makes only the missing frames.
+- **Four checks that could not fail.** One asserted PHP array keys are unique; one asserted
+  a string is not equal to its own prefix. Each is replaced by one that can fail.
+- **A test that agreed with its own bug.** The pronoun check read the choice field `'label'`;
+  a validated choice stores its wording under `'text'`. Every fixture was hand-built with
+  `'label'`, so it passed while an option's wording was never read at all. Fixtures are built
+  through the validator now.
+- **A check that held a bug in place.** `'and the debrief borrows the one the scenario opened
+  on'` required the DOM scrape that made the last screen a learner saw be the first one
+  again. It survived a release whose whole subject was removing borrowed pictures.
+
+### No screen borrows another's picture
+
+Five paths, found in two passes: the opening, the lesson slides, the consequence, the debrief
+entries, the debrief pages — and, in a second sweep, the crisis screen (written as a `?:`, so
+the word "fallback" appeared nowhere near it) and the ending card.
+
+All gone. A missing frame shows **nothing**, and the review panel names it and offers to make
+it. A borrowed picture is not a cheaper version of the right one; it is the repetition fault
+arriving quietly, and it is invisible to every check because it still resolves to a picture.
+
+### The image map has its spine
+
+Debrief keys were positional — `debrief_lesson_0` — which is "something counted them into the
+same slot and hoped", the phrase the plan used for what was wrong *before*. They carry the
+principle id now: `debrief_lesson_p1`. Lesson 1, takeaway 1 and principle 1 belong together
+by construction, and reordering the principles moves their pictures with them.
+
+### Faults nobody had reported
+
+- **A failed media run billed 100 credits.** The refund exclusion covered scenario, suggest
+  and populate jobs and skipped media entirely.
+- **`revisions.createdby`** was a stored user id the Privacy API did not declare, export or
+  delete. Erasure now removes the attribution and keeps the revision, because learners are
+  part-way through attempts against it.
+- **Node ids were never checked against reserved names.** A node called `opening` or
+  `lesson_p1` collided with a picture the plugin writes under that name, and publishing drops
+  the second file.
+- **Fields were cut mid-word** at their ceiling. The one check that looked fed a single
+  unbroken token, which cannot detect word severing.
+- **A stray `@media (min-width: 820px)`** broke the three-breakpoint policy, unseen by a
+  check that scanned `max-width` only.
+- **Skill names could appear anywhere in a scenario.** The content standard had asked them
+  not to since v1.44.0 and nothing ever read the text back. The shipped worked example had
+  four lessons against three principles — so every teacher copying it copied the fault.
+
+### Checks that are derived, not typed
+
+A hand-maintained list cannot fail when something new is added, which is exactly when a check
+earns its place. Now enumerated from the files themselves: every external function authorises
+before it acts and is declared with its capability; every capability comes from
+`db/access.php`; every stored user id is compared against the privacy metadata **under its
+own table**, with a control proving the scan would notice a column declared under the wrong
+one.
+
+### The tests that had never run
+
+- **PHPUnit: 45 tests, 286 assertions, passing.** Never once executed before this release.
+- **`harness/check.sh`** runs everything in one command: the sweep, the harness on all three
+  Moodle versions, phpcs *without* `-q` (the quiet flag hid nine real errors), the unit tests,
+  seven browser sweeps, and a negative control that fails if the layout fix stops being
+  load-bearing.
+- **`clip.mjs`** — the one of forty sweeps that can see the layout frame — now runs on every
+  sync, re-dumps its own markup, runs the fold correction it used to omit, and **exits 2
+  rather than skipping** when its browser is missing. A sweep that skips silently is a sweep
+  that does not exist.
+- **Behat still has not run.** Both features and the step definitions are correct and the
+  environment now initialises, but the only chromedriver here is 147 against a Chromium 141,
+  and the download host for a matching driver is blocked by egress policy. That is the whole
+  reason, and it is not a code fault.
+
+### Checks
+
+**1,865**, up from 1,696 three days ago. The count was never the measure — but four of them
+can no longer pass unconditionally, and the layout sweep fails without its fix.
+
+## [v1.82.0] - 2026-09-18
+
+An audit of v1.81.0 against the written plan, and everything it found.
+
+v1.81.0 was reported as finished. It was not: seven of seventy-eight invariants had been
+worked on and the rest were never checked. This release is what the audit turned up.
+
+### The picture top-up now exists
+
+`reconcile_images()` could answer "which slots are unfilled" and **nothing called it** — the
+only caller was the test harness. There was no way to regenerate one picture; a teacher four
+pictures short paid for a full rerun of thirty. The report had been built and the reader had
+not, which is this plugin's oldest recurring fault, committed in the same week it was
+written down as the thing to stop doing.
+
+- `topup_media` is a real external function with a real capability check
+- The review page carries a **Missing pictures** panel: check costs nothing, generate makes
+  only what was missing and leaves the rest untouched
+- `generate_missing_images()` gates every image write on one list, so a second walk cannot
+  drift from the map; the file area is not cleared and narration is never touched
+- `publish_image_keys()` copies the new frames into the revision by name rather than
+  replacing the whole area
+
+Running it end to end immediately found a real bug: **every "wanted" counter incremented
+before the gate**, so a four-picture top-up reported twenty-seven wanted and four made — and
+the job record filed a successful run as a failure. Reading the code would never have shown
+that.
+
+### Nothing borrows another screen's picture any more
+
+Every fallback is gone: the opening, the lesson slides, the consequence, the debrief entries
+and the debrief pages. A missing frame shows **nothing**, and the review panel names it.
+
+A borrowed picture is not a cheaper version of the right one. It is the repetition fault
+arriving quietly, and it is invisible to every check, because a borrowed picture still
+resolves to a picture. Keeping the fallbacks "for older scenarios" meant the fault was
+always one refused image away on every scenario.
+
+### Checks that could not fail
+
+Four were removed. One asserted PHP array keys are unique; one asserted
+`"n1_after_negative" !== "n1"`, which is a string against its own prefix. They were written
+in the same week as a document about checks that cannot see what they claim to.
+
+Each is replaced by one that can fail — including a **negative control** on the layout fix:
+disable the density lever and the sweep fails at all three frame heights.
+
+### A test that agreed with its own bug
+
+The pronoun check read the choice field `'label'`. A validated choice stores its wording
+under `'text'`. So an option's wording was never read, and a female Alex called "he" inside
+an option shipped silently — while every fixture, hand-built with `'label'`, passed.
+
+Fixtures for that check are built **through the validator** now, which is the only way a
+fixture cannot disagree with the code about what the fields are called. Principles are read
+too; they were omitted entirely.
+
+### Faults the audit found that nobody had reported
+
+- **A failed media run still billed 100 credits.** The refund exclusion covered scenario,
+  suggest and populate jobs and skipped media, so a run refused for insufficient credits and
+  refunded in full still spent a teacher's whole daily allowance.
+- **`revisions.createdby` was a stored user id the Privacy API did not declare, export or
+  delete.** Erasure now takes the attribution off; the revision itself stays, because
+  learners are part-way through attempts against it.
+- **Node ids were never checked against reserved names.** A node called `opening`,
+  `lesson_p1` or `debrief_lesson_0` collided with a picture the plugin writes under that
+  exact name, and publishing drops the second file — so one screen silently showed another's.
+  The reaction family was keyed by suffix and unguarded entirely.
+- **A stray `@media (min-width: 820px)`** broke the three-breakpoint policy. The check that
+  guards it scanned `max-width` only.
+
+### Checks derived from files, not from lists
+
+A hand-maintained list cannot fail when something new is added, which is exactly when a
+check earns its place. Now enumerated: every external function authorises before it acts and
+is declared with its capability; every capability comes from `db/access.php`; every stored
+user id is compared against the declared privacy metadata.
+
+### The sweep that sees the frame now runs
+
+`clip.mjs` is the one of forty browser sweeps that can see the layout constraint. It was run
+by hand when remembered, and it read a cached markup dump it never refreshed — the same
+staleness fault the preview was fixed for, reintroduced inside the tool written to catch
+faults. It re-dumps its own markup and runs on every sync; a clipped screen fails the sync.
+
+Its header claimed the harness kept its copy of the fit loop in step with the player's. No
+such check existed. There is one now.
+
+### Checks
+
+1,822, up from 1,763. The layout sweep covers 96 cells and fails without the fix.
+
+## [v1.81.0] - 2026-09-18
+
+Five faults a learner could see, and the checks that could not see them.
+
+### The consequence screen no longer clips
+
+A slide that still did not fit once the type had stepped down to its floor simply clipped:
+the frame held, the card did not, and the signal pill was sliced across the top while
+Continue was sliced across the bottom. In fullscreen the same card fitted, which is why it
+read as a fullscreen-only problem.
+
+The fit loop could always SEE the overflow. It had run out of lever — type size was the only
+one, and its floor is there so the words stay readable. There is a second lever now, spent
+on the scoreboard rather than on the words: when the type bottoms out, the three reading
+cards become one row of dials and the band under each name goes to screen readers only.
+That buys about 150px, three times the worst cut measured.
+
+**Why nothing caught it.** 38 of the 39 browser sweeps load the review page, which sets
+`height:auto !important` on every slide — so the entire sweep estate was measuring the
+layout with the failing constraint switched off. A new sweep, `preview/clip.mjs`, restores
+the frame, runs the player's own fit algorithm, and measures across 96 cells: three frame
+heights, four widths, both themes, every screen. It also compares a page frame against a
+fullscreen frame, because a fault where both views are individually plausible and only the
+comparison is wrong is invisible to any single-size sweep.
+
+### The debrief closes the loop on every principle
+
+A scenario teaching three principles closed with two lessons learnt, two critical decisions
+and two takeaways. Nothing asked for a count, so the model chose one, and two is the
+cheapest number that still reads as a list.
+
+- The content standard now states the rule for both routes: one entry per principle, in the
+  order the principles were taught.
+- `quality_review` reports a page that is short, naming it and the count, so the teacher can
+  fill the gap in the editor before publishing.
+- The validator's caps were 6 against a principle ceiling of 8 — a guard that cut below the
+  contract it was guarding. Both are 8.
+
+### Pronouns are compared against the cast record
+
+A record saying Alex is female, prose saying "He feels some decisions are not well thought
+out", and a picture briefed from the record showing a woman. Every check in the plugin
+passed; a learner saw it in a second, because nothing anywhere compared the two.
+
+- `quality_review` reads the sentences that name each character and reports a pronoun that
+  contradicts their record.
+- Gender is no longer silently blanked. "Female", "woman", "M" and "non-binary" are
+  understood rather than discarded, on all three routes into the field, and non-binary now
+  round-trips through the wizard instead of being reset to "not set" by a teacher who opened
+  the character to fix a typo.
+- The image brief states each person's gender in its own sentence, in the fixed tail where
+  the length trim cannot reach it.
+
+### Every image is keyed to the idea it illustrates
+
+Image keys named a screen, not an idea, so a picture could not follow its idea from the
+slide that taught it to the page that looked back at it — and nothing knew how many pictures
+a scenario should have. "You are four pictures short" was an unanswerable question.
+
+- **The consequence gets a reaction frame.** One per outcome signal each node actually uses,
+  briefed as a reaction — closer framing, the person it landed on, what their face is doing.
+  It used to redraw the decision's own photograph.
+- **The opening gets an establishing frame.** It used to borrow the start node's picture,
+  and the start node is the first decision — so the first three screens were one photograph
+  three times before a second choice was made.
+- **Each debrief entry gets its own picture**, keyed to match the clip that reads it, so one
+  stem finds the picture, the words and the voice for a single idea. Entries used to borrow
+  a scene photograph by an arithmetic offset.
+- **`reconcile_images()`** compares the map against what a revision holds and answers three
+  questions: what is missing, what is orphaned, and what two screens are sharing. Missing
+  pictures can be regenerated on their own instead of rerunning the set.
+
+Every one of these falls back to what was shown before it when a scenario predates this
+release, so an existing revision keeps working unchanged.
+
+### Looking back at a decision already taken
+
+There was no way to re-read what a decision did — only a list of node titles and choice
+texts behind a control in the bar, which answers "what did I pick" and not "what did it do".
+The consequence screen now carries a way back, a way forward, and a way out. Read only: it
+redraws what was already received, submits nothing and re-scores nothing.
+
+### Checks
+
+1,756 harness checks, up from 1,696, with 60 added for the above. The picture-count
+estimate is compared against what a real run asks for rather than against itself — which is
+what caught it drifting the moment the map changed.
+
 ## [v1.80.0] - 2026-09-16
 
 A milestone number rather than a change: the first release prepared for the Moodle

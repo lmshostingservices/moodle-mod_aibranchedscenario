@@ -42,6 +42,8 @@ $PAGE->set_context($context);
 // The draft review renders the player shell and loads nothing else, so it needs the one
 // thing that shell cannot work out for itself: whether the page behind it is dark.
 $PAGE->requires->js_call_amd('mod_aibranchedscenario/scheme', 'init');
+// And the missing-picture panel, which is the only interactive thing on this page.
+$PAGE->requires->js_call_amd('mod_aibranchedscenario/topup', 'init', [(int)$cm->id]);
 
 echo $OUTPUT->header();
 // No Moodle heading here: the review template carries its own masthead with the same

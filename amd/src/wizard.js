@@ -822,10 +822,19 @@ class Wizard {
                     return;
                 }
                 if (key === 'gender') {
-                    // A select, not a text box: anything that is not one of its two values
-                    // is left unset rather than written in and silently dropped later.
+                    // A select, not a text box: anything that is not one of its values is
+                    // left unset rather than written in and silently dropped later. The
+                    // spellings are matched loosely because a model writes "Female" and
+                    // "woman" as readily as "female", and a value dropped here takes the
+                    // person's gender out of the picture brief further down.
                     const value = parts[index].toLowerCase().trim();
-                    element.value = (value === 'male' || value === 'female') ? value : '';
+                    const known = {
+                        male: 'male', m: 'male', man: 'male', boy: 'male',
+                        female: 'female', f: 'female', woman: 'female', girl: 'female',
+                        'non-binary': 'non-binary', nonbinary: 'non-binary',
+                        'non binary': 'non-binary', nb: 'non-binary', enby: 'non-binary'
+                    };
+                    element.value = known[value] || '';
                     return;
                 }
                 element.value = parts[index];

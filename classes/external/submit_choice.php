@@ -22,6 +22,7 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use mod_aibranchedscenario\local\attempt_manager;
+use mod_aibranchedscenario\local\media_manager;
 
 /**
  * Records a decision and returns its consequence and the next node.
@@ -95,6 +96,17 @@ class submit_choice extends external_api {
             // Narration for the branch the learner actually took. Stored under the choice
             // id alongside the node clips.
             'audiourl'       => $mediaurls['narration'][$params['choiceid']] ?? '',
+            // THE REACTION SHOT, for the screen that used to redraw the decision.
+            //
+            // A frame per outcome signal, generated with the scenario, so the consequence
+            // shows what the decision did to somebody rather than the room it was taken in.
+            // Empty for a scenario generated before v1.81.0, or where that one frame
+            // failed - the player then falls back to the decision's own picture, which is
+            // what it always showed and is better than an empty column.
+            'reactionimageurl' => (string)($mediaurls['scene'][media_manager::reaction_key(
+                (string)$params['nodeid'],
+                (string)$result['signal']
+            )] ?? ''),
             'before'         => $result['before'],
             'after'          => $result['after'],
             'finished'       => (bool)$result['finished'],
@@ -117,6 +129,12 @@ class submit_choice extends external_api {
             'feedbackparas'    => helper::paragraphs_structure('Feedback as plain text; escape before use as HTML'),
             'principle'       => new external_value(PARAM_TEXT, 'Decision principle this choice tested'),
             'audiourl'        => new external_value(PARAM_URL, 'Narration for this consequence, or empty'),
+            'reactionimageurl' => new external_value(
+                PARAM_URL,
+                'The reaction frame for this outcome, or empty to fall back to the scene',
+                VALUE_DEFAULT,
+                ''
+            ),
             'before'          => helper::metrics_structure(),
             'after'           => helper::metrics_structure(),
             'finished'        => new external_value(PARAM_BOOL, 'Whether the attempt has now finished'),

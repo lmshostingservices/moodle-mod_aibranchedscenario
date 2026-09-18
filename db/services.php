@@ -107,6 +107,18 @@ $functions = [
         'services'    => [],
     ],
 
+    // The other half of the reconciliation: which pictures a published revision is short of,
+    // and a way to make just those. Asked without keys it only reports, so a teacher can
+    // look at the shortfall without spending anything.
+    'mod_aibranchedscenario_topup_media' => [
+        'classname'   => 'mod_aibranchedscenario\external\topup_media',
+        'description' => 'Report which pictures a published revision is missing, and generate just those.',
+        'type'        => 'write',
+        'ajax'        => true,
+        'capabilities' => 'mod/aibranchedscenario:generate',
+        'services'    => [],
+    ],
+
     'mod_aibranchedscenario_publish_scenario' => [
         'classname'   => 'mod_aibranchedscenario\external\publish_scenario',
         'description' => 'Publish the working copy as a new immutable revision.',

@@ -815,5 +815,38 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091486, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091801) {
+        // Release 1.81.0 changes no schema. It changes what gets DRAWN and what gets
+        // CHECKED: the consequence stops clipping on a page, the debrief carries one entry
+        // per principle, pronouns are compared against the cast record, and every image is
+        // keyed to the idea it illustrates rather than to the screen it lands on.
+        //
+        // Existing revisions keep working: every new picture falls back to what was shown
+        // before it when the scenario predates this release.
+        upgrade_mod_savepoint(true, 2026091801, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091802) {
+        // Release 1.82.0 changes no schema. It finishes what 1.81.0 started and audits what
+        // 1.81.0 claimed: the picture top-up now exists rather than only being reported, no
+        // screen borrows another's frame any more, and a teacher's name comes off the
+        // revisions they published when they are erased.
+        upgrade_mod_savepoint(true, 2026091802, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091900) {
+        // Release 2.0.0 changes no schema.
+        //
+        // The number is a statement about the checking rather than about the features. It
+        // follows an audit of the whole plugin against a written list of seventy-eight
+        // invariants - the first time anything had counted all of them rather than the
+        // handful most recently worked on - and the release is what that audit turned up:
+        // four checks that could not fail, a test that agreed with its own bug, a service
+        // nothing called, five picture-borrowing paths, a media run that billed after
+        // failing, a stored user id outside the Privacy API, and the plugin's unit tests,
+        // which had never once been run.
+        upgrade_mod_savepoint(true, 2026091900, 'aibranchedscenario');
+    }
+
     return true;
 }

@@ -3694,7 +3694,19 @@ button.aibs-avatar {
     padding: 0;
 }
 
-@media (min-width: 820px) {
+/* 899, not 820. The breakpoint policy is three values - 420, 600, 899 - and this was a
+   fourth, added for one grid because 820 happened to be where three columns started
+   fitting. The harness check that guards the policy scans max-width only, so a stray
+   min-width was invisible to it; both are scanned now.
+
+   A breakpoint is a promise that everything changes shape at the same width. A fourth one
+   means two components reflow at different moments on the same drag of a window edge,
+   which reads as the layout stuttering rather than responding.
+
+   900 rather than 899: the policy's third value is the boundary, and the pair either side
+   of it is max-width 899 / min-width 900. Writing min-width 899 would have made both sides
+   true at exactly 899px, which is the other way to get two shapes from one width. */
+@media (min-width: 900px) {
     .path-mod-aibranchedscenario .aibs-benefits,
     .aibs-benefits {
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -5608,4 +5620,118 @@ button.aibs-avatar:focus-visible {
         position: static;
         transform: none;
     }
+}
+
+/* ------------------------------------------------- the last step before clipping
+
+   A slide that still does not fit once the type has stepped down to its floor used to
+   clip: the frame held, the card did not, and the learner was shown a consequence with
+   its signal pill sliced across the top and Continue sliced across the bottom. Measured
+   on the review harness with the frame restored, the consequence was cut by 90px at a
+   420px frame and by 51px at the desktop cap - and the fit loop SAW the overflow each
+   time. It had simply run out of things to do about it, because the only lever was type
+   size and the floor is there so the words stay readable.
+
+   So there is a second lever, used only when the first one has bottomed out. The readings
+   are the scoreboard; the words are the point. The scoreboard gives way first: the three
+   cards become one row of dials, the band under each name goes to screen readers only -
+   the colour and the arrow already carry it on screen - and the room that buys goes back
+   to the sentence and the button. Roughly 150px on a three-metric consequence, which is
+   three times the worst cut measured.
+
+   The class is put on by the fit loop, so it is applied only where it is needed and a
+   card with room to spare is untouched. */
+.aibs-consequence.aibs-dense .aibs-rings {
+    flex-direction: row;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.aibs-consequence.aibs-dense .aibs-ring {
+    column-gap: 8px;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 10px;
+}
+
+.aibs-consequence.aibs-dense .aibs-ring-dial,
+.aibs-consequence.aibs-dense .aibs-ring-dial > svg {
+    height: 44px;
+    width: 44px;
+}
+
+.aibs-consequence.aibs-dense .aibs-ring-readout {
+    gap: 6px;
+}
+
+/* Still announced, no longer drawn: "LOW" under the name is the one piece the colour and
+   the arrow beside it already say. */
+.aibs-consequence.aibs-dense .aibs-ring-standing {
+    border: 0;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+}
+
+.aibs-consequence.aibs-dense .aibs-feedback {
+    margin-top: 10px;
+    padding: 10px 12px;
+}
+
+/* ------------------------------------------------- looking back at a decision
+
+   The consequence screen carries the way back to the one before it. A learner three
+   decisions in could not re-read what the first one had cost: the only record was a list
+   of node titles and choice texts behind a control in the bar, which answers "what did I
+   pick" and not "what did it do".
+
+   The note is a statement of fact, not a warning, so it is quiet: the same soft surface as
+   the readings, no colour band, no icon in a circle of its own. What it has to say is that
+   nothing here changes anything, and a learner who is being reassured should not be
+   alarmed by the reassurance. */
+.aibs-review-note {
+    align-items: center;
+    background: var(--aibs-surface-alt);
+    border-radius: var(--aibs-radius-sm);
+    color: var(--aibs-text-muted);
+    display: flex;
+    font-size: var(--aibs-text-meta);
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 8px 12px;
+}
+
+.aibs-review-note .aibs-icon {
+    flex: none;
+    height: 16px;
+    width: 16px;
+}
+
+/* It sits with the actions rather than above the prose: it describes the controls under
+   it, and a note at the top of the card would be read as being about the consequence. */
+.aibs-consequence .aibs-review-note {
+    order: 5;
+}
+
+.aibs-consequence .aibs-consequence-actions {
+    order: 6;
+}
+
+/* The missing-picture panel on the review page. Same card as the quality panel beside it:
+   two panels doing the same job - telling a teacher what to fix before a learner sees it -
+   should not be two different shapes. */
+.aibs-review-media .aibs-quality-list:empty {
+    display: none;
+}
+
+.aibs-review-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 14px;
 }

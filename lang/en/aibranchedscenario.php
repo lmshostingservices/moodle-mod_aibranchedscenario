@@ -264,10 +264,42 @@ $string['published'] = 'Published';
 $string['publishedrevision'] = 'Published revision {$a}';
 $string['previewscenario'] = 'Preview as a learner';
 $string['review:title'] = 'Review the draft';
+// The debrief pages, named for the quality review so a warning can say which page is
+// short without repeating the heading the player already uses.
+$string['debrief:whatmattered'] = 'Lessons learnt';
+$string['debrief:criticaldecisions'] = 'Critical decisions';
+$string['debrief:practice'] = 'How to apply this';
+$string['debrief:takeaways'] = 'Key takeaways';
+$string['quality:pronounconflict'] = 'The cast record says {$a->name} is {$a->gender}, but the scenario calls them "{$a->pronoun}". The illustrations are briefed from the record, so a learner will read one thing and see another. Fix the pronoun in the editor, or change the character\'s gender, before publishing.';
+// What each picture in the image map illustrates. Shown to a teacher when a revision is
+// short of pictures, so "you are four short" can name which four rather than leaving them
+// to work it out from the screens.
+$string['map:opening'] = 'The opening: the place, before anyone has done anything';
+$string['map:lesson'] = 'The slide that teaches "{$a}"';
+$string['map:scene'] = 'The decision "{$a}"';
+$string['map:crisis'] = 'The escalated version of "{$a}"';
+$string['map:reactionpositive'] = 'The reaction after "{$a}" goes well';
+$string['map:reactionneutral'] = 'The reaction after "{$a}" settles nothing';
+$string['map:reactionnegative'] = 'The reaction after "{$a}" costs something';
+$string['map:debrieflesson'] = 'Lessons learnt, entry {$a}';
+$string['map:debriefcritical'] = 'Critical decisions, entry {$a}';
+$string['map:debriefpractice'] = 'How to apply this, entry {$a}';
+$string['map:debrieftakeaway'] = 'Key takeaways, entry {$a}';
+$string['quality:debrieflong'] = '"{$a->page}" carries {$a->have} entries for the {$a->wanted} principles this scenario teaches, so at least one answers no principle at all - and it will have no picture, because the illustrations follow the principles. Remove the extra entries or teach another principle.';
+$string['quality:skillnameleak'] = 'The skill name "{$a->skill}" appears in {$a->where}. Skill names are the scoring language of the debrief; a learner who meets one mid-scenario is being shown the marking scheme while they are being marked. Rewrite it in the words of the job.';
+$string['quality:debriefshort'] = '"{$a->page}" closes the loop on {$a->have} of the {$a->wanted} principles this scenario teaches. Add the missing {$a->page} entries in the editor before publishing, one for each principle, or a learner is taught something at the start that is never looked back at.';
 $string['quality:principleneedsexample'] = 'The principle "{$a}" teaches a rule with no example. Add the words a learner could actually say or the action they could take, in the editor before publishing - a learner remembers the words they can use, not the rule.';
 $string['quality:principleneedspitfall'] = 'The principle "{$a}" has no pitfall. Add the plausible-sounding version that does not work, and why - that is the thing a learner needs warning about.';
 $string['quality:spelling'] = 'This scenario is set to {$a->language}, but the writing uses the other variety\'s spelling in places: {$a->words}. Correct them in the editor before publishing, or the learner reads them.';
 $string['quality:spellingnode'] = 'Spelling';
+// Looking back at a decision already taken, from the consequence screen itself. The
+// read-only list behind the bar answered "what did I pick"; this answers "what did it do",
+// which is the question a branching scenario exists to make a learner ask.
+$string['reviewback'] = 'Previous decision';
+$string['reviewforward'] = 'Next decision';
+$string['reviewreturn'] = 'Back to where you were';
+$string['reviewnote'] = 'Looking back. Nothing here changes your answers or your score.';
+$string['reviewposition'] = 'Decision {$a->current} of {$a->total}';
 $string['journey:readonly'] = 'What you have decided so far. Earlier decisions cannot be changed - their consequences have already happened.';
 $string['journey:sofar'] = 'Decisions so far';
 $string['bandgreen'] = 'Good from';
@@ -330,6 +362,16 @@ $string['work:built'] = 'Built {$a->nodes} decision points';
 $string['work:mediaqueued'] = 'Queued {$a} illustrations - they arrive in the background';
 $string['work:done'] = 'Done';
 $string['recordyouchose'] = 'You chose:';
+// The picture top-up: the shortfall a teacher is shown, and the controls that fix it.
+$string['error:nopublishedrevision'] = 'This activity has no published version yet, so there is nothing to check for missing pictures. Publish it first.';
+$string['topup:nothingmissing'] = 'Every picture this scenario calls for is already there.';
+$string['topup:heading'] = 'Missing pictures';
+$string['topup:short'] = 'This published version is short of {$a} pictures. Slides without their own picture fall back to borrowing another screen\'s, which is why two screens can look the same.';
+$string['topup:check'] = 'Check for missing pictures';
+$string['topup:make'] = 'Generate the missing pictures';
+$string['topup:made'] = 'Made {$a->made} of {$a->wanted}.';
+$string['topup:orphaned'] = '{$a} pictures belong to entries that have since been edited or removed. They cost nothing and are not shown to learners.';
+$string['topup:shared'] = 'Two or more screens are showing the same picture.';
 $string['media:incomplete'] = 'Only {$a->made} of {$a->wanted} pictures and clips were made, so some slides have no picture or no narration. Generate the media again to finish the set. Reason: {$a->why}';
 $string['media:nowhy'] = 'the run did not finish';
 $string['media:inflight'] = 'The scenario was imported, but its pictures and narration were not started: a media run for this activity is already under way. Wait for it to finish, then generate the media again from the activity settings.';
@@ -373,6 +415,7 @@ $string['field:charactergendernone'] = 'Not set - the narrator reads their line'
 $string['field:charactergenderhelp'] = 'Chooses the voice this person\'s spoken line is read in, and keeps their face the same from one scene image to the next. Left unset, the narrator reads the line and the illustrator is given nothing to hold to.';
 $string['gender:female'] = 'Female';
 $string['gender:male'] = 'Male';
+$string['gender:nonbinary'] = 'Non-binary';
 $string['field:decisions'] = 'Decision points';
 $string['field:decisionshint'] = 'How many decisions the learner makes on the longest path through the scenario.';
 $string['field:tone'] = 'Tone';
@@ -659,6 +702,7 @@ $string['error:nonodes'] = 'The scenario has no nodes.';
 $string['error:toomanynodes'] = 'The scenario has more than {$a} nodes.';
 $string['error:badnode'] = 'Node {$a} is not a valid node.';
 $string['error:badnodeid'] = 'Node {$a} has an unusable identifier.';
+$string['error:reservednodeid'] = 'The node id "{$a}" is a name the plugin already uses for one of its own pictures or clips, so a scene would silently take another screen\'s. Rename the node.';
 $string['error:duplicatenodeid'] = 'More than one node uses the identifier {$a}.';
 $string['error:nodenosituation'] = 'Node {$a} has no situation text.';
 $string['error:nodenochoices'] = 'Node {$a} offers no way forward.';
@@ -734,5 +778,9 @@ $string['privacy:metadata:aibranchedscenario_jobs:timemodified'] = 'When the req
 $string['privacy:metadata:lmslabs'] = 'Scenario generation is performed by the LMS Labs service, which passes the request to a contracted AI provider. Learner attempt data is never sent.';
 $string['privacy:metadata:lmslabs:sourcecontent'] = 'The source content and authoring inputs a teacher supplied for the scenario.';
 $string['privacy:metadata:lmslabs:siteid'] = 'The site identifier used to authenticate the request and account for credit use.';
+$string['privacy:revisionspath'] = 'Scenario versions you published';
+$string['privacy:metadata:aibranchedscenario_revisions'] = 'Published versions of a scenario record who published them, so an author can be credited and a version traced. The scenario text itself belongs to the activity rather than to the person who published it.';
+$string['privacy:metadata:aibranchedscenario_revisions:createdby'] = 'The user who published this version. Cleared when that user is erased; the version itself is kept so learners part-way through it are not disrupted.';
+$string['privacy:metadata:aibranchedscenario_revisions:timecreated'] = 'When this version was published.';
 $string['privacy:attemptpath'] = 'Attempt {$a}';
 $string['privacy:jobspath'] = 'AI generation requests';

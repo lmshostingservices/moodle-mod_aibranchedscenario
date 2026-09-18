@@ -467,12 +467,20 @@
                             {{#str}} field:charactergender, mod_aibranchedscenario {{/str}}</label>
                         <select class="aibs-input" id="aibs-chargender-{{index}}"
                                 data-character-field="gender">
-                            <option value="" {{^ismale}}{{^isfemale}}selected{{/isfemale}}{{/ismale}}>
+                            {{! Three values, not two. The service can legitimately send
+                                non-binary, and a select that cannot hold it meant a teacher
+                                who opened the character to fix a typo silently reset the
+                                field to "not set" - which then took the person's gender out
+                                of the picture brief and let the image model choose. A field
+                                the UI cannot express is a field the UI quietly destroys. }}
+                            <option value="" {{^ismale}}{{^isfemale}}{{^isnonbinary}}selected{{/isnonbinary}}{{/isfemale}}{{/ismale}}>
                                 {{#str}} field:charactergendernone, mod_aibranchedscenario {{/str}}</option>
                             <option value="female" {{#isfemale}}selected{{/isfemale}}>
                                 {{#str}} gender:female, mod_aibranchedscenario {{/str}}</option>
                             <option value="male" {{#ismale}}selected{{/ismale}}>
                                 {{#str}} gender:male, mod_aibranchedscenario {{/str}}</option>
+                            <option value="non-binary" {{#isnonbinary}}selected{{/isnonbinary}}>
+                                {{#str}} gender:nonbinary, mod_aibranchedscenario {{/str}}</option>
                         </select>
                         <p class="aibs-field-help">
                             {{#str}} field:charactergenderhelp, mod_aibranchedscenario {{/str}}</p>

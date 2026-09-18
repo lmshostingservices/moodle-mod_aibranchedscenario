@@ -102,6 +102,19 @@ class provider implements
             'timemodified' => 'privacy:metadata:aibranchedscenario_jobs:timemodified',
         ], 'privacy:metadata:aibranchedscenario_jobs');
 
+        // The teacher who pressed Publish. A stored user id that this provider did not
+        // declare, export or delete - so a teacher who exercised erasure kept their id on
+        // every revision they had published. Found by auditing the declared metadata against
+        // db/install.xml column by column, which is a comparison nothing was making.
+        //
+        // The revision itself is activity content and is not deleted with a user: a
+        // published scenario has to keep working for the learners taking it. The
+        // attribution is what goes.
+        $collection->add_database_table('aibranchedscenario_revisions', [
+            'createdby'   => 'privacy:metadata:aibranchedscenario_revisions:createdby',
+            'timecreated' => 'privacy:metadata:aibranchedscenario_revisions:timecreated',
+        ], 'privacy:metadata:aibranchedscenario_revisions');
+
         $collection->add_external_location_link('lmslabs', [
             'sourcecontent' => 'privacy:metadata:lmslabs:sourcecontent',
             'siteid'        => 'privacy:metadata:lmslabs:siteid',
@@ -225,7 +238,44 @@ class provider implements
             }
 
             self::export_jobs($context, $cm->instance, $userid);
+            self::export_revisions($context, (int)$cm->instance, $userid);
         }
+    }
+
+    /**
+     * Export the revisions this user published, as attribution rather than as content.
+     *
+     * The scenario text inside a revision belongs to the activity, not to the teacher who
+     * pressed Publish, so it is not exported here - what is exported is the fact that they
+     * published it and when, which is the part that is about them.
+     *
+     * @param context_module $context The module context.
+     * @param int $scenarioid The activity instance.
+     * @param int $userid The user being exported.
+     * @return void
+     */
+    protected static function export_revisions(context_module $context, int $scenarioid, int $userid): void {
+        global $DB;
+        $revisions = $DB->get_records(
+            'aibranchedscenario_revisions',
+            ['scenarioid' => $scenarioid, 'createdby' => $userid],
+            'revision ASC',
+            'id, revision, timecreated'
+        );
+        if (!$revisions) {
+            return;
+        }
+        $rows = [];
+        foreach ($revisions as $revision) {
+            $rows[] = (object)[
+                'revision'    => (int)$revision->revision,
+                'timecreated' => transform::datetime((int)$revision->timecreated),
+            ];
+        }
+        writer::with_context($context)->export_data(
+            [get_string('privacy:revisionspath', 'mod_aibranchedscenario')],
+            (object)['published' => $rows]
+        );
     }
 
     /**
@@ -364,6 +414,33 @@ class provider implements
             return;
         }
         \mod_aibranchedscenario\external\helper::recalculate_for_user($scenario, $userid);
+        self::unattribute_revisions($scenarioid, $userid);
+    }
+
+    /**
+     * Take a user's name off the revisions they published, without deleting the revisions.
+     *
+     * A published revision is activity content: learners are part-way through attempts
+     * against it, and deleting it to honour one teacher's erasure would take their work with
+     * it. What can go is the attribution, and that is the part that identifies a person.
+     *
+     * Zero rather than a deleted row, because the column is NOT NULL and every read of it
+     * already treats an unknown publisher as "the site". Found by comparing declared
+     * metadata against db/install.xml: this column was stored, undeclared, unexported and
+     * undeleted.
+     *
+     * @param int $scenarioid The activity instance.
+     * @param int $userid The user being erased.
+     * @return void
+     */
+    protected static function unattribute_revisions(int $scenarioid, int $userid): void {
+        global $DB;
+        $DB->set_field(
+            'aibranchedscenario_revisions',
+            'createdby',
+            0,
+            ['scenarioid' => $scenarioid, 'createdby' => $userid]
+        );
     }
 
     /**

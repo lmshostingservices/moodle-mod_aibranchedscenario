@@ -154,13 +154,30 @@ class scenario_mapper {
      * @return array
      */
     protected static function person_from_wire(array $person): array {
+        // The same three values the validator stores, matched in the spellings the service
+        // actually sends. This used to accept "male" and "female" and nothing else, so
+        // "Female", "woman" and "non-binary" all arrived here and left as an empty string -
+        // the person's gender then never reached the picture brief and the image model
+        // chose for itself.
         $gender = \core_text::strtolower(trim((string)($person['gender'] ?? '')));
+        $known = [
+            'male'       => ['male', 'm', 'man', 'boy'],
+            'female'     => ['female', 'f', 'woman', 'girl'],
+            'non-binary' => ['non-binary', 'nonbinary', 'non binary', 'nb', 'enby'],
+        ];
+        $canonical = '';
+        foreach ($known as $value => $spellings) {
+            if (in_array($gender, $spellings, true)) {
+                $canonical = $value;
+                break;
+            }
+        }
         return [
             'name'       => (string)($person['name'] ?? ''),
             'role'       => (string)($person['role'] ?? ''),
             'trait'      => (string)($person['trait'] ?? ''),
             'appearance' => (string)($person['appearance'] ?? ''),
-            'gender'     => in_array($gender, ['male', 'female'], true) ? $gender : '',
+            'gender'     => $canonical,
         ];
     }
 

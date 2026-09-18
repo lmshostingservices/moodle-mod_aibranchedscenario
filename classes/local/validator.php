@@ -274,7 +274,7 @@ class validator {
         }
         $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $value);
         $value = trim(preg_replace('/\s+/u', ' ', (string)$value));
-        return \core_text::substr($value, 0, $max);
+        return self::clip_to_words($value, $max);
     }
 
     /**
@@ -295,7 +295,7 @@ class validator {
         $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $value);
         $value = preg_replace('/\n{3,}/u', "\n\n", (string)$value);
         $value = trim($value);
-        return \core_text::substr($value, 0, $max);
+        return self::clip_to_words($value, $max);
     }
 
     /**
@@ -480,8 +480,18 @@ class validator {
         if (!is_string($colour) || !preg_match('/^#[0-9a-fA-F]{6}$/', $colour)) {
             $colour = '#4a6fa5';
         }
-        $gender = ($raw['gender'] ?? '') === 'male' || ($raw['gender'] ?? '') === 'female'
-            ? $raw['gender'] : '';
+        // Anything that was not exactly "male" or "female" used to be replaced with an
+        // empty string and nobody was told - so "woman", "f", "Female" and a typo all
+        // became "not stated", the image brief then omitted the person's gender entirely,
+        // and the picture model chose for itself. With a name like Alex it chose freely,
+        // which is how a learner ended up reading "he" beside a photograph of a woman.
+        //
+        // Two changes. Common spellings are understood rather than discarded, and
+        // non-binary is accepted because it is a value the service can legitimately send.
+        // What is genuinely unknown stays empty - but see pronoun_conflicts() and the
+        // image brief, both of which now treat empty as "say nothing" rather than as
+        // "anything goes".
+        $gender = $this->normalise_gender($raw['gender'] ?? '');
         return [
             'id'           => $this->identifier($raw['id'] ?? '') ?: '',
             'name'         => $name,
@@ -492,6 +502,70 @@ class validator {
             'avatarcolour' => $colour,
             'gender'       => $gender,
         ];
+    }
+
+    /**
+     * Cut a field to its ceiling without severing a word.
+     *
+     * Both of the text helpers ended in a bare `core_text::substr()`, so a field at its
+     * limit was cut mid-word: a learner read "the machine is vibr", and a picture brief
+     * built from that text was briefed from a half-sentence. The image brief has had a
+     * word-safe trim since v1.70.0; the fields a learner actually reads did not, and the
+     * one harness check that looked at it fed a single unbroken token, which cannot detect
+     * word severing at all.
+     *
+     * The cut falls back to the hard one when there is no space to cut at - a single long
+     * token, or a language that does not put spaces between words - because a field cut to
+     * nothing is worse than a field cut mid-word.
+     *
+     * @param string $value The cleaned value.
+     * @param int $max Ceiling in characters.
+     * @return string
+     */
+    protected static function clip_to_words(string $value, int $max): string {
+        if (\core_text::strlen($value) <= $max) {
+            return $value;
+        }
+        $cut = \core_text::substr($value, 0, $max);
+        $space = max(strrpos($cut, ' '), strrpos($cut, "\n"));
+        // Only back off to a word boundary when doing so keeps most of the field. Cutting
+        // a 200-character limit down to 40 to land on a space loses more than it saves.
+        if ($space !== false && $space > (int)($max * 0.6)) {
+            return rtrim(\core_text::substr($cut, 0, $space));
+        }
+        return $cut;
+    }
+
+    /**
+     * Read a gender the service sent, in the spellings it actually sends.
+     *
+     * A closed set of three values, matched loosely on the way in and stored exactly on the
+     * way out, so everything downstream - the voice picker, the image brief, the pronoun
+     * check - reads one vocabulary rather than three.
+     *
+     * @param mixed $raw Whatever arrived in the gender field.
+     * @return string One of male, female, non-binary, or empty when genuinely unstated.
+     */
+    protected function normalise_gender($raw): string {
+        if (!is_string($raw)) {
+            return '';
+        }
+        $value = \core_text::strtolower(trim($raw));
+        if ($value === '') {
+            return '';
+        }
+        $known = [
+            'male'       => ['male', 'm', 'man', 'boy', 'he', 'him'],
+            'female'     => ['female', 'f', 'woman', 'girl', 'she', 'her'],
+            'non-binary' => ['non-binary', 'nonbinary', 'non binary', 'nb', 'enby', 'they',
+                'them', 'other'],
+        ];
+        foreach ($known as $canonical => $spellings) {
+            if (in_array($value, $spellings, true)) {
+                return $canonical;
+            }
+        }
+        return '';
     }
 
     /**
@@ -684,11 +758,25 @@ class validator {
         // the second file, so one screen silently gets another screen's picture or another
         // screen's voice.
         $taken[] = 'opening';
+        // The debrief writes ONE PICTURE PER ENTRY since v1.81.0 - debrief_lesson_0,
+        // debrief_takeaway_2 - and the old page-level names were still what was reserved
+        // here, so the families the plugin actually writes were unguarded for a release.
+        // The entry index is not known until the debrief is read, so a whole prefix is
+        // reserved rather than a list: nothing a node or choice is called may begin with
+        // one of these, which is the guarantee a numbered family needs.
+        $reservedprefixes = ['debrief_lesson_', 'debrief_critical_', 'debrief_practice_',
+            'debrief_takeaway_', 'lesson_'];
+        // The names nothing in the scenario may be called. Separate from $taken, which also
+        // holds every node id so that a CHOICE cannot take one - a node checked against
+        // $taken would always appear to clash with itself.
+        $reservednames = ['opening'];
         foreach (['whatmattered', 'criticaldecisions', 'practice', 'takeaways'] as $page) {
             $taken[] = 'debrief_' . $page;
+            $reservednames[] = 'debrief_' . $page;
         }
         foreach ($principleids as $principleid) {
             $taken[] = 'lesson_' . $principleid;
+            $reservednames[] = 'lesson_' . $principleid;
         }
 
         foreach ($raw as $rawnode) {
@@ -697,6 +785,13 @@ class validator {
                 $taken[] = $nodeid;
                 $taken[] = $nodeid . '_crisis';
                 $taken[] = $nodeid . '_said';
+                // The reaction frames, one per outcome signal. A node called "n1" and a
+                // node called "n1_after_negative" would otherwise fight over one filename,
+                // and publishing drops the second - so one screen silently shows another
+                // screen's picture.
+                foreach (schema::signals() as $signal) {
+                    $taken[] = $nodeid . '_after_' . $signal;
+                }
             }
             foreach ((array)($rawnode['choices'] ?? []) as $rawchoice) {
                 $choiceid = is_array($rawchoice) ? $this->identifier($rawchoice['id'] ?? '') : '';
@@ -721,10 +816,67 @@ class validator {
                 $this->fail(get_string('error:duplicatenodeid', 'mod_aibranchedscenario', $id));
                 continue;
             }
+            // THE RESERVED LIST WAS ONLY EVER APPLIED TO CHOICE IDS.
+            //
+            // It was built here, carried into normalise_node() and used there to make choice
+            // ids unique; node ids were checked against other node ids and nothing else. So
+            // a node called "opening", "lesson_p1" or "debrief_practice_0" was accepted and
+            // then collided with a picture the media manager writes under that exact name -
+            // and publishing DROPS the second file, so one screen silently shows another
+            // screen's photograph. Found by a harness check that builds the image map from a
+            // definition whose node is named after a lesson and counts the entries: two
+            // things, one key, and the count was one short.
+            //
+            // Checked against $reservednames rather than $taken, because $taken deliberately
+            // holds every node id already - it exists so a choice cannot take one - and a
+            // node id would therefore always appear to clash with itself.
+            if ($this->reserved_name($id, $reservednames, $reservedprefixes)) {
+                $this->fail(get_string('error:reservednodeid', 'mod_aibranchedscenario', $id));
+                continue;
+            }
             $seen[] = $id;
             $out[] = $this->normalise_node($rawnode, $id, $principleids, $voices, $taken);
         }
         return $out;
+    }
+
+    /**
+     * Is this identifier one the media manager already writes a file under?
+     *
+     * Exact names for the fixed families, and a prefix for the numbered ones - the debrief's
+     * entry index is not known until the debrief is read, and a numbered family can only be
+     * guarded by reserving the whole prefix.
+     *
+     * @param string $id The identifier being claimed.
+     * @param string[] $names Reserved exact names.
+     * @param string[] $prefixes Reserved prefixes.
+     * @return bool
+     */
+    protected function reserved_name(string $id, array $names, array $prefixes): bool {
+        if (in_array($id, $names, true)) {
+            return true;
+        }
+        foreach ($prefixes as $prefix) {
+            if (strpos($id, $prefix) === 0) {
+                return true;
+            }
+        }
+        // The reaction frames are keyed by SUFFIX - <nodeid>_after_<signal> - so a node
+        // called "n1_after_negative" collides with node n1's negative reaction whatever n1
+        // is called. A prefix list cannot see that, which is why the first harness check
+        // written for it passed for the wrong reason: the fixture was rejected for having
+        // no situation text, and I read the rejection as proof of a guard that did not
+        // exist. A check that throws is not a check that throws for the right reason.
+        foreach (schema::signals() as $signal) {
+            $suffix = '_after_' . $signal;
+            if (
+                \core_text::strlen($id) > \core_text::strlen($suffix)
+                    && substr($id, -\core_text::strlen($suffix)) === $suffix
+            ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -988,10 +1140,15 @@ class validator {
             }
             return $out;
         };
+        // The ceiling matches the principle ceiling deliberately. The debrief carries one
+        // entry per principle, up to eight principles are accepted, and these were capped
+        // at six - so a scenario teaching seven or eight ideas had its debrief silently
+        // truncated by the thing that exists to protect it. A cap that cuts below the
+        // contract is not a guard, it is the fault.
         return [
-            'whatmattered'      => $listof($raw['whatmattered'] ?? [], 6, 600),
-            'criticaldecisions' => $listof($raw['criticaldecisions'] ?? [], 6, 600),
-            'practice'          => $listof($raw['practice'] ?? [], 6, 600),
+            'whatmattered'      => $listof($raw['whatmattered'] ?? [], 8, 600),
+            'criticaldecisions' => $listof($raw['criticaldecisions'] ?? [], 8, 600),
+            'practice'          => $listof($raw['practice'] ?? [], 8, 600),
             'sourceconnection'  => $this->text($raw['sourceconnection'] ?? '', 2000),
         ];
     }
@@ -1007,7 +1164,9 @@ class validator {
             return [];
         }
         $out = [];
-        foreach (array_slice($raw, 0, 6) as $item) {
+        // Eight, to match the principle ceiling: one takeaway per principle. Six cut the
+        // debrief below its own contract on a scenario teaching seven or eight ideas.
+        foreach (array_slice($raw, 0, 8) as $item) {
             if (!is_array($item)) {
                 continue;
             }

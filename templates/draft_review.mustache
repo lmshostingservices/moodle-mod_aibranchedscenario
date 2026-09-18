@@ -37,6 +37,7 @@
         "hookparas": ["It is ten past the end of your shift."],
         "nodecount": 8,
         "imagecount": 8,
+        "published": true,
         "hasprinciples": false,
         "principles": [],
         "haswarnings": true,
@@ -85,6 +86,28 @@
                     </ul>
                 </section>
             {{/hasprinciples}}
+
+            {{! MISSING PICTURES, AND THE WAY TO FIX THEM.
+                reconcile_images() could answer "which slots are unfilled" for a whole
+                release before anything asked it, and the only remedy a teacher had was to
+                regenerate every picture at the full price. This is where the answer
+                surfaces and where the four-picture job is started. Checking costs nothing;
+                only Generate spends. }}
+            {{#published}}
+                <section class="aibs-card aibs-review-media" data-region="topup">
+                    <h3 class="aibs-h3">{{#str}} topup:heading, mod_aibranchedscenario {{/str}}</h3>
+                    <p class="aibs-field-hint" data-region="topupstatus"></p>
+                    <ul class="aibs-quality-list" data-region="topuplist"></ul>
+                    <div class="aibs-review-actions">
+                        <button type="button" class="aibs-btn aibs-btn-secondary"
+                                data-action="topupcheck">
+                            {{#str}} topup:check, mod_aibranchedscenario {{/str}}</button>
+                        <button type="button" class="aibs-btn aibs-btn-primary"
+                                data-action="topupmake" hidden>
+                            {{#str}} topup:make, mod_aibranchedscenario {{/str}}</button>
+                    </div>
+                </section>
+            {{/published}}
 
             {{#haswarnings}}
                 <section class="aibs-card aibs-review-quality">

@@ -162,6 +162,7 @@ class wizard implements \renderable, \templatable {
                 'appearance' => $source['characters'][$i]['appearance'] ?? '',
                 'ismale'     => ($source['characters'][$i]['gender'] ?? '') === 'male',
                 'isfemale'   => ($source['characters'][$i]['gender'] ?? '') === 'female',
+                'isnonbinary' => ($source['characters'][$i]['gender'] ?? '') === 'non-binary',
             ];
         }
 

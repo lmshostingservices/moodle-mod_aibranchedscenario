@@ -205,6 +205,12 @@ class attempt_manager {
         $DB->update_record('aibranchedscenario_attempts', $attempt);
     }
 
+    /**
+     * How many attempts this user has spent on this scenario.
+     *
+     * @param int $userid The learner.
+     * @return int Attempts that count against the allowance.
+     */
     public function count_user_attempts(int $userid): int {
         global $DB;
         // ABANDONED ATTEMPTS DO NOT COUNT.

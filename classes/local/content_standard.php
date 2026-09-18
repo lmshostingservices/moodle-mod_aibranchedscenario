@@ -115,6 +115,26 @@ class content_standard {
                     . 'taught before the scenario starts, so they are the difference between '
                     . 'a learner who knows the principle and one who can use it.',
             ],
+            // Watched to fail: a scenario that taught three principles closed with two
+            // lessons learnt, two critical decisions and two takeaways, so a third of what
+            // the learner was taught was never looked back at. Nothing asked for a count,
+            // so the model chose one, and two is the cheapest number that still reads as a
+            // list.
+            'debriefcount' => [
+                'short' => 'The debrief carries one entry per principle - the same number of '
+                    . 'lessons learnt, critical decisions and takeaways as there are '
+                    . 'principles, never fewer.',
+                'long'  => '- The debrief closes the loop on what was taught, so it carries '
+                    . 'ONE ENTRY PER PRINCIPLE and never fewer. Three principles means three '
+                    . 'lessons learnt, three critical decisions, three practice points and '
+                    . 'three takeaways. Each entry answers its own principle in the same '
+                    . 'order the principles were taught, so lesson one is about principle '
+                    . 'one, takeaway one is about principle one, and a learner can follow a '
+                    . 'single idea from the slide that taught it, through the decision that '
+                    . 'tested it, to the takeaway that names it. Do not merge two principles '
+                    . 'into one entry and do not drop the principle that was hardest to '
+                    . 'write about - that is usually the one worth keeping.',
+            ],
             'cast' => [
                 'short' => 'Name the same cast in every scene; no unnamed stand-ins.',
                 'long'  => '- The scenario has a named cast, and every scene names the people '

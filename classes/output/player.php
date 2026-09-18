@@ -76,16 +76,38 @@ class player implements \renderable, \templatable {
         if (!is_array($definition) || !$revision) {
             return '';
         }
-        $start = (string)($definition['startnode'] ?? '');
-        if ($start === '') {
-            return '';
-        }
         $media = new media_manager($this->context);
         $scenes = $media->urls_for_revision(
             media_manager::AREA_REVISION_SCENE,
             (int)$revision->revision
         );
-        return (string)($scenes[$start] ?? '');
+
+        // ITS OWN ESTABLISHING FRAME FIRST.
+        //
+        // This used to return the START NODE's photograph. The start node IS the first
+        // decision, so a learner's first three screens - the opening situation, decision
+        // one, and the consequence of decision one - were the same picture three times
+        // before they had made a second choice. Three identical frames inside ten seconds
+        // is the product introducing itself as cheap.
+        //
+        // Since v1.81.0 the opening has a wide frame of its own, briefed from the
+        // scenario's setting and hook rather than from a node: the place, before anyone
+        // has done anything. The start node's picture stays as the fallback for scenarios
+        // published before that release.
+        // NO FALLBACK. Its own frame, or none.
+        //
+        // This fell back to the START NODE's photograph, and the start node IS the first
+        // decision - so the opening, decision one and the consequence of decision one were
+        // one picture three times before a learner had made a second choice. v1.81.0 gave
+        // the opening a frame of its own and left the fallback in place "for scenarios
+        // published before it", which meant the fault was still one refused image away on
+        // every scenario, and no check could fail on it because every key still resolved to
+        // a picture.
+        //
+        // A borrowed picture is not a cheaper version of the right one. It is the fault,
+        // arriving quietly. An empty column says "this frame is missing" - which the
+        // missing-picture panel on the review page then names and offers to fix.
+        return (string)($scenes[media_manager::OPENING_KEY] ?? '');
     }
 
     /**
@@ -126,21 +148,12 @@ class player implements \renderable, \templatable {
             media_manager::AREA_REVISION_SCENE,
             (int)$revision->revision
         );
-        // A lesson slide with no picture of its own borrows a DECISION node's frame, never
-        // a debrief one. The fallback was array_values() of a map sorted by filename, and
-        // 'debrief_criticaldecisions' sorts first - so a principle with no picture was
-        // illustrated with the debrief's "decisions that changed things" photograph, which
-        // shows a learner the ending before the scenario has started.
-        $fallback = [];
-        foreach ($scenes as $key => $url) {
-            $borrowed = strpos((string)$key, 'debrief_') === 0
-                || strpos((string)$key, 'lesson_') === 0
-                || strpos((string)$key, 'end_') === 0;
-            if ($borrowed) {
-                continue;
-            }
-            $fallback[] = (string)$url;
-        }
+        // The borrowing list that used to live here is gone. Every screen shows its own
+        // picture or no picture: a frame borrowed from elsewhere in the set is how two
+        // consecutive screens end up identical, and it is invisible to every check, because
+        // a borrowed picture still resolves to a picture. What a missing frame gets now is
+        // an empty column, which the missing-picture panel on the review page names and
+        // offers to generate on its own.
         $narration = $media->urls_for_revision(
             media_manager::AREA_REVISION_NARRATION,
             (int)$revision->revision
@@ -148,14 +161,12 @@ class player implements \renderable, \templatable {
 
         $slides = [];
         foreach (array_values($definition['principles']) as $position => $principle) {
-            // Its own picture where there is one. A scenario published before these were
-            // generated has none, and borrowing a scene is still better than an empty
-            // frame on the screens that open the activity.
+            // Its own picture, or none. The rotation that used to stand in for a missing
+            // lesson frame put a photograph of a scene the learner had not reached yet
+            // beside words it had nothing to do with - and then showed it to them again a
+            // minute later when they actually got there.
             $key = media_manager::principle_key($principle, $position + 1);
             $image = (string)($scenes['lesson_' . $key] ?? '');
-            if ($image === '' && $fallback) {
-                $image = (string)$fallback[$position % count($fallback)];
-            }
             $slides[] = [
                 'number'      => $position + 1,
                 'title'       => (string)$principle['title'],
@@ -285,8 +296,10 @@ class player implements \renderable, \templatable {
             // is most obvious because they are consecutive. It takes the frame of the node
             // the scenario actually opens on, which is what the opening situation
             // describes; the lesson slides keep theirs.
-            'openingimage' => $this->opening_scene($definition, $revision)
-                ?: ($lessonslides ? (string)$lessonslides[0]['imageurl'] : ''),
+            // And no second fallback to the first lesson slide's picture, which was the
+            // same fault one step further along: the opening and the slide immediately
+            // after it showing one photograph.
+            'openingimage' => $this->opening_scene($definition, $revision),
             // The opening situation has a clip of its own. It was being generated and
             // published and then never asked for: this slide is not a node, so nothing in
             // the node payload covered it, and its article carried no audio attribute to

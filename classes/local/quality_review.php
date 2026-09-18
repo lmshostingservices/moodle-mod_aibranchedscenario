@@ -66,6 +66,14 @@ class quality_review {
         // Principles are a property of the document too, and like spelling they have to be
         // checked before the node walk or they are lost to the early return below.
         $spelling = array_merge($spelling, self::principle_warnings($definition));
+        // The debrief is a property of the document as well, and it is the part a learner
+        // reaches last and remembers longest.
+        $spelling = array_merge($spelling, self::debrief_warnings($definition));
+        // Pronouns are a property of the whole document too: the sentence that contradicts
+        // a cast record can be anywhere in it.
+        $spelling = array_merge($spelling, self::pronoun_warnings($definition));
+        // And the scoring vocabulary, which is supposed to stay in the debrief.
+        $spelling = array_merge($spelling, self::skillname_warnings($definition));
         $nodes = $definition['nodes'] ?? [];
         if (!is_array($nodes) || !$nodes) {
             return $spelling;
@@ -123,6 +131,364 @@ class quality_review {
                     ),
                 ];
             }
+        }
+        return $out;
+    }
+
+    /**
+     * Prose that calls a character by a pronoun their record contradicts.
+     *
+     * The gender on the cast record and the pronoun in the sentence are produced by two
+     * different steps and, until now, were never compared by anything. So a scenario could
+     * carry a record saying Alex is female and prose saying "He feels some decisions are
+     * not well thought out", and the picture - briefed from the record - showed a woman
+     * beside the word "he". Every check in the plugin passed. The learner saw it in a
+     * second.
+     *
+     * Only sentences that name the character are read. A pronoun three paragraphs away
+     * belongs to somebody else, and a scenario with two people in it would otherwise flag
+     * on every page.
+     *
+     * Reported rather than rejected, for the same reason the principle check reports: the
+     * teacher has been charged, and a pronoun is a one-word fix in the editor. What it will
+     * not do is stay silent.
+     *
+     * @param array $definition A validated definition.
+     * @return array Warning rows.
+     */
+    protected static function pronoun_warnings(array $definition): array {
+        $people = array_merge(
+            [$definition['facilitator'] ?? []],
+            (array)($definition['characters'] ?? [])
+        );
+        // Narrative only. all_prose() walks the WHOLE definition, cast records included, so
+        // reading it here matched every character's own name field against the name fields
+        // beside it and reported a conflict on a scenario whose prose never mentioned them.
+        // Caught by the first test written for this check, which is the argument for
+        // writing the test before believing the code.
+        $prose = self::narrative_prose($definition);
+        $out = [];
+        $seen = [];
+        foreach ($people as $person) {
+            if (!is_array($person)) {
+                continue;
+            }
+            $name = trim((string)($person['name'] ?? ''));
+            $gender = (string)($person['gender'] ?? '');
+            // Nothing to contradict: an unstated gender is not a conflict, it is a gap,
+            // and the image brief handles a gap by saying nothing rather than by guessing.
+            if ($name === '' || ($gender !== 'male' && $gender !== 'female')) {
+                continue;
+            }
+            if (in_array($name, $seen, true)) {
+                continue;
+            }
+            $seen[] = $name;
+            $wrong = $gender === 'male'
+                ? '/\b(she|her|hers|herself)\b/iu'
+                : '/\b(he|him|his|himself)\b/iu';
+            $others = [];
+            foreach ($people as $other) {
+                $othername = is_array($other) ? trim((string)($other['name'] ?? '')) : '';
+                if ($othername !== '' && $othername !== $name) {
+                    $others[] = $othername;
+                }
+            }
+            $window = self::sentences_naming($prose, $name, $others);
+            if ($window === '' || !preg_match($wrong, $window, $match)) {
+                continue;
+            }
+            $out[] = [
+                'nodeid'  => 'cast_' . \core_text::strtolower($name),
+                'node'    => $name,
+                'message' => get_string(
+                    'quality:pronounconflict',
+                    'mod_aibranchedscenario',
+                    (object)[
+                        'name'    => $name,
+                        'gender'  => get_string(
+                            'gender:' . ($gender === 'male' ? 'male' : 'female'),
+                            'mod_aibranchedscenario'
+                        ),
+                        'pronoun' => \core_text::strtolower($match[1]),
+                    ]
+                ),
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * The scoring vocabulary appearing in the scenario itself.
+     *
+     * The four skills - presence, adaptability, empathy, clarity - are how the debrief
+     * describes what a learner did. They are not words that belong in the story: a scene
+     * that says "this calls for empathy" is showing the learner the marking scheme while
+     * they are being marked, and it tells them which option to pick without teaching them
+     * anything about why.
+     *
+     * The content standard has asked for this since v1.44.0 and nothing has ever read the
+     * generated text back to see whether it was obeyed - so the rule was a request. Asking
+     * is not the same as getting, which this plugin has now learned in four separate places.
+     *
+     * Whole words only. "Clarity" is a skill name; "clarify the deadline" is a person doing
+     * their job, and a check that flags the second stops being read.
+     *
+     * @param array $definition A validated definition.
+     * @return array Warning rows.
+     */
+    protected static function skillname_warnings(array $definition): array {
+        $out = [];
+        $skills = schema::skills();
+        $places = [];
+        foreach ((array)($definition['nodes'] ?? []) as $node) {
+            if (!is_array($node)) {
+                continue;
+            }
+            $id = (string)($node['id'] ?? '');
+            $title = trim((string)($node['title'] ?? '')) ?: $id;
+            foreach (['situation', 'challenge', 'facilitatorspeech', 'summary'] as $field) {
+                $places[] = [$id, $title, (string)($node[$field] ?? '')];
+            }
+            foreach ((array)($node['choices'] ?? []) as $choice) {
+                if (!is_array($choice)) {
+                    continue;
+                }
+                foreach (['text', 'consequence', 'feedback'] as $field) {
+                    $places[] = [$id, $title, (string)($choice[$field] ?? '')];
+                }
+            }
+        }
+        // The teaching slides count too: a principle named after a skill teaches the
+        // scoreboard rather than the job.
+        foreach ((array)($definition['principles'] ?? []) as $principle) {
+            if (!is_array($principle)) {
+                continue;
+            }
+            $title = trim((string)($principle['title'] ?? ''));
+            foreach (['title', 'summary', 'example', 'pitfall'] as $field) {
+                $places[] = [(string)($principle['id'] ?? ''), $title, (string)($principle[$field] ?? '')];
+            }
+        }
+
+        $seen = [];
+        foreach ($places as $place) {
+            [$id, $title, $text] = $place;
+            if (trim($text) === '') {
+                continue;
+            }
+            foreach ($skills as $skill) {
+                if (isset($seen[$id . '|' . $skill])) {
+                    continue;
+                }
+                if (!preg_match('/\b' . preg_quote($skill, '/') . '\b/iu', $text)) {
+                    continue;
+                }
+                $seen[$id . '|' . $skill] = true;
+                $out[] = [
+                    'nodeid'  => $id,
+                    'node'    => $title,
+                    'message' => get_string(
+                        'quality:skillnameleak',
+                        'mod_aibranchedscenario',
+                        (object)['skill' => $skill, 'where' => $title !== '' ? $title : $id]
+                    ),
+                ];
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * The text a learner actually reads, and nothing else.
+     *
+     * Distinct from all_prose(), which walks everything in the definition including ids,
+     * filenames and the cast records themselves. For a pronoun check that distinction is
+     * the difference between reading a story and reading a database row.
+     *
+     * @param array $definition A validated definition.
+     * @return string
+     */
+    protected static function narrative_prose(array $definition): string {
+        $bits = [
+            (string)($definition['hook'] ?? ''),
+            (string)($definition['setting'] ?? ''),
+        ];
+        foreach ((array)($definition['nodes'] ?? []) as $node) {
+            if (!is_array($node)) {
+                continue;
+            }
+            foreach (['situation', 'challenge', 'facilitatorspeech', 'summary', 'body'] as $field) {
+                $bits[] = (string)($node[$field] ?? '');
+            }
+            foreach ((array)($node['crisis'] ?? []) as $value) {
+                if (is_string($value)) {
+                    $bits[] = $value;
+                }
+            }
+            foreach ((array)($node['choices'] ?? []) as $choice) {
+                if (!is_array($choice)) {
+                    continue;
+                }
+                // The field is 'text', not 'label'. The validator stores a choice's wording under
+                // 'text' (validator.php:956) and this read 'label', which does not exist on
+                // a validated choice - so every option's wording was excluded from the
+                // pronoun check and a female Alex called "he" inside an option shipped
+                // silently. The fixtures written for the check used hand-built arrays with
+                // 'label' in them, so the test agreed with the bug. Fixtures are built
+                // through the validator now, which is the only way a fixture can disagree
+                // with the code it is testing.
+                foreach (['text', 'label', 'consequence', 'feedback'] as $field) {
+                    $bits[] = (string)($choice[$field] ?? '');
+                }
+            }
+        }
+        // The teaching slides are prose a learner reads, and were left out: a pronoun
+        // conflict in a principle's summary, example or pitfall was invisible.
+        foreach ((array)($definition['principles'] ?? []) as $principle) {
+            if (!is_array($principle)) {
+                continue;
+            }
+            foreach (['title', 'summary', 'example', 'pitfall'] as $field) {
+                $bits[] = (string)($principle[$field] ?? '');
+            }
+        }
+        $debrief = (array)($definition['debrief'] ?? []);
+        foreach (['whatmattered', 'criticaldecisions', 'practice'] as $page) {
+            foreach ((array)($debrief[$page] ?? []) as $line) {
+                if (is_string($line)) {
+                    $bits[] = $line;
+                }
+            }
+        }
+        $bits[] = (string)($debrief['sourceconnection'] ?? '');
+        foreach ((array)($definition['takeaways'] ?? []) as $takeaway) {
+            if (is_array($takeaway)) {
+                $bits[] = (string)($takeaway['heading'] ?? '');
+                $bits[] = (string)($takeaway['body'] ?? '');
+            }
+        }
+        return implode(' ', array_filter($bits, fn($bit) => trim($bit) !== ''));
+    }
+
+    /**
+     * The sentences that mention a person, and the one immediately after each.
+     *
+     * A pronoun usually lands in the sentence after the one that introduced the name -
+     * "Alex reads the roster. She has been here twice this week" - so the following
+     * sentence is part of the window. Two sentences is where the confidence stops: past
+     * that the pronoun is as likely to belong to whoever was named next.
+     *
+     * @param string $prose All the scenario's text.
+     * @param string $name The person's name.
+     * @param string[] $others Everybody else's names.
+     * @return string The sentences that concern them, joined.
+     */
+    protected static function sentences_naming(string $prose, string $name, array $others = []): string {
+        $sentences = preg_split('/(?<=[.!?])\s+/u', $prose) ?: [];
+        $quoted = preg_quote($name, '/');
+        $window = [];
+        foreach ($sentences as $index => $sentence) {
+            if (!preg_match('/\b' . $quoted . '\b/iu', $sentence)) {
+                continue;
+            }
+            $window[$index] = $sentence;
+            $next = $sentences[$index + 1] ?? null;
+            if ($next === null) {
+                continue;
+            }
+            // Not if the next sentence names somebody else - then the pronoun in it is as
+            // likely to be theirs, and reading it here is how a check earns a reputation
+            // for crying wolf and stops being read.
+            foreach ($others as $other) {
+                if ($other !== '' && preg_match('/\b' . preg_quote($other, '/') . '\b/iu', $next)) {
+                    continue 2;
+                }
+            }
+            $window[$index + 1] = $next;
+        }
+        return implode(' ', $window);
+    }
+
+    /**
+     * A debrief that closes the loop on fewer ideas than the scenario opened with.
+     *
+     * The scenario teaches N principles, tests them, and then looks back at them. Those
+     * three counts should be the same number, and nothing checked that they were. Watched
+     * to fail on a live scenario: three principles taught at the start, then two lessons
+     * learnt, two critical decisions and two takeaways - so a third of what the learner was
+     * taught was never looked back at, and the debrief quietly decided which third.
+     *
+     * Nothing in the definition said how many there should be, so the service chose, and
+     * two is the cheapest number that still reads as a list.
+     *
+     * Like the principle check above, this reports rather than rejects. The teacher has
+     * been charged by the time the definition is read, and a scenario that is sound except
+     * for a short debrief is not worth throwing away when the missing entry is a sentence
+     * they can write in the editor. What it will not do any more is say nothing.
+     *
+     * @param array $definition A validated definition.
+     * @return array Warning rows.
+     */
+    protected static function debrief_warnings(array $definition): array {
+        $principles = array_values(array_filter(
+            (array)($definition['principles'] ?? []),
+            fn($p) => is_array($p) && trim((string)($p['title'] ?? '')) !== ''
+        ));
+        $wanted = count($principles);
+        if ($wanted < 1) {
+            return [];
+        }
+
+        $debrief = (array)($definition['debrief'] ?? []);
+        // Takeaways are a sibling of the debrief rather than a member of it, so they are
+        // counted from where they actually live. They were missed for exactly that reason.
+        $lists = [
+            'whatmattered'      => (array)($debrief['whatmattered'] ?? []),
+            'criticaldecisions' => (array)($debrief['criticaldecisions'] ?? []),
+            'practice'          => (array)($debrief['practice'] ?? []),
+            'takeaways'         => (array)($definition['takeaways'] ?? []),
+        ];
+
+        $out = [];
+        foreach ($lists as $key => $list) {
+            $have = count(array_filter($list, fn($item) => $item !== '' && $item !== []));
+            // MORE than one per principle is a fault too, and `>=` said nothing about it.
+            // Four lessons against three principles means one of them answers no principle
+            // at all - and the fourth has no picture, because the image map is built from
+            // the entries that HAVE a principle behind them.
+            if ($have > $wanted) {
+                $out[] = [
+                    'nodeid'  => 'debrief_' . $key,
+                    'node'    => get_string('debrief:' . $key, 'mod_aibranchedscenario'),
+                    'message' => get_string(
+                        'quality:debrieflong',
+                        'mod_aibranchedscenario',
+                        (object)[
+                            'page'   => get_string('debrief:' . $key, 'mod_aibranchedscenario'),
+                            'have'   => $have,
+                            'wanted' => $wanted,
+                        ]
+                    ),
+                ];
+                continue;
+            }
+            if ($have === $wanted) {
+                continue;
+            }
+            $out[] = [
+                'nodeid'  => 'debrief_' . $key,
+                'node'    => get_string('debrief:' . $key, 'mod_aibranchedscenario'),
+                'message' => get_string(
+                    'quality:debriefshort',
+                    'mod_aibranchedscenario',
+                    (object)[
+                        'page'      => get_string('debrief:' . $key, 'mod_aibranchedscenario'),
+                        'have'      => $have,
+                        'wanted'    => $wanted,
+                    ]
+                ),
+            ];
         }
         return $out;
     }

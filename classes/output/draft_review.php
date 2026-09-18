@@ -168,6 +168,11 @@ class draft_review implements \renderable, \templatable {
             'nodes'       => $nodes,
             'nodecount'   => count($nodes),
             'imagecount'  => count($images),
+            // The missing-picture panel only means anything once there is a published
+            // revision to be short of pictures.
+            'published'   => \mod_aibranchedscenario\local\scenario_manager::get_current_revision(
+                $this->scenario
+            ) !== null,
             'principles'  => array_values($definition['principles']),
             'hasprinciples' => !empty($definition['principles']),
             'editurl'     => (new \moodle_url(

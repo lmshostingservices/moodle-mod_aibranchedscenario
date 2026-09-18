@@ -233,12 +233,18 @@ class helper {
             'outcome'       => $node['outcome'],
             'summary'       => $node['summary'],
             'summaryparas'   => self::paragraph_list($node['summary']),
-            // A crisis frame is stored beside the calm one under the same node id with
-            // a suffix, so a learner who has driven the tension up sees the escalated
-            // moment. Falling back keeps a scenario generated before crisis frames
-            // existed showing its original image rather than none.
-            'imageurl'      => ($crisis ? ($mediaurls['scene'][$node['id'] . '_crisis'] ?? '') : '')
-                ?: ($mediaurls['scene'][$node['id']] ?? ''),
+            // A crisis frame is stored beside the calm one under the same node id with a
+            // suffix, so a learner who has driven the tension up sees the escalated moment.
+            //
+            // NO FALLBACK to the calm frame. It used to fall back, and that is the same
+            // fault as everywhere else in this release: a crisis screen showing the picture
+            // of the room BEFORE it went wrong is not a cheaper version of the right
+            // picture, it is the wrong picture, and it is invisible to every check because
+            // it still resolves to a picture. It survived the sweep of v1.82.0 because it is
+            // written as a `?:` rather than as a named fallback.
+            'imageurl'      => $crisis
+                ? (string)($mediaurls['scene'][$node['id'] . '_crisis'] ?? '')
+                : (string)($mediaurls['scene'][$node['id']] ?? ''),
             'imagealt'      => $node['imagealt'] !== ''
                 ? $node['imagealt']
                 : \mod_aibranchedscenario\local\ai\image_prompt::alt_text($node, $situation, $crisis),
@@ -263,21 +269,35 @@ class helper {
      * @param array $scene Node key to scene URL.
      * @return array
      */
-    public static function scripted_items($items, string $key, array $narration, array $scene): array {
-        $frames = array_values(array_map('strval', $scene));
-        $count = count($frames);
+    public static function scripted_items(
+        $items,
+        string $key,
+        array $narration,
+        array $scene,
+        array $definition = []
+    ): array {
         $out = [];
         foreach (array_values((array)$items) as $index => $text) {
-            // A frame each, and each list starts from a different point in the set, so the
-            // lessons and the practice points are not illustrated by the same five pictures
-            // in the same order.
-            $frame = '';
-            if ($count) {
-                $frame = (string)$frames[($index + (strlen($key) % $count)) % $count];
-            }
+            // ITS OWN PICTURE, OR NONE.
+            //
+            // Every entry used to borrow one of the scenario's scene photographs, offset by
+            // the length of the list's name so the four lists did not all start from the
+            // same frame. That was an arithmetic trick standing in for a link: the picture
+            // beside "Clear communication and trust-building were essential" was whichever
+            // scene happened to land on that index, and two lists could still collide.
+            //
+            // Each entry has a frame briefed from its own words, stored under the same key
+            // stem as the clip that reads it, and that stem carries the PRINCIPLE ID -
+            // debrief_lesson_p1 - so lesson 1 belongs to principle 1 by construction rather
+            // than by position. The rotation is gone rather than kept as a fallback: a
+            // borrowed picture is not a cheaper version of the right one, it is the
+            // repetition fault arriving quietly, and it is invisible to every check because
+            // it still resolves to a picture.
+            $stem = media_manager::debrief_key($key, $definition, $index);
+            $frame = (string)($scene[$stem] ?? '');
             $out[] = [
                 'text'     => (string)$text,
-                'audiourl' => (string)($narration['debrief_' . $key . '_' . $index] ?? ''),
+                'audiourl' => (string)($narration[$stem] ?? ''),
                 'imageurl' => $frame,
                 'number'   => $index + 1,
             ];
@@ -644,19 +664,18 @@ class helper {
             'outcometitle' => $outcomenode['title'] ?? '',
             // The ending, and the three debrief screens that are the same every attempt.
             'outcomeaudiourl'  => (string)($narration[$outcomenode['id'] ?? ''] ?? ''),
-            // Every page of the debrief drew the same opening frame. Each one that has
-            // words of its own now has a picture briefed from those words.
-            'whatmatteredimageurl' => (string)($scene['debrief_whatmattered'] ?? ''),
-            'criticalimageurl' => (string)($scene['debrief_criticaldecisions'] ?? ''),
-            'practiceimageurl' => (string)($scene['debrief_practice'] ?? ''),
-            'takeawaysimageurl' => (string)($scene['debrief_takeaways'] ?? ''),
+            // The page-level frames. Since v1.81.0 a picture belongs to an ENTRY rather
+            // than to the page holding it, so these four keys are generated by nothing -
+            // they resolved empty on every scenario made since, and the request stayed
+            // behind asking for them. A page still wants a frame behind its heading, so it
+            // takes its own first entry's picture: the same idea, and one that exists.
+            // The ending's own frame. The four page-level ones that used to sit beside it -
+            // whatmatteredimageurl and its siblings - are gone: no template referenced any
+            // of them, they were computed, declared, shipped over the wire and assigned into
+            // a mustache context that never read them. A payload field with no reader is the
+            // next thing to drift, and these existed only to feed the borrowing that this
+            // release removed.
             'outcomeimageurl'  => (string)($scene[$outcomenode['id'] ?? ''] ?? ''),
-            // Every frame the scenario has, in node order. A debrief page whose own
-            // picture could not be generated takes the next one of these rather than
-            // redrawing whichever frame happens to be first - the point of the picture is
-            // that the page is remembered by it, and a page illustrated by the same
-            // photograph as the four pages around it is remembered by none of them.
-            'sceneurls' => array_values(array_map('strval', $scene)),
             'whatmatteredaudiourl' => (string)($narration['debrief_whatmattered'] ?? ''),
             'practiceaudiourl' => (string)($narration['debrief_practice'] ?? ''),
             'takeawaysaudiourl' => (string)($narration['debrief_takeaways'] ?? ''),
@@ -672,19 +691,37 @@ class helper {
             // it. The frames are the scenario's own scenes - the pictures the learner
             // already walked through, which is what makes a lesson land as something they
             // were there for rather than as a line of advice.
-            'lessons'   => self::scripted_items($debrief['whatmattered'], 'lesson', $narration, $scene),
-            'criticals' => self::scripted_items($debrief['criticaldecisions'], 'critical', $narration, $scene),
-            'practices' => self::scripted_items($debrief['practice'], 'practice', $narration, $scene),
+            'lessons'   => self::scripted_items(
+                $debrief['whatmattered'],
+                'lesson',
+                $narration,
+                $scene,
+                $definition
+            ),
+            'criticals' => self::scripted_items(
+                $debrief['criticaldecisions'],
+                'critical',
+                $narration,
+                $scene,
+                $definition
+            ),
+            'practices' => self::scripted_items(
+                $debrief['practice'],
+                'practice',
+                $narration,
+                $scene,
+                $definition
+            ),
             'takeawaycards' => array_values(array_map(
-                static function ($takeaway, $index) use ($narration, $scene) {
-                    $frames = array_values(array_map('strval', $scene));
-                    $count = count($frames);
+                static function ($takeaway, $index) use ($narration, $scene, $definition) {
+                    // Its own frame, or none - see scripted_items() above for why the
+                    // rotation that used to stand in for it was never a link.
                     return [
                         'heading'  => (string)($takeaway['heading'] ?? ''),
                         'body'     => (string)($takeaway['body'] ?? ''),
                         'bodyparas' => self::paragraph_list((string)($takeaway['body'] ?? '')),
-                        'audiourl' => (string)($narration['debrief_takeaway_' . $index] ?? ''),
-                        'imageurl' => $count ? (string)$frames[($index + 3) % $count] : '',
+                        'audiourl' => (string)($narration[media_manager::debrief_key('takeaway', $definition, $index)] ?? ''),
+                        'imageurl' => (string)($scene[media_manager::debrief_key('takeaway', $definition, $index)] ?? ''),
                         'number'   => $index + 1,
                     ];
                 },
@@ -721,7 +758,6 @@ class helper {
             'outcomelabel' => new external_value(PARAM_TEXT, 'Translated outcome band label'),
             'outcometitle' => new external_value(PARAM_TEXT, 'Title of the outcome node'),
             'outcomeaudiourl' => new external_value(PARAM_URL, 'Narration for the ending, or empty'),
-            'whatmatteredimageurl' => new external_value(PARAM_URL, 'Picture for the lessons page, or empty'),
             'lessons' => self::scripted_shape('The lessons'),
             'criticals' => self::scripted_shape('The critical decisions'),
             'practices' => self::scripted_shape('The practice points'),
@@ -738,16 +774,7 @@ class helper {
                 VALUE_DEFAULT,
                 []
             ),
-            'criticalimageurl' => new external_value(PARAM_URL, 'Picture for the critical decisions page, or empty'),
-            'practiceimageurl' => new external_value(PARAM_URL, 'Picture for the practice page, or empty'),
-            'takeawaysimageurl' => new external_value(PARAM_URL, 'Picture for the takeaways page, or empty'),
             'outcomeimageurl' => new external_value(PARAM_URL, 'Picture for the ending, or empty'),
-            'sceneurls' => new external_multiple_structure(
-                new external_value(PARAM_URL, 'A scene picture from the scenario'),
-                'Every frame the scenario has, in node order',
-                VALUE_DEFAULT,
-                []
-            ),
             'whatmatteredaudiourl' => new external_value(PARAM_URL, 'Narration for what mattered, or empty'),
             'practiceaudiourl' => new external_value(PARAM_URL, 'Narration for applying it, or empty'),
             'takeawaysaudiourl' => new external_value(PARAM_URL, 'Narration for the takeaways, or empty'),

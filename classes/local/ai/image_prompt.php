@@ -164,6 +164,139 @@ class image_prompt {
     }
 
     /**
+     * Compose the brief for a consequence's reaction frame.
+     *
+     * THE CUT TO THE FACE.
+     *
+     * The consequence screen showed the decision's own photograph again. The reasoning
+     * written into the player was that the room has not changed because the learner chose
+     * something in it. True, and beside the point: the PEOPLE have changed, and the people
+     * are what the screen is about. A film does not hold on the wide shot while somebody
+     * reacts.
+     *
+     * So this is deliberately not a scene brief. Closer framing, one or two people, and
+     * what their face and hands are doing - the same discipline as the crisis frame, aimed
+     * at a person rather than at a room. Everything that keeps the set coherent is
+     * unchanged, because it comes from the same fixed_tail() the scene frames use: same
+     * cast sheet, same genders, same treatment, same safety clauses.
+     *
+     * One frame per outcome signal rather than per choice. A node's three choices usually
+     * resolve to positive, neutral and negative, and the reaction a learner needs to see is
+     * the reaction to THAT.
+     *
+     * @param array $definition The whole validated scenario.
+     * @param array $node The decision node this reaction follows.
+     * @param string $style One of the plugin's image styles.
+     * @param string $signal positive, neutral or negative.
+     * @return array Keys: prompt, scenetitle, style, alt.
+     */
+    public static function for_reaction(
+        array $definition,
+        array $node,
+        string $style,
+        string $signal
+    ): array {
+        // What actually happened, in the scenario's own words: the consequence text of a
+        // choice carrying this signal. Briefing from the node's situation instead would
+        // describe the moment BEFORE the decision, which is the picture this frame exists
+        // to stop repeating.
+        $consequence = '';
+        foreach ((array)($node['choices'] ?? []) as $choice) {
+            if ((string)($choice['signal'] ?? '') !== $signal) {
+                continue;
+            }
+            $consequence = trim((string)($choice['consequence'] ?? ''));
+            if ($consequence !== '') {
+                break;
+            }
+        }
+        if ($consequence === '') {
+            return ['prompt' => '', 'scenetitle' => '', 'style' => '', 'alt' => ''];
+        }
+
+        $setting = trim((string)($definition['setting'] ?? ''));
+        $setting = $setting !== '' ? \core_text::substr($setting, 0, 220) : 'a workplace';
+
+        // Who is in the frame. The reaction is on somebody's face, so a named person is
+        // worth far more here than "workers" - and people_in_scene() reads the consequence
+        // text for names the same way it reads a situation.
+        $people = self::people_in_scene($definition, $node, $consequence, false);
+        $cast = $people !== ''
+            ? 'The person in shot is ' . rtrim(trim($people), '.') . '. '
+            : '';
+
+        $teacher = trim((string)($node['imageprompt'] ?? ''));
+        $teacherline = $teacher !== ''
+            ? 'Additional direction: '
+                . self::sentence(self::dequote(self::clip($teacher, 300))) . ' '
+            : '';
+
+        $body = self::opener($style) . ' '
+            . rtrim(self::reaction_feel($signal), '.') . '. '
+            . 'Closer than a room shot: head and shoulders, or head and hands, so the '
+            . 'reaction on their face is the subject of the picture. '
+            . 'The setting is still ' . rtrim($setting, '.') . ', recognisably the same '
+            . 'place as the wider frames in this set, but out of focus behind them. '
+            . $cast
+            . 'What has just happened: '
+            . self::sentence(self::dequote(self::clip(
+                trim(preg_replace('/\s+/u', ' ', $consequence)),
+                600
+            ))) . ' '
+            . 'Show the moment just after it landed, not the moment it was decided. '
+            . 'Nobody is speaking. ';
+
+        $tail = self::fixed_tail($definition, $style, $teacherline);
+        $prompt = self::fit($body, self::MAX_PROMPT - \core_text::strlen($tail) - 1);
+
+        return [
+            'prompt'     => trim($prompt . ' ' . $tail),
+            'scenetitle' => \core_text::substr(
+                trim((string)($node['title'] ?? '')),
+                0,
+                self::MAX_TITLE
+            ),
+            'style'      => \core_text::substr(self::style_phrase($style), 0, self::MAX_STYLE),
+            'alt'        => self::reaction_alt($consequence),
+        ];
+    }
+
+    /**
+     * How a reaction should read, by what the decision cost.
+     *
+     * Behaviour a camera can see, never an emotion word on its own: "relieved" is a label,
+     * "the breath they had been holding going out of them" is a photograph.
+     *
+     * @param string $signal positive, neutral or negative.
+     * @return string
+     */
+    protected static function reaction_feel(string $signal): string {
+        if ($signal === 'positive') {
+            return 'The moment something goes right: the tension going out of someone\'s '
+                . 'shoulders, a small nod, the beginning of relief rather than celebration';
+        }
+        if ($signal === 'negative') {
+            return 'The moment the cost lands on somebody: the face of a person taking in '
+                . 'news they did not want, jaw set, eyes down, absolutely still';
+        }
+        return 'The moment nothing is settled: a person left holding a question, mouth '
+            . 'half open as if about to say something and not saying it, unresolved';
+    }
+
+    /**
+     * Alt text for a reaction frame.
+     *
+     * The same shape as alt_text() above: the scenario's own words, condensed. The picture
+     * shows somebody reacting to what happened, so what happened is what describes it.
+     *
+     * @param string $consequence What happened.
+     * @return string
+     */
+    protected static function reaction_alt(string $consequence): string {
+        return \core_text::substr(self::condense($consequence), 0, 250);
+    }
+
+    /**
      * The whole brief for one frame, as a single described photograph.
      *
      * @param array $definition The whole scenario.
@@ -261,10 +394,38 @@ class image_prompt {
         // than is true. "The same people" used to be stated on every frame while each frame
         // named a different subset of them, and an instruction the rest of the prompt
         // contradicts teaches a model that the whole paragraph is soft.
+        $tail = self::fixed_tail($definition, $style, $teacherline);
+        $prompt = self::fit($body, self::MAX_PROMPT - \core_text::strlen($tail) - 1);
+        return trim($prompt . ' ' . $tail);
+    }
+
+    /**
+     * Everything a frame's brief must carry whatever else is trimmed.
+     *
+     * The cast sheet, each person's gender, the treatment, the teacher's own direction and
+     * the safety clauses. These were once written into the body - the only part fit() is
+     * allowed to cut - and at the END of it, so they were the first things discarded on any
+     * wordy node: the set came back in mixed styles, characters changed appearance between
+     * frames and the teacher's direction was silently ignored.
+     *
+     * Extracted so the reaction frames below carry byte-for-byte the same tail as the scene
+     * frames. Two copies of this text would have drifted the first time one was edited, and
+     * a set whose frames carry different cast sheets is a set whose people change.
+     *
+     * @param array $definition The whole scenario.
+     * @param string $style One of the plugin's image styles.
+     * @param string $teacherline The teacher's own direction, already formatted, or empty.
+     * @return string
+     */
+    protected static function fixed_tail(array $definition, string $style, string $teacherline): string {
+        $sheet = self::cast_sheet($definition);
+        $sheet = $sheet !== '' ? rtrim($sheet) . ' ' : '';
+
         $fixed = 'The same place and the same treatment as the other images in this set, so '
             . 'they read as one continuous series. Only the people named above appear in '
             . 'this frame. '
             . $sheet
+            . self::gender_line($definition)
             . 'Treatment, identical in every frame of the set: '
             . rtrim(self::style_phrase($style), '.') . '. ';
 
@@ -272,7 +433,7 @@ class image_prompt {
         // treatment: telling a noir frame it wants "soft natural lighting", or an oil
         // painting that it is "a realistic photograph", is the same self-contradiction the
         // rewrite existed to remove, reintroduced as fixed text.
-        $tail = $fixed . $teacherline . self::look($style) . ' '
+        return $fixed . $teacherline . self::look($style) . ' '
             . 'Paperwork, screens and signage may be present but turned away or out of focus '
             . 'so that no text is readable. No captions, subtitles, watermarks, logos or '
             . 'brand marks. Do not depict any real or identifiable person, and do not '
@@ -280,9 +441,6 @@ class image_prompt {
             . 'the scenario describes: no children or young people, no nudity, no weapons, '
             . 'no violence, no injury and no medical procedure shown in detail. '
             . 'Workplace-appropriate for adult vocational learners.';
-
-        $prompt = self::fit($body, self::MAX_PROMPT - \core_text::strlen($tail) - 1);
-        return trim($prompt . ' ' . $tail);
     }
 
     /**
@@ -511,6 +669,53 @@ class image_prompt {
                 . 'serious, the first real disagreement showing';
     }
 
+
+    /**
+     * Each person's gender, stated on its own, in its own sentence.
+     *
+     * It was already in the cast sheet - as one comma-separated item among four, between a
+     * job title and a description of somebody's jacket. An image model weights a short
+     * explicit sentence far more heavily than a clause buried in a list, and this is the
+     * one attribute a learner notices being wrong the instant they see it: a woman in the
+     * frame beside the word "he" is the whole illusion gone.
+     *
+     * Where a gender is genuinely unstated the person is simply left out of this sentence.
+     * Saying "gender not specified" would be worse than useless - it invites the model to
+     * choose and to tell itself it was asked to.
+     *
+     * In the FIXED TAIL, with the cast sheet, where the length trim cannot reach it.
+     *
+     * @param array $definition The whole scenario.
+     * @return string The sentence, or empty when nobody's gender is recorded.
+     */
+    protected static function gender_line(array $definition): string {
+        $stated = [];
+        $seen = [];
+        $everyone = array_merge(
+            !empty($definition['facilitator']['name']) ? [$definition['facilitator']] : [],
+            (array)($definition['characters'] ?? [])
+        );
+        foreach ($everyone as $person) {
+            $name = trim((string)($person['name'] ?? ''));
+            $gender = (string)($person['gender'] ?? '');
+            if ($name === '' || isset($seen[\core_text::strtolower($name)])) {
+                continue;
+            }
+            if ($gender !== 'male' && $gender !== 'female' && $gender !== 'non-binary') {
+                continue;
+            }
+            $seen[\core_text::strtolower($name)] = true;
+            $stated[] = $name . ' is ' . ($gender === 'non-binary' ? 'non-binary' : $gender);
+            if (count($stated) >= 6) {
+                break;
+            }
+        }
+        if (!$stated) {
+            return '';
+        }
+        return 'Gender, exactly as stated here and never changed between frames: '
+            . implode('; ', $stated) . '. ';
+    }
 
     /**
      * Every person this scenario can show, described identically in every frame's brief.
@@ -886,25 +1091,56 @@ class image_prompt {
             }
         }
 
-        // The four debrief pages are drawn too, and were not counted.
+        // ONE PICTURE PER DEBRIEF ENTRY, not per page, since v1.81.0.
         //
-        // Each of them gets a frame briefed from its own words - that is what stopped every
-        // debrief page redrawing the picture the scenario opened on. The estimate was
-        // written before those existed and never caught up, so a teacher was quoted four
-        // pictures fewer than the run makes, and every figure built on this number was
-        // short by the same four. Found by checking the estimate against what a real run
-        // asks for rather than against itself.
+        // Each of the four pages used to get one frame briefed from the whole page's text.
+        // The entries are what a learner reads one at a time, so each entry has its own
+        // frame, keyed to match the narration clip that reads it.
+        //
+        // This estimate has now been wrong three separate times, always the same way: a
+        // picture was added and the count was not. That is why the harness compares this
+        // function against what a REAL run asks for rather than against itself - a mirror
+        // checked only against its own reflection is not a check.
         $debrief = (array)($definition['debrief'] ?? []);
-        $pages = [
-            media_manager::lines_text($debrief['whatmattered'] ?? []),
-            media_manager::lines_text($debrief['criticaldecisions'] ?? []),
-            media_manager::lines_text($debrief['practice'] ?? []),
-            media_manager::takeaways_text($definition['takeaways'] ?? []),
-        ];
-        foreach ($pages as $text) {
-            if (trim($text) !== '') {
+        $entries = array_merge(
+            array_values((array)($debrief['whatmattered'] ?? [])),
+            array_values((array)($debrief['criticaldecisions'] ?? [])),
+            array_values((array)($debrief['practice'] ?? [])),
+            array_values(array_map(
+                static function ($takeaway) {
+                    return trim(trim((string)($takeaway['heading'] ?? ''), " .") . '. '
+                        . (string)($takeaway['body'] ?? ''));
+                },
+                (array)($definition['takeaways'] ?? [])
+            ))
+        );
+        foreach ($entries as $entry) {
+            if (trim((string)$entry) !== '') {
                 $count++;
             }
+        }
+
+        // The opening establishing frame: the place before anyone has done anything. One
+        // picture, and it removes the duplicate every learner saw in the first ten seconds.
+        if (
+            trim((string)($definition['hook'] ?? '')) !== ''
+                || trim((string)($definition['setting'] ?? '')) !== ''
+        ) {
+            $count++;
+        }
+
+        // The reaction frames: one per outcome signal each decision node actually uses.
+        // Asked of the node rather than assumed, so a node whose choices are all negative
+        // is billed for one reaction and not three.
+        foreach ((array)($definition['nodes'] ?? []) as $node) {
+            if (!is_array($node)) {
+                continue;
+            }
+            // The signals_used() helper already excludes a signal with no consequence text to brief
+            // from, so this counts what the run will actually ask for. It used to re-check
+            // the text here while the run did not, which is exactly the kind of drift the
+            // harness comparison against a real run exists to catch.
+            $count += count(media_manager::signals_used($node));
         }
 
         return $count;

@@ -193,6 +193,11 @@ class Player {
         // Every decision made in this attempt, in order. Seeded from the server on resume
         // so the record is the attempt's, not the browser session's.
         this.journey = [];
+        // The consequences already shown, so a learner can look back at what a decision
+        // actually did rather than only at what they picked. Read only: see stepReview().
+        this.reviewable = [];
+        this.reviewing = false;
+        this.reviewCursor = -1;
         this.audio = null;
         this.wayOnTimer = null;
         // The frame is measured once and then held. Recomputing it on every screen made it
@@ -222,6 +227,7 @@ class Player {
             'deltaup', 'deltadown', 'deltareduced', 'deltaraised', 'deltasame',
             'error:printblocked', 'listento', 'fullscreen:enter', 'fullscreen:exit',
             'deckposition', 'standing:strong', 'standing:mixed', 'standing:weak',
+            'reviewback', 'reviewforward', 'reviewreturn', 'reviewnote', 'reviewposition',
         ];
         const values = await getStrings(keys.map((key) => ({key, component: 'mod_aibranchedscenario'})));
         keys.forEach((key, index) => {
@@ -335,6 +341,15 @@ class Player {
             case 'continue':
                 this.showPendingNode();
                 break;
+            case 'reviewback':
+                this.stepReview(-1);
+                break;
+            case 'reviewforward':
+                this.stepReview(1);
+                break;
+            case 'reviewreturn':
+                this.endReview();
+                break;
             case 'mute':
                 this.toggleMute(element);
                 break;
@@ -444,6 +459,13 @@ class Player {
             this.hideRegion(SELECTORS.debrief);
             this.hideRegion(SELECTORS.consequence);
             this.journey = Array.isArray(response.journey) ? response.journey.slice() : [];
+            // A resumed attempt has decisions behind it that this browser never saw, so
+            // there is nothing to look back AT until the learner makes one here. Cleared
+            // rather than left over from a previous attempt: showing attempt one's
+            // consequences inside attempt two would be worse than showing none.
+            this.reviewable = [];
+            this.reviewing = false;
+            this.reviewCursor = -1;
             this.drawHistory();
             this.updateMeters(response.metrics, null);
             await this.renderNode(response.node);
@@ -539,8 +561,14 @@ class Player {
             hasspeechaudio: Boolean(node.speechurl) && this.audioEnabled,
             speakerinitial: (node.speaker || '').trim().charAt(0).toUpperCase(),
         });
-        // Kept so the consequence can show the scene the decision was taken in: the room
-        // has not changed because the learner chose something in it.
+        // The decision's own picture, held for the decision screen and for nothing else.
+        //
+        // It used to be what the consequence fell back on, and the reasoning written here
+        // was that the room has not changed because the learner chose something in it. True,
+        // and beside the point: the PEOPLE have changed, and the people are what the
+        // consequence is about. The fallback outlived that reasoning by one release, which
+        // meant the fault was always one refused image away and no check could see it -
+        // a borrowed picture still resolves to a picture.
         this.sceneImage = node.imageurl || '';
         // The bar and the card both said "Decision N" and they said different numbers.
         // The card printed the node's own narrative stage; the bar counted events, and an
@@ -567,6 +595,36 @@ class Player {
      * @returns {Promise} Resolves once rendered.
      */
     async renderConsequence(response) {
+        // KEPT, SO IT CAN BE LOOKED AT AGAIN.
+        //
+        // "There is no way to go back and forward to check what you just clicked on."
+        // There was a read-only list of node titles and choice texts behind a control in
+        // the bar, which answers "what did I pick" and not "what did it do" - and what it
+        // did is the whole point of a branching scenario. A learner three decisions in
+        // could not re-read the consequence they had just been shown.
+        //
+        // Everything needed to draw that screen again is already in this response, so it is
+        // recorded here rather than fetched back later. Nothing is re-submitted and nothing
+        // is re-scored: review is a second look at what happened, never a chance to change
+        // it, which is what keeps a score meaning something.
+        if (!this.reviewing) {
+            this.reviewable = this.reviewable || [];
+            this.reviewable.push({
+                response: response,
+                sceneImage: this.sceneImage,
+                stage: this.stage,
+            });
+        }
+        return this.drawConsequence(response);
+    }
+
+    /**
+     * Draw a consequence screen, live or under review.
+     *
+     * @param {Object} response A consequence, as submit_choice returned it.
+     * @returns {Promise} Resolves once the screen is shown.
+     */
+    async drawConsequence(response) {
         const metricKeys = ['engagement', 'trust', 'tension'];
         const deltas = [];
         // Ring geometry. r = 28 in a 72 box, so the full circle is 2 * PI * 28.
@@ -642,8 +700,13 @@ class Player {
             feedbackparas: response.feedbackparas,
             hasfeedback: response.feedbackparas.length > 0,
             principle: response.principle,
-            hasimage: Boolean(this.sceneImage),
-            imageurl: this.sceneImage,
+            // The reaction shot, or no picture. Never the decision's own frame again: two
+            // consecutive screens showing one photograph is the thing this frame exists to
+            // stop, and falling back to it puts the fault straight back whenever a single
+            // image was refused. An empty column is honest, and the review page names the
+            // missing frame and offers to make it.
+            hasimage: Boolean(response.reactionimageurl),
+            imageurl: response.reactionimageurl || '',
             // The setting hid the readings in the bar and left them here, on the screen
             // where the numbers matter most and where the legend explaining them is no
             // longer reachable. It now means what it says on every screen.
@@ -651,6 +714,22 @@ class Player {
             deltas: this.showMetrics ? deltas : [],
             finished: response.finished,
             continuelabel: response.finished ? this.strings.seewhathappened : this.strings.continue,
+            // Review controls. On a live consequence there is a way back if anything has
+            // been decided before this one; under review there is a way back, a way
+            // forward, and a way out to where the learner actually is.
+            reviewing: Boolean(this.reviewing),
+            canreviewback: this.reviewIndex() > 0,
+            canreviewforward: Boolean(this.reviewing)
+                && this.reviewIndex() < (this.reviewable || []).length - 1,
+            reviewposition: this.reviewing
+                ? (this.strings.reviewposition || '')
+                    .replace('{$a->current}', this.reviewIndex() + 1)
+                    .replace('{$a->total}', (this.reviewable || []).length)
+                : '',
+            reviewbacklabel: this.strings.reviewback,
+            reviewforwardlabel: this.strings.reviewforward,
+            reviewreturnlabel: this.strings.reviewreturn,
+            reviewnote: this.strings.reviewnote,
         };
 
         this.hideRegion(SELECTORS.node);
@@ -666,6 +745,71 @@ class Player {
         this.playAudio(response.audiourl || '', '');
         this.updateRail();
         this.focusRegion(SELECTORS.consequence);
+    }
+
+    /**
+     * Where the learner is in the record they are looking back through.
+     *
+     * Live, that is the last thing that happened, so stepping back from a live consequence
+     * lands on the one before it rather than redrawing the screen already on show.
+     *
+     * @returns {Number} Zero based index into the recorded consequences.
+     */
+    reviewIndex() {
+        const count = (this.reviewable || []).length;
+        if (!count) {
+            return -1;
+        }
+        return this.reviewing ? this.reviewCursor : count - 1;
+    }
+
+    /**
+     * Step back or forward through the decisions already taken.
+     *
+     * Read only, always. Nothing here submits, re-scores, or changes which node comes next:
+     * the learner's position in the scenario is untouched and `pendingNode` is exactly where
+     * they left it, so returning puts them back on the screen they were on.
+     *
+     * @param {Number} direction -1 for back, 1 for forward.
+     * @returns {Promise} Resolves once the screen is shown.
+     */
+    async stepReview(direction) {
+        const count = (this.reviewable || []).length;
+        if (!count) {
+            return;
+        }
+        const from = this.reviewIndex();
+        const next = from + direction;
+        if (next < 0 || next >= count) {
+            return;
+        }
+        // Stepping forward off the end of the record is the same thing as being finished
+        // looking back, so it returns rather than refusing.
+        this.reviewing = true;
+        this.reviewCursor = next;
+        const step = this.reviewable[next];
+        this.sceneImage = step.sceneImage;
+        await this.drawConsequence(step.response);
+    }
+
+    /**
+     * Stop looking back and return to where the learner actually is.
+     *
+     * @returns {Promise} Resolves once the live screen is shown.
+     */
+    async endReview() {
+        if (!this.reviewing) {
+            return;
+        }
+        this.reviewing = false;
+        const count = (this.reviewable || []).length;
+        this.reviewCursor = count - 1;
+        const step = count ? this.reviewable[count - 1] : null;
+        if (!step) {
+            return;
+        }
+        this.sceneImage = step.sceneImage;
+        await this.drawConsequence(step.response);
     }
 
     /**
@@ -739,26 +883,16 @@ class Player {
                 'aibs-tone-warn': 'endverdict:mixed',
                 'aibs-tone-bad': 'endverdict:weak',
             }[endband.tone];
-            // The scenario's own frames, walked once. Each page takes its own picture when
-            // it has one and the next unused frame when it does not; the walk never
-            // returns to a frame it has already handed out while an unused one remains.
-            const spare = (response.sceneurls || []).slice();
-            const used = new Set([response.whatmatteredimageurl, response.criticalimageurl,
-                response.practiceimageurl, response.takeawaysimageurl, response.outcomeimageurl]
-                .filter(Boolean));
-            const pageimage = (own) => {
-                if (own) {
-                    return own;
-                }
-                while (spare.length) {
-                    const next = spare.shift();
-                    if (next && !used.has(next)) {
-                        used.add(next);
-                        return next;
-                    }
-                }
-                return '';
-            };
+            // The borrowing that used to live here is gone, and so are the four page-level
+            // image fields it consumed - no template ever referenced them. A debrief page
+            // with no picture of its own used to take the next unused frame from the
+            // scenario, walked once so no two pages got the same one. It was the most
+            // careful of the borrowing paths and still the same mistake: the picture beside
+            // "Lessons learnt" was whichever scene happened to be next in a list, and a page
+            // illustrated by a photograph of something else is illustrated by nothing.
+            //
+            // Each debrief card carries its own frame through the scripted lists, which is
+            // where the pictures actually belong.
             const context = Object.assign({}, response, {
                 outcomeclass: 'aibs-outcome-' + response.outcome,
                 endtone: endband.tone,
@@ -789,13 +923,16 @@ class Player {
                 // not exist - an older revision, or a generation that was refused - it
                 // takes the next unused scene from the scenario instead of falling back to
                 // the opening frame again, so no two pages in a row look alike.
-                hasimage: Boolean(this.openingImage()),
-                imageurl: this.openingImage(),
-                whatmatteredimageurl: pageimage(response.whatmatteredimageurl),
-                criticalimageurl: pageimage(response.criticalimageurl),
-                practiceimageurl: pageimage(response.practiceimageurl),
-                takeawaysimageurl: pageimage(response.takeawaysimageurl),
-                outcomeimageurl: pageimage(response.outcomeimageurl),
+                // THE ENDING SHOWS THE ENDING, not the scenario's opening frame.
+                //
+                // This used to scrape the opening screen's picture straight out of the DOM,
+                // so the last card a learner sees was the first one again. The ending node
+                // has a frame of its own and it was already in the payload, unread. A
+                // harness check asserted the borrowing in place, which is how it survived a
+                // release whose whole point was removing borrowed pictures.
+                hasimage: Boolean(response.outcomeimageurl),
+                imageurl: response.outcomeimageurl || '',
+                outcomeimageurl: response.outcomeimageurl || '',
                 allowreplay: this.root.dataset.replay !== '0',
                 radar: response.radar.map((entry) => {
                     const percent = Math.round(entry.value * 100);
@@ -1421,16 +1558,6 @@ class Player {
     }
 
     /**
-     * The picture the scenario opened on, for screens that have none of their own.
-     *
-     * @returns {String} An image URL, or the empty string.
-     */
-    openingImage() {
-        const img = this.root.querySelector('[data-region="brief"] .aibs-scene-img');
-        return img ? img.getAttribute('src') || '' : '';
-    }
-
-    /**
      * Is there anything on this consequence worth stopping the learner for?
      *
      * Three things can make it worth a screen: something happened in the story, the
@@ -1973,6 +2100,10 @@ class Player {
                     // corrected against where the slide actually ended up before the text is
                     // scaled to it.
                     this.trimToFold(slide);
+                    // A card only gets the tighter scoreboard when it has been shown it
+                    // needs one, so the measurement below starts from the roomy layout
+                    // every time rather than from whatever the last screen decided.
+                    slide.classList.remove('aibs-dense');
                     let scale = 1;
                     let guard = 0;
                     while (this.overflowing(body)
@@ -1980,6 +2111,29 @@ class Player {
                         scale -= 0.04;
                         guard++;
                         slide.style.setProperty('--aibs-fit', scale.toFixed(2));
+                    }
+
+                    // The type has reached its floor and the card is still too tall. Up to
+                    // here that was the end of it: the frame held, the card did not, and
+                    // the learner got a consequence with its signal pill cut across the top
+                    // and Continue cut across the bottom. The loop could see the overflow -
+                    // it had simply run out of lever, because the only one was type size.
+                    //
+                    // The second lever is density, and it is spent on the scoreboard rather
+                    // than on the words: three reading cards become one row of dials and
+                    // the band under each name goes to screen readers only. Then the type
+                    // is given another run, from the top, in the room that bought.
+                    if (this.overflowing(body) && !slide.classList.contains('aibs-dense')) {
+                        slide.classList.add('aibs-dense');
+                        scale = 1;
+                        guard = 0;
+                        slide.style.removeProperty('--aibs-fit');
+                        while (this.overflowing(body)
+                                && scale > Player.MIN_FIT && guard < 22) {
+                            scale -= 0.04;
+                            guard++;
+                            slide.style.setProperty('--aibs-fit', scale.toFixed(2));
+                        }
                     }
                     // The scale only ever stepped down, which is right on a page: the frame
                     // is sized to the page and the type is what gives. In fullscreen it was
