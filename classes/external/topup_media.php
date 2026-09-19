@@ -61,13 +61,18 @@ class topup_media extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module id'),
-            'tier' => new external_value(PARAM_INT, 'Which rung of the ladder', VALUE_DEFAULT, 1),
             'keys' => new external_multiple_structure(
                 new external_value(PARAM_ALPHANUMEXT, 'An image key to generate'),
                 'The keys to make. Empty to report the shortfall without making anything.',
                 VALUE_DEFAULT,
                 []
             ),
+            // Last, because the order here is the CALLING order: Moodle validates the
+            // arguments by name and then calls execute() with them positionally, in the
+            // order this list declares. A key inserted in the middle is handed to whichever
+            // argument sits in that position - which is how a rung number ended up where
+            // this function expected something else entirely.
+            'tier' => new external_value(PARAM_INT, 'Which rung of the ladder', VALUE_DEFAULT, 1),
         ]);
     }
 

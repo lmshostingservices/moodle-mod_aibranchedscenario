@@ -62,11 +62,20 @@ class import_definition extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid'       => new external_value(PARAM_INT, 'Course module id'),
-            'tier'       => new external_value(PARAM_INT, 'Which rung of the ladder', VALUE_DEFAULT, 1),
             'definition' => new external_value(
                 PARAM_BASE64,
                 'Scenario definition: a JSON document, base64 encoded'
             ),
+            // LAST, BECAUSE THE ORDER HERE IS THE CALLING ORDER.
+            //
+            // Moodle validates the arguments by name and then calls execute() with them
+            // POSITIONALLY, in the order this list declares - "this also sorts the params
+            // properly, we need the correct order in the next part", as external_api puts
+            // it. A key added in the middle of this list is therefore handed to whichever
+            // argument sits in that position, so a rung number arrived where the scenario
+            // was expected and every paste-in was refused with "Invalid parameter value
+            // detected". A new optional key goes at the end, matching the signature.
+            'tier'       => new external_value(PARAM_INT, 'Which rung of the ladder', VALUE_DEFAULT, 1),
         ]);
     }
 

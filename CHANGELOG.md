@@ -2,6 +2,32 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v2.5.1] - 2026-09-19
+
+### Fixed: three web services were refusing every call
+
+v2.5.0 declared `tier` in the middle of three parameter lists and appended it to the three
+method signatures. Moodle validates a call's arguments by name and then invokes the method
+**positionally, in the order the parameter list declares** — so the rung number was handed
+to the argument sitting in that position, and three calls failed with **"Invalid parameter
+value detected"**:
+
+- **saving an edited scene** in the authoring wizard (`save_node_text`)
+- **pasting a scenario in** (`import_definition`)
+- **reporting the missing pictures** on the review page (`topup_media`)
+
+The rung is declared last in all three now, matching the signatures. Nothing else changed.
+
+The upgrade step for this release deliberately touches no schema: a site does not re-read a
+plugin's service descriptions until its version moves, so a site that replaced the files in
+place would otherwise keep v2.5.0's broken parameter lists in `external_functions`.
+
+**Why nothing caught it.** Every check in the harness called these functions directly, with
+positional arguments — which is to say every check agreed with the mistake. Two checks now
+cover it: one compares each function's declared parameter order against its method
+signature, and one reproduces Moodle's own validate-sort-and-call for every service the
+ladder touches. Both were confirmed to fail with the fault put back.
+
 ## [v2.5.0] - 2026-09-19
 
 ### The ladder: an activity holds three scenarios

@@ -1071,5 +1071,22 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091908, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091910) {
+        // NO SCHEMA CHANGE. THIS STEP EXISTS TO MOVE THE VERSION, AND THAT IS THE FIX.
+        //
+        // v2.5.0 shipped three web services whose parameter lists were declared in a
+        // different order from the arguments they take. Moodle validates a call's arguments
+        // by name and then invokes the method POSITIONALLY, in the order the parameter list
+        // declares - so saving an edited scene, pasting a scenario in and reporting the
+        // picture shortfall were all refused with "Invalid parameter value detected".
+        //
+        // The declarations are corrected in code, but a site does not re-read them until
+        // the plugin's version moves: external_update_descriptions() runs from the upgrade,
+        // so a site that replaced the files in place would keep v2.5.0's broken parameter
+        // descriptions in its external_functions table and stay broken. Hence a step that
+        // touches nothing: the version bump is the delivery mechanism.
+        upgrade_mod_savepoint(true, 2026091910, 'aibranchedscenario');
+    }
+
     return true;
 }

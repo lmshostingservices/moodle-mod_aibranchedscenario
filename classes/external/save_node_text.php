@@ -40,7 +40,6 @@ class save_node_text extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid'   => new external_value(PARAM_INT, 'Course module id'),
-            'tier'   => new external_value(PARAM_INT, 'Which rung of the ladder', VALUE_DEFAULT, 1),
             'nodeid' => new external_value(PARAM_ALPHANUMEXT, 'Node identifier'),
             'fields' => new external_single_structure([
                 'title'             => new external_value(PARAM_TEXT, 'Node title', VALUE_OPTIONAL),
@@ -74,6 +73,12 @@ class save_node_text extends external_api {
                 VALUE_DEFAULT,
                 false
             ),
+            // Last, because the order here is the CALLING order: Moodle validates the
+            // arguments by name and then calls execute() with them positionally, in the
+            // order this list declares. A key inserted in the middle is handed to whichever
+            // argument sits in that position - which is how a rung number ended up where
+            // this function expected something else entirely.
+            'tier'   => new external_value(PARAM_INT, 'Which rung of the ladder', VALUE_DEFAULT, 1),
         ]);
     }
 
