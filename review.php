@@ -27,6 +27,7 @@ require(__DIR__ . '/../../config.php');
 use mod_aibranchedscenario\output\draft_review;
 
 $id = required_param('id', PARAM_INT);
+$tier = optional_param('tier', 1, PARAM_INT);
 
 [$course, $cm] = get_course_and_cm_from_cmid($id, 'aibranchedscenario');
 $moduleinstance = $DB->get_record('aibranchedscenario', ['id' => $cm->instance], '*', MUST_EXIST);
@@ -35,7 +36,8 @@ require_login($course, false, $cm);
 $context = context_module::instance($cm->id);
 require_capability('mod/aibranchedscenario:manage', $context);
 
-$PAGE->set_url('/mod/aibranchedscenario/review.php', ['id' => $cm->id]);
+$tier = isset(\mod_aibranchedscenario\local\schema::tiers()[$tier]) ? $tier : 1;
+$PAGE->set_url('/mod/aibranchedscenario/review.php', ['id' => $cm->id, 'tier' => $tier]);
 $PAGE->set_title(get_string('review:title', 'mod_aibranchedscenario'));
 $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($context);
@@ -43,10 +45,10 @@ $PAGE->set_context($context);
 // thing that shell cannot work out for itself: whether the page behind it is dark.
 $PAGE->requires->js_call_amd('mod_aibranchedscenario/scheme', 'init');
 // And the missing-picture panel, which is the only interactive thing on this page.
-$PAGE->requires->js_call_amd('mod_aibranchedscenario/topup', 'init', [(int)$cm->id]);
+$PAGE->requires->js_call_amd('mod_aibranchedscenario/topup', 'init', [(int)$cm->id, $tier]);
 
 echo $OUTPUT->header();
 // No Moodle heading here: the review template carries its own masthead with the same
 // name, and printing both gave the page two titles.
-echo $OUTPUT->render(new draft_review($moduleinstance, $cm, $context));
+echo $OUTPUT->render(new draft_review($moduleinstance, $cm, $context, $tier));
 echo $OUTPUT->footer();

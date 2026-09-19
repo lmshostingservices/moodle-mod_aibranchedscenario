@@ -40,6 +40,7 @@ class save_node_text extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid'   => new external_value(PARAM_INT, 'Course module id'),
+            'tier'   => new external_value(PARAM_INT, 'Which rung of the ladder', VALUE_DEFAULT, 1),
             'nodeid' => new external_value(PARAM_ALPHANUMEXT, 'Node identifier'),
             'fields' => new external_single_structure([
                 'title'             => new external_value(PARAM_TEXT, 'Node title', VALUE_OPTIONAL),
@@ -83,6 +84,8 @@ class save_node_text extends external_api {
      * @param string $nodeid Node identifier.
      * @param array $fields Edited node fields.
      * @param array $choices Edited choices.
+     * @param bool $replacechoices Whether the choices given replace the node's own.
+     * @param int $tier Which rung of the ladder.
      * @return array
      */
     public static function execute(
@@ -90,15 +93,17 @@ class save_node_text extends external_api {
         string $nodeid,
         array $fields,
         array $choices,
-        bool $replacechoices = false
+        bool $replacechoices = false,
+        int $tier = 1
     ): array {
         $params = self::validate_parameters(self::execute_parameters(), [
             'cmid' => $cmid, 'nodeid' => $nodeid, 'fields' => $fields, 'choices' => $choices,
-            'replacechoices' => $replacechoices,
+            'replacechoices' => $replacechoices, 'tier' => $tier,
         ]);
         $resolved = helper::resolve($params['cmid'], 'mod/aibranchedscenario:manage');
+        $tier = helper::tier($params['tier']);
 
-        $definition = scenario_manager::get_working_definition($resolved['scenario']);
+        $definition = scenario_manager::get_working_definition($resolved['scenario'], $tier);
         if ($definition === null) {
             throw new \moodle_exception('error:noworkingcopy', 'mod_aibranchedscenario');
         }
@@ -165,7 +170,7 @@ class save_node_text extends external_api {
         // typo fix against the fixed shape refused the whole definition, naming a node the
         // teacher was not editing - so an old draft was uneditable as well as
         // unpublishable, and the only route out of both was to throw it away.
-        scenario_manager::save_definition($resolved['scenario'], $definition, null, false);
+        scenario_manager::save_definition($resolved['scenario'], $definition, null, false, $tier);
 
         return ['saved' => true];
     }

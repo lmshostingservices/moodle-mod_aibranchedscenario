@@ -40,17 +40,53 @@ class wizard implements \renderable, \templatable {
     /** @var context_module Module context. */
     protected $context;
 
+    /** @var int Which of the activity's three scenarios is being written. */
+    protected $tier;
+
     /**
      * Constructor.
      *
      * @param stdClass $scenario Activity instance.
      * @param stdClass $cm Course module record.
      * @param context_module $context Module context.
+     * @param int $tier Which rung of the ladder is being written.
      */
-    public function __construct(stdClass $scenario, $cm, context_module $context) {
+    public function __construct(stdClass $scenario, $cm, context_module $context, int $tier = 1) {
         $this->scenario = $scenario;
         $this->cm = $cm;
         $this->context = $context;
+        $this->tier = isset(schema::tiers()[$tier]) ? $tier : 1;
+    }
+
+    /**
+     * The three rungs, as something a teacher can move between.
+     *
+     * The wizard writes one scenario at a time, so the activity's other two have to be
+     * reachable from it or they are invisible - a teacher would have no way of knowing
+     * the activity holds three, let alone of writing the other two. Each one says whether
+     * it is started and whether it is live, because "which of these have I done" is the
+     * question a teacher opens this page with.
+     *
+     * @return array
+     */
+    protected function rungs(): array {
+        $out = [];
+        foreach (schema::tiers() as $tier => $complexity) {
+            $row = scenario_manager::tier_row((int)$this->scenario->id, $tier);
+            $out[] = [
+                'tier'      => $tier,
+                'name'      => get_string('tier:' . $complexity, 'mod_aibranchedscenario'),
+                'current'   => $tier === $this->tier,
+                'started'   => !empty($row->scenariojson),
+                'live'      => $row->status === scenario_manager::STATUS_PUBLISHED
+                    && (int)$row->revision > 0,
+                'url'       => (new \moodle_url(
+                    '/mod/aibranchedscenario/edit.php',
+                    ['id' => $this->cm->id, 'tier' => $tier]
+                ))->out(false),
+            ];
+        }
+        return $out;
     }
 
     /**
@@ -117,7 +153,8 @@ class wizard implements \renderable, \templatable {
         $source = scenario_manager::get_source($this->scenario);
         $source = $source ? source_normaliser::normalise($source) : source_normaliser::blank();
 
-        $definition = scenario_manager::get_working_definition($this->scenario);
+        $definition = scenario_manager::get_working_definition($this->scenario, $this->tier);
+        $tierrow = scenario_manager::tier_row((int)$this->scenario->id, $this->tier);
         $nodes = [];
         if (is_array($definition)) {
             foreach ($definition['nodes'] as $node) {
@@ -183,13 +220,23 @@ class wizard implements \renderable, \templatable {
             ))->out(false),
             'reviewurl'    => (new \moodle_url(
                 '/mod/aibranchedscenario/review.php',
-                ['id' => $this->cm->id]
+                ['id' => $this->cm->id, 'tier' => $this->tier]
             ))->out(false),
             'aiavailable'  => $credentials['source'] !== credentials::SOURCE_NONE,
-            'published'    => $this->scenario->status === scenario_manager::STATUS_PUBLISHED,
-            'revision'     => (int)$this->scenario->revision,
+            // Per RUNG, not per activity. Read from the instance, the wizard for the
+            // unwritten advanced scenario announced itself as published at revision 3,
+            // because the foundation scenario was - and offered Restore draft on a rung
+            // that had never had one.
+            'published'    => $tierrow->status === scenario_manager::STATUS_PUBLISHED
+                && (int)$tierrow->revision > 0,
+            'revision'     => (int)$tierrow->revision,
             'hasdraft'     => is_array($definition),
-            'hasprevious'  => !empty($this->scenario->previousjson),
+            'hasprevious'  => !empty($tierrow->previousjson),
+            'tier'         => $this->tier,
+            'tiercount'    => schema::TIERS,
+            'tiername'     => get_string('tier:' . schema::tiers()[$this->tier], 'mod_aibranchedscenario'),
+            'rungs'        => $this->rungs(),
+            'isladder'     => true,
             'source'       => $source,
             'characters'   => $characters,
             'principles'   => array_values($source['principles']),
@@ -215,7 +262,6 @@ class wizard implements \renderable, \templatable {
             'whyhard'      => $this->options(schema::whyhard(), 'whyhard', $source['whyhard']),
             'stakes'       => $this->options(schema::stakes(), 'stakes', $source['stakes']),
             'tones'        => $this->options(schema::tones(), 'tone', $source['tone']),
-            'complexities' => $this->options(schema::complexities(), 'complexity', $source['complexity']),
             'imagestyles'  => $this->options(schema::imagestyles(), 'imagestyle', $source['imagestyle']),
             'openingmetrics' => [
                 ['key' => 'engagement', 'label' => get_string('metric:engagement', 'mod_aibranchedscenario'),

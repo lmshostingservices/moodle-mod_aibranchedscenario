@@ -86,13 +86,59 @@ class media_manager {
      */
     protected $onlyimages = null;
 
+    /** @var int Which rung of the ladder this manager's files belong to. */
+    protected $tier;
+
+    /**
+     * How far apart the rungs sit in a file area's item ids.
+     *
+     * A REVISION NUMBER IS NO LONGER UNIQUE WITHIN AN ACTIVITY.
+     *
+     * Media used to be itemised by revision number, which was safe while an activity held
+     * one scenario. It holds three now and revision numbers run per rung, so the
+     * intermediate scenario's first publish is revision 1 and so is the foundation
+     * scenario's. Left alone, publishing the second rung would delete the first rung's
+     * pictures and put its own in their place - every learner part-way through the
+     * foundation scenario would have been looking at the wrong scenario's photographs,
+     * and the originals would be gone.
+     *
+     * The rung is folded into the item id instead. The arithmetic is deliberately chosen
+     * so that rung one is unchanged: an activity that existed before the ladder keeps
+     * every file exactly where it already is, and nothing has to be migrated. A hundred
+     * thousand revisions of one rung is a ceiling nobody will meet.
+     */
+    const TIER_SPAN = 100000;
+
     /**
      * Constructor.
      *
      * @param context_module $context Module context.
+     * @param int $tier Which rung of the ladder these files belong to.
      */
-    public function __construct(context_module $context) {
+    public function __construct(context_module $context, int $tier = 1) {
         $this->context = $context;
+        $this->tier = max(1, min(schema::TIERS, $tier));
+    }
+
+    /**
+     * The item id this rung's copy of an item is stored under.
+     *
+     * @param int $item Revision number, or node index in a working area.
+     * @return int
+     */
+    protected function slot(int $item): int {
+        return ($this->tier - 1) * self::TIER_SPAN + $item;
+    }
+
+    /**
+     * Does this item id belong to this rung?
+     *
+     * @param int $itemid A stored file's item id.
+     * @return bool
+     */
+    protected function mine(int $itemid): bool {
+        $base = ($this->tier - 1) * self::TIER_SPAN;
+        return $itemid >= $base && $itemid < $base + self::TIER_SPAN;
     }
 
     /**
@@ -177,9 +223,26 @@ class media_manager {
         // run then reported success, because with images off it had asked for none and made
         // none, and the next publish produced a scenario with no pictures. A run that is
         // not making pictures has no business deleting them.
+        //
+        // Cleared PER RUNG as well. The working areas are shared by all three scenarios in
+        // an activity, so wiping the whole area would throw away the other two rungs'
+        // draft artwork every time a teacher generated one of them.
         if (empty($this->cleared[$filearea])) {
             $fs = get_file_storage();
-            $fs->delete_area_files($this->context->id, 'mod_aibranchedscenario', $filearea);
+            foreach (
+                $fs->get_area_files(
+                    $this->context->id,
+                    'mod_aibranchedscenario',
+                    $filearea,
+                    false,
+                    'itemid, filepath, filename',
+                    false
+                ) as $old
+            ) {
+                if ($this->mine((int)$old->get_itemid())) {
+                    $old->delete();
+                }
+            }
             $this->cleared[$filearea] = true;
         }
         $filename = $key . '.' . $extension;
@@ -202,11 +265,12 @@ class media_manager {
         // The comment on the principle clips already said storing a file clears whatever
         // shares its item id - that was known, worked around for the principles by giving
         // each its own id, and left in place for everything else.
+        $slot = $this->slot($itemid);
         $existing = $fs->get_file(
             $this->context->id,
             'mod_aibranchedscenario',
             $filearea,
-            $itemid,
+            $slot,
             '/',
             $filename
         );
@@ -218,7 +282,7 @@ class media_manager {
             'contextid' => $this->context->id,
             'component' => 'mod_aibranchedscenario',
             'filearea'  => $filearea,
-            'itemid'    => $itemid,
+            'itemid'    => $slot,
             'filepath'  => '/',
             'filename'  => $filename,
         ], $binary);
@@ -1490,16 +1554,17 @@ class media_manager {
             'itemid, filepath, filename',
             false
         );
+        $slot = $this->slot($revisionnumber);
         foreach ($files as $file) {
             $name = $file->get_filename();
-            if (!isset($wanted[pathinfo($name, PATHINFO_FILENAME)])) {
+            if (!isset($wanted[pathinfo($name, PATHINFO_FILENAME)]) || !$this->mine((int)$file->get_itemid())) {
                 continue;
             }
             $existing = $fs->get_file(
                 $this->context->id,
                 'mod_aibranchedscenario',
                 self::AREA_REVISION_SCENE,
-                $revisionnumber,
+                $slot,
                 '/',
                 $name
             );
@@ -1513,7 +1578,7 @@ class media_manager {
                 'contextid' => $this->context->id,
                 'component' => 'mod_aibranchedscenario',
                 'filearea'  => self::AREA_REVISION_SCENE,
-                'itemid'    => $revisionnumber,
+                'itemid'    => $slot,
                 'filepath'  => '/',
                 'filename'  => $name,
             ], $file);
@@ -1541,7 +1606,7 @@ class media_manager {
             self::AREA_NARRATION => self::AREA_REVISION_NARRATION,
         ];
         foreach ($pairs as $from => $to) {
-            $fs->delete_area_files($this->context->id, 'mod_aibranchedscenario', $to, $revisionnumber);
+            $fs->delete_area_files($this->context->id, 'mod_aibranchedscenario', $to, $this->slot($revisionnumber));
             $files = $fs->get_area_files(
                 $this->context->id,
                 'mod_aibranchedscenario',
@@ -1564,12 +1629,19 @@ class media_manager {
             // caller's "did this reach the learner" check reports it instead. Losing one
             // clip is a fault worth reporting. Looping on a paid API is not a fault, it is
             // a bill.
+            $slot = $this->slot($revisionnumber);
             foreach ($files as $file) {
+                // Only this rung's working files. The three scenarios in an activity share
+                // the working areas, so without this the foundation scenario's publish
+                // would sweep up the intermediate one's half-finished artwork.
+                if (!$this->mine((int)$file->get_itemid())) {
+                    continue;
+                }
                 $target = [
                     'contextid' => $this->context->id,
                     'component' => 'mod_aibranchedscenario',
                     'filearea'  => $to,
-                    'itemid'    => $revisionnumber,
+                    'itemid'    => $slot,
                     'filepath'  => '/',
                     'filename'  => $file->get_filename(),
                 ];
@@ -1581,7 +1653,7 @@ class media_manager {
                     $this->context->id,
                     'mod_aibranchedscenario',
                     $to,
-                    $revisionnumber,
+                    $slot,
                     '/',
                     $file->get_filename()
                 );
@@ -1604,11 +1676,12 @@ class media_manager {
      */
     public function urls_for_revision(string $filearea, int $revisionnumber): array {
         $fs = get_file_storage();
+        $slot = $this->slot($revisionnumber);
         $files = $fs->get_area_files(
             $this->context->id,
             'mod_aibranchedscenario',
             $filearea,
-            $revisionnumber,
+            $slot,
             'filename',
             false
         );
@@ -1620,7 +1693,7 @@ class media_manager {
                 $this->context->id,
                 'mod_aibranchedscenario',
                 $filearea,
-                $revisionnumber,
+                $slot,
                 '/',
                 $name
             )->out(false);
@@ -1649,6 +1722,9 @@ class media_manager {
         );
         $out = [];
         foreach ($files as $file) {
+            if (!$this->mine((int)$file->get_itemid())) {
+                continue;
+            }
             $name = $file->get_filename();
             $nodeid = pathinfo($name, PATHINFO_FILENAME);
             $out[$nodeid] = moodle_url::make_pluginfile_url(

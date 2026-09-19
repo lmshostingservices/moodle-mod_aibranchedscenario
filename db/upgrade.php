@@ -912,5 +912,164 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091905, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091906) {
+        // Release 2.4.0 makes the plugin's name true.
+        //
+        // The route contract has required branching since v1 - "do not emit a graph in
+        // which every choice from a node points at the same target" - and nothing ever
+        // checked it. The scenario shipped inside the plugin as its worked example broke
+        // that rule on three of its five decisions, so what the product actually delivered
+        // was a linear lesson with three mood meters. Branching is now asked for in the
+        // prompt, carried in the content standard and reported by the review panel.
+        //
+        // A choice can also leave a FACT behind - setflags - and a later node can be
+        // written against it, so a scenario remembers what the learner did rather than
+        // only scoring it. The crisis variant is one case of that general mechanism and
+        // keeps working exactly as it did.
+        //
+        // No schema change: the attempt's state column is free-form and already held the
+        // visited list, so flags needed no migration. A scenario published before this has
+        // no flags and no variants, reads exactly as it always did, and is not reported as
+        // faulty - the shape rules apply to scenarios being made, not to ones already
+        // stored.
+        upgrade_mod_savepoint(true, 2026091906, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091907) {
+        // THE LADDER. An activity holds three scenarios now, not one.
+        //
+        // Foundation, intermediate and advanced, testing the same principles at rising
+        // difficulty, each unlocked by passing the one before. One scenario is a single
+        // sample of a learner's judgement; three is a trend, and a trend is what an RTO is
+        // actually assessing.
+        //
+        // Every existing activity becomes the FOUNDATION rung of its own ladder, with the
+        // other two empty until a teacher generates them. Nothing a learner has done
+        // changes: their attempts stay bound to the revisions they were taken against, and
+        // those revisions become tier 1 revisions.
+
+        // One row per rung, holding that rung's working copy and what it has published.
+        $table = new xmldb_table('aibranchedscenario_tiers');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('scenarioid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('tier', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '1');
+        $table->add_field('status', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'draft');
+        $table->add_field('scenariojson', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('previousjson', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('generationmeta', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('revision', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('scenarioid', XMLDB_KEY_FOREIGN, ['scenarioid'], 'aibranchedscenario', ['id']);
+        $table->add_index('scenarioid-tier', XMLDB_INDEX_UNIQUE, ['scenarioid', 'tier']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // A revision belongs to a rung. The unique index has to move with it, or the
+        // intermediate scenario's first publish collides with the foundation's.
+        $revisions = new xmldb_table('aibranchedscenario_revisions');
+        $tierfield = new xmldb_field('tier', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '1', 'scenarioid');
+        if (!$dbman->field_exists($revisions, $tierfield)) {
+            $dbman->add_field($revisions, $tierfield);
+        }
+        $oldindex = new xmldb_index('scenarioid-revision', XMLDB_INDEX_UNIQUE, ['scenarioid', 'revision']);
+        if ($dbman->index_exists($revisions, $oldindex)) {
+            $dbman->drop_index($revisions, $oldindex);
+        }
+        $newindex = new xmldb_index(
+            'scenarioid-tier-revision',
+            XMLDB_INDEX_UNIQUE,
+            ['scenarioid', 'tier', 'revision']
+        );
+        if (!$dbman->index_exists($revisions, $newindex)) {
+            $dbman->add_index($revisions, $newindex);
+        }
+
+        // And so does an attempt - including its attempt NUMBER, which is counted per rung.
+        // Without this a learner's first attempt at the intermediate scenario collides with
+        // their first at the foundation one, and the insert simply fails.
+        $attempts = new xmldb_table('aibranchedscenario_attempts');
+        $attempttier = new xmldb_field('tier', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '1', 'revisionid');
+        if (!$dbman->field_exists($attempts, $attempttier)) {
+            $dbman->add_field($attempts, $attempttier);
+        }
+        $oldattemptindex = new xmldb_index(
+            'scenarioid-userid-attemptno',
+            XMLDB_INDEX_UNIQUE,
+            ['scenarioid', 'userid', 'attemptno']
+        );
+        if ($dbman->index_exists($attempts, $oldattemptindex)) {
+            $dbman->drop_index($attempts, $oldattemptindex);
+        }
+        $newattemptindex = new xmldb_index(
+            'scenarioid-tier-userid-attemptno',
+            XMLDB_INDEX_UNIQUE,
+            ['scenarioid', 'tier', 'userid', 'attemptno']
+        );
+        if (!$dbman->index_exists($attempts, $newattemptindex)) {
+            $dbman->add_index($attempts, $newattemptindex);
+        }
+
+        // Every activity that exists becomes the foundation rung of its own ladder. Done in
+        // a recordset rather than a single INSERT..SELECT because the working copy is a
+        // text column holding up to two megabytes and a site may have thousands of rows.
+        $now = time();
+        $existing = $DB->get_recordset(
+            'aibranchedscenario',
+            null,
+            'id',
+            'id, status, scenariojson, previousjson, generationmeta, revision, timecreated'
+        );
+        foreach ($existing as $activity) {
+            if (
+                $DB->record_exists(
+                    'aibranchedscenario_tiers',
+                    ['scenarioid' => $activity->id, 'tier' => 1]
+                )
+            ) {
+                continue;
+            }
+            $DB->insert_record('aibranchedscenario_tiers', (object)[
+                'scenarioid'     => $activity->id,
+                'tier'           => 1,
+                'status'         => $activity->status,
+                'scenariojson'   => $activity->scenariojson,
+                'previousjson'   => $activity->previousjson,
+                'generationmeta' => $activity->generationmeta,
+                'revision'       => $activity->revision,
+                'timecreated'    => $activity->timecreated ?: $now,
+                'timemodified'   => $now,
+            ]);
+        }
+        $existing->close();
+
+        upgrade_mod_savepoint(true, 2026091907, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091908) {
+        // A generation job writes one rung, so it has to say which. Jobs queued before the
+        // ladder existed wrote the only scenario there was, which is rung one.
+        $table = new xmldb_table('aibranchedscenario_jobs');
+        $field = new xmldb_field('tier', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '1', 'jobtype');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // The in-flight check asks whether this RUNG already has a job running, so the
+        // index it reads has to carry the rung too.
+        $old = new xmldb_index('scenarioid-status', XMLDB_INDEX_NOTUNIQUE, ['scenarioid', 'status']);
+        if ($dbman->index_exists($table, $old)) {
+            $dbman->drop_index($table, $old);
+        }
+        $new = new xmldb_index('scenarioid-status', XMLDB_INDEX_NOTUNIQUE, ['scenarioid', 'tier', 'status']);
+        if (!$dbman->index_exists($table, $new)) {
+            $dbman->add_index($table, $new);
+        }
+
+        upgrade_mod_savepoint(true, 2026091908, 'aibranchedscenario');
+    }
+
     return true;
 }

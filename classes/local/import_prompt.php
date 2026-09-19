@@ -148,6 +148,25 @@ class import_prompt {
                 . '"situation" 4000 characters, "summary" 2000, "consequence" and '
                 . '"feedback" 1800 each, "challenge" 600, "imageprompt" 600 on one line, '
                 . '"imagealt" 250, a choice\'s "text" 400, any title or name 255.',
+            '- BRANCH. Different choices must lead to different nodes. At least two of the '
+                . $decisions . ' decisions send a poor choice somewhere a good choice does '
+                . 'not: a different scene, a different conversation, a consequence that has '
+                . 'to be dealt with. Those paths reconverge at a later decision so the '
+                . 'scenario stays one story. A decision whose choices all name the same '
+                . '"next" is not a decision, it is a question with a score attached - and '
+                . 'the activity now reports it to the teacher before they publish.',
+            '- CARRY STATE. Put "setflags" on a choice to record what it left behind: '
+                . '{"hazard_reported": true} or {"lead_still_in_use": true}. Then give a '
+                . 'LATER node a "variants" list - each entry a "when" and its own '
+                . '"situation", and optionally "facilitatorspeech" and "challenge" - so '
+                . 'that moment is written differently for a learner carrying that fact. '
+                . 'First match wins, so write the most specific first. "when" is one of: '
+                . '{"flag": "hazard_reported", "is": true}, {"metric": "tension", '
+                . '"atleast": 75}, or {"signals": "negative", "atleast": 3} for the case '
+                . 'where somebody has made three poor calls and the scenario should '
+                . 'escalate. Two or three variants across the whole scenario is enough. '
+                . 'Every flag a variant waits on must be set by some choice, or that '
+                . 'screen can never be shown to anybody.',
             '- Give one or two mid-story decision nodes a "crisisvariant" carrying its '
                 . 'own "situation", "facilitatorspeech" and "challenge": the same moment '
                 . 'as it plays out when tension has already run high. The activity shows '
@@ -285,6 +304,7 @@ class import_prompt {
                     'choices' => [[
                         'id' => 'n1_a', 'text' => 'What the learner does',
                         'signal' => 'positive', 'consequence' => 'What happens next',
+                        'setflags' => ['a_fact_a_choice_set' => true],
                         'feedback' => 'What this told us', 'principleid' => 'p1',
                         'outcomenote' => 'ONE OF THREE. Where this option leads and why: '
                             . 'what it costs, what it teaches, how it leaves the people in '
@@ -293,6 +313,13 @@ class import_prompt {
                         'skills' => ['presence' => 2, 'adaptability' => 0, 'empathy' => 1, 'clarity' => 2],
                         'tags' => ['gathers-information'],
                         'next' => '__auto__',
+                    ]],
+                    // What this choice leaves behind, and the later screen written against
+                    // it. This pair is what makes a scenario remember.
+                    'variants' => [[
+                        'when' => ['flag' => 'a_fact_a_choice_set', 'is' => true],
+                        'situation' => 'This same moment, written for a learner who did '
+                            . 'that earlier',
                     ]],
                     'crisisvariant' => [
                         'situation' => 'The same moment with the tension already high',

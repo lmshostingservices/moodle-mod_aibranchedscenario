@@ -54,6 +54,16 @@ class attempt_manager {
     protected $nodes = [];
 
     /**
+     * @var int Which rung of the ladder this manager is serving.
+     *
+     * An activity holds schema::TIERS scenarios now. Everything an attempt does - which
+     * revision it binds to, which attempt number it gets, which of a learner's attempts
+     * count against the limit - is per rung, because a learner climbing the ladder is
+     * doing three separate scenarios rather than three tries at one.
+     */
+    protected $tier = 1;
+
+    /**
      * Constructor.
      *
      * @param stdClass $scenario Activity instance record.
@@ -62,6 +72,9 @@ class attempt_manager {
     public function __construct(stdClass $scenario, stdClass $revision) {
         $this->scenario = $scenario;
         $this->revision = $revision;
+        // Read from the revision rather than passed in, so a manager can never be serving
+        // one rung while bound to another's content.
+        $this->tier = max(1, (int)($revision->tier ?? 1));
         $decoded = json_decode($revision->scenariojson, true);
         if (!is_array($decoded)) {
             throw new moodle_exception('error:revisionunreadable', 'mod_aibranchedscenario');
@@ -78,18 +91,24 @@ class attempt_manager {
      * @param stdClass $scenario Activity instance record.
      * @return self
      */
-    public static function for_scenario(stdClass $scenario): self {
-        global $DB;
-        $revision = $DB->get_record(
-            'aibranchedscenario_revisions',
-            ['scenarioid' => $scenario->id, 'revision' => $scenario->revision],
-            '*',
-            IGNORE_MISSING
-        );
+    public static function for_scenario(stdClass $scenario, int $tier = 1): self {
+        // Asked of scenario_manager rather than worked out here: which revision a rung is
+        // serving is the ladder's business, and two places answering it is how they come
+        // to disagree.
+        $revision = scenario_manager::get_current_revision($scenario, $tier);
         if (!$revision) {
             throw new moodle_exception('error:notpublished', 'mod_aibranchedscenario');
         }
         return new self($scenario, $revision);
+    }
+
+    /**
+     * Which rung of the ladder this manager is serving.
+     *
+     * @return int
+     */
+    public function get_tier(): int {
+        return $this->tier;
     }
 
     /**
@@ -159,6 +178,7 @@ class attempt_manager {
         global $DB;
         $records = $DB->get_records('aibranchedscenario_attempts', [
             'scenarioid' => $this->scenario->id,
+            'tier'       => $this->tier,
             'userid'     => $userid,
             'status'     => self::STATUS_INPROGRESS,
         ], 'attemptno DESC', '*', 0, 1);
@@ -175,6 +195,7 @@ class attempt_manager {
         global $DB;
         return $DB->get_records('aibranchedscenario_attempts', [
             'scenarioid' => $this->scenario->id,
+            'tier'       => $this->tier,
             'userid'     => $userid,
         ], 'attemptno DESC');
     }
@@ -221,11 +242,15 @@ class attempt_manager {
         // on screen explaining where their attempts went. What the setting means to a
         // teacher is how many times a learner may GO THROUGH the scenario, not how many
         // times they may press a button.
+        // Per rung, like everything else about an attempt. The attempt limit is how many
+        // times a learner may go through A SCENARIO; counting across the ladder would let
+        // three tries at the foundation one lock them out of the other two entirely.
         return $DB->count_records_select(
             'aibranchedscenario_attempts',
-            'scenarioid = :sid AND userid = :uid AND status <> :abandoned',
+            'scenarioid = :sid AND tier = :tier AND userid = :uid AND status <> :abandoned',
             [
                 'sid' => $this->scenario->id,
+                'tier' => $this->tier,
                 'uid' => $userid,
                 'abandoned' => self::STATUS_ABANDONED,
             ]
@@ -303,15 +328,20 @@ class attempt_manager {
             }
         }
 
+        // Counted per rung: the learner's first go at the intermediate scenario is attempt
+        // one of that scenario, not attempt four of the activity. Counting across the whole
+        // ladder would also collide with the unique index, which is per rung.
         $max = (int)$DB->get_field_sql(
-            'SELECT MAX(attemptno) FROM {aibranchedscenario_attempts} WHERE scenarioid = ? AND userid = ?',
-            [$this->scenario->id, $userid]
+            'SELECT MAX(attemptno) FROM {aibranchedscenario_attempts}
+                WHERE scenarioid = ? AND tier = ? AND userid = ?',
+            [$this->scenario->id, $this->tier, $userid]
         );
 
         $opening = $this->definition['openingmetrics'];
         $attempt = (object)[
             'scenarioid'   => $this->scenario->id,
             'revisionid'   => $this->revision->id,
+            'tier'         => $this->tier,
             'userid'       => $userid,
             'attemptno'    => $max + 1,
             'status'       => self::STATUS_INPROGRESS,
@@ -428,6 +458,16 @@ class attempt_manager {
         $state = $this->decode_state($attempt);
         if ($node['type'] === 'decision') {
             $state['decisions'] = (int)($state['decisions'] ?? 0) + 1;
+            // How many of each kind of call they have made, which is what lets a scenario
+            // escalate after three poor ones rather than merely react to the last.
+            $signal = (string)($choice['signal'] ?? 'neutral');
+            $state['signals'][$signal] = (int)($state['signals'][$signal] ?? 0) + 1;
+        }
+        // The facts this choice sets about the world. A flag set here is why a screen two
+        // stages later reads the way it does - the difference between a scenario that
+        // scores you and one that remembers you.
+        foreach ((array)($choice['setflags'] ?? []) as $flag => $value) {
+            $state['flags'][$flag] = (bool)$value;
         }
 
         $nextid = $this->resolve_target($choice['next'], $attempt, $state, $node);
@@ -673,6 +713,14 @@ class attempt_manager {
         if (!isset($state['decisions'])) {
             $state['decisions'] = 0;
         }
+        // An attempt started before flags existed has neither key, and every condition
+        // written against them must simply be false rather than throw.
+        if (!isset($state['flags']) || !is_array($state['flags'])) {
+            $state['flags'] = [];
+        }
+        if (!isset($state['signals']) || !is_array($state['signals'])) {
+            $state['signals'] = [];
+        }
         return $state;
     }
 
@@ -749,6 +797,61 @@ class attempt_manager {
             ];
         }
         return $journey;
+    }
+
+    /**
+     * The wording this node should show THIS learner, given what they have done.
+     *
+     * First match wins, in the order the author wrote them, so a scenario reads top to
+     * bottom like the rules it is describing: the most specific case first, the general
+     * one last. A node with no matching variant shows its own text, which is every node in
+     * every scenario written before v2.4.0.
+     *
+     * @param array $node The node being rendered.
+     * @param stdClass $attempt The attempt, for the readings.
+     * @param array $state Decoded attempt state, for the flags and counts.
+     * @return array|null The variant to show, or null for the node's own text.
+     */
+    public function variant_for(array $node, stdClass $attempt, array $state): ?array {
+        foreach ((array)($node['variants'] ?? []) as $variant) {
+            if (self::condition_holds((array)($variant['when'] ?? []), $attempt, $state)) {
+                return $variant;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Does one variant condition hold for this attempt?
+     *
+     * Three shapes and no more - see validator::condition() for why the language is kept
+     * small. An unrecognised condition is FALSE rather than true: a screen that fails to
+     * appear is a scenario reading slightly flat, and a screen that appears when it should
+     * not is a scenario telling a learner something that did not happen to them.
+     *
+     * @param array $when The normalised condition.
+     * @param stdClass $attempt The attempt, for the readings.
+     * @param array $state Decoded attempt state.
+     * @return bool
+     */
+    public static function condition_holds(array $when, stdClass $attempt, array $state): bool {
+        if (isset($when['flag'])) {
+            return !empty($state['flags'][$when['flag']]) === !empty($when['is']);
+        }
+        if (isset($when['metric'])) {
+            $value = (int)($attempt->{$when['metric']} ?? 0);
+            if (isset($when['atleast'])) {
+                return $value >= (int)$when['atleast'];
+            }
+            if (isset($when['atmost'])) {
+                return $value <= (int)$when['atmost'];
+            }
+            return false;
+        }
+        if (isset($when['signals'])) {
+            return (int)($state['signals'][$when['signals']] ?? 0) >= (int)($when['atleast'] ?? 1);
+        }
+        return false;
     }
 
     /**
@@ -872,11 +975,66 @@ class attempt_manager {
      * @return float|null Percentage, or null when there is nothing to grade.
      */
     public static function aggregate_score(stdClass $scenario, int $userid): ?float {
+        // THE GRADE IS THE LADDER, NOT ONE RUNG OF IT.
+        //
+        // An activity holds three scenarios at rising difficulty. A learner who has only
+        // reached the foundation one has not demonstrated competence at the advanced one,
+        // and a grade that reported their foundation score as the activity's mark would
+        // say they had. The mean across all schema::TIERS rungs, counting a rung they have
+        // not reached as nought, is the honest number: only somebody who climbs the whole
+        // ladder can score well on it, which is what "competent" is supposed to mean.
+        //
+        // The grade METHOD - last, first, highest, average - still decides which of a
+        // learner's attempts at one rung counts. It was never about the ladder.
+        $total = 0.0;
+        $any = false;
+        foreach (array_keys(schema::tiers()) as $tier) {
+            $rung = self::tier_score($scenario, $userid, $tier);
+            if ($rung !== null) {
+                $any = true;
+                $total += $rung;
+            }
+        }
+        return $any ? $total / schema::TIERS : null;
+    }
+
+    /**
+     * The learner's best score at one rung, or null when they have not finished it.
+     *
+     * @param stdClass $scenario Activity instance.
+     * @param int $userid The learner.
+     * @param int $tier Which rung.
+     * @return float|null
+     */
+    public static function best_score(stdClass $scenario, int $userid, int $tier = 1): ?float {
+        global $DB;
+        $best = $DB->get_field_select(
+            'aibranchedscenario_attempts',
+            'MAX(score)',
+            'scenarioid = :sid AND userid = :uid AND tier = :tier AND status = :status
+                AND score IS NOT NULL',
+            ['sid' => $scenario->id, 'uid' => $userid, 'tier' => $tier,
+                'status' => self::STATUS_FINISHED]
+        );
+        return $best === null || $best === false ? null : (float)$best;
+    }
+
+    /**
+     * The score one rung contributes, under the activity's grade method.
+     *
+     * @param stdClass $scenario Activity instance.
+     * @param int $userid The learner.
+     * @param int $tier Which rung.
+     * @return float|null Null when the learner has not finished this rung.
+     */
+    public static function tier_score(stdClass $scenario, int $userid, int $tier): ?float {
         global $DB;
         $attempts = $DB->get_records_select(
             'aibranchedscenario_attempts',
-            'scenarioid = :sid AND userid = :uid AND status = :status AND score IS NOT NULL',
-            ['sid' => $scenario->id, 'uid' => $userid, 'status' => self::STATUS_FINISHED],
+            'scenarioid = :sid AND userid = :uid AND tier = :tier AND status = :status
+                AND score IS NOT NULL',
+            ['sid' => $scenario->id, 'uid' => $userid, 'tier' => $tier,
+                'status' => self::STATUS_FINISHED],
             'attemptno ASC'
         );
         if (!$attempts) {

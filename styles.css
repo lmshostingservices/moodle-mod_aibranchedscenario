@@ -39,7 +39,8 @@
 /* ------------------------------------------------------------------ tokens */
 
 .aibs-player,
-.aibs-wizard {
+.aibs-wizard,
+.aibs-ladder {
     --aibs-canvas: #f5f6f8;
     --aibs-surface: #fff;
     --aibs-surface-alt: #eef0f4;
@@ -170,6 +171,7 @@
    behaviour that shipped before. */
 .aibs-player[data-aibs-scheme="dark"],
 .aibs-wizard[data-aibs-scheme="dark"],
+.aibs-ladder[data-aibs-scheme="dark"],
 .aibs-toasts[data-aibs-scheme="dark"],
 .aibs-toasts[data-aibs-scheme="dark"] .aibs-toast {
     --aibs-canvas: #11141a;
@@ -207,7 +209,8 @@
    and the border a mid tone that can still be seen against both. */
 
 .aibs-player[data-aibs-scheme="dark"].aibs-theme-slate,
-.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-slate {
+.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-slate,
+.aibs-ladder[data-aibs-scheme="dark"].aibs-theme-slate {
     --aibs-accent: #60a5fa;
     --aibs-accent-strong: #93c5fd;
     --aibs-accent-soft: #16233b;
@@ -215,7 +218,8 @@
 }
 
 .aibs-player[data-aibs-scheme="dark"].aibs-theme-emerald,
-.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-emerald {
+.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-emerald,
+.aibs-ladder[data-aibs-scheme="dark"].aibs-theme-emerald {
     --aibs-accent: #34d399;
     --aibs-accent-strong: #6ee7b7;
     --aibs-accent-soft: #10281f;
@@ -224,7 +228,8 @@
 
 
 .aibs-player[data-aibs-scheme="dark"].aibs-theme-amber,
-.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-amber {
+.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-amber,
+.aibs-ladder[data-aibs-scheme="dark"].aibs-theme-amber {
     --aibs-accent: #fbbf24;
     --aibs-accent-strong: #fcd34d;
     --aibs-accent-soft: #2c2109;
@@ -271,8 +276,15 @@
 /* ------------------------------------------------------------------- shell */
 
 .aibs-player,
-.aibs-wizard {
+.aibs-wizard,
+.aibs-ladder {
     background: var(--aibs-canvas);
+    /* Stated on the shell, not only on what is inside it. Every descendant was told, and
+       the shell itself was left to whatever the host page happened to set - which is
+       Bootstrap's global rule on a Moodle theme, and therefore correct by luck rather
+       than by statement. A shell with content-box sizing and padding is wider than the
+       column it sits in, which is a page that scrolls sideways on a phone. */
+    box-sizing: border-box;
     border: 1px solid var(--aibs-border);
     border-radius: calc(var(--aibs-radius) + 6px);
     color: var(--aibs-text);
@@ -314,7 +326,8 @@
    Stated on the roots, so it applies to everything inside the player and the wizard and to
    nothing else on the page. A site that wants its own face can still override it. */
 .aibs-player,
-.aibs-wizard {
+.aibs-wizard,
+.aibs-ladder {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
         "Noto Sans", sans-serif;
 }
@@ -323,7 +336,8 @@
 .aibs-player h1, .aibs-player h2, .aibs-player h3, .aibs-player h4,
 .aibs-player h5, .aibs-player h6,
 .aibs-wizard h1, .aibs-wizard h2, .aibs-wizard h3, .aibs-wizard h4,
-.aibs-wizard h5, .aibs-wizard h6 {
+.aibs-wizard h5, .aibs-wizard h6,
+.aibs-ladder h2, .aibs-ladder h3 {
     font-family: inherit;
 }
 
@@ -334,7 +348,8 @@
 }
 
 .aibs-player *,
-.aibs-wizard * {
+.aibs-wizard *,
+.aibs-ladder * {
     box-sizing: border-box;
 }
 
@@ -356,7 +371,8 @@
    Neither is a rule about how the plugin should look; both are about not leaving a value to
    whoever happens to own the page. */
 .aibs-player li,
-.aibs-wizard li {
+.aibs-wizard li,
+.aibs-ladder li {
     margin-block: 0;
 }
 
@@ -1200,6 +1216,7 @@
 .path-mod-aibranchedscenario [hidden],
 .aibs-player [hidden],
 .aibs-wizard [hidden],
+.aibs-ladder [hidden],
 .aibs-region[hidden] {
     display: none !important;
 }
@@ -3143,7 +3160,7 @@ body.aibs-work-locked {
     }
 
     .path-mod-aibranchedscenario .aibs-printhead-meta {
-        color: var(--aibs-text-muted);
+        color: var(--aibs-muted);
         font-size: var(--aibs-text-meta);
         margin: 2px 0 0;
     }
@@ -5900,7 +5917,7 @@ button.aibs-avatar:focus-visible {
     align-items: center;
     background: var(--aibs-surface-alt);
     border-radius: var(--aibs-radius-sm);
-    color: var(--aibs-text-muted);
+    color: var(--aibs-muted);
     display: flex;
     font-size: var(--aibs-text-meta);
     gap: 8px;
@@ -5955,7 +5972,7 @@ button.aibs-avatar:focus-visible {
 }
 
 .aibs-brief-label {
-    color: var(--aibs-text-muted);
+    color: var(--aibs-muted);
     font-size: var(--aibs-text-meta);
     font-weight: var(--aibs-weight-label);
     letter-spacing: .06em;
@@ -6011,7 +6028,7 @@ button.aibs-avatar:focus-visible {
 /* The direction, in words. "get this up" and "keep this down" are the whole scoreboard
    explained, and they cost one line each. */
 .aibs-brief-goal-aim {
-    color: var(--aibs-text-muted);
+    color: var(--aibs-muted);
     font-size: var(--aibs-text-meta);
     grid-column: 2 / -1;
     grid-row: 2;
@@ -6027,7 +6044,7 @@ button.aibs-avatar:focus-visible {
 }
 
 .aibs-brief-facts dt {
-    color: var(--aibs-text-muted);
+    color: var(--aibs-muted);
     font-size: var(--aibs-text-meta);
     font-weight: var(--aibs-weight-label);
     letter-spacing: .06em;
@@ -6041,12 +6058,12 @@ button.aibs-avatar:focus-visible {
 
 /* Names read as a list without needing commas typed into the template. */
 .aibs-brief-person + .aibs-brief-person::before {
-    color: var(--aibs-text-muted);
+    color: var(--aibs-muted);
     content: " · ";
 }
 
 .aibs-brief-person-role {
-    color: var(--aibs-text-muted);
+    color: var(--aibs-muted);
 }
 
 .aibs-brief-person-role::before {
@@ -6057,4 +6074,357 @@ button.aibs-avatar:focus-visible {
 /* The printed record's header is paper-only. */
 .aibs-printhead {
     display: none;
+}
+
+
+/* ============================================================ the ladder ====
+   The chooser an activity with more than one scenario opens on: three cards, in
+   order, one open and the rest waiting.
+
+   The cards are a numbered list in the markup because they are a sequence - the
+   order carries the meaning, which is the whole design. A locked card is drawn
+   quietly rather than hidden, because what is ahead is the reason to finish what
+   is in front of you. */
+
+.aibs-ladder {
+    padding: clamp(18px, 2.2vw, 32px);
+}
+
+.aibs-ladder-head {
+    margin-block-end: clamp(16px, 2vw, 26px);
+    max-width: 62ch;
+}
+
+.aibs-ladder-title {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-head);
+    font-weight: var(--aibs-weight-strong);
+    line-height: var(--aibs-leading-tight);
+    margin: 0;
+    text-wrap: balance;
+}
+
+.aibs-ladder-lead {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-lead);
+    line-height: var(--aibs-leading-snug);
+    margin: 6px 0 0;
+}
+
+/* How far along, said once and in words. A learner who has passed one of three has
+   a fact about themselves, not a progress bar to watch fill. */
+.aibs-ladder-progress {
+    color: var(--aibs-accent);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-label);
+    letter-spacing: .06em;
+    margin: 12px 0 0;
+    text-transform: uppercase;
+}
+
+.aibs-ladder-cards {
+    display: grid;
+    gap: clamp(12px, 1.6vw, 20px);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.aibs-ladder-item {
+    display: flex;
+    min-width: 0;
+}
+
+/* One target over the whole card. The three cards are the same height because they
+   are grid items stretching to the tallest, and the foot is pushed to the bottom so
+   the three action lines agree with each other across the row. */
+.aibs-ladder-card {
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius);
+    box-shadow: var(--aibs-shadow-sm);
+    color: var(--aibs-text);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    text-decoration: none;
+    transition: box-shadow .18s var(--aibs-ease), transform .18s var(--aibs-ease),
+        border-color .18s var(--aibs-ease);
+    width: 100%;
+}
+
+/* A lift, and nothing else - no tint, no colour change, no border that appears from
+   nowhere. The card is a physical object under the pointer. */
+.path-mod-aibranchedscenario a.aibs-ladder-card:hover,
+.path-mod-aibranchedscenario a.aibs-ladder-card:focus-visible,
+a.aibs-ladder-card:hover,
+a.aibs-ladder-card:focus-visible {
+    border-color: var(--aibs-accent-border);
+    box-shadow: var(--aibs-shadow-hover);
+    color: var(--aibs-text);
+    text-decoration: none;
+    transform: translateY(-2px);
+}
+
+a.aibs-ladder-card:focus-visible {
+    outline: 2px solid var(--aibs-accent);
+    outline-offset: 2px;
+}
+
+/* Waiting, not broken. Enough colour left to read the situation on it. */
+.aibs-ladder-card.aibs-is-locked {
+    background: var(--aibs-surface-alt);
+    border-color: var(--aibs-border-soft);
+    box-shadow: none;
+}
+
+.aibs-ladder-figure {
+    aspect-ratio: 16 / 9;
+    background: var(--aibs-surface-alt);
+    display: block;
+    position: relative;
+    width: 100%;
+}
+
+.aibs-ladder-img {
+    border: 0;
+    display: block;
+    height: 100%;
+    max-width: 100%;
+    object-fit: cover;
+    width: 100%;
+}
+
+.aibs-ladder-card.aibs-is-locked .aibs-ladder-img {
+    filter: grayscale(.85);
+    opacity: .55;
+}
+
+/* A rung with no picture yet still needs a shape in that space, or the card below it
+   starts at a different height from its neighbours. */
+.aibs-ladder-plate {
+    background: linear-gradient(140deg, var(--aibs-surface-alt), var(--aibs-border-soft));
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
+/* Which rung this is, on the picture. It repeats what the order already says, which
+   is the point: the number is what a learner refers to it by afterwards. */
+.aibs-ladder-step {
+    align-items: center;
+    background: var(--aibs-accent);
+    border-radius: 999px;
+    color: var(--aibs-on-accent);
+    display: flex;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-strong);
+    height: 30px;
+    inset-block-start: 12px;
+    inset-inline-start: 12px;
+    justify-content: center;
+    position: absolute;
+    width: 30px;
+}
+
+.aibs-ladder-card.aibs-is-locked .aibs-ladder-step {
+    background: var(--aibs-neutral);
+}
+
+.aibs-ladder-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: clamp(14px, 1.4vw, 20px);
+}
+
+.aibs-ladder-name {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-label);
+    letter-spacing: .07em;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+.aibs-ladder-heading {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-title);
+    font-weight: var(--aibs-weight-strong);
+    line-height: var(--aibs-leading-tight);
+    margin: 0;
+    text-wrap: balance;
+}
+
+.aibs-ladder-sub {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-sub);
+    line-height: var(--aibs-leading-snug);
+    margin: 0;
+}
+
+.aibs-ladder-blurb {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-small);
+    line-height: var(--aibs-leading-body);
+    margin: 0;
+}
+
+/* The bottom line of every card sits on the same baseline, because the body above it
+   grows and this does not. */
+.aibs-ladder-foot {
+    align-items: center;
+    border-block-start: 1px solid var(--aibs-border-soft);
+    column-gap: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 12px clamp(14px, 1.4vw, 20px);
+    row-gap: 4px;
+}
+
+.aibs-ladder-mark {
+    align-items: center;
+    color: var(--aibs-positive);
+    display: inline-flex;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-label);
+    gap: 5px;
+}
+
+.aibs-ladder-mark .aibs-icon {
+    height: 16px;
+    width: 16px;
+}
+
+.aibs-ladder-best,
+.aibs-ladder-reason {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-meta);
+}
+
+/* Not a button: the card is the control. This is the card telling you what happens
+   when you use it. */
+.aibs-ladder-go {
+    color: var(--aibs-accent);
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-strong);
+    margin-inline-start: auto;
+}
+
+@media (max-width: 899px) {
+    .aibs-ladder-cards {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .aibs-ladder-figure {
+        aspect-ratio: 21 / 9;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aibs-ladder-card {
+        transition: none;
+    }
+
+    .path-mod-aibranchedscenario a.aibs-ladder-card:hover,
+    a.aibs-ladder-card:hover {
+        transform: none;
+    }
+}
+
+/* The way back to the chooser, sitting above the player rather than inside it, so it is
+   not one of the scenario's own controls. It is outside every shell, so it carries the two
+   tokens it needs rather than borrowing a palette it is not inside. */
+.aibs-backlink {
+    --aibs-accent: #2563eb;
+    --aibs-text-meta: .8125rem;
+    --aibs-weight-strong: 600;
+    color: var(--aibs-accent);
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-strong);
+    text-decoration: none;
+}
+
+.path-mod-aibranchedscenario .aibs-backlink:hover,
+.path-mod-aibranchedscenario .aibs-backlink:focus-visible,
+.aibs-backlink:hover,
+.aibs-backlink:focus-visible {
+    text-decoration: underline;
+}
+
+
+/* -------------------------------------------------- the rungs, in the wizard
+   Which of the activity's three scenarios this wizard is writing, and what state
+   the other two are in. A strip rather than a dropdown, because the states are the
+   information: a teacher wants to see at a glance which rungs are live. */
+
+.aibs-rungs {
+    align-items: center;
+    column-gap: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    margin-block-end: 14px;
+    row-gap: 6px;
+}
+
+.aibs-rungs-label {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-label);
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+.aibs-rung {
+    align-items: baseline;
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: 999px;
+    color: var(--aibs-text);
+    column-gap: 7px;
+    display: inline-flex;
+    font-size: var(--aibs-text-meta);
+    padding: 5px 13px;
+    text-decoration: none;
+}
+
+.path-mod-aibranchedscenario a.aibs-rung:hover,
+.path-mod-aibranchedscenario a.aibs-rung:focus-visible,
+a.aibs-rung:hover,
+a.aibs-rung:focus-visible {
+    border-color: var(--aibs-accent-border);
+    color: var(--aibs-text);
+    text-decoration: none;
+}
+
+.aibs-rung.aibs-is-current {
+    background: var(--aibs-accent-soft);
+    border-color: var(--aibs-accent-border);
+}
+
+.aibs-rung-name {
+    font-weight: var(--aibs-weight-strong);
+}
+
+.aibs-rung-state {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
+}
+
+.aibs-rung-state.aibs-is-live {
+    color: var(--aibs-positive);
+    font-weight: var(--aibs-weight-label);
+}
+
+/* A statement where a control used to be. */
+.aibs-field-note {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-small);
+    line-height: var(--aibs-leading-snug);
+    margin: 0;
 }

@@ -153,6 +153,40 @@ class content_standard {
                     . 'readings beside that score still sit near the middle, the screen is '
                     . 'telling them two different things about the same run.',
             ],
+            // THE PRODUCT IS CALLED AI BRANCHED SCENARIO.
+            //
+            // Nothing asked for branching until v2.4.0. The route contract stated the rule
+            // on day one and no prompt repeated it, so the scenario shipped inside the
+            // plugin as its worked example broke it on three of its five decisions - every
+            // option leading to the same screen, which is a linear lesson with meters.
+            'branching' => [
+                'short' => 'Different choices lead to genuinely different screens, and the '
+                    . 'paths reconverge later.',
+                'long'  => '- The learner\'s choices must change WHERE THEY GO, not only '
+                    . 'what the readings say. At least two of the five decisions send a '
+                    . 'poor choice somewhere a good choice does not - a different scene, a '
+                    . 'different conversation, a consequence that has to be dealt with. '
+                    . 'Paths reconverge at a later decision so the scenario stays one '
+                    . 'story, but a learner who chooses badly must SEE something a learner '
+                    . 'who chooses well never sees. A decision whose options all point at '
+                    . 'the same next screen is not a decision; it is a question with a '
+                    . 'score attached.',
+            ],
+            // What turns a branching quiz into a simulation: the world remembering.
+            'state' => [
+                'short' => 'Choices leave facts behind, and later screens are written '
+                    . 'against them.',
+                'long'  => '- Use "setflags" on a choice to record what it left behind - '
+                    . '{"hazard_reported": true}, {"lead_still_in_use": true} - and use '
+                    . '"variants" on a later node to write the version of that moment that '
+                    . 'belongs to a learner carrying that fact. Two or three across the '
+                    . 'scenario is enough. This is what makes the difference between a '
+                    . 'story that scores you and one that remembers you: the supervisor who '
+                    . 'says "thanks for flagging that earlier" to one learner and "why was '
+                    . 'this not reported?" to another, on the same screen. Every flag a '
+                    . 'variant waits on must be set by some choice, or that screen can '
+                    . 'never appear.',
+            ],
             'cast' => [
                 'short' => 'Name the same cast in every scene; no unnamed stand-ins.',
                 'long'  => '- The scenario has a named cast, and every scene names the people '

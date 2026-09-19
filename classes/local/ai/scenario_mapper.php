@@ -215,6 +215,34 @@ class scenario_mapper {
             ];
         }
 
+        // The conditional variants: this moment, written for a learner carrying a
+        // particular fact. Mapped by hand rather than passed through so that the condition
+        // keys arrive in the shape the validator normalises, whichever case the service
+        // sends them in.
+        $out['variants'] = [];
+        foreach ((array)($node['variants'] ?? []) as $variant) {
+            if (!is_array($variant)) {
+                continue;
+            }
+            $when = (array)($variant['when'] ?? []);
+            $out['variants'][] = [
+                'when' => [
+                    'flag'    => (string)($when['flag'] ?? ''),
+                    'is'      => !empty($when['is']),
+                    'metric'  => (string)($when['metric'] ?? ''),
+                    'signals' => (string)($when['signals'] ?? ''),
+                    'atleast' => isset($when['atLeast']) ? (int)$when['atLeast']
+                        : (isset($when['atleast']) ? (int)$when['atleast'] : null),
+                    'atmost'  => isset($when['atMost']) ? (int)$when['atMost']
+                        : (isset($when['atmost']) ? (int)$when['atmost'] : null),
+                ],
+                'situation'         => (string)($variant['situation'] ?? ''),
+                'facilitatorspeech' => (string)($variant['facilitatorSpeech']
+                    ?? ($variant['facilitatorspeech'] ?? '')),
+                'challenge'         => (string)($variant['challenge'] ?? ''),
+            ];
+        }
+
         if ($mapped === 'outcome') {
             $out['outcome'] = (string)($node['outcome'] ?? 'mixed');
             $out['summary'] = (string)($node['summary'] ?? '');
@@ -332,6 +360,10 @@ class scenario_mapper {
             // The paragraph the debrief slide shows against this option. Accepted under
             // either spelling, like every other field the service may camel-case.
             'outcomenote' => (string)($choice['outcomeNote'] ?? ($choice['outcomenote'] ?? '')),
+            // What this choice leaves behind. Accepted under either spelling, like every
+            // other field the service may camel-case, and simply absent on a service that
+            // has not shipped it - which is every service today.
+            'setflags'    => (array)($choice['setFlags'] ?? ($choice['setflags'] ?? [])),
             'principleid' => (string)($choice['principleId'] ?? ''),
             'next'        => (string)($choice['nextNodeId'] ?? ''),
             'skills'      => [

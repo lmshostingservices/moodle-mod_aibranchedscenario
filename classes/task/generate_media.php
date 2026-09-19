@@ -44,6 +44,9 @@ class generate_media extends \core\task\adhoc_task {
 
         $data = $this->get_custom_data();
         $cmid = (int)($data->cmid ?? 0);
+        // Which rung's artwork this run is making. Absent on a task queued before the
+        // ladder existed, and on those the only scenario there was is rung one.
+        $tier = (int)($data->tier ?? 1);
         if (!$cmid) {
             return;
         }
@@ -61,7 +64,7 @@ class generate_media extends \core\task\adhoc_task {
             return;
         }
 
-        $definition = scenario_manager::get_working_definition($scenario);
+        $definition = scenario_manager::get_working_definition($scenario, $tier);
         if (!is_array($definition)) {
             mtrace('Activity ' . $scenario->id . ' has no working copy; media skipped.');
             return;
@@ -81,6 +84,7 @@ class generate_media extends \core\task\adhoc_task {
             'userid'       => (int)$this->get_userid(),
             'status'       => generator::JOB_RUNNING,
             'jobtype'      => 'media',
+            'tier'         => $tier,
             'requestjson'  => json_encode(['nodes' => count($definition['nodes'] ?? [])]),
             'modelused'    => '',
             'timecreated'  => time(),
@@ -88,7 +92,7 @@ class generate_media extends \core\task\adhoc_task {
         ]);
 
         $generator = new generator();
-        $media = new media_manager($context);
+        $media = new media_manager($context, $tier);
         $counts = $media->generate_for_definition($generator->get_provider(), $scenario, $definition);
         $failures = $media->failures();
 
@@ -229,7 +233,7 @@ class generate_media extends \core\task\adhoc_task {
         if (!$scenario) {
             return;
         }
-        $revision = scenario_manager::get_current_revision($scenario);
+        $revision = scenario_manager::get_current_revision($scenario, $tier);
         if (!$revision) {
             // Not an error in itself - a teacher may simply not have published yet, and
             // publishing will collect this media. It is only worth a note, and only when

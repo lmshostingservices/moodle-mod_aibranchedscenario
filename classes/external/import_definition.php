@@ -62,6 +62,7 @@ class import_definition extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid'       => new external_value(PARAM_INT, 'Course module id'),
+            'tier'       => new external_value(PARAM_INT, 'Which rung of the ladder', VALUE_DEFAULT, 1),
             'definition' => new external_value(
                 PARAM_BASE64,
                 'Scenario definition: a JSON document, base64 encoded'
@@ -74,16 +75,18 @@ class import_definition extends external_api {
      *
      * @param int $cmid Course module id.
      * @param string $definition Scenario definition: a JSON document, base64 encoded.
+     * @param int $tier Which rung of the ladder this definition is for.
      * @return array
      */
-    public static function execute(int $cmid, string $definition): array {
+    public static function execute(int $cmid, string $definition, int $tier = 1): array {
         global $USER;
 
         $params = self::validate_parameters(
             self::execute_parameters(),
-            ['cmid' => $cmid, 'definition' => $definition]
+            ['cmid' => $cmid, 'definition' => $definition, 'tier' => $tier]
         );
         $resolved = helper::resolve($params['cmid'], 'mod/aibranchedscenario:manage');
+        $tier = helper::tier($params['tier']);
 
         $json = base64_decode($params['definition'], true);
         if ($json === false) {
@@ -112,7 +115,8 @@ class import_definition extends external_api {
             'contractversion' => $clean['version'],
             'nodecount'       => (int)($clean['stats']['nodecount'] ?? 0),
             'decisioncount'   => (int)($clean['stats']['decisioncount'] ?? 0),
-        ]);
+            'tier'            => $tier,
+        ], true, $tier);
 
         // An imported scenario used to arrive with no pictures, because the media loop
         // ran only inside the generation task. A teacher who drafted the scenario
@@ -160,12 +164,12 @@ class import_definition extends external_api {
                 // A run is only treated as in flight for an hour. Blocking on a job record
                 // forever would mean one crashed run locks a teacher out of their own
                 // pictures with no way back except the database.
-                if (self::media_in_flight((int)$resolved['scenario']->id)) {
+                if (self::media_in_flight((int)$resolved['scenario']->id, $tier)) {
                     throw new generation_exception('error:mediainflight');
                 }
                 (new generator())->check_credits((int)$USER->id, $cost);
                 $task = new \mod_aibranchedscenario\task\generate_media();
-                $task->set_custom_data((object)['cmid' => (int)$params['cmid']]);
+                $task->set_custom_data((object)['cmid' => (int)$params['cmid'], 'tier' => $tier]);
                 $task->set_userid((int)$USER->id);
                 \core\task\manager::queue_adhoc_task($task, true);
                 $media = $images;
@@ -210,16 +214,21 @@ class import_definition extends external_api {
      * Is a media run for this activity already under way?
      *
      * @param int $scenarioid Activity instance id.
+     * @param int $tier Which rung of the ladder.
      * @return bool
      */
-    protected static function media_in_flight(int $scenarioid): bool {
+    protected static function media_in_flight(int $scenarioid, int $tier = 1): bool {
         global $DB;
+        // Per rung, for the same reason generation is: illustrating the intermediate
+        // scenario while the foundation one's pictures are still being drawn is two
+        // separate runs writing two separate sets of files.
         return $DB->record_exists_select(
             'aibranchedscenario_jobs',
-            'scenarioid = :sid AND jobtype = :type AND status IN (:queued, :running)
+            'scenarioid = :sid AND tier = :tier AND jobtype = :type AND status IN (:queued, :running)
                AND timecreated > :since',
             [
                 'sid'     => $scenarioid,
+                'tier'    => $tier,
                 'type'    => 'media',
                 'queued'  => generator::JOB_QUEUED,
                 'running' => generator::JOB_RUNNING,

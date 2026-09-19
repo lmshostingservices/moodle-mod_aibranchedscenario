@@ -35,7 +35,10 @@ require_login($course, false, $cm);
 $context = context_module::instance($cm->id);
 require_capability('mod/aibranchedscenario:manage', $context);
 
-$PAGE->set_url('/mod/aibranchedscenario/edit.php', ['id' => $cm->id]);
+$tier = optional_param('tier', 1, PARAM_INT);
+$tier = isset(\mod_aibranchedscenario\local\schema::tiers()[$tier]) ? $tier : 1;
+
+$PAGE->set_url('/mod/aibranchedscenario/edit.php', ['id' => $cm->id, 'tier' => $tier]);
 $PAGE->set_title(get_string('editscenario', 'mod_aibranchedscenario'));
 $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($context);
@@ -43,7 +46,7 @@ $PAGE->set_context($context);
 echo $OUTPUT->header();
 echo $OUTPUT->heading(format_string($moduleinstance->name));
 
-$renderable = new wizard($moduleinstance, $cm, $context);
+$renderable = new wizard($moduleinstance, $cm, $context, $tier);
 echo $OUTPUT->render_from_template(
     'mod_aibranchedscenario/wizard',
     $renderable->export_for_template($OUTPUT)

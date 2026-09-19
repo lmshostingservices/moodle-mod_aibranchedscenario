@@ -17,6 +17,7 @@
 namespace mod_aibranchedscenario;
 
 use mod_aibranchedscenario\local\attempt_manager;
+use mod_aibranchedscenario\local\schema;
 use stdClass;
 
 /**
@@ -396,14 +397,24 @@ final class attempt_manager_test extends \advanced_testcase {
             ]);
         }
 
+        // THE GRADE METHOD DECIDES WHICH ATTEMPT AT A RUNG COUNTS. It was never about the
+        // ladder, so it is tested on the rung, where it applies.
         $expected = ['first' => 20.0, 'last' => 40.0, 'highest' => 90.0, 'average' => 50.0];
         foreach ($expected as $method => $value) {
             $this->scenario->grademethod = $method;
             $this->assertEqualsWithDelta(
                 $value,
-                attempt_manager::aggregate_score($this->scenario, (int)$this->learner->id),
+                attempt_manager::tier_score($this->scenario, (int)$this->learner->id, 1),
                 0.001,
                 'Aggregation method ' . $method . ' returned the wrong value.'
+            );
+            // And the ACTIVITY's grade is the ladder: this learner has climbed one rung of
+            // schema::TIERS, so whatever that rung is worth, the activity is worth a share.
+            $this->assertEqualsWithDelta(
+                $value / schema::TIERS,
+                attempt_manager::aggregate_score($this->scenario, (int)$this->learner->id),
+                0.001,
+                'The ladder grade for method ' . $method . ' was wrong.'
             );
         }
 

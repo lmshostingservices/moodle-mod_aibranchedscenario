@@ -42,6 +42,7 @@ class restore_draft extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module id'),
+            'tier' => new external_value(PARAM_INT, 'Which rung of the ladder', VALUE_DEFAULT, 1),
         ]);
     }
 
@@ -49,14 +50,19 @@ class restore_draft extends external_api {
      * Restore the previous working copy.
      *
      * @param int $cmid Course module id.
+     * @param int $tier Which rung of the ladder.
      * @return array
      */
-    public static function execute(int $cmid): array {
-        $params = self::validate_parameters(self::execute_parameters(), ['cmid' => $cmid]);
+    public static function execute(int $cmid, int $tier = 1): array {
+        $params = self::validate_parameters(
+            self::execute_parameters(),
+            ['cmid' => $cmid, 'tier' => $tier]
+        );
         $resolved = helper::resolve($params['cmid'], 'mod/aibranchedscenario:manage');
+        $tier = helper::tier($params['tier']);
 
-        $restored = scenario_manager::restore_previous($resolved['scenario']);
-        $definition = scenario_manager::get_working_definition($resolved['scenario']);
+        $restored = scenario_manager::restore_previous($resolved['scenario'], $tier);
+        $definition = scenario_manager::get_working_definition($resolved['scenario'], $tier);
 
         return [
             'restored'  => $restored,

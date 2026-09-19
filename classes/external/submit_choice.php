@@ -110,7 +110,15 @@ class submit_choice extends external_api {
             'before'         => $result['before'],
             'after'          => $result['after'],
             'finished'       => (bool)$result['finished'],
-            'node'           => helper::node_payload($node, $attempt, $mediaurls),
+            // Decoded AFTER the choice was submitted, so a flag this very choice set is
+            // already true for the screen it leads to - which is what makes an immediate
+            // consequence read as caused rather than as coincidence.
+            'node'           => helper::node_payload(
+                $node,
+                $attempt,
+                $mediaurls,
+                $manager->decode_state($attempt)
+            ),
         ];
     }
 

@@ -65,7 +65,10 @@
             "tension": -14
           },
           "next": "n2a",
-          "outcomenote": "The best of the three, and the only one that costs you anything at the time: four awkward seconds while the room waits. Naming what you saw, in the moment, is what makes the interruption a fact rather than an accusation - and it is the only version Priya can build on, because it happens in front of the people who were doing it. She learns that the room will hold still for her, which is what makes her speak up on Friday without being invited."
+          "outcomenote": "The best of the three, and the only one that costs you anything at the time: four awkward seconds while the room waits. Naming what you saw, in the moment, is what makes the interruption a fact rather than an accusation - and it is the only version Priya can build on, because it happens in front of the people who were doing it. She learns that the room will hold still for her, which is what makes her speak up on Friday without being invited.",
+          "setflags": {
+            "raised_in_room": true
+          }
         },
         {
           "id": "n1_b",
@@ -86,7 +89,10 @@
             "tension": 2
           },
           "next": "n2b",
-          "outcomenote": "The plausible middle, and the one that quietly teaches the wrong thing. You do hear her, which is why it feels like listening - but you hear her alone, at four o'clock, away from the people who needed to. The meeting learns nothing, Dan learns nothing, and Priya learns that her input reaches you through a side channel. The next time she has something, she will wait for the side channel."
+          "outcomenote": "The plausible middle, and the one that quietly teaches the wrong thing. You do hear her, which is why it feels like listening - but you hear her alone, at four o'clock, away from the people who needed to. The meeting learns nothing, Dan learns nothing, and Priya learns that her input reaches you through a side channel. The next time she has something, she will wait for the side channel.",
+          "setflags": {
+            "raised_privately": true
+          }
         },
         {
           "id": "n1_c",
@@ -107,7 +113,10 @@
             "tension": 14
           },
           "next": "n2b",
-          "outcomenote": "The most expensive of the three, and it looks like efficiency. Four minutes saved against a rollback: the cost is not the meeting, it is the information that was in the room and left it unsaid. Priya now has evidence that starting a sentence here is not worth finishing, and the next time she will not start it."
+          "outcomenote": "The most expensive of the three, and it looks like efficiency. Four minutes saved against a rollback: the cost is not the meeting, it is the information that was in the room and left it unsaid. Priya now has evidence that starting a sentence here is not worth finishing, and the next time she will not start it.",
+          "setflags": {
+            "never_raised": true
+          }
         }
       ]
     },
@@ -202,7 +211,7 @@
             "trust": -12,
             "tension": 14
           },
-          "next": "n4b",
+          "next": "n4c",
           "outcomenote": "The worst of the three, and the one that produces the warmest response. 'How you come across' names no behaviour, so there is nothing to stop doing. He agrees because agreeing is easy and costs him nothing, and you both leave believing the conversation worked. Nothing changes, and the next one is harder because this one apparently went fine."
         }
       ]
@@ -226,6 +235,96 @@
       "facilitatorspeech": "I'll just send it to you before, easier that way.",
       "next": "n5",
       "continuelabel": "Notice what she has started doing"
+    },
+    {
+      "id": "n4c",
+      "type": "beat",
+      "title": "Nothing to act on",
+      "stage": 4,
+      "situation": "Dan is friendly with you all week, and the stand-ups run exactly as they did. He has nothing to stop doing, because you did not name anything he does.\n\nOn Thursday he mentions, lightly, that he has been \"trying to be more aware\". Priya says nothing at all.",
+      "next": "n5alt",
+      "continuelabel": "Carry on",
+      "imageprompt": "A stand-up meeting where one person is talking and another is looking at the table, not speaking",
+      "imagealt": "A team meeting where one person listens without contributing"
+    },
+    {
+      "id": "n5alt",
+      "type": "decision",
+      "title": "The workaround, with Dan in the room",
+      "stage": 5,
+      "situation": "Priya starts sending you the updates the night before instead of raising them. They are excellent, and the meeting runs smoothly on them.\n\nOn Thursday she says it out loud, in front of everyone: \"I just send them to you now, it is easier.\" Dan looks up.",
+      "facilitatorspeech": "It's honestly easier this way. I don't mind.",
+      "challenge": "She has said it in the room. What do you do with that?",
+      "choices": [
+        {
+          "id": "n5alt_a",
+          "text": "Take it seriously in front of everyone. \"That is a workaround, and it is working. What I want to know is what we are working around.\"",
+          "consequence": "The table goes quiet for a second. Dan says, \"Is it me?\" Priya does not answer, which is an answer. Dan says he will leave a gap after she starts.",
+          "feedback": "Naming the workaround in the room let the person causing it ask the question himself, which is the only version he will act on.",
+          "signal": "positive",
+          "skills": {
+            "presence": 2,
+            "adaptability": 2,
+            "empathy": 2,
+            "clarity": 0
+          },
+          "principleid": "p3",
+          "effects": {
+            "engagement": 10,
+            "trust": 12,
+            "tension": -14
+          },
+          "next": "n6",
+          "outcomenote": "The best of the three, and the most uncomfortable for about four seconds. She raised it publicly, so answering privately would tell her she was wrong to. Asking what the workaround is FOR puts the question in the room without naming anybody, and Dan gets to arrive at it himself - which is why he does something about it."
+        },
+        {
+          "id": "n5alt_b",
+          "text": "Thank her and say you will pick it up with her afterwards.",
+          "consequence": "You do pick it up, at four. She is friendly about it and nothing changes. The messages keep arriving and the room stays quiet.",
+          "feedback": "Moving a public problem into a private conversation solves it for one person and leaves it in place for the room.",
+          "signal": "neutral",
+          "skills": {
+            "presence": 1,
+            "adaptability": 1,
+            "empathy": 0,
+            "clarity": 0
+          },
+          "principleid": "p3",
+          "effects": {
+            "engagement": 0,
+            "trust": 0,
+            "tension": 2
+          },
+          "next": "n6",
+          "outcomenote": "The plausible middle, and it looks like discretion. She raised it in front of everyone, which was the brave part; taking it out of the room hands the privacy back to the person who did not need it. Nothing is refused and nothing changes."
+        },
+        {
+          "id": "n5alt_c",
+          "text": "Say it is working well and move on to the next item.",
+          "consequence": "The meeting runs four minutes early. Priya sends the next update that evening, and the one after. She does not raise anything in the room again.",
+          "feedback": "Endorsing the workaround in front of the team makes it the way things are done here.",
+          "signal": "negative",
+          "skills": {
+            "presence": 0,
+            "adaptability": 0,
+            "empathy": 0,
+            "clarity": 0
+          },
+          "principleid": "p3",
+          "effects": {
+            "engagement": -10,
+            "trust": -12,
+            "tension": 14
+          },
+          "next": "n6alt",
+          "outcomenote": "The worst, and it costs nothing in the moment, which is what makes it easy. Calling the workaround \"working\" in front of everybody promotes it from something she does to how this team operates - and the next person to join learns it by watching.",
+          "setflags": {
+            "workaround_endorsed": true
+          }
+        }
+      ],
+      "imageprompt": "A stand-up meeting where one person has just said something that made the others look up",
+      "imagealt": "A team meeting where a comment has just landed"
     },
     {
       "id": "n5",
@@ -296,8 +395,11 @@
             "trust": -12,
             "tension": 14
           },
-          "next": "n6",
-          "outcomenote": "The worst, and it is worst precisely because she gave you permission. 'I don't mind' is what people say about a cost they have decided to absorb; taking it at face value moves that cost permanently onto her. She stops raising it, and the next thing you hear about it is her asking what roles are open on other teams."
+          "next": "n6alt",
+          "outcomenote": "The worst, and it is worst precisely because she gave you permission. 'I don't mind' is what people say about a cost they have decided to absorb; taking it at face value moves that cost permanently onto her. She stops raising it, and the next thing you hear about it is her asking what roles are open on other teams.",
+          "setflags": {
+            "workaround_endorsed": true
+          }
         }
       ]
     },
@@ -376,6 +478,82 @@
       ]
     },
     {
+      "id": "n6alt",
+      "type": "decision",
+      "title": "It has become how things are done",
+      "stage": 6,
+      "situation": "A new starter joined three weeks ago. This morning she sends you her update the night before the stand-up, formatted exactly like Priya's.\n\nShe has never raised anything in the room. Nobody told her not to. She simply copied what she saw working.",
+      "facilitatorspeech": "This is how it works here, right?",
+      "challenge": "The workaround has been learnt by somebody who was never part of it. What do you do?",
+      "choices": [
+        {
+          "id": "n6alt_a",
+          "text": "Change the format for everyone: ninety uninterrupted seconds each, in a fixed order.",
+          "consequence": "The first two stand-ups are stilted and everyone hates it. By the fourth, the new starter raises something nobody else had noticed.",
+          "feedback": "A rule that lives in the structure does not depend on anyone remembering to be good at it.",
+          "signal": "positive",
+          "skills": {
+            "presence": 2,
+            "adaptability": 2,
+            "empathy": 2,
+            "clarity": 0
+          },
+          "principleid": "p2",
+          "effects": {
+            "engagement": 10,
+            "trust": 12,
+            "tension": -14
+          },
+          "next": "n7",
+          "outcomenote": "The best available, and the only one that reaches somebody who was never part of the original problem. She copied what she saw; changing what there is to see is the only correction that works on a person who did nothing wrong."
+        },
+        {
+          "id": "n6alt_b",
+          "text": "Tell the new starter she is welcome to raise things in the stand-up.",
+          "consequence": "She says \"of course\" and keeps sending the messages. She has watched what happens to people who speak in this meeting.",
+          "feedback": "Permission does not undo a demonstration.",
+          "signal": "neutral",
+          "skills": {
+            "presence": 1,
+            "adaptability": 1,
+            "empathy": 0,
+            "clarity": 0
+          },
+          "principleid": "p2",
+          "effects": {
+            "engagement": 0,
+            "trust": 0,
+            "tension": 2
+          },
+          "next": "n7",
+          "outcomenote": "It is true, it is kind, and it is not what she is going on. She has watched a room for three weeks and drawn a conclusion; being told the opposite once does not outweigh that. Permission is not evidence."
+        },
+        {
+          "id": "n6alt_c",
+          "text": "Leave it. The updates are good and the meetings are efficient.",
+          "consequence": "The meetings stay efficient. Six months later the stand-up is four people confirming what you already read the night before.",
+          "feedback": "An efficient meeting where nobody says anything new is a meeting that could be an email, and it is now the only place the team meets.",
+          "signal": "negative",
+          "skills": {
+            "presence": 0,
+            "adaptability": 0,
+            "empathy": 0,
+            "clarity": 0
+          },
+          "principleid": "p2",
+          "effects": {
+            "engagement": -10,
+            "trust": -12,
+            "tension": 14
+          },
+          "next": "n7",
+          "outcomenote": "The worst, and it will feel like the right call for months. What you are left with is a meeting that runs on time because nothing happens in it, and a team whose thinking you only ever meet in writing, one person at a time."
+        }
+      ],
+      "imageprompt": "A new team member at a desk composing a written message rather than speaking to the people nearby",
+      "imagealt": "A new team member writing a message instead of speaking"
+    },
+    {
       "id": "n7",
       "type": "decision",
       "title": "Six weeks on",
@@ -446,6 +624,44 @@
           },
           "next": "__auto__",
           "outcomenote": "The worst, and the most tempting, because it is partly fair. Answering a question about your own delay by naming hers turns a moment of trust into a score being settled. She will keep contributing correctly and briefly, and she will never again ask you why something took as long as it did."
+        }
+      ],
+      "variants": [
+        {
+          "when": {
+            "flag": "workaround_endorsed",
+            "is": true
+          },
+          "situation": "The new format has held for six weeks. Priya raises things in the room again, and so does the new starter.\n\nShe catches you afterwards. \"Can I ask something? For a while there it felt like the messages were the way to do it. I thought that was what you wanted.\"",
+          "facilitatorspeech": "I thought that was what you wanted.",
+          "challenge": "She is telling you what your agreement looked like from where she was standing. What do you say?"
+        },
+        {
+          "when": {
+            "flag": "never_raised",
+            "is": true
+          },
+          "situation": "The new format has held for six weeks. Priya raises things in the room again.\n\nShe catches you afterwards. \"That first week - the cutover one. You were in that meeting too, weren't you?\"",
+          "facilitatorspeech": "You were in that meeting too, weren't you?",
+          "challenge": "She is asking whether you watched it happen and said nothing. What do you say?"
+        },
+        {
+          "when": {
+            "flag": "raised_privately",
+            "is": true
+          },
+          "situation": "The new format has held for six weeks. Priya raises things in the room again.\n\nShe catches you afterwards. \"You caught me at my desk that first week, after the cutover meeting. Why not in the room?\"",
+          "facilitatorspeech": "Why not in the room?",
+          "challenge": "She heard you. The team did not. What do you say?"
+        },
+        {
+          "when": {
+            "flag": "raised_in_room",
+            "is": true
+          },
+          "situation": "The new format has held for six weeks. Priya raises things in the room again.\n\nShe catches you afterwards. \"You stopped that meeting for me in my first fortnight. I have been meaning to ask why it took another six weeks for anything to change.\"",
+          "facilitatorspeech": "Why did it take another six weeks?",
+          "challenge": "She is not complaining. She is asking a real question. What do you say?"
         }
       ]
     },

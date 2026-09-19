@@ -34,16 +34,77 @@ class scenario_manager {
     const STATUS_PUBLISHED = 'published';
 
     /**
-     * Read the working-copy definition for an activity, or null when there is none yet.
+     * The row for one rung of an activity's ladder, created empty if it does not exist.
+     *
+     * THE LADDER IS THE SINGLE DESCRIPTION OF WHAT AN ACTIVITY HOLDS.
+     *
+     * An activity used to be one scenario, stored in columns on the instance itself. It
+     * holds three now - foundation, intermediate, advanced - and every one of them is a row
+     * here. The instance's own scenariojson, previousjson and revision columns are legacy:
+     * the upgrade copied them into tier 1 and nothing reads them any more.
+     *
+     * Created on demand rather than at install time, because a teacher who never generates
+     * the advanced scenario should not have an empty row implying they abandoned one.
+     *
+     * @param int $scenarioid Activity instance id.
+     * @param int $tier Which rung, 1 to schema::TIERS.
+     * @return stdClass The rung.
+     */
+    public static function tier_row(int $scenarioid, int $tier = 1): stdClass {
+        global $DB;
+        $tier = max(1, min(schema::TIERS, $tier));
+        $row = $DB->get_record(
+            'aibranchedscenario_tiers',
+            ['scenarioid' => $scenarioid, 'tier' => $tier],
+            '*',
+            IGNORE_MISSING
+        );
+        if ($row) {
+            return $row;
+        }
+        $now = time();
+        $row = (object)[
+            'scenarioid'     => $scenarioid,
+            'tier'           => $tier,
+            'status'         => self::STATUS_DRAFT,
+            'scenariojson'   => null,
+            'previousjson'   => null,
+            'generationmeta' => null,
+            'revision'       => 0,
+            'timecreated'    => $now,
+            'timemodified'   => $now,
+        ];
+        $row->id = $DB->insert_record('aibranchedscenario_tiers', $row);
+        return $row;
+    }
+
+    /**
+     * Every rung of an activity's ladder, lowest first, whether or not it has content.
+     *
+     * @param int $scenarioid Activity instance id.
+     * @return stdClass[] Tier number to row.
+     */
+    public static function ladder(int $scenarioid): array {
+        $out = [];
+        foreach (array_keys(schema::tiers()) as $tier) {
+            $out[$tier] = self::tier_row($scenarioid, $tier);
+        }
+        return $out;
+    }
+
+    /**
+     * Read the working-copy definition for one rung, or null when there is none yet.
      *
      * @param stdClass $scenario Activity instance record.
+     * @param int $tier Which rung.
      * @return array|null
      */
-    public static function get_working_definition(stdClass $scenario): ?array {
-        if (empty($scenario->scenariojson)) {
+    public static function get_working_definition(stdClass $scenario, int $tier = 1): ?array {
+        $row = self::tier_row((int)$scenario->id, $tier);
+        if (empty($row->scenariojson)) {
             return null;
         }
-        $decoded = json_decode($scenario->scenariojson, true);
+        $decoded = json_decode($row->scenariojson, true);
         return is_array($decoded) ? $decoded : null;
     }
 
@@ -92,7 +153,8 @@ class scenario_manager {
         stdClass $scenario,
         array $definition,
         ?array $generationmeta = null,
-        bool $strictshape = true
+        bool $strictshape = true,
+        int $tier = 1
     ): array {
         global $DB;
         // Strict by default, because most callers are saving something newly made. An edit
@@ -115,21 +177,28 @@ class scenario_manager {
         // previousjson was then written from the pre-edit copy the caller was holding, so
         // the edit was gone from BOTH slots and Restore draft put back a version that had
         // never existed. The undo has to preserve what was actually there a moment ago.
-        $current = $DB->get_field('aibranchedscenario', 'scenariojson', ['id' => $scenario->id]);
+        $row = self::tier_row((int)$scenario->id, $tier);
         $update = (object)[
-            'id'           => $scenario->id,
-            'previousjson' => $current !== false ? $current : ($scenario->scenariojson ?? null),
+            'id'           => $row->id,
+            'previousjson' => $row->scenariojson,
             'scenariojson' => $encoded,
             'timemodified' => time(),
         ];
         if ($generationmeta !== null) {
             $update->generationmeta = json_encode(self::sanitise_meta($generationmeta));
         }
-        $DB->update_record('aibranchedscenario', $update);
-        $scenario->previousjson = $update->previousjson;
-        $scenario->scenariojson = $encoded;
-        if ($generationmeta !== null) {
-            $scenario->generationmeta = $update->generationmeta;
+        $DB->update_record('aibranchedscenario_tiers', $update);
+        // The instance record the caller is holding is updated too, so code that has not
+        // been moved onto the ladder yet still sees the foundation scenario where it
+        // expects it. The DATABASE columns are not written: the ladder is the single
+        // description of what an activity holds, and two places holding the same answer is
+        // how they come to disagree.
+        if ($tier === 1) {
+            $scenario->previousjson = $update->previousjson;
+            $scenario->scenariojson = $encoded;
+            if ($generationmeta !== null) {
+                $scenario->generationmeta = $update->generationmeta;
+            }
         }
         return $clean;
     }
@@ -143,10 +212,11 @@ class scenario_manager {
      * @param stdClass $scenario Activity instance.
      * @return bool True when something was restored.
      */
-    public static function restore_previous(stdClass $scenario): bool {
+    public static function restore_previous(stdClass $scenario, int $tier = 1): bool {
         global $DB;
 
-        $previous = $scenario->previousjson ?? null;
+        $row = self::tier_row((int)$scenario->id, $tier);
+        $previous = $row->previousjson;
         if (empty($previous)) {
             return false;
         }
@@ -155,15 +225,17 @@ class scenario_manager {
             return false;
         }
 
-        $DB->update_record('aibranchedscenario', (object)[
-            'id'           => $scenario->id,
+        $DB->update_record('aibranchedscenario_tiers', (object)[
+            'id'           => $row->id,
             'scenariojson' => $previous,
-            'previousjson' => $scenario->scenariojson ?? null,
+            'previousjson' => $row->scenariojson,
             'timemodified' => time(),
         ]);
-        $swap = $scenario->scenariojson ?? null;
-        $scenario->scenariojson = $previous;
-        $scenario->previousjson = $swap;
+        if ($tier === 1) {
+            $swap = $row->scenariojson;
+            $scenario->scenariojson = $previous;
+            $scenario->previousjson = $swap;
+        }
         return true;
     }
 
@@ -174,13 +246,13 @@ class scenario_manager {
      * @return array
      */
     protected static function sanitise_meta(array $meta): array {
-        // standardnotstated: the rules the content standard could not fit into the narrow
-        // instructions field on this request. Kept with the scenario because it is part of
-        // what this scenario was asked to be, and a site owner comparing two scenarios of
-        // different quality should be able to see that one of them was written to fewer
-        // rules than the other.
+        // The standardnotstated key holds the rules the content standard could not fit into
+        // the narrow instructions field on this request. Kept with the scenario because it
+        // is part of what this scenario was asked to be, and a site owner comparing two
+        // scenarios of different quality should be able to see that one of them was written
+        // to fewer rules than the other.
         $allowed = ['model', 'provider', 'durationms', 'timegenerated', 'promptversion', 'contractversion',
-            'sourcechars', 'nodecount', 'decisioncount', 'standardnotstated'];
+            'sourcechars', 'nodecount', 'decisioncount', 'standardnotstated', 'tier'];
         $out = [];
         foreach ($allowed as $key) {
             if (array_key_exists($key, $meta)) {
@@ -201,10 +273,10 @@ class scenario_manager {
      * @param int $userid Publishing user.
      * @return stdClass The new revision record.
      */
-    public static function publish(stdClass $scenario, int $userid): stdClass {
+    public static function publish(stdClass $scenario, int $userid, int $tier = 1): stdClass {
         global $DB;
 
-        $definition = self::get_working_definition($scenario);
+        $definition = self::get_working_definition($scenario, $tier);
         if ($definition === null) {
             throw new moodle_exception('error:nothingtopublish', 'mod_aibranchedscenario');
         }
@@ -218,13 +290,19 @@ class scenario_manager {
 
         $transaction = $DB->start_delegated_transaction();
 
+        // Revision numbers run per RUNG. Counting them across the whole activity would
+        // make the intermediate scenario's first publish "revision 4" because the
+        // foundation one had been through three - a number that means nothing to the
+        // teacher looking at it, and one that changes depending on work they did elsewhere.
         $revisionno = (int)$DB->get_field_sql(
-            'SELECT MAX(revision) FROM {aibranchedscenario_revisions} WHERE scenarioid = ?',
-            [$scenario->id]
+            'SELECT MAX(revision) FROM {aibranchedscenario_revisions}
+                WHERE scenarioid = ? AND tier = ?',
+            [$scenario->id, $tier]
         ) + 1;
 
         $revision = (object)[
             'scenarioid'    => $scenario->id,
+            'tier'          => $tier,
             'revision'      => $revisionno,
             'scenariojson'  => json_encode($clean, JSON_UNESCAPED_UNICODE),
             'theme'         => $scenario->theme,
@@ -235,14 +313,25 @@ class scenario_manager {
         ];
         $revision->id = $DB->insert_record('aibranchedscenario_revisions', $revision);
 
-        $DB->update_record('aibranchedscenario', (object)[
-            'id'           => $scenario->id,
+        $row = self::tier_row((int)$scenario->id, $tier);
+        $DB->update_record('aibranchedscenario_tiers', (object)[
+            'id'           => $row->id,
             'status'       => self::STATUS_PUBLISHED,
             'revision'     => $revisionno,
             'timemodified' => time(),
         ]);
+        // The ACTIVITY is published once any rung is: a learner can start the ladder as
+        // soon as its first scenario exists, and waiting for all three would mean a
+        // teacher who has only written the foundation one has an activity nobody can open.
+        $DB->update_record('aibranchedscenario', (object)[
+            'id'           => $scenario->id,
+            'status'       => self::STATUS_PUBLISHED,
+            'timemodified' => time(),
+        ]);
         $scenario->status = self::STATUS_PUBLISHED;
-        $scenario->revision = $revisionno;
+        if ($tier === 1) {
+            $scenario->revision = $revisionno;
+        }
 
         $transaction->allow_commit();
 
@@ -256,14 +345,29 @@ class scenario_manager {
      * @param stdClass $scenario Activity instance record.
      * @return void
      */
-    public static function unpublish(stdClass $scenario): void {
+    public static function unpublish(stdClass $scenario, int $tier = 1): void {
         global $DB;
-        $DB->update_record('aibranchedscenario', (object)[
-            'id'           => $scenario->id,
+        $row = self::tier_row((int)$scenario->id, $tier);
+        $DB->update_record('aibranchedscenario_tiers', (object)[
+            'id'           => $row->id,
             'status'       => self::STATUS_DRAFT,
             'timemodified' => time(),
         ]);
-        $scenario->status = self::STATUS_DRAFT;
+        // The activity goes back to draft only when NO rung is published any more.
+        // Unpublishing the advanced scenario must not take the foundation one away from
+        // the learners who are part way up the ladder.
+        $stillpublished = $DB->record_exists(
+            'aibranchedscenario_tiers',
+            ['scenarioid' => $scenario->id, 'status' => self::STATUS_PUBLISHED]
+        );
+        if (!$stillpublished) {
+            $DB->update_record('aibranchedscenario', (object)[
+                'id'           => $scenario->id,
+                'status'       => self::STATUS_DRAFT,
+                'timemodified' => time(),
+            ]);
+            $scenario->status = self::STATUS_DRAFT;
+        }
     }
 
     /**
@@ -272,14 +376,15 @@ class scenario_manager {
      * @param stdClass $scenario Activity instance record.
      * @return stdClass|null
      */
-    public static function get_current_revision(stdClass $scenario): ?stdClass {
+    public static function get_current_revision(stdClass $scenario, int $tier = 1): ?stdClass {
         global $DB;
-        if ($scenario->status !== self::STATUS_PUBLISHED || empty($scenario->revision)) {
+        $row = self::tier_row((int)$scenario->id, $tier);
+        if ($row->status !== self::STATUS_PUBLISHED || empty($row->revision)) {
             return null;
         }
         $revision = $DB->get_record(
             'aibranchedscenario_revisions',
-            ['scenarioid' => $scenario->id, 'revision' => $scenario->revision],
+            ['scenarioid' => $scenario->id, 'tier' => $tier, 'revision' => $row->revision],
             '*',
             IGNORE_MISSING
         );
@@ -292,8 +397,67 @@ class scenario_manager {
      * @param stdClass $scenario Activity instance record.
      * @return bool
      */
-    public static function is_playable(stdClass $scenario): bool {
-        return self::get_current_revision($scenario) !== null;
+    public static function is_playable(stdClass $scenario, int $tier = 1): bool {
+        return self::get_current_revision($scenario, $tier) !== null;
+    }
+
+    /**
+     * May this learner open this rung?
+     *
+     * The chooser already draws a locked card as locked, but a card is a picture of the
+     * rule and not the rule itself: the tier arrives as a request parameter, so a learner
+     * who changes the number in the address bar would otherwise walk straight into the
+     * advanced scenario without having passed anything. This is the same question asked
+     * where it is answerable.
+     *
+     * @param stdClass $scenario Activity instance record.
+     * @param int $userid The learner.
+     * @param int $tier Which rung.
+     * @return bool
+     */
+    public static function tier_open(stdClass $scenario, int $userid, int $tier): bool {
+        $progress = self::ladder_progress($scenario, $userid);
+        return !empty($progress[$tier]['unlocked']);
+    }
+
+    /**
+     * Which rungs of the ladder a learner can actually open, and why not where they cannot.
+     *
+     * The gate is the pass mark the teacher sets. A rung is available when the one below it
+     * has been passed; the foundation rung is always available once it is published.
+     *
+     * Deliberately NOT a full score: with five decisions and three options, demanding every
+     * best choice locks out a learner who reasoned well and took one defensible middle
+     * option, and what they do about it is replay until they find the green path - at which
+     * point they have stopped reasoning about the job and started memorising a sequence.
+     *
+     * @param stdClass $scenario Activity instance record.
+     * @param int $userid The learner.
+     * @return array Tier number to ['published','unlocked','passed','best'].
+     */
+    public static function ladder_progress(stdClass $scenario, int $userid): array {
+        $pass = (int)($scenario->completionminscore ?? 0);
+        $out = [];
+        $unlocked = true;
+        foreach (array_keys(schema::tiers()) as $tier) {
+            $published = self::is_playable($scenario, $tier);
+            $best = attempt_manager::best_score($scenario, $userid, $tier);
+            // A pass mark of zero means "finishing it is enough", which is what a teacher
+            // who never touched the setting gets.
+            $passed = $best !== null && ($pass <= 0 || $best >= $pass);
+            $out[$tier] = [
+                'published' => $published,
+                'unlocked'  => $published && $unlocked,
+                'passed'    => $passed,
+                'best'      => $best,
+            ];
+            // The next rung opens only if this one was passed. A rung that is not published
+            // closes the ladder behind it rather than being skipped over, or a teacher who
+            // has written the foundation and advanced scenarios would have learners
+            // jumping the missing middle.
+            $unlocked = $unlocked && $passed;
+        }
+        return $out;
     }
 
     /**

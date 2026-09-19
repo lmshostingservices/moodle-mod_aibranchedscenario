@@ -80,7 +80,7 @@ class generate_scenario extends adhoc_task {
         $media = null;
         try {
             $context = context_module::instance($cmid);
-            $media = new media_manager($context);
+            $media = new media_manager($context, (int)($job->tier ?? 1));
             $counts = $media->generate_for_definition($generator->get_provider(), $scenario, $definition);
         } catch (\moodle_exception $e) {
             mtrace('Course module context unavailable; media skipped.');
@@ -102,7 +102,7 @@ class generate_scenario extends adhoc_task {
         // fetched before a run that takes minutes, and a record that old cannot be asked
         // what is published now.
         $fresh = $DB->get_record('aibranchedscenario', ['id' => $scenario->id], '*', IGNORE_MISSING);
-        $live = $fresh ? scenario_manager::get_current_revision($fresh) : null;
+        $live = $fresh ? scenario_manager::get_current_revision($fresh, (int)($job->tier ?? 1)) : null;
         if ($media && $live && generate_media::same_scenes($live->scenariojson, $definition)) {
             $copied = $media->publish_media((int)$live->revision);
             mtrace('Scenario ' . $scenario->id . ' media copied into revision '

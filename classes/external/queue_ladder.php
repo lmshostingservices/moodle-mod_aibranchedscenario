@@ -21,17 +21,21 @@ use core_external\external_function_parameters;
 use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
-use mod_aibranchedscenario\local\media_manager;
-use mod_aibranchedscenario\local\scenario_manager;
+use mod_aibranchedscenario\local\generator;
 
 /**
- * Publishes the working copy as a new immutable revision.
+ * Queue all three of an activity's scenarios from one press.
+ *
+ * An activity holds a foundation, an intermediate and an advanced scenario, written from
+ * the same source material and testing the same principles at rising difficulty. There is
+ * nothing for a teacher to fill in between them, so asking them to describe the situation
+ * once and then press Generate three times is work the product should be doing.
  *
  * @package    mod_aibranchedscenario
  * @copyright  2026 LMS Hosting Services
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class publish_scenario extends external_api {
+class queue_ladder extends external_api {
     /**
      * Describe the parameters.
      *
@@ -40,36 +44,30 @@ class publish_scenario extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module id'),
-            'tier' => new external_value(PARAM_INT, 'Which rung of the ladder', VALUE_DEFAULT, 1),
         ]);
     }
 
     /**
-     * Publish the working copy.
+     * Queue one generation job per rung.
      *
      * @param int $cmid Course module id.
-     * @param int $tier Which rung of the ladder to publish.
      * @return array
      */
-    public static function execute(int $cmid, int $tier = 1): array {
+    public static function execute(int $cmid): array {
         global $USER;
 
-        $params = self::validate_parameters(
-            self::execute_parameters(),
-            ['cmid' => $cmid, 'tier' => $tier]
-        );
-        $resolved = helper::resolve($params['cmid'], 'mod/aibranchedscenario:publish');
-        $tier = helper::tier($params['tier']);
+        $params = self::validate_parameters(self::execute_parameters(), ['cmid' => $cmid]);
+        $resolved = helper::resolve($params['cmid'], 'mod/aibranchedscenario:generate');
 
-        $revision = scenario_manager::publish($resolved['scenario'], (int)$USER->id, $tier);
+        $generator = new generator();
+        $queued = $generator->queue_ladder($resolved['scenario'], (int)$USER->id, $params['cmid']);
 
-        $media = new media_manager($resolved['context'], $tier);
-        $media->publish_media((int)$revision->revision);
+        $jobs = [];
+        foreach ($queued as $tier => $jobid) {
+            $jobs[] = ['tier' => (int)$tier, 'jobid' => (int)$jobid];
+        }
 
-        return [
-            'revision'  => (int)$revision->revision,
-            'nodecount' => (int)$revision->nodecount,
-        ];
+        return ['jobs' => $jobs, 'status' => generator::JOB_QUEUED];
     }
 
     /**
@@ -79,8 +77,13 @@ class publish_scenario extends external_api {
      */
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
-            'revision'  => new external_value(PARAM_INT, 'The published revision number'),
-            'nodecount' => new external_value(PARAM_INT, 'Nodes in the published revision'),
+            'jobs' => new external_multiple_structure(
+                new external_single_structure([
+                    'tier'  => new external_value(PARAM_INT, 'Which rung this job is writing'),
+                    'jobid' => new external_value(PARAM_INT, 'Identifier of the queued job'),
+                ])
+            ),
+            'status' => new external_value(PARAM_ALPHA, 'Current status of the queued jobs'),
         ]);
     }
 }

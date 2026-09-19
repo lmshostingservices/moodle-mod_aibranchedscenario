@@ -318,15 +318,22 @@ class generator {
      * @return int Job id.
      * @throws generation_exception
      */
-    public function queue_scenario(stdClass $scenario, int $userid, int $cmid): int {
+    public function queue_scenario(stdClass $scenario, int $userid, int $cmid, int $tier = 1): int {
         global $DB;
 
         $this->check_quota($userid);
 
+        $tier = isset(schema::tiers()[$tier]) ? $tier : 1;
+
+        // IN FLIGHT PER RUNG, not per activity. An activity holds three scenarios, and a
+        // teacher writing the intermediate one while the advanced one is still being made
+        // is doing something perfectly ordinary. Asked of the whole activity, the second
+        // request was refused with a message about a generation already running, which is
+        // true and useless.
         $open = $DB->get_records_select(
             'aibranchedscenario_jobs',
-            'scenarioid = :sid AND jobtype = :type AND status IN (:queued, :running)',
-            ['sid' => $scenario->id, 'type' => provider::OP_SCENARIO,
+            'scenarioid = :sid AND tier = :tier AND jobtype = :type AND status IN (:queued, :running)',
+            ['sid' => $scenario->id, 'tier' => $tier, 'type' => provider::OP_SCENARIO,
             'queued' => self::JOB_QUEUED,
             'running' => self::JOB_RUNNING]
         );
@@ -342,7 +349,8 @@ class generator {
         $jobid = $this->create_job($scenario->id, $userid, provider::OP_SCENARIO, [
             'cmid'     => $cmid,
             'language' => $scenario->scenariolang,
-        ]);
+            'tier'     => $tier,
+        ], $tier);
 
         $task = new \mod_aibranchedscenario\task\generate_scenario();
         $task->set_custom_data((object)['jobid' => $jobid, 'cmid' => $cmid]);
@@ -350,6 +358,75 @@ class generator {
         \core\task\manager::queue_adhoc_task($task, true);
 
         return $jobid;
+    }
+
+    /**
+     * Queue the whole ladder: one job per rung, same source, complexity rising.
+     *
+     * ONE PRESS, THREE SCENARIOS, THREE PRICES.
+     *
+     * The three scenarios in an activity are written from the same source material and test
+     * the same principles; what changes between them is how much is signposted, which the
+     * rung decides. So there is nothing for a teacher to fill in between them, and asking
+     * them to press Generate three times and wait three times for a result they described
+     * once is work the product should be doing.
+     *
+     * Every check is made for ALL THREE BEFORE ANY OF THEM IS QUEUED. Queueing the
+     * foundation scenario and then discovering the balance only covers two would leave a
+     * teacher charged for a ladder they cannot finish, with no way to tell which rung is
+     * missing and why.
+     *
+     * @param stdClass $scenario Activity instance.
+     * @param int $userid Requesting user.
+     * @param int $cmid Course module id, for the task context.
+     * @return array Tier number to job id.
+     * @throws generation_exception
+     */
+    public function queue_ladder(stdClass $scenario, int $userid, int $cmid): array {
+        global $DB;
+
+        $rungs = array_keys(schema::tiers());
+
+        // The balance has to cover the whole ladder, not one rung of it.
+        $this->check_credits($userid, (int)(schema::tariff()[provider::OP_SCENARIO] ?? 1) * count($rungs));
+
+        // A rung already being written is the one thing that cannot be worked around: its
+        // result would land on top of whatever this run produces, and which of the two the
+        // teacher ends up with would depend on which finished last.
+        $inflight = $DB->get_fieldset_select(
+            'aibranchedscenario_jobs',
+            'tier',
+            'scenarioid = :sid AND jobtype = :type AND status IN (:queued, :running)',
+            ['sid' => $scenario->id, 'type' => provider::OP_SCENARIO,
+            'queued' => self::JOB_QUEUED,
+            'running' => self::JOB_RUNNING]
+        );
+        if ($inflight) {
+            throw new generation_exception('error:generationinflight');
+        }
+
+        $source = scenario_manager::get_source($scenario);
+        if (empty($source['sourcecontent']) && empty($source['brief']) && empty($source['centralproblem'])) {
+            throw new generation_exception('error:nosourcecontent');
+        }
+
+        $jobs = [];
+        foreach ($rungs as $tier) {
+            $jobid = $this->create_job($scenario->id, $userid, provider::OP_SCENARIO, [
+                'cmid'     => $cmid,
+                'language' => $scenario->scenariolang,
+                'tier'     => $tier,
+            ], $tier);
+
+            $task = new \mod_aibranchedscenario\task\generate_scenario();
+            $task->set_custom_data((object)['jobid' => $jobid, 'cmid' => $cmid]);
+            $task->set_userid($userid);
+            \core\task\manager::queue_adhoc_task($task, true);
+
+            $jobs[$tier] = $jobid;
+        }
+
+        return $jobs;
     }
 
     /**
@@ -367,8 +444,19 @@ class generator {
         $job->timemodified = time();
         $DB->update_record('aibranchedscenario_jobs', $job);
 
+        $tier = isset(schema::tiers()[(int)($job->tier ?? 1)]) ? (int)$job->tier : 1;
+
         $source = scenario_manager::get_source($scenario);
         $source['sourcecontent'] = $this->clamp_source($source['sourcecontent'] ?? '');
+        // THE RUNG IS THE COMPLEXITY.
+        //
+        // The three scenarios in an activity are written from the same source material and
+        // test the same principles; what changes between them is how much is signposted.
+        // The rungs were named after the complexity levels the wizard already offered for
+        // exactly that reason, so this is a lookup rather than a second set of rules - and
+        // it means a teacher cannot accidentally generate an advanced rung at foundation
+        // complexity by leaving the wizard's own setting where it was.
+        $source['complexity'] = schema::tiers()[$tier];
         $source['language'] = $scenario->scenariolang;
         $source['theme'] = $scenario->theme;
         $source['contractversion'] = schema::CONTRACT_VERSION;
@@ -410,7 +498,8 @@ class generator {
         $meta['nodecount'] = (int)($definition['stats']['nodecount'] ?? 0);
         $meta['decisioncount'] = (int)($definition['stats']['decisioncount'] ?? 0);
 
-        scenario_manager::save_definition($scenario, $definition, $meta);
+        $meta['tier'] = $tier;
+        scenario_manager::save_definition($scenario, $definition, $meta, true, $tier);
 
         $job->modelused = (string)($meta['model'] ?? '');
         $job->durationms = (int)($meta['durationms'] ?? 0);
@@ -477,13 +566,20 @@ class generator {
      * @param array $request Non-sensitive request summary.
      * @return int Job id.
      */
-    protected function create_job(int $scenarioid, int $userid, string $jobtype, array $request): int {
+    protected function create_job(
+        int $scenarioid,
+        int $userid,
+        string $jobtype,
+        array $request,
+        int $tier = 1
+    ): int {
         global $DB;
         return (int)$DB->insert_record('aibranchedscenario_jobs', (object)[
             'scenarioid'   => $scenarioid,
             'userid'       => $userid,
             'status'       => self::JOB_QUEUED,
             'jobtype'      => $jobtype,
+            'tier'         => $tier,
             'requestjson'  => json_encode($request),
             'resultjson'   => null,
             'errormsg'     => null,

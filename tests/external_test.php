@@ -294,7 +294,12 @@ final class external_test extends \externallib_advanced_testcase {
 
         $stored = $DB->get_record('aibranchedscenario', ['id' => $this->scenario->id], '*', MUST_EXIST);
         $this->assertSame('published', $stored->status);
-        $this->assertSame(1, (int)$stored->revision);
+        // The rung tracks the revision it is serving: an activity holds three scenarios
+        // now, so a single revision number on the instance could only ever be one of them.
+        $this->assertSame(1, (int)\mod_aibranchedscenario\local\scenario_manager::tier_row(
+            (int)$this->scenario->id,
+            1
+        )->revision);
 
         // Publishing again moves to the next revision.
         $second = publish_scenario::execute((int)$this->cm->id);

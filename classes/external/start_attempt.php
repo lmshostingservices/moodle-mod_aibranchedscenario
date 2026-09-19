@@ -22,6 +22,8 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use mod_aibranchedscenario\local\attempt_manager;
+use mod_aibranchedscenario\local\scenario_manager;
+use mod_aibranchedscenario\local\schema;
 
 /**
  * Starts or resumes the current user's attempt and returns the current node.
@@ -45,6 +47,12 @@ class start_attempt extends external_api {
                 VALUE_DEFAULT,
                 false
             ),
+            'tier'     => new external_value(
+                PARAM_INT,
+                'Which rung of the ladder, 1 to 3',
+                VALUE_DEFAULT,
+                1
+            ),
         ]);
     }
 
@@ -53,20 +61,35 @@ class start_attempt extends external_api {
      *
      * @param int $cmid Course module id.
      * @param bool $forcenew Whether to force a new attempt.
+     * @param int $tier Which rung of the ladder.
      * @return array
      */
-    public static function execute(int $cmid, bool $forcenew): array {
+    public static function execute(int $cmid, bool $forcenew, int $tier = 1): array {
         global $USER;
 
         $params = self::validate_parameters(
             self::execute_parameters(),
-            ['cmid' => $cmid, 'forcenew' => $forcenew]
+            ['cmid' => $cmid, 'forcenew' => $forcenew, 'tier' => $tier]
         );
         $resolved = helper::resolve($params['cmid'], 'mod/aibranchedscenario:attempt');
         $scenario = $resolved['scenario'];
 
         if ($params['forcenew'] && empty($scenario->allowreplay)) {
             throw new \moodle_exception('error:replaynotallowed', 'mod_aibranchedscenario');
+        }
+
+        // THE LADDER'S ORDER IS ENFORCED HERE, NOT ON THE CHOOSER.
+        //
+        // The chooser draws a locked card as locked, which is a picture of the rule. The
+        // tier arrives as a parameter, so without this a learner could open the advanced
+        // scenario by changing a number - and the whole point of the ladder is that they
+        // build up to it. Asked of the database, where it is answerable.
+        $tier = (int)$params['tier'];
+        if (!isset(schema::tiers()[$tier])) {
+            throw new \moodle_exception('error:tierunknown', 'mod_aibranchedscenario');
+        }
+        if (!scenario_manager::tier_open($scenario, (int)$USER->id, $tier)) {
+            throw new \moodle_exception('error:tierlocked', 'mod_aibranchedscenario');
         }
 
         // A RESUMED ATTEMPT IS PLAYED ON THE REVISION IT STARTED ON.
@@ -81,7 +104,7 @@ class start_attempt extends external_api {
         // Attempts have always been pinned to their own revision; only this entry point
         // forgot. The new attempt case still uses the current revision, because a new
         // attempt starts on whatever is published now.
-        $manager = attempt_manager::for_scenario($scenario);
+        $manager = attempt_manager::for_scenario($scenario, $tier);
         $attempt = $manager->start_or_resume((int)$USER->id, (bool)$params['forcenew']);
         if ((int)$attempt->revisionid !== (int)$manager->get_revision()->id) {
             $manager = attempt_manager::for_attempt($scenario, $attempt);
@@ -117,7 +140,14 @@ class start_attempt extends external_api {
             'status'     => $attempt->status,
             'nextseq'    => $seq + 1,
             'metrics'    => helper::metrics($attempt),
-            'node'       => helper::node_payload($node, $attempt, $mediaurls),
+            // The state goes with it, so a node can be shown the wording that matches
+            // what this learner has already done. A resumed attempt carries its flags.
+            'node'       => helper::node_payload(
+                $node,
+                $attempt,
+                $mediaurls,
+                $manager->decode_state($attempt)
+            ),
             'resumed'    => $seq > 0,
             'journey'    => $journey,
         ];

@@ -44,6 +44,9 @@ class player implements \renderable, \templatable {
     /** @var bool Whether the current user may attempt the scenario. */
     protected $canattempt;
 
+    /** @var int Which rung of the ladder is being played. */
+    protected $tier;
+
     /**
      * Constructor.
      *
@@ -51,12 +54,20 @@ class player implements \renderable, \templatable {
      * @param stdClass $cm Course module record.
      * @param context_module $context Module context.
      * @param bool $canattempt Whether the current user may attempt the scenario.
+     * @param int $tier Which rung of the ladder is being played.
      */
-    public function __construct(stdClass $scenario, $cm, context_module $context, bool $canattempt) {
+    public function __construct(
+        stdClass $scenario,
+        $cm,
+        context_module $context,
+        bool $canattempt,
+        int $tier = 1
+    ) {
         $this->scenario = $scenario;
         $this->cm = $cm;
         $this->context = $context;
         $this->canattempt = $canattempt;
+        $this->tier = $tier;
     }
 
     /**
@@ -264,7 +275,7 @@ class player implements \renderable, \templatable {
      * @return array
      */
     public function export_for_template(\renderer_base $output): array {
-        $revision = scenario_manager::get_current_revision($this->scenario);
+        $revision = scenario_manager::get_current_revision($this->scenario, $this->tier);
         $definition = $revision ? json_decode($revision->scenariojson, true) : null;
 
         $lessonslides = $this->lesson_slides($definition, $revision);
@@ -329,6 +340,7 @@ class player implements \renderable, \templatable {
 
         return [
             'cmid'         => (int)$this->cm->id,
+            'tier'         => (int)$this->tier,
             'instanceid'   => (int)$this->scenario->id,
             'theme'        => $this->scenario->theme,
             'themeclass'   => schema::theme_class((string)$this->scenario->theme),

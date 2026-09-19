@@ -21,6 +21,7 @@ use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
 use mod_aibranchedscenario\local\ai\lmslabs_provider;
+use mod_aibranchedscenario\local\quality_review;
 use mod_aibranchedscenario\local\scenario_manager;
 use mod_aibranchedscenario\local\schema;
 use mod_aibranchedscenario\local\source_normaliser;
@@ -44,7 +45,13 @@ class get_generation_plan extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'cmid' => new external_value(PARAM_INT, 'Course module id'),
+            'cmid'  => new external_value(PARAM_INT, 'Course module id'),
+            'tiers' => new external_value(
+                PARAM_INT,
+                'How many rungs of the ladder this press will write',
+                VALUE_DEFAULT,
+                1
+            ),
         ]);
     }
 
@@ -54,10 +61,21 @@ class get_generation_plan extends external_api {
      * @param int $cmid Course module id.
      * @return array
      */
-    public static function execute(int $cmid): array {
-        $params = self::validate_parameters(self::execute_parameters(), ['cmid' => $cmid]);
+    public static function execute(int $cmid, int $tiers = 1): array {
+        $params = self::validate_parameters(
+            self::execute_parameters(),
+            ['cmid' => $cmid, 'tiers' => $tiers]
+        );
         $resolved = helper::resolve($params['cmid'], 'mod/aibranchedscenario:generate');
         $scenario = $resolved['scenario'];
+        // GENERATING THE WHOLE LADDER IS THREE RUNS AND THREE PRICES.
+        //
+        // One press can now write all three scenarios, and a teacher deciding whether to
+        // press it is deciding about the whole bill, not a third of it. Everything counted
+        // below is multiplied here rather than in the browser, because the prices are a
+        // fixed product decision and multiplying them in JavaScript would be a second
+        // place that decides what something costs.
+        $rungs = max(1, min(schema::TIERS, (int)$params['tiers']));
 
         $source = scenario_manager::get_source($scenario);
         $source = $source ? source_normaliser::normalise($source) : source_normaliser::blank();
@@ -71,6 +89,13 @@ class get_generation_plan extends external_api {
         $decisions = schema::DECISIONS;
         $choices = schema::CHOICES;
         $outcomes = count(schema::outcomes());
+        // A branched scenario has MORE decision nodes than it has decisions: a poor choice
+        // leads somewhere a good one does not, and that alternative is a node of its own
+        // with a scene, reactions and clips. The content standard asks for at least two
+        // branch points, so two alternatives is the floor and what the shipped worked
+        // example carries. Counting only the five made the estimate a third short the day
+        // branching became a requirement.
+        $nodes = $decisions + quality_review::MIN_BRANCHING_DECISIONS;
         // Three is what the content standard asks for and what the debrief was built
         // around; a scenario may teach more, which makes this an estimate rather than a
         // count - stated as one, and checked against a real run by the harness.
@@ -89,13 +114,13 @@ class get_generation_plan extends external_api {
         // is a frame of its own.
         $crisis = 2;
         $images = $wantsimages
-            ? $scenes + $principles + ($decisions * count(schema::signals())) + $crisis
+            ? $scenes + $principles + ($nodes * count(schema::signals())) + $crisis
             : 0;
         // Every clip: the situation on each node that is not an ending, the opening, one
         // spoken line per decision, and then three per option - the consequence, the same
         // choice read again on its record, and the outcome note the debrief slide reads.
         $narrations = $wantsaudio
-            ? ($decisions + 1 + $decisions + ($decisions * $choices * 3) + $outcomes)
+            ? ($nodes + 1 + $nodes + ($nodes * $choices * 3) + $outcomes)
             : 0;
         // What the run costs this site to produce, which is not what the teacher pays and
         // is not shown to them. It is kept because the daily allowance is a budget of
@@ -108,10 +133,15 @@ class get_generation_plan extends external_api {
         // Showing the teacher two different credit figures on one dialogue - what they are
         // charged and what it costs us to make - is how a support ticket starts.
         $price = schema::price_for($wantsimages, $wantsaudio);
+        $price['total'] = (int)$price['total'] * $rungs;
         $estimate = (int)$price['total'];
+        $servicecost *= $rungs;
+        $scenes *= $rungs;
+        $images *= $rungs;
+        $narrations *= $rungs;
 
         $provider = new lmslabs_provider();
-        $status = $provider->status();
+        $status = $provider->get_status();
 
         $allowance = (new \mod_aibranchedscenario\local\generator())->allowance((int)$GLOBALS['USER']->id);
 
@@ -131,11 +161,40 @@ class get_generation_plan extends external_api {
             'enough'       => !empty($status['unlimited'])
                 || !empty($status['connected']) === false
                 || (int)($status['credits'] ?? 0) >= $estimate,
-            'replacesdraft' => !empty($scenario->scenariojson),
+            // ASKED OF THE LADDER, NOT OF THE INSTANCE.
+            //
+            // This read the activity's own scenariojson column, which the ladder stopped
+            // writing: for any activity created since, the column is empty and the warning
+            // never appeared, so the one dialogue that exists to say "this replaces work
+            // you have done" stopped saying it. Every rung this press will write is asked
+            // instead, because replacing any of them is worth the warning.
+            'replacesdraft' => self::replaces_draft($scenario, $rungs),
+            'tiers'         => $rungs,
             'allowancelimited'   => !empty($allowance['limited']),
             'allowanceremaining' => (int)$allowance['remaining'],
             'buyurl'       => (string)($status['buyurl'] ?? ''),
         ];
+    }
+
+    /**
+     * Describe the return value.
+     *
+     * @return external_single_structure
+     */
+    /**
+     * Would this press overwrite a draft somebody has already made?
+     *
+     * @param \stdClass $scenario Activity instance record.
+     * @param int $rungs How many rungs the press will write, counted from the first.
+     * @return bool
+     */
+    protected static function replaces_draft(\stdClass $scenario, int $rungs): bool {
+        for ($tier = 1; $tier <= $rungs; $tier++) {
+            if (scenario_manager::get_working_definition($scenario, $tier) !== null) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -159,6 +218,7 @@ class get_generation_plan extends external_api {
             'balanceknown'  => new external_value(PARAM_BOOL, 'Whether the balance could be read'),
             'enough'        => new external_value(PARAM_BOOL, 'Whether the balance covers the estimate'),
             'replacesdraft' => new external_value(PARAM_BOOL, 'Whether a working copy would be replaced'),
+            'tiers'         => new external_value(PARAM_INT, 'How many scenarios this press will write'),
             'allowancelimited'   => new external_value(PARAM_BOOL, 'Whether a daily allowance applies'),
             'allowanceremaining' => new external_value(PARAM_INT, 'How much of the daily allowance is left'),
             'buyurl'        => new external_value(PARAM_URL, 'Where more credits can be bought', VALUE_DEFAULT, ''),

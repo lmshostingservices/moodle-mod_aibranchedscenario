@@ -144,18 +144,19 @@ final class scenario_manager_test extends \advanced_testcase {
 
         $stored = $DB->get_record('aibranchedscenario', ['id' => $this->scenario->id], '*', MUST_EXIST);
         $this->assertSame(scenario_manager::STATUS_PUBLISHED, $stored->status);
-        $this->assertSame(1, (int)$stored->revision);
+        // Read from the LADDER. An activity holds three scenarios now and each rung tracks
+        // the revision it is serving; the instance's own revision column is legacy.
+        $this->assertSame(1, (int)scenario_manager::tier_row((int)$this->scenario->id, 1)->revision);
         $this->assertTrue(scenario_manager::is_playable($stored));
 
         $second = scenario_manager::publish($this->scenario, (int)$this->teacher->id);
         $this->assertSame(2, (int)$second->revision);
         $this->assertNotEquals((int)$first->id, (int)$second->id);
 
-        $stored = $DB->get_record('aibranchedscenario', ['id' => $this->scenario->id], '*', MUST_EXIST);
-        $this->assertSame(2, (int)$stored->revision);
+        $this->assertSame(2, (int)scenario_manager::tier_row((int)$this->scenario->id, 1)->revision);
         $this->assertSame(2, $DB->count_records(
             'aibranchedscenario_revisions',
-            ['scenarioid' => $this->scenario->id]
+            ['scenarioid' => $this->scenario->id, 'tier' => 1]
         ));
 
         $current = scenario_manager::get_current_revision($stored);
@@ -233,8 +234,10 @@ final class scenario_manager_test extends \advanced_testcase {
             'nested'        => ['still' => 'not scalar'],
         ]);
 
-        $stored = $DB->get_record('aibranchedscenario', ['id' => $this->scenario->id], '*', MUST_EXIST);
-        $meta = json_decode($stored->generationmeta, true);
+        // Generation metadata belongs to the RUNG that was generated: three rungs are three
+        // generations with three sets of it.
+        $stored = scenario_manager::tier_row((int)$this->scenario->id, 1);
+        $meta = json_decode((string)$stored->generationmeta, true);
 
         $this->assertIsArray($meta);
         $this->assertSame('test-model-1', $meta['model']);

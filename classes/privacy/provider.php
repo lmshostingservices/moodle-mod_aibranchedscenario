@@ -57,6 +57,7 @@ class provider implements
             'revisionid'   => 'privacy:metadata:aibranchedscenario_attempts:revisionid',
             'userid'       => 'privacy:metadata:aibranchedscenario_attempts:userid',
             'attemptno'    => 'privacy:metadata:aibranchedscenario_attempts:attemptno',
+            'tier'         => 'privacy:metadata:aibranchedscenario_attempts:tier',
             'status'       => 'privacy:metadata:aibranchedscenario_attempts:status',
             'currentnode'  => 'privacy:metadata:aibranchedscenario_attempts:currentnode',
             'statejson'    => 'privacy:metadata:aibranchedscenario_attempts:statejson',
@@ -289,6 +290,11 @@ class provider implements
 
         $data = (object)[
             'attemptno'    => (int)$attempt->attemptno,
+            // Which scenario of the three this attempt was at. Without it, a learner's
+            // export lists three "attempt 1"s with no way to tell which was the foundation
+            // scenario and which the advanced - and a subject access request answered
+            // ambiguously has not been answered.
+            'tier'         => (int)($attempt->tier ?? 1),
             'status'       => $attempt->status,
             'currentnode'  => $attempt->currentnode,
             'outcome'      => $attempt->outcome,

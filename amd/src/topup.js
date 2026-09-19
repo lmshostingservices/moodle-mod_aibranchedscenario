@@ -46,9 +46,10 @@ const SELECTORS = {
  * Wire the panel, if this page has one.
  *
  * @param {Number} cmid The course module.
+ * @param {Number} tier Which rung of the ladder this page is reviewing.
  * @returns {void}
  */
-export const init = (cmid) => {
+export const init = (cmid, tier) => {
     const panel = document.querySelector(SELECTORS.panel);
     if (!panel) {
         return;
@@ -110,7 +111,7 @@ export const init = (cmid) => {
         try {
             const response = await Ajax.call([{
                 methodname: 'mod_aibranchedscenario_topup_media',
-                args: {cmid: cmid, keys: keys},
+                args: {cmid: cmid, keys: keys, tier: tier || 1},
             }])[0];
             await draw(response);
             if (keys.length) {

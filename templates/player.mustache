@@ -38,6 +38,7 @@
 
     Context variables required for this template:
     * cmid int Course module id
+    * tier int Which rung of the ladder is being played, 1 to 3
     * themeclass string CSS class applying the chosen accent theme
     * title string Activity name
     * scenariotitle string Title of the published scenario
@@ -69,6 +70,7 @@
     Example context (json):
     {
         "cmid": 42,
+        "tier": 1,
         "themeclass": "aibs-theme-slate",
         "title": "Reporting a hazard",
         "scenariotitle": "The vibrating machine",
@@ -93,6 +95,7 @@
     }
 }}
 <div class="aibs-player {{themeclass}}" data-region="player" data-cmid="{{cmid}}"
+     data-tier="{{tier}}"
      data-stages="{{stagecount}}"
      data-metrics="{{#showmetrics}}1{{/showmetrics}}{{^showmetrics}}0{{/showmetrics}}"
      data-bandgreen="{{bandgreen}}" data-bandred="{{bandred}}"

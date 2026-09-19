@@ -57,12 +57,17 @@ class draft_review implements \renderable, \templatable {
      * @param stdClass $scenario Activity instance.
      * @param stdClass $cm Course module record.
      * @param context_module $context Module context.
+     * @param int $tier Which rung of the ladder is being reviewed.
      */
-    public function __construct(stdClass $scenario, $cm, context_module $context) {
+    public function __construct(stdClass $scenario, $cm, context_module $context, int $tier = 1) {
         $this->scenario = $scenario;
         $this->cm = $cm;
         $this->context = $context;
+        $this->tier = $tier;
     }
+
+    /** @var int Which rung of the ladder is being reviewed. */
+    protected $tier = 1;
 
     /**
      * Export the data used by the template.
@@ -71,19 +76,19 @@ class draft_review implements \renderable, \templatable {
      * @return array
      */
     public function export_for_template(\renderer_base $output): array {
-        $definition = scenario_manager::get_working_definition($this->scenario);
+        $definition = scenario_manager::get_working_definition($this->scenario, $this->tier);
         if (!is_array($definition)) {
             return [
                 'cmid'     => (int)$this->cm->id,
                 'hasdraft' => false,
                 'editurl'  => (new \moodle_url(
                     '/mod/aibranchedscenario/edit.php',
-                    ['id' => $this->cm->id]
+                    ['id' => $this->cm->id, 'tier' => $this->tier]
                 ))->out(false),
             ];
         }
 
-        $media = new media_manager($this->context);
+        $media = new media_manager($this->context, $this->tier);
         $images = $media->urls_for_working(media_manager::AREA_SCENE);
 
         $titles = [];
@@ -171,13 +176,14 @@ class draft_review implements \renderable, \templatable {
             // The missing-picture panel only means anything once there is a published
             // revision to be short of pictures.
             'published'   => \mod_aibranchedscenario\local\scenario_manager::get_current_revision(
-                $this->scenario
+                $this->scenario,
+                $this->tier
             ) !== null,
             'principles'  => array_values($definition['principles']),
             'hasprinciples' => !empty($definition['principles']),
             'editurl'     => (new \moodle_url(
                 '/mod/aibranchedscenario/edit.php',
-                ['id' => $this->cm->id]
+                ['id' => $this->cm->id, 'tier' => $this->tier]
             ))->out(false),
         ];
     }

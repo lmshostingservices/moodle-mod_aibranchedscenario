@@ -152,6 +152,10 @@ class Player {
     constructor(root) {
         this.root = root;
         this.cmid = parseInt(root.dataset.cmid, 10);
+        // Which rung of the ladder is being played. An activity holds three scenarios, and
+        // every attempt belongs to exactly one of them; the server refuses a rung this
+        // learner has not reached, so this is which one to ask for rather than a permission.
+        this.tier = parseInt(root.dataset.tier, 10) || 1;
         this.audioEnabled = root.dataset.audio === '1';
         this.showMetrics = root.dataset.metrics !== '0';
         // Where a reading stops counting as good and where it becomes a problem. These were
@@ -448,7 +452,7 @@ class Player {
         this.clearError();
         this.setBusy(true);
         try {
-            const response = await this.call('start_attempt', {forcenew: forceNew});
+            const response = await this.call('start_attempt', {forcenew: forceNew, tier: this.tier});
             this.attemptId = response.attemptid;
             this.nextSeq = response.nextseq;
             this.step = response.nextseq - 1;

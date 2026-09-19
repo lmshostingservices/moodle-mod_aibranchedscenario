@@ -49,7 +49,7 @@ class backup_aibranchedscenario_activity_structure_step extends backup_activity_
             'scenariojson', 'sourcejson', 'generationmeta', 'revision',
             'maxattempts', 'allowreplay', 'showdebrief', 'showtimeline', 'showmetrics',
             'enableaudio', 'requirelisten', 'bandgreen', 'bandred',
-            // 'grade' was missing from this list. install.xml defaults it to 100, so every
+            // The 'grade' field was missing from this list. install.xml defaults it to 100, so every
             // restore reset a teacher's chosen maximum - and the first grade push then
             // rewrote the gradebook item from that wrong value, turning a 25-point activity
             // into a 100-point one and multiplying every learner's mark by four. A backup
@@ -59,11 +59,22 @@ class backup_aibranchedscenario_activity_structure_step extends backup_activity_
             'timecreated', 'timemodified',
         ]);
 
+        // THE LADDER. An activity holds three scenarios - foundation, intermediate,
+        // advanced - and each rung's working copy lives in its own row. Without this a
+        // course backup would carry the published revisions and lose every draft a teacher
+        // had not published yet, which on a half-built ladder is most of their work.
+        $tiers = new backup_nested_element('tiers');
+
+        $tier = new backup_nested_element('tier', ['id'], [
+            'tier', 'status', 'scenariojson', 'previousjson', 'generationmeta',
+            'revision', 'timecreated', 'timemodified',
+        ]);
+
         // Published revisions.
         $revisions = new backup_nested_element('revisions');
 
         $revision = new backup_nested_element('revision', ['id'], [
-            'revision', 'scenariojson', 'theme', 'nodecount', 'maxskillscore',
+            'tier', 'revision', 'scenariojson', 'theme', 'nodecount', 'maxskillscore',
             'timecreated', 'createdby',
         ]);
 
@@ -71,7 +82,7 @@ class backup_aibranchedscenario_activity_structure_step extends backup_activity_
         $attempts = new backup_nested_element('attempts');
 
         $attempt = new backup_nested_element('attempt', ['id'], [
-            'revisionid', 'userid', 'attemptno', 'status', 'currentnode', 'statejson',
+            'revisionid', 'tier', 'userid', 'attemptno', 'status', 'currentnode', 'statejson',
             'engagement', 'trust', 'tension', 'presence', 'adaptability', 'empathy', 'clarity',
             'score', 'outcome', 'timestarted', 'timemodified', 'timefinished',
         ]);
@@ -85,6 +96,9 @@ class backup_aibranchedscenario_activity_structure_step extends backup_activity_
         ]);
 
         // Build the tree.
+        $aibranchedscenario->add_child($tiers);
+        $tiers->add_child($tier);
+
         $aibranchedscenario->add_child($revisions);
         $revisions->add_child($revision);
 
@@ -97,11 +111,19 @@ class backup_aibranchedscenario_activity_structure_step extends backup_activity_
         // Define sources.
         $aibranchedscenario->set_source_table('aibranchedscenario', ['id' => backup::VAR_ACTIVITYID]);
 
+        // The rungs are structural content - a teacher's unpublished drafts - so they
+        // travel with every backup, user data or not.
+        $tier->set_source_table(
+            'aibranchedscenario_tiers',
+            ['scenarioid' => backup::VAR_PARENTID],
+            'tier ASC'
+        );
+
         // Revisions are structural content, so they travel with every backup.
         $revision->set_source_table(
             'aibranchedscenario_revisions',
             ['scenarioid' => backup::VAR_PARENTID],
-            'revision ASC'
+            'tier ASC, revision ASC'
         );
 
         if ($userinfo) {

@@ -61,6 +61,7 @@ class topup_media extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module id'),
+            'tier' => new external_value(PARAM_INT, 'Which rung of the ladder', VALUE_DEFAULT, 1),
             'keys' => new external_multiple_structure(
                 new external_value(PARAM_ALPHANUMEXT, 'An image key to generate'),
                 'The keys to make. Empty to report the shortfall without making anything.',
@@ -75,19 +76,22 @@ class topup_media extends external_api {
      *
      * @param int $cmid Course module id.
      * @param array $keys Image keys to generate, or empty to report only.
+     * @param int $tier Which rung of the ladder.
      * @return array
      */
-    public static function execute(int $cmid, array $keys = []): array {
+    public static function execute(int $cmid, array $keys = [], int $tier = 1): array {
         global $DB, $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'cmid' => $cmid,
             'keys' => $keys,
+            'tier' => $tier,
         ]);
         $resolved = helper::resolve($params['cmid'], 'mod/aibranchedscenario:generate');
         $scenario = $resolved['scenario'];
+        $tier = helper::tier($params['tier']);
 
-        $revision = scenario_manager::get_current_revision($scenario);
+        $revision = scenario_manager::get_current_revision($scenario, $tier);
         if (!$revision) {
             throw new \moodle_exception('error:nopublishedrevision', 'mod_aibranchedscenario');
         }
@@ -96,7 +100,7 @@ class topup_media extends external_api {
             throw new \moodle_exception('error:nopublishedrevision', 'mod_aibranchedscenario');
         }
 
-        $media = new media_manager($resolved['context']);
+        $media = new media_manager($resolved['context'], $tier);
         $report = $media->reconcile_images($definition, (int)$revision->revision);
 
         $missing = [];
@@ -149,6 +153,7 @@ class topup_media extends external_api {
             'userid'       => (int)$USER->id,
             'status'       => generator::JOB_RUNNING,
             'jobtype'      => 'media',
+            'tier'         => $tier,
             'requestjson'  => json_encode(['topup' => count($wanted)]),
             'modelused'    => '',
             'timecreated'  => time(),

@@ -978,6 +978,7 @@ class validator {
             'imageprompt'        => $this->short($raw['imageprompt'] ?? '', 600),
             'imagealt'           => $this->short($raw['imagealt'] ?? '', 250),
             'crisisvariant'      => null,
+            'variants'           => [],
             'choices'            => [],
             'outcome'            => '',
             'summary'            => '',
@@ -994,6 +995,42 @@ class validator {
             $node['speakergender'] = $voices[\core_text::strtolower($node['speaker'])] ?? '';
         }
 
+        // THE WORLD REACTING TO WHAT THE LEARNER DID.
+        //
+        // There used to be exactly one of these - crisisvariant - gated on one metric
+        // passing one threshold, on one field. It was the right idea with one condition
+        // available, so a scenario could say "this has got tense" and nothing else. It
+        // could not say "you never reported that hazard, and it is still here".
+        //
+        // A node now carries a LIST of variants, each with a condition, first match wins in
+        // document order. That is what turns a branching quiz into something that remembers:
+        // a flag set at stage one changes the wording at stage three, with no extra screen
+        // and no extra picture.
+        //
+        // crisisvariant still works, unchanged, as shorthand for the tension case, and is
+        // appended last so an explicit variant always wins. It is kept rather than migrated
+        // because every scenario in existence uses it and none of them have been
+        // regenerated - which is the v2.3.0 lesson, learned expensively.
+        $node['variants'] = [];
+        foreach ((array)($raw['variants'] ?? []) as $rawvariant) {
+            if (!is_array($rawvariant)) {
+                continue;
+            }
+            $condition = $this->condition($rawvariant['when'] ?? []);
+            $variant = [
+                'when'              => $condition,
+                'situation'         => $this->text($rawvariant['situation'] ?? ''),
+                'facilitatorspeech' => $this->text($rawvariant['facilitatorspeech'] ?? '', 1500),
+                'challenge'         => $this->text($rawvariant['challenge'] ?? '', 600),
+            ];
+            // A variant with no condition would fire on every attempt and replace the node
+            // it belongs to, which is a scenario with a screen nobody can ever see behind
+            // it. A variant with no situation has nothing to show.
+            if ($condition !== null && $variant['situation'] !== '') {
+                $node['variants'][] = $variant;
+            }
+        }
+
         if (isset($raw['crisisvariant']) && is_array($raw['crisisvariant'])) {
             $variant = [
                 'situation'         => $this->text($raw['crisisvariant']['situation'] ?? ''),
@@ -1002,6 +1039,10 @@ class validator {
             ];
             if ($variant['situation'] !== '') {
                 $node['crisisvariant'] = $variant;
+                $node['variants'][] = $variant + ['when' => [
+                    'metric'  => 'tension',
+                    'atleast' => schema::CRISIS_TENSION_THRESHOLD,
+                ]];
             }
         }
 
@@ -1192,6 +1233,17 @@ class validator {
                 'consequence' => $this->text($rawchoice['consequence'] ?? '', 1800),
                 'feedback'    => $this->text($rawchoice['feedback'] ?? '', 1800),
                 'outcomenote' => $outcomenote,
+                // WHAT THIS CHOICE CHANGES ABOUT THE WORLD.
+                //
+                // The readings already carried something forward, but only as three
+                // numbers - a scenario could know the room had got tense and could not
+                // know the hazard was still there. A flag is a fact: hazard_reported,
+                // lead_still_in_use. Later screens are written against it, so a decision
+                // taken at stage one is why stage three reads the way it does.
+                //
+                // Stored in the attempt's state blob, which is free-form, so this needs no
+                // schema change and no upgrade step.
+                'setflags'    => $this->flags($rawchoice['setflags'] ?? []),
                 'principleid' => $principleid,
                 'tags'        => $this->stringlist($rawchoice['tags'] ?? [], schema::choicetags(), 5),
                 'effects'     => [
@@ -1286,6 +1338,82 @@ class validator {
             $out[] = $rawchoices[$at];
         }
         return array_slice($out, 0, schema::CHOICES);
+    }
+
+    /**
+     * Normalise the facts a choice sets about the world.
+     *
+     * Names are normalised the same way node and choice ids are, so a scenario cannot set
+     * "Hazard Reported" and then test for "hazard_reported" and quietly never match - which
+     * would be a screen nobody can ever reach, and invisible to every check that only looks
+     * at whether the screen exists.
+     *
+     * @param mixed $raw Flag name to boolean.
+     * @return array Normalised name to boolean.
+     */
+    protected function flags($raw): array {
+        if (!is_array($raw)) {
+            return [];
+        }
+        $out = [];
+        foreach ($raw as $name => $value) {
+            $name = $this->identifier((string)$name);
+            if ($name !== '') {
+                $out[$name] = (bool)$value;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Normalise one variant condition, or null when it is not one this engine can answer.
+     *
+     * Deliberately three shapes and no more. A condition language grows until nobody can
+     * say what a scenario will do, and the review panel has to be able to explain in one
+     * sentence why a screen did or did not appear:
+     *
+     *   {"flag": "hazard_reported", "is": true}    something the learner did
+     *   {"metric": "tension", "atleast": 75}       a reading that has run high or low
+     *   {"signals": "negative", "atleast": 3}      how many poor calls they have made
+     *
+     * The third is what "if the learner has made three unsafe decisions" means, and it is
+     * the one that lets a scenario escalate rather than merely react.
+     *
+     * @param mixed $raw The raw condition.
+     * @return array|null The condition, or null when it cannot be answered.
+     */
+    protected function condition($raw): ?array {
+        if (!is_array($raw)) {
+            return null;
+        }
+        $flag = $this->identifier($raw['flag'] ?? '');
+        if ($flag !== '') {
+            return ['flag' => $flag, 'is' => !empty($raw['is'])];
+        }
+        $metric = (string)($raw['metric'] ?? '');
+        if (schema::in_list($metric, schema::metrics())) {
+            // isset() is not enough: the wire mapper writes an explicit null for a bound
+            // the service did not send, so a condition with neither would otherwise be read
+            // as "at least null", which is nought, which is always true - a variant that
+            // fires on every attempt and replaces the node behind it.
+            if (($raw['atleast'] ?? null) !== null) {
+                return ['metric' => $metric, 'atleast' => $this->intrange($raw['atleast'], 0, 100)];
+            }
+            if (($raw['atmost'] ?? null) !== null) {
+                return ['metric' => $metric, 'atmost' => $this->intrange($raw['atmost'], 0, 100)];
+            }
+            return null;
+        }
+        $signal = (string)($raw['signals'] ?? '');
+        if (schema::in_list($signal, schema::signals())) {
+            return [
+                'signals' => $signal,
+                // At least one, or the condition is true before the learner has done
+                // anything and the variant is simply the node's own text.
+                'atleast' => max(1, $this->intrange($raw['atleast'] ?? 1, 1, schema::MAX_NODES)),
+            ];
+        }
+        return null;
     }
 
     /**

@@ -92,6 +92,32 @@ class schema {
      */
     const MAX_OUTCOME_NOTE = 700;
 
+    /**
+     * @var int How many scenarios one activity holds, in rising difficulty.
+     *
+     * THE LADDER. An activity used to be one scenario, which is a single sample of a
+     * learner's judgement. Three, testing the same principles at rising difficulty and
+     * each unlocked by passing the one before, is a trend - and a trend is what an RTO is
+     * actually assessing.
+     *
+     * The rungs line up with the complexity levels the wizard has always offered:
+     * foundation, intermediate, advanced.
+     */
+    const TIERS = 3;
+
+    /**
+     * The rungs of the ladder, lowest first.
+     *
+     * @return array Tier number to the complexity it is written at.
+     */
+    public static function tiers(): array {
+        return [
+            1 => 'foundation',
+            2 => 'intermediate',
+            3 => 'advanced',
+        ];
+    }
+
     /** @var int Tension level at or above which a crisis variant is shown. */
     const CRISIS_TENSION_THRESHOLD = 75;
 

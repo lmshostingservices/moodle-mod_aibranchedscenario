@@ -89,6 +89,15 @@ $functions = [
         'services'    => [],
     ],
 
+    'mod_aibranchedscenario_queue_ladder' => [
+        'classname'   => 'mod_aibranchedscenario\external\queue_ladder',
+        'description' => 'Queue generation of all three of an activity\'s scenarios.',
+        'type'        => 'write',
+        'ajax'        => true,
+        'capabilities' => 'mod/aibranchedscenario:generate',
+        'services'    => [],
+    ],
+
     'mod_aibranchedscenario_get_job_status' => [
         'classname'   => 'mod_aibranchedscenario\external\get_job_status',
         'description' => 'Report the progress of a queued generation job.',

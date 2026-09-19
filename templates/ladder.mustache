@@ -1,0 +1,169 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template mod_aibranchedscenario/ladder
+
+    The screen a learner lands on when an activity holds more than one scenario.
+
+    Three cards, in order. The first is open, and each of the others opens when the one
+    below it has been passed. A locked card is not hidden: it shows what is waiting and
+    says in words why it is not available yet, because a learner who cannot see what is
+    ahead has no reason to finish what is in front of them.
+
+    Classes required for JS:
+    * aibs-ladder
+
+    Context variables required for this template:
+    * title string Heading for the screen
+    * lead string One line saying how the three relate to each other
+    * themeclass string CSS class applying the chosen accent theme
+    * progress string How many have been passed, in words
+    * allpassed bool Whether every scenario has been passed
+    * allpassedtext string What to say when they have
+    * cards array One per scenario, in order
+
+    Example context (json):
+    {
+        "title": "Three scenarios, one after another",
+        "lead": "Each one tests the same ideas in a harder situation. Pass one to open the next.",
+        "themeclass": "aibs-theme-slate",
+        "progress": "Scenario 1 of 3 passed",
+        "allpassed": false,
+        "allpassedtext": "You have passed all three.",
+        "cards": [
+            {
+                "tier": 1,
+                "number": 1,
+                "name": "Foundation",
+                "title": "The third interruption",
+                "hastitle": true,
+                "subtitle": "Active listening when the room is moving too fast",
+                "blurb": "One of your team has stopped speaking in meetings.",
+                "hasblurb": true,
+                "hasimage": false,
+                "imageurl": "",
+                "unlocked": true,
+                "locked": false,
+                "lockreason": "",
+                "passed": true,
+                "attempted": true,
+                "best": "82",
+                "label": "Try again",
+                "url": "#"
+            },
+            {
+                "tier": 2,
+                "number": 2,
+                "name": "Intermediate",
+                "title": "",
+                "hastitle": false,
+                "subtitle": "The same ideas under pressure, with somebody who disagrees.",
+                "blurb": "",
+                "hasblurb": false,
+                "hasimage": false,
+                "imageurl": "",
+                "unlocked": false,
+                "locked": true,
+                "lockreason": "Opens when you pass Foundation",
+                "passed": false,
+                "attempted": false,
+                "best": "",
+                "label": "Start",
+                "url": "#"
+            }
+        ]
+    }
+}}
+<div class="aibs-ladder {{themeclass}}" data-region="ladder">
+    <div class="aibs-shell">
+
+        <header class="aibs-ladder-head">
+            <h2 class="aibs-ladder-title">{{title}}</h2>
+            <p class="aibs-ladder-lead">{{lead}}</p>
+            <p class="aibs-ladder-progress">
+                {{#allpassed}}{{allpassedtext}}{{/allpassed}}
+                {{^allpassed}}{{progress}}{{/allpassed}}
+            </p>
+        </header>
+
+        <ol class="aibs-ladder-cards">
+            {{#cards}}
+            <li class="aibs-ladder-item">
+                {{! An open card is one link over the whole card, so the target is the card
+                    and not a button at the bottom of it. A locked one is not a link at
+                    all: a disabled anchor is a control that looks like it should work. }}
+                {{#unlocked}}
+                <a class="aibs-ladder-card{{#passed}} aibs-is-passed{{/passed}}" href="{{url}}">
+                {{/unlocked}}
+                {{#locked}}
+                <div class="aibs-ladder-card aibs-is-locked" aria-disabled="true">
+                {{/locked}}
+
+                    <div class="aibs-ladder-figure">
+                        {{#hasimage}}
+                        <img class="aibs-ladder-img" src="{{imageurl}}" alt="">
+                        {{/hasimage}}
+                        {{^hasimage}}
+                        <span class="aibs-ladder-plate" aria-hidden="true"></span>
+                        {{/hasimage}}
+                        <span class="aibs-ladder-step">{{number}}</span>
+                    </div>
+
+                    <div class="aibs-ladder-body">
+                        <p class="aibs-ladder-name">{{name}}</p>
+                        {{#hastitle}}
+                        <h3 class="aibs-ladder-heading">{{title}}</h3>
+                        {{/hastitle}}
+                        <p class="aibs-ladder-sub">{{subtitle}}</p>
+                        {{#hasblurb}}
+                        <p class="aibs-ladder-blurb">{{blurb}}</p>
+                        {{/hasblurb}}
+                    </div>
+
+                    <div class="aibs-ladder-foot">
+                        {{#passed}}
+                        <span class="aibs-ladder-mark">
+                            <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                                <path d="M4.5 10.4l3.4 3.4 7.6-7.6" fill="none" stroke="currentColor"
+                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            {{#str}} ladder:passed, mod_aibranchedscenario {{/str}}
+                        </span>
+                        {{/passed}}
+                        {{#attempted}}
+                        <span class="aibs-ladder-best">{{#str}} ladder:best, mod_aibranchedscenario, {{best}} {{/str}}</span>
+                        {{/attempted}}
+                        {{#locked}}
+                        <span class="aibs-ladder-reason">{{lockreason}}</span>
+                        {{/locked}}
+                        {{#unlocked}}
+                        <span class="aibs-ladder-go">{{label}}</span>
+                        {{/unlocked}}
+                    </div>
+
+                {{#unlocked}}
+                </a>
+                {{/unlocked}}
+                {{#locked}}
+                </div>
+                {{/locked}}
+            </li>
+            {{/cards}}
+        </ol>
+
+    </div>
+</div>

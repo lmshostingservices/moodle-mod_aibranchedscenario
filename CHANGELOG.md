@@ -2,6 +2,144 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v2.5.0] - 2026-09-19
+
+### The ladder: an activity holds three scenarios
+
+An activity used to be one scenario, which is a single sample of a learner's judgement.
+It now holds three — foundation, intermediate and advanced — testing the same principles at
+rising difficulty, each unlocked by passing the one before.
+
+- Every activity that already exists becomes the **foundation** rung of its own ladder.
+  Nothing a learner has done changes: their attempts stay bound to the revisions they were
+  taken against.
+- Attempts, revisions and attempt numbers are now **per rung**, so a learner's first go at
+  the intermediate scenario is attempt one of that scenario rather than attempt four of the
+  activity.
+- The **grade is the whole ladder** — the mean across all three rungs, counting one not
+  reached as zero. A perfect run at the foundation scenario is a third of the activity,
+  because that is what it is.
+- The **gate is the pass mark the teacher sets**, not a perfect score.
+
+### The screen a learner lands on
+
+- A **chooser**: three cards, in order, each showing the scenario's own title and a piece of
+  the situation it drops you into, so picking one is a choice about the situation rather
+  than about a difficulty label. A locked card is drawn rather than hidden and **says why**
+  it is locked — "Locked", with no reason, is the thing a learner takes to their trainer.
+- An activity with only one scenario written **opens straight into it**. A chooser in front
+  of a single card asks for a choice that does not exist.
+- The order is **enforced where it is answerable**, not only drawn. The rung arrives as a
+  URL parameter, so both the learner view and `start_attempt` refuse a rung the learner has
+  not reached. A teacher previewing their own work is not a learner climbing the ladder and
+  passes through.
+
+### Authoring three scenarios
+
+- **One press writes all three.** The three scenarios are made from the same source material
+  and test the same principles — only how much is signposted changes, and the rung decides
+  that — so there is nothing for a teacher to fill in between them. Generating a single
+  scenario is still offered beside it, for fixing one without paying to rewrite the other
+  two. Every check is made for all three *before any of them is queued*: queueing the
+  foundation scenario and then finding the balance covers two would leave a teacher charged
+  for a ladder they cannot finish.
+- The confirmation **prices what is about to happen** — three scenarios, three prices,
+  multiplied on the server where the prices are defined rather than in the browser.
+- The wizard follows all three jobs and reports **"two of three scenarios written"**. A rung
+  that finishes is kept even if a sibling fails: it was written and it was paid for.
+- The wizard writes **one rung at a time** and carries a strip showing all three, each
+  marked live, draft or not started — the other two were otherwise unreachable and, worse,
+  invisible.
+- Publication state, revision number and the restore-draft offer are now read **per rung**.
+  Read off the activity, the wizard for an unwritten advanced scenario announced itself as
+  published at the foundation scenario's revision.
+- **Complexity is no longer a control.** The three rungs *are* foundation, intermediate and
+  advanced, so a picker setting it separately could only ever disagree with the scenario it
+  was sitting in. Generation takes the complexity from the rung.
+- Generation and illustration are **in flight per rung**: writing the intermediate scenario
+  while the advanced one is still being made is an ordinary thing to do, and used to be
+  refused with a message about a generation already running.
+
+### Fixed
+
+- **The cost estimate had been throwing a fatal error every single time it was asked for.**
+  `get_generation_plan` called `status()` on the provider; the method is `get_status()`. The
+  wizard caught the failure, showed no price, no balance and no allowance, and said nothing
+  — so the one dialogue in the product that exists to say what a teacher is about to spend
+  had been blank for as long as the name was wrong, and looked exactly like a build that was
+  never asked to show them. The estimate is now **checked by being called**, because a
+  source grep reads a wrong method name as happily as a right one, and a lost estimate now
+  **says so on the dialogue** instead of quietly disappearing.
+- **The overwrite warning had stopped appearing.** "Generating replaces the draft you have"
+  was decided by the activity's own `scenariojson` column, which the ladder stopped writing
+  — so on any activity created since, it was empty and the warning never showed. It asks
+  every rung the press will write, so a draft on the advanced scenario alone still earns it.
+- **Publishing a second rung would have deleted the first rung's pictures.** Media is
+  itemised by revision number and revision numbers run per rung, so rung 1 and rung 2 both
+  have a revision 1 — the second publish deleted the first's photographs and put its own in
+  their place. The rung is folded into the item id, chosen so that **rung one is exactly
+  where it always was**: nothing on an existing site is moved or migrated.
+- The working file areas are shared by all three scenarios, so a generation run cleared the
+  **other two rungs' draft artwork** on its first write. It clears only its own rung now.
+- Seven CSS declarations referenced `--aibs-text-muted`, a token that does not exist, so the
+  opening brief's muted text rendered at full strength.
+- The plugin's shells stated `box-sizing` on everything inside them and left themselves to
+  whatever the host page set — correct by luck on a Moodle theme rather than by statement.
+
+## [v2.4.0] - 2026-09-19
+
+### It actually branches now
+
+The plugin is called AI Branched Scenario. Until this release, the scenario shipped with it
+as the worked example sent **every option at three of its five decisions to the same
+screen** — so whatever a learner chose, the next thing they saw was identical. What a
+choice changed was three numbers on the meters and one paragraph read once.
+
+The rule had been written down since version 1, in the contract the writing service is
+built against. Nothing ever checked it, and it was in neither the prompt nor the quality
+review. Now it is in both:
+
+- The **review panel** reports a scenario whose decisions do not change where the learner
+  goes, and names the ones that do nothing.
+- A **narrative beat is not a branch** — two options that rejoin one screen later through
+  two different paragraphs have not branched, and are no longer counted as if they had.
+- Paths are still meant to **rejoin**. A well-built scenario has decisions that converge;
+  what it must not be is a scenario where that is true of all of them.
+
+### The scenario remembers what you did
+
+The meters carried something forward, but only as numbers — a scenario could know the room
+had got tense, and could not know the hazard was still there.
+
+A choice can now **leave a fact behind**, and a later screen can be written for a learner
+carrying it. The supervisor who says *"thanks for flagging that earlier"* to one learner and
+*"why wasn't this reported?"* to another, on the same screen, in the same scenario.
+
+Conditions can read a fact you set, a reading that has run high or low, or **how many poor
+calls you have made** — so a scenario can escalate after three rather than only react to the
+last one.
+
+The crisis screens are one case of this and behave exactly as before.
+
+### The worked example is now worth copying
+
+It branches twice, carries four facts forward, and its closing conversation is written four
+different ways depending on what the learner did in the very first meeting. It raises no
+quality warnings of any kind.
+
+### Fixes
+
+- The picture and narration counts quoted before you generate now allow for the branch
+  alternatives a branched scenario contains.
+- A screen waiting on a fact nothing sets — content no learner could ever reach — is now
+  reported, and so is a fact nothing reads.
+
+### Upgrading
+
+Upgrade as normal, no configuration changes. Scenarios published before this keep working
+exactly as they did and are not reported as faulty: the branching rules apply to scenarios
+being made, not to ones you already have. Regenerate to get a branched version.
+
 ## [v2.3.1] - 2026-09-19
 
 ### Generation works again

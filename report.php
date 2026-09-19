@@ -234,18 +234,22 @@ if (!$total) {
 }
 
 $userfields = \core_user\fields::for_name()->get_sql('u', false, '', '', false);
-$sql = "SELECT a.id, a.userid, a.attemptno, a.status, a.score, a.outcome, a.engagement, a.trust,
+$sql = "SELECT a.id, a.userid, a.tier, a.attemptno, a.status, a.score, a.outcome, a.engagement, a.trust,
                a.tension, a.timestarted, a.timefinished {$userfields->selects}
           FROM {aibranchedscenario_attempts} a
           JOIN {user} u ON u.id = a.userid
          WHERE a.scenarioid = :sid
-      ORDER BY a.timestarted DESC, a.id DESC";
+      ORDER BY a.tier ASC, a.timestarted DESC, a.id DESC";
 $params = array_merge(['sid' => $moduleinstance->id], $userfields->params);
 
 $table = new html_table();
 $table->attributes['class'] = 'generaltable';
 $table->head = [
     get_string('learner', 'mod_aibranchedscenario'),
+    // WHICH OF THE THREE. Without this a teacher reads three "attempt 1" rows for one
+    // learner and cannot tell which scenario each was - and the whole point of the ladder
+    // is being able to see how somebody did as it got harder.
+    get_string('tier', 'mod_aibranchedscenario'),
     get_string('attemptnumber', 'mod_aibranchedscenario'),
     get_string('status', 'mod_aibranchedscenario'),
     get_string('score', 'mod_aibranchedscenario'),
@@ -258,6 +262,10 @@ $recordset = $DB->get_recordset_sql($sql, $params, $page * $perpage, $perpage);
 foreach ($recordset as $record) {
     $row = [
         fullname($record),
+        get_string(
+            'tier:' . (schema::tiers()[(int)$record->tier] ?? 'foundation'),
+            'mod_aibranchedscenario'
+        ),
         (int)$record->attemptno,
         get_string('attemptstatus:' . $record->status, 'mod_aibranchedscenario'),
         $record->score === null ? '-' : round((float)$record->score, 1) . '%',

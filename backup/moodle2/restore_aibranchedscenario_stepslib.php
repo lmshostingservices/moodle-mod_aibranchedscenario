@@ -40,6 +40,14 @@ class restore_aibranchedscenario_activity_structure_step extends restore_activit
         $userinfo = $this->get_setting_value('userinfo');
 
         $paths[] = new restore_path_element('aibranchedscenario', '/activity/aibranchedscenario');
+        // The ladder's rungs, carrying the working copies. A backup made before v2.5.0 has
+        // no <tiers> element at all, and simply produces no calls here - the activity then
+        // restores with nothing on its ladder, which is what process_aibranchedscenario()
+        // repairs from the legacy columns.
+        $paths[] = new restore_path_element(
+            'aibranchedscenario_tier',
+            '/activity/aibranchedscenario/tiers/tier'
+        );
         $paths[] = new restore_path_element(
             'aibranchedscenario_revision',
             '/activity/aibranchedscenario/revisions/revision'
@@ -85,6 +93,59 @@ class restore_aibranchedscenario_activity_structure_step extends restore_activit
         // Insert the record and connect it to the course module being restored.
         $newitemid = $DB->insert_record('aibranchedscenario', $data);
         $this->apply_activity_instance($newitemid);
+
+        // A BACKUP MADE BEFORE THE LADDER HAS NO RUNGS IN IT.
+        //
+        // Its working copy is in the activity's own scenariojson column, which is where it
+        // lived until v2.5.0. Restored without this, the activity comes back with an empty
+        // ladder: the published revisions are there, so learners can still play, and the
+        // teacher's unpublished draft is simply gone. Rebuilt here from the legacy columns,
+        // and replaced by the real thing if the backup does turn out to carry a <tiers>
+        // element - see process_aibranchedscenario_tier().
+        $now = time();
+        $DB->insert_record('aibranchedscenario_tiers', (object)[
+            'scenarioid'     => $newitemid,
+            'tier'           => 1,
+            'status'         => $data->status,
+            'scenariojson'   => $data->scenariojson ?? null,
+            'previousjson'   => $data->previousjson ?? null,
+            'generationmeta' => $data->generationmeta ?? null,
+            'revision'       => (int)$data->revision,
+            'timecreated'    => $now,
+            'timemodified'   => $now,
+        ]);
+    }
+
+    /**
+     * Process one rung of the ladder.
+     *
+     * @param array $data Parsed rung data.
+     * @return void
+     */
+    protected function process_aibranchedscenario_tier($data) {
+        global $DB;
+
+        $data = (object)$data;
+        unset($data->id);
+        $data->scenarioid = $this->get_new_parentid('aibranchedscenario');
+        $data->tier = max(1, min(\mod_aibranchedscenario\local\schema::TIERS, (int)($data->tier ?? 1)));
+        $data->timecreated = $this->apply_date_offset(empty($data->timecreated) ? time() : $data->timecreated);
+        $data->timemodified = $this->apply_date_offset(empty($data->timemodified) ? time() : $data->timemodified);
+        // The unique index is (scenarioid, tier), and process_aibranchedscenario() may have
+        // already built a foundation rung from the legacy columns of an older backup. The
+        // one in the backup is the better answer, so it replaces rather than collides.
+        $existing = $DB->get_record(
+            'aibranchedscenario_tiers',
+            ['scenarioid' => $data->scenarioid, 'tier' => $data->tier],
+            'id',
+            IGNORE_MISSING
+        );
+        if ($existing) {
+            $data->id = $existing->id;
+            $DB->update_record('aibranchedscenario_tiers', $data);
+            return;
+        }
+        $DB->insert_record('aibranchedscenario_tiers', $data);
     }
 
     /**
@@ -100,6 +161,9 @@ class restore_aibranchedscenario_activity_structure_step extends restore_activit
         $oldid = $data->id;
 
         $data->scenarioid = $this->get_new_parentid('aibranchedscenario');
+        // A revision from a backup made before the ladder belongs to the foundation rung,
+        // which is where its activity has been put.
+        $data->tier = max(1, min(\mod_aibranchedscenario\local\schema::TIERS, (int)($data->tier ?? 1)));
         $data->timecreated = $this->apply_date_offset(empty($data->timecreated) ? time() : $data->timecreated);
 
         // Keep the author when that user came across in the backup, otherwise drop the reference.
@@ -133,6 +197,9 @@ class restore_aibranchedscenario_activity_structure_step extends restore_activit
         // Point the attempt at the revision that was just created for it.
         $revisionid = empty($data->revisionid) ? 0 : $this->get_mappingid('aibranchedscenario_revision', $data->revisionid);
         $data->revisionid = $revisionid ? $revisionid : 0;
+        // Which rung it was taken at. Absent from a pre-ladder backup, where every attempt
+        // was at the only scenario the activity had.
+        $data->tier = max(1, min(\mod_aibranchedscenario\local\schema::TIERS, (int)($data->tier ?? 1)));
 
         $data->userid = $this->get_mappingid('user', $data->userid);
 

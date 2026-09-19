@@ -18,6 +18,8 @@ namespace mod_aibranchedscenario\completion;
 
 use core_completion\activity_custom_completion;
 use mod_aibranchedscenario\local\attempt_manager;
+use mod_aibranchedscenario\local\scenario_manager;
+use mod_aibranchedscenario\local\schema;
 
 /**
  * Activity custom completion rules.
@@ -43,25 +45,41 @@ class custom_completion extends activity_custom_completion {
             return COMPLETION_INCOMPLETE;
         }
 
+        // FINISHING THE ACTIVITY MEANS CLIMBING THE LADDER.
+        //
+        // An activity holds three scenarios at rising difficulty. Marking it complete on
+        // one finished attempt would mark it complete for somebody who had done the
+        // foundation scenario and never opened the other two - which is precisely the
+        // learner the ladder exists to distinguish from a competent one.
+        //
+        // Every rung that is PUBLISHED has to be passed. A rung the teacher has not written
+        // is not held against the learner: a half-built ladder is the teacher's problem,
+        // not a permanent incomplete on somebody's record.
         $minscore = (float)$instance->completionminscore;
-        if ($minscore <= 0) {
-            $complete = $DB->record_exists('aibranchedscenario_attempts', [
-                'scenarioid' => $instance->id,
-                'userid'     => $this->userid,
-                'status'     => attempt_manager::STATUS_FINISHED,
-            ]);
-        } else {
-            $complete = $DB->record_exists_select(
-                'aibranchedscenario_attempts',
-                'scenarioid = :sid AND userid = :uid AND status = :status AND score >= :minscore',
-                [
-                    'sid'      => $instance->id,
-                    'uid'      => $this->userid,
-                    'status'   => attempt_manager::STATUS_FINISHED,
-                    'minscore' => $minscore,
-                ]
-            );
+        $wanted = 0;
+        $passed = 0;
+        foreach (array_keys(schema::tiers()) as $tier) {
+            if (!scenario_manager::is_playable($instance, $tier)) {
+                continue;
+            }
+            $wanted++;
+            $params = [
+                'sid'    => $instance->id,
+                'tier'   => $tier,
+                'uid'    => $this->userid,
+                'status' => attempt_manager::STATUS_FINISHED,
+            ];
+            $select = 'scenarioid = :sid AND tier = :tier AND userid = :uid AND status = :status';
+            if ($minscore > 0) {
+                $select .= ' AND score >= :minscore';
+                $params['minscore'] = $minscore;
+            }
+            if ($DB->record_exists_select('aibranchedscenario_attempts', $select, $params)) {
+                $passed++;
+            }
         }
+
+        $complete = $wanted > 0 && $passed === $wanted;
 
         return $complete ? COMPLETION_COMPLETE : COMPLETION_INCOMPLETE;
     }

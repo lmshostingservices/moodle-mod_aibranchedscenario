@@ -158,6 +158,21 @@ class helper {
     }
 
     /**
+     * A tier number that is certainly one of the rungs.
+     *
+     * The tier arrives from a browser on every authoring call, so it is normalised in one
+     * place rather than trusted in eight. Anything unrecognised is the foundation rung,
+     * which is the activity as it was before the ladder existed.
+     *
+     * @param mixed $tier Whatever the caller sent.
+     * @return int
+     */
+    public static function tier($tier): int {
+        $tier = (int)$tier;
+        return isset(\mod_aibranchedscenario\local\schema::tiers()[$tier]) ? $tier : 1;
+    }
+
+    /**
      * Media URL maps for a published revision.
      *
      * @param context_module $context Module context.
@@ -165,7 +180,9 @@ class helper {
      * @return array Keys: scene, narration.
      */
     public static function media_urls(context_module $context, stdClass $revision): array {
-        $media = new media_manager($context);
+        // The revision knows which rung it belongs to, and the rung is what separates one
+        // scenario's pictures from another's in the file areas.
+        $media = new media_manager($context, self::tier($revision->tier ?? 1));
         return [
             'scene'     => $media->urls_for_revision(media_manager::AREA_REVISION_SCENE, (int)$revision->revision),
             'narration' => $media->urls_for_revision(media_manager::AREA_REVISION_NARRATION, (int)$revision->revision),
@@ -183,23 +200,48 @@ class helper {
      * @param array $mediaurls Node id to media URL maps, keyed 'scene' and 'narration'.
      * @return array
      */
-    public static function node_payload(array $node, stdClass $attempt, array $mediaurls = []): array {
+    public static function node_payload(
+        array $node,
+        stdClass $attempt,
+        array $mediaurls = [],
+        array $state = []
+    ): array {
         $situation = $node['situation'];
         $speech = $node['facilitatorspeech'];
         $challenge = $node['challenge'];
 
-        $crisis = false;
-        if (
-            !empty($node['crisisvariant'])
-                && (int)$attempt->tension >= schema::CRISIS_TENSION_THRESHOLD
-        ) {
-            $crisis = true;
-            $situation = $node['crisisvariant']['situation'];
-            if ($node['crisisvariant']['facilitatorspeech'] !== '') {
-                $speech = $node['crisisvariant']['facilitatorspeech'];
+        // THE WORLD REACTING TO WHAT THIS LEARNER DID.
+        //
+        // This used to read one field, crisisvariant, gated on one metric passing one
+        // threshold. A node now carries a list of variants with conditions - on a flag the
+        // learner set, on a reading, or on how many poor calls they have made - and the
+        // first that holds is what they are shown. The crisis case is still in that list;
+        // the validator appends it, so a scenario written before any of this behaves
+        // exactly as it did.
+        //
+        // The state is passed in rather than decoded here because the caller already has
+        // it, and because a payload that went and read the database would be a second
+        // place the answer is worked out.
+        $variant = null;
+        foreach ((array)($node['variants'] ?? []) as $candidate) {
+            if (attempt_manager::condition_holds((array)($candidate['when'] ?? []), $attempt, $state)) {
+                $variant = $candidate;
+                break;
             }
-            if ($node['crisisvariant']['challenge'] !== '') {
-                $challenge = $node['crisisvariant']['challenge'];
+        }
+        $crisis = false;
+        if ($variant !== null) {
+            // Still reported as "crisis" to the screen when it IS the crisis case, because
+            // that is what draws the escalated styling. A variant that fires on a flag is
+            // the world remembering, not the room boiling over, and should not look alarmed.
+            $crisis = isset($variant['when']['metric'])
+                && $variant['when']['metric'] === 'tension';
+            $situation = $variant['situation'];
+            if (($variant['facilitatorspeech'] ?? '') !== '') {
+                $speech = $variant['facilitatorspeech'];
+            }
+            if (($variant['challenge'] ?? '') !== '') {
+                $challenge = $variant['challenge'];
             }
         }
 

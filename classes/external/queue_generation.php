@@ -39,6 +39,7 @@ class queue_generation extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module id'),
+            'tier' => new external_value(PARAM_INT, 'Which rung of the ladder', VALUE_DEFAULT, 1),
         ]);
     }
 
@@ -46,16 +47,25 @@ class queue_generation extends external_api {
      * Queue the generation job.
      *
      * @param int $cmid Course module id.
+     * @param int $tier Which rung of the ladder to write.
      * @return array
      */
-    public static function execute(int $cmid): array {
+    public static function execute(int $cmid, int $tier = 1): array {
         global $USER;
 
-        $params = self::validate_parameters(self::execute_parameters(), ['cmid' => $cmid]);
+        $params = self::validate_parameters(
+            self::execute_parameters(),
+            ['cmid' => $cmid, 'tier' => $tier]
+        );
         $resolved = helper::resolve($params['cmid'], 'mod/aibranchedscenario:generate');
 
         $generator = new generator();
-        $jobid = $generator->queue_scenario($resolved['scenario'], (int)$USER->id, $params['cmid']);
+        $jobid = $generator->queue_scenario(
+            $resolved['scenario'],
+            (int)$USER->id,
+            $params['cmid'],
+            helper::tier($params['tier'])
+        );
 
         return ['jobid' => $jobid, 'status' => generator::JOB_QUEUED];
     }

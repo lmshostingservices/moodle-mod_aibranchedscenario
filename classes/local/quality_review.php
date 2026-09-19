@@ -36,6 +36,15 @@ namespace mod_aibranchedscenario\local;
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class quality_review {
+    /**
+     * @var int How many decisions must send a poor choice somewhere a good one does not.
+     *
+     * Not all five. Branch-and-bottleneck means paths REJOIN, so a well-built scenario
+     * legitimately has decisions whose options converge - what it must not have is a
+     * scenario where that is true of all of them, which is a linear lesson with meters.
+     */
+    const MIN_BRANCHING_DECISIONS = 2;
+
     /** @var int Percentage similarity at which two choice texts count as the same choice. */
     const SIMILAR_ENOUGH = 90;
 
@@ -70,6 +79,7 @@ class quality_review {
         // reaches last and remembers longest.
         $spelling = array_merge($spelling, self::debrief_warnings($definition));
         $spelling = array_merge($spelling, self::reading_range_warnings($definition));
+        $spelling = array_merge($spelling, self::branching_warnings($definition));
         // Pronouns are a property of the whole document too: the sentence that contradicts
         // a cast record can be anywhere in it.
         $spelling = array_merge($spelling, self::pronoun_warnings($definition));
@@ -530,6 +540,181 @@ class quality_review {
                     break;
                 }
             }
+        }
+        return $out;
+    }
+
+    /**
+     * Decisions that do not branch, in a product called AI Branched Scenario.
+     *
+     * THE RULE WAS WRITTEN DOWN ON DAY ONE AND NOTHING EVER READ IT.
+     *
+     * The route contract the service is built against has said since v1, rule 7: "different
+     * choices lead to genuinely different nodes... do not emit a graph in which every
+     * choice from a node points at the same target." Nothing checked it. It was not in this
+     * plugin's own prompt or content standard at all, and the scenario shipped inside the
+     * plugin as its worked example - the one teachers copy - broke it on three of its five
+     * decisions.
+     *
+     * What that produces is a linear lesson with mood meters: a choice moves three numbers,
+     * changes one paragraph you read once, and hands you the same next decision as
+     * everybody else. The graph was always able to branch. The content never did, and no
+     * check could see it.
+     *
+     * A BEAT IS NOT A BRANCH. A node with one way off it that rejoins immediately is a
+     * transition - two of them side by side are two paragraphs, not two paths - so the
+     * targets are followed through beats before being compared. That distinction is the
+     * whole difference between this check working and this check agreeing with the fault.
+     *
+     * Reports rather than rejects, like everything else here: a scenario that does not
+     * branch is still playable, and the teacher has already been charged by the time the
+     * definition is read.
+     *
+     * @param array $definition A validated definition.
+     * @return array Warning rows.
+     */
+    protected static function branching_warnings(array $definition): array {
+        $nodes = [];
+        foreach ((array)($definition['nodes'] ?? []) as $node) {
+            if (is_array($node) && trim((string)($node['id'] ?? '')) !== '') {
+                $nodes[(string)$node['id']] = $node;
+            }
+        }
+
+        // Where a choice ACTUALLY lands, which is not where it points: a beat is a
+        // paragraph with one way off it, and two choices that reach the same decision
+        // through two different beats have not branched, they have read different prose.
+        $lands = function (string $target) use ($nodes) {
+            $seen = [];
+            while (
+                isset($nodes[$target])
+                    && ($nodes[$target]['type'] ?? '') === 'beat'
+                    && !isset($seen[$target])
+            ) {
+                $seen[$target] = true;
+                $onward = '';
+                foreach ((array)($nodes[$target]['choices'] ?? []) as $choice) {
+                    $onward = (string)($choice['next'] ?? '');
+                    break;
+                }
+                $onward = $onward ?: (string)($nodes[$target]['next'] ?? '');
+                if ($onward === '' || $onward === schema::auto_target()) {
+                    break;
+                }
+                $target = $onward;
+            }
+            return $target;
+        };
+
+        $out = [];
+        $flat = [];
+        $decisions = 0;
+        $branching = 0;
+        foreach ($nodes as $node) {
+            if (($node['type'] ?? '') !== 'decision') {
+                continue;
+            }
+            $choices = (array)($node['choices'] ?? []);
+            if (count($choices) < 2) {
+                continue;
+            }
+            $decisions++;
+            $title = trim((string)($node['title'] ?? '')) ?: (string)($node['id'] ?? '');
+            $targets = [];
+            $auto = false;
+            foreach ($choices as $choice) {
+                $next = (string)($choice['next'] ?? '');
+                // The automatic target resolves to the ending the learner earned, which is
+                // branching - late-bound, on the whole journey rather than on this choice.
+                // Counting it as flat would report the LAST decision of every scenario
+                // ever written, which is a rule nobody can satisfy.
+                if ($next === schema::auto_target()) {
+                    $auto = true;
+                    continue;
+                }
+                $targets[$lands($next)] = true;
+            }
+            if (count($targets) > 1) {
+                $branching++;
+                continue;
+            }
+            // THE AUTOMATIC TARGET IS NEITHER A FAULT NOR EVIDENCE.
+            //
+            // It resolves to the ending the learner earned, which IS branching - late
+            // bound, on the whole journey - so reporting it would flag the last decision of
+            // every scenario ever written. But counting it toward the minimum lets a
+            // scenario that branches nowhere pass by having two decisions that both end it,
+            // which was true of the first cut of this check and is exactly the shape of
+            // fault it exists to catch.
+            if (!$auto) {
+                $flat[] = $title;
+            }
+        }
+
+        // A FLAG NOBODY SETS, AND A FLAG NOBODY READS.
+        //
+        // Both are content that cannot do anything, and both are invisible to every other
+        // check: the screen exists, the choice exists, and they never meet. A variant
+        // waiting on a flag nothing sets is a screen no learner can ever be shown - paid
+        // for, illustrated, and unreachable.
+        $set = [];
+        $read = [];
+        foreach ($nodes as $node) {
+            foreach ((array)($node['choices'] ?? []) as $choice) {
+                foreach (array_keys((array)($choice['setflags'] ?? [])) as $flag) {
+                    $set[$flag] = true;
+                }
+            }
+            foreach ((array)($node['variants'] ?? []) as $variant) {
+                if (isset($variant['when']['flag'])) {
+                    $read[(string)$variant['when']['flag']] = true;
+                }
+            }
+        }
+        foreach (array_keys($read) as $flag) {
+            if (!isset($set[$flag])) {
+                $out[] = [
+                    'nodeid'  => 'flag_' . $flag,
+                    'node'    => $flag,
+                    'message' => get_string('quality:deadflag', 'mod_aibranchedscenario', $flag),
+                ];
+            }
+        }
+        foreach (array_keys($set) as $flag) {
+            if (!isset($read[$flag])) {
+                $out[] = [
+                    'nodeid'  => 'flag_' . $flag,
+                    'node'    => $flag,
+                    'message' => get_string('quality:unreadflag', 'mod_aibranchedscenario', $flag),
+                ];
+            }
+        }
+
+        // JUDGED ON THE SCENARIO, NOT ON EACH DECISION.
+        //
+        // The first cut of this reported every decision whose options converge, which
+        // would nag on a correctly built scenario: branch-and-bottleneck means paths
+        // REJOIN, so a five-decision scenario with two real branch points legitimately has
+        // three decisions that converge. A panel that complains about a good design is one
+        // teachers learn to scroll past, which is how the debrief warnings got ignored.
+        //
+        // Two branch points is what the content standard asks for, and the message names
+        // the flat decisions so the teacher has somewhere to start rather than a verdict.
+        if ($decisions > 1 && $branching < self::MIN_BRANCHING_DECISIONS) {
+            array_unshift($out, [
+                'nodeid'  => 'scenario',
+                'node'    => trim((string)($definition['title'] ?? '')),
+                'message' => get_string(
+                    $branching === 0
+                    ? 'quality:nobranchingatall' : 'quality:notenoughbranching',
+                    'mod_aibranchedscenario',
+                    (object)[
+                        'have'   => $branching,
+                        'wanted' => self::MIN_BRANCHING_DECISIONS,
+                        'flat'   => implode('", "', array_slice($flat, 0, 4)),
+                    ]
+                ),
+            ]);
         }
         return $out;
     }
