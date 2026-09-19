@@ -36,11 +36,32 @@ class schema {
     /** @var int Maximum number of nodes in one scenario. */
     const MAX_NODES = 60;
 
+    /**
+     * @var int How many decisions a scenario contains. Not a maximum, and not a default.
+     *
+     * It used to be the teacher's to pick, anywhere from three to eight. Every extra
+     * decision is another set of choices to write, another set of frames to draw and pay
+     * for, and another screen between a learner and the point - and the debrief had to
+     * cope with all of it, which is what made that end of the product confusing. One
+     * length, always, and everything downstream can be built to fit it exactly.
+     */
+    const DECISIONS = 5;
+
+    /**
+     * @var int How many options every decision offers. Fixed, for the same reason.
+     *
+     * The debrief gives each decision a slide that lays out what every option would have
+     * cost. Three is what that slide holds, and a scenario whose decisions offer two on
+     * one screen and four on the next produces five slides that do not look like each
+     * other.
+     */
+    const CHOICES = 3;
+
     /** @var int Maximum number of choices on one decision node. */
-    const MAX_CHOICES = 4;
+    const MAX_CHOICES = self::CHOICES;
 
     /** @var int Minimum number of choices on one decision node. */
-    const MIN_CHOICES = 2;
+    const MIN_CHOICES = self::CHOICES;
 
     /** @var int Maximum characters for any single narrative string. */
     const MAX_TEXT = 4000;
@@ -59,6 +80,17 @@ class schema {
 
     /** @var int Maximum absolute value of a single dynamics delta. */
     const MAX_METRIC_DELTA = 40;
+
+
+    /**
+     * @var int Maximum characters in a choice's outcome note.
+     *
+     * The paragraph the debrief slide shows against each option: what taking it would
+     * have cost, what it would have taught, and how it would have left the people in the
+     * room. Long enough for a real paragraph, short enough that three of them fit on one
+     * screen without the frame growing a scrollbar.
+     */
+    const MAX_OUTCOME_NOTE = 700;
 
     /** @var int Tension level at or above which a crisis variant is shown. */
     const CRISIS_TENSION_THRESHOLD = 75;

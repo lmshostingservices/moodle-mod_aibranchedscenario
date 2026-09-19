@@ -2292,6 +2292,121 @@
     transform: translateY(-2px);
 }
 
+/* THE DECISION SLIDE.
+
+   One per decision, and the only thing the debrief is made of now. The choice the learner
+   made sits at the top; under it every option that was open, each with the paragraph saying
+   where it would have led. The one they took is marked, because a comparison with nothing
+   marked is a quiz. */
+.aibs-slide-eyebrow {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-strong);
+    letter-spacing: .06em;
+    margin: 0 0 2px;
+    text-transform: uppercase;
+}
+
+/* What they chose, stated once and plainly. It carries the signal's colour on its left
+   edge only - the band is information, and a whole line in the band's colour would compete
+   with the three options underneath, which are the subject of the slide. */
+.aibs-youchose {
+    background: var(--aibs-surface-alt);
+    border: 1px solid var(--aibs-border-soft);
+    border-radius: var(--aibs-radius-sm);
+    color: var(--aibs-text);
+    margin: 0 0 14px;
+    padding: 10px 14px;
+}
+
+.aibs-option-list {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* A row: the letter on the left, the option and its paragraph beside it. Aligned to the
+   first line rather than centred - these rows are a heading over a paragraph, so a centred
+   disc on a five-line row floats in the middle of the prose. */
+.aibs-option {
+    align-items: start;
+    background: var(--aibs-surface-alt);
+    border: 1px solid var(--aibs-border-soft);
+    border-radius: var(--aibs-radius-sm);
+    display: grid;
+    gap: 0 12px;
+    grid-template-columns: 24px minmax(0, 1fr);
+    padding: 13px 16px;
+    transition: box-shadow .2s var(--aibs-ease), transform .2s var(--aibs-ease);
+}
+
+.aibs-option:hover {
+    box-shadow: var(--aibs-shadow-lg);
+    transform: translateY(-2px);
+}
+
+/* The one they took. A heavier border and the accent on the letter, nothing else: the row
+   is already carrying a paragraph, and a filled background behind it would make the option
+   they chose the hardest of the three to read. */
+.aibs-option.aibs-is-chosen {
+    border-color: var(--aibs-accent);
+    box-shadow: inset 0 0 0 1px var(--aibs-accent);
+}
+
+.aibs-option-letter {
+    align-items: center;
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border-soft);
+    border-radius: 999px;
+    color: var(--aibs-muted);
+    display: flex;
+    flex: none;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-strong);
+    height: 24px;
+    justify-content: center;
+    width: 24px;
+}
+
+.aibs-option.aibs-is-chosen .aibs-option-letter {
+    background: var(--aibs-accent);
+    border-color: var(--aibs-accent);
+    color: var(--aibs-on-accent);
+}
+
+.aibs-option-text {
+    color: var(--aibs-text);
+    display: block;
+}
+
+/* Says which row is theirs in words, for anyone the border alone does not reach. */
+.aibs-option-badge {
+    align-self: start;
+    background: var(--aibs-accent-soft);
+    border-radius: var(--aibs-radius-sm);
+    color: var(--aibs-accent-strong);
+    display: inline-block;
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-strong);
+    padding: 1px 8px;
+}
+
+/* The band, as an outline. The first cut of this drew a 3px bar down the left edge, which
+   is a left-hand accent rule and a physical edge - two things the product does not do, and
+   the harness says so twice. A card that carries a signal is OUTLINED in it, the same way a
+   consequence card is, so the debrief is drawn in the same language as the screen it is
+   looking back at. */
+.aibs-option.aibs-signal-positive {
+    border-color: var(--aibs-positive-border);
+}
+
+.aibs-option.aibs-signal-negative {
+    border-color: var(--aibs-negative-border);
+}
+
 /* One across. The text half of a slide is around 480px, so two cards in it were about
    190px each - narrow enough that a three-word heading wrapped and every card became a
    column of two-word lines. One card to a row reads at every width, and it is the same
@@ -2956,13 +3071,42 @@ body.aibs-work-locked {
 
 /* ------------------------------------------------------------------- print */
 
+/* The printed record. A learner's evidence of what they did, which is what an RTO keeps.
+
+   The readings used to be hidden here along with the buttons, which took the FINAL SCORES
+   off the printed page - the one set of numbers the record exists to carry. Controls are
+   hidden because paper cannot be pressed; the scoreboard is not a control. */
 @media print {
     .path-mod-aibranchedscenario .aibs-debrief-actions,
     .path-mod-aibranchedscenario .aibs-consequence-actions,
     .path-mod-aibranchedscenario .aibs-brief-actions,
-    .path-mod-aibranchedscenario .aibs-meters,
     .path-mod-aibranchedscenario .aibs-rail {
         display: none;
+    }
+
+    /* Hidden on screen, first on paper: who this is and when it was printed. */
+    .path-mod-aibranchedscenario .aibs-printhead {
+        display: block;
+        margin-bottom: 14px;
+    }
+
+    .path-mod-aibranchedscenario .aibs-printhead-title {
+        font-size: var(--aibs-text-lead);
+        font-weight: var(--aibs-weight-strong);
+        margin: 0;
+    }
+
+    .path-mod-aibranchedscenario .aibs-printhead-meta {
+        color: var(--aibs-text-muted);
+        font-size: var(--aibs-text-meta);
+        margin: 2px 0 0;
+    }
+
+    /* The opening deck too: a record of what happened that omits what the learner was
+       TAUGHT records only half of it. It is hidden on screen once the scenario starts. */
+    .path-mod-aibranchedscenario .aibs-brief[hidden],
+    .path-mod-aibranchedscenario .aibs-brief {
+        display: block !important;
     }
 
     .path-mod-aibranchedscenario .aibs-player {
@@ -5746,4 +5890,125 @@ button.aibs-avatar:focus-visible {
     flex-wrap: wrap;
     gap: 12px;
     margin-top: 14px;
+}
+
+/* ------------------------------------------------- the opening brief
+
+   What a learner is walking into. The opening screen carried a chip, a title, the role and
+   the hook - four short things in a card sized to hold a scene, with most of it empty - and
+   everything below was already in the scenario and shown nowhere.
+
+   The readings were the real gap. They move on every decision, the whole scoreboard is built
+   on them, and until now the first time a learner found out what they measured was when one
+   of them dropped. Each one says which direction is the good one, in words, because tension
+   reads the other way up and a colour cannot say that. */
+.aibs-brief-block {
+    border-top: 1px solid var(--aibs-border-soft);
+    margin-top: 18px;
+    padding-top: 16px;
+}
+
+.aibs-brief-label {
+    color: var(--aibs-text-muted);
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-label);
+    letter-spacing: .06em;
+    margin: 0 0 10px;
+    text-transform: uppercase;
+}
+
+/* One row per reading: the mark, the name, where it starts, and which way is good. The same
+   row shape as the consequence's scoreboard, so a learner meets it here and recognises it
+   there rather than learning two layouts for one idea. */
+.aibs-brief-goals {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.aibs-brief-goal {
+    align-items: center;
+    background: var(--aibs-surface-alt);
+    border-radius: var(--aibs-radius-sm);
+    display: grid;
+    gap: 4px 10px;
+    grid-template-columns: auto auto 1fr;
+    padding: 8px 12px;
+}
+
+.aibs-brief-goal-mark {
+    align-items: center;
+    display: inline-flex;
+    grid-row: 1;
+}
+
+.aibs-brief-goal-mark .aibs-icon {
+    height: 20px;
+    width: 20px;
+}
+
+.aibs-brief-goal-name {
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-label);
+}
+
+.aibs-brief-goal-value {
+    font-size: var(--aibs-text-small);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--aibs-weight-strong);
+    justify-self: end;
+}
+
+/* The direction, in words. "get this up" and "keep this down" are the whole scoreboard
+   explained, and they cost one line each. */
+.aibs-brief-goal-aim {
+    color: var(--aibs-text-muted);
+    font-size: var(--aibs-text-meta);
+    grid-column: 2 / -1;
+    grid-row: 2;
+}
+
+/* Where, who and what is ahead. A definition list because that is what it is: three short
+   labels each answered once. */
+.aibs-brief-facts {
+    display: grid;
+    gap: 4px 14px;
+    grid-template-columns: auto minmax(0, 1fr);
+    margin: 14px 0 0;
+}
+
+.aibs-brief-facts dt {
+    color: var(--aibs-text-muted);
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-label);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.aibs-brief-facts dd {
+    font-size: var(--aibs-text-small);
+    margin: 0;
+}
+
+/* Names read as a list without needing commas typed into the template. */
+.aibs-brief-person + .aibs-brief-person::before {
+    color: var(--aibs-text-muted);
+    content: " · ";
+}
+
+.aibs-brief-person-role {
+    color: var(--aibs-text-muted);
+}
+
+.aibs-brief-person-role::before {
+    content: " ";
+}
+
+
+/* The printed record's header is paper-only. */
+.aibs-printhead {
+    display: none;
 }

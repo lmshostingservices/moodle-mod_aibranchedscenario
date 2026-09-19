@@ -166,11 +166,6 @@ class wizard implements \renderable, \templatable {
             ];
         }
 
-        $decisionoptions = [];
-        for ($i = 3; $i <= 8; $i++) {
-            $decisionoptions[] = ['value' => $i, 'selected' => (int)$source['decisions'] === $i];
-        }
-
         $credentials = credentials::resolve();
         $configuredmax = get_config('mod_aibranchedscenario', 'maxsourcechars');
         $maxsourcechars = (int)($configuredmax ?: schema::MAX_SOURCE_CHARS);
@@ -198,7 +193,9 @@ class wizard implements \renderable, \templatable {
             'hasprinciples' => !empty($source['principles']),
             'nodes'        => $nodes,
             'nodecount'    => count($nodes),
-            'decisionoptions' => $decisionoptions,
+            // Not a list of options any more - the length is fixed. Passed so the screen
+            // can name the number rather than hard-coding it in the template.
+            'decisions'    => schema::DECISIONS,
             'industries'   => $this->options(schema::industries(), 'industry', $source['industry']),
             'settings'     => $this->options(schema::settings_list(), 'setting', $source['setting']),
             'atmospheres'  => $this->options(schema::atmospheres(), 'atmosphere', $source['atmosphere']),
@@ -226,7 +223,7 @@ class wizard implements \renderable, \templatable {
             ],
             'maxsourcechars' => $maxsourcechars,
             'generationeta'  => get_string('generationeta', 'mod_aibranchedscenario'),
-            'importprompt'   => \mod_aibranchedscenario\local\import_prompt::text((int)$source['decisions']),
+            'importprompt'   => \mod_aibranchedscenario\local\import_prompt::text(),
             'pricing'        => self::pricing_card($this->scenario),
             'howto'          => self::how_to_use(),
             'reading'        => self::further_reading(),

@@ -46,16 +46,7 @@
     * score float Decision quality as a percentage
     * decisions int Number of decisions taken
     * radar array Skill values, each with label, percent and raw
-    * journeypages array The decision journey, chunked one page at a time
-    * whatmattered array Lessons demonstrated
-    * criticaldecisions array Decisions that changed the outcome
-    * practice array Behaviours to use in practice
-    * sourceconnectionparas string How the lessons connect to the source content
-    * hassourceconnection bool Whether a source connection is present
-    * takeaways array Takeaway cards
-    * hascritical bool Whether critical decisions are listed
-    * haspractice bool Whether practice behaviours are listed
-    * hastakeaways bool Whether takeaway cards are present
+    * slides array One per decision: what was chosen, the principle it tested, and where every option led
     * allowreplay bool Whether the learner may replay
 
     Example context (json):
@@ -74,16 +65,7 @@
         "score": 62.5,
         "decisions": 5,
         "radar": [{"skill": "clarity", "label": "Clarity", "percent": 70, "raw": 3}],
-        "journeypages": [{"first": 1, "last": 1, "decisions": [{"seq": 1, "nodetitle": "The fault nobody logged", "choicetext": "Log it now", "signal": "positive", "signalclass": "aibs-signal-positive", "consequenceparas": ["Sam agrees."], "feedbackparas": ["Good call."], "hasfeedback": true, "principle": "Report faults early"}]}],
-        "whatmattered": ["Faults are logged the moment they are seen."],
-        "criticaldecisions": ["Choosing to log the fault rather than fix it quietly."],
-        "practice": ["Log it, then fix it."],
-        "sourceconnectionparas": ["Section 4.2 of the procedure."],
-        "hassourceconnection": true,
-        "hascritical": true,
-        "haspractice": true,
-        "hastakeaways": true,
-        "takeaways": [{"heading": "Speak early", "bodyparas": ["Raising a fault early costs less than hiding it."]}],
+        "slides": [{"seq": 1, "nodetitle": "The fault nobody logged", "choicetext": "Log it now", "signal": "positive", "signalclass": "aibs-signal-positive", "principle": "Let the other person finish", "hasimage": false, "imageurl": "", "options": [{"letter": "A", "text": "Log it now", "signal": "positive", "signalclass": "aibs-signal-positive", "chosen": true, "noteparas": ["The best of the three: it costs you four minutes and it costs the night shift nothing."], "audiourl": ""}]}],
         "allowreplay": true
     }
 }}
@@ -146,181 +128,69 @@
                     </div>
         </section>
 
-        {{#journeypages}}
-            <section class="aibs-card aibs-deckslide aibs-slide aibs-journey aibs-noscene" data-region="deckslide" data-audio="{{pageaudiourl}}" hidden>
-            <div class="aibs-node-body">
-                <h3 class="aibs-h3">{{#str}} yourdecisions, mod_aibranchedscenario {{/str}}</h3>
-                <ol class="aibs-journey-list">
-                    {{#decisions}}
-                        <li class="aibs-journey-item {{signalclass}}" data-audio="{{audiourl}}"
-                            data-region="readable">
-                            <div class="aibs-journey-head">
-                                <span class="aibs-journey-seq" aria-hidden="true">{{seq}}</span>
-                                <span class="aibs-journey-title">{{nodetitle}}</span>
-                            </div>
-                            <p class="aibs-journey-choice">{{choicetext}}</p>
-                            <div class="aibs-prose aibs-prose-small">
-                                {{#consequenceparas}}<p>{{.}}</p>{{/consequenceparas}}</div>
-                            {{#hasfeedback}}
-                                <div class="aibs-journey-feedback">
-                                    <span class="aibs-journey-feedback-label">
-                                        {{> mod_aibranchedscenario/feedbackmark }}
-                                        {{#str}} whythismattered, mod_aibranchedscenario {{/str}}</span>
-                                    <div class="aibs-prose aibs-prose-small">
-                                        {{#feedbackparas}}<p>{{.}}</p>{{/feedbackparas}}</div>
-                                </div>
-                            {{/hasfeedback}}
-                            {{#principle}}
-                                <p class="aibs-journey-principle">
-                                    <span class="aibs-chip-lead">
-                                        {{#str}} principletested, mod_aibranchedscenario {{/str}}</span>
-                                    {{principle}}
-                                </p>
-                            {{/principle}}
-                        </li>
-                    {{/decisions}}
-                </ol>
-                            </div>
-            </section>
-        {{/journeypages}}
+        {{! ONE SLIDE PER DECISION.
 
-        {{! A scripted page. The picture on the left changes as each card arrives, the card
-            floats up, its own clip reads it with the card marked, and the next arrives when
-            that clip finishes. The whole list is in the markup either way, so a learner with
-            narration off - or a browser that will not play - simply sees the list. The
-            choreography is an enhancement, never the only way in. }}
-        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons aibs-scripted {{^lessons.0.imageurl}}aibs-noscene{{/lessons.0.imageurl}}"
+            This is the debrief. It used to be a paged list of the decisions followed by
+            four pages of closing advice - lessons learnt, critical decisions, practice
+            points, takeaways - written independently of the scenario and of each other. A
+            learner finished a story and was handed a general essay about it.
+
+            A slide carries one decision: what they chose at the top, the reaction frame for
+            that choice on the left, and every option that was open on the right, each with
+            the paragraph saying where it would have led. The lesson is the comparison
+            between the road taken and the roads not taken, so it needs no page of its own.
+
+            Scripted, like the pages it replaces: the options arrive one at a time, each read
+            by its own clip. The picture does not change between them - it is the reaction to
+            what they actually chose, and it is what the whole slide is about. }}
+        {{#slides}}
+        <section class="aibs-card aibs-deckslide aibs-slide aibs-decisionslide aibs-scripted {{^hasimage}}aibs-noscene{{/hasimage}}"
                  data-region="deckslide" data-script="1" hidden>
-            {{! Guarded. It rendered unconditionally, so a page whose frames were never
-                generated drew an empty grey column with a broken-image mark in the corner -
-                the two-column silhouette held open by nothing. }}
-            {{#lessons.0.imageurl}}
+            {{#hasimage}}
                 <div class="aibs-scene aibs-script-scene">
-                    <img src="{{lessons.0.imageurl}}" alt="" class="aibs-scene-img" loading="lazy"
+                    <img src="{{imageurl}}" alt="" class="aibs-scene-img" loading="lazy"
                          data-region="scriptimage">
                 </div>
-            {{/lessons.0.imageurl}}
+            {{/hasimage}}
             <div class="aibs-node-body">
-                <h3 class="aibs-h3">{{#str}} whatmattered, mod_aibranchedscenario {{/str}}</h3>
-                <ul class="aibs-lesson-list aibs-script-list">
-                    {{#lessons}}
-                        <li class="aibs-lesson aibs-script-item" data-region="readable"
-                            data-audio="{{audiourl}}" data-image="{{imageurl}}">
-                            <span class="aibs-lesson-mark" aria-hidden="true">{{number}}</span>{{text}}
-                        </li>
-                    {{/lessons}}
-                </ul>
-            </div>
-        </section>
-
-        {{! Its own page. Two headings and two numbered lists on one card overran the frame,
-            and a debrief page that does not fit is the one screen a learner reads slowly -
-            it grew a scrollbar rather than fitting, which is the thing the whole frame
-            exists to avoid. They are separate subjects and they are separate pages. }}
-        {{#hascritical}}
-        {{! A scripted page. The picture on the left changes as each card arrives, the card
-            floats up, its own clip reads it with the card marked, and the next arrives when
-            that clip finishes. The whole list is in the markup either way, so a learner with
-            narration off - or a browser that will not play - simply sees the list. The
-            choreography is an enhancement, never the only way in. }}
-        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons aibs-scripted {{^criticals.0.imageurl}}aibs-noscene{{/criticals.0.imageurl}}"
-                 data-region="deckslide" data-script="1" hidden>
-            {{! Guarded. It rendered unconditionally, so a page whose frames were never
-                generated drew an empty grey column with a broken-image mark in the corner -
-                the two-column silhouette held open by nothing. }}
-            {{#criticals.0.imageurl}}
-                <div class="aibs-scene aibs-script-scene">
-                    <img src="{{criticals.0.imageurl}}" alt="" class="aibs-scene-img" loading="lazy"
-                         data-region="scriptimage">
-                </div>
-            {{/criticals.0.imageurl}}
-            <div class="aibs-node-body">
-                <h3 class="aibs-h3">{{#str}} decisionsthatchanged, mod_aibranchedscenario {{/str}}</h3>
-                <ul class="aibs-lesson-list aibs-script-list">
-                    {{#criticals}}
-                        <li class="aibs-lesson aibs-script-item" data-region="readable"
-                            data-audio="{{audiourl}}" data-image="{{imageurl}}">
-                            <span class="aibs-lesson-mark" aria-hidden="true">{{number}}</span>{{text}}
-                        </li>
-                    {{/criticals}}
-                </ul>
-            </div>
-        </section>
-        {{/hascritical}}
-
-        {{#haspractice}}
-        {{! A scripted page. The picture on the left changes as each card arrives, the card
-            floats up, its own clip reads it with the card marked, and the next arrives when
-            that clip finishes. The whole list is in the markup either way, so a learner with
-            narration off - or a browser that will not play - simply sees the list. The
-            choreography is an enhancement, never the only way in. }}
-        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons aibs-scripted {{^practices.0.imageurl}}aibs-noscene{{/practices.0.imageurl}}"
-                 data-region="deckslide" data-script="1" hidden>
-            {{! Guarded. It rendered unconditionally, so a page whose frames were never
-                generated drew an empty grey column with a broken-image mark in the corner -
-                the two-column silhouette held open by nothing. }}
-            {{#practices.0.imageurl}}
-                <div class="aibs-scene aibs-script-scene">
-                    <img src="{{practices.0.imageurl}}" alt="" class="aibs-scene-img" loading="lazy"
-                         data-region="scriptimage">
-                </div>
-            {{/practices.0.imageurl}}
-            <div class="aibs-node-body">
-                <h3 class="aibs-h3">{{#str}} applyitinpractice, mod_aibranchedscenario {{/str}}</h3>
-                <ul class="aibs-lesson-list aibs-script-list">
-                    {{#practices}}
-                        <li class="aibs-lesson aibs-script-item" data-region="readable"
-                            data-audio="{{audiourl}}" data-image="{{imageurl}}">
-                            <span class="aibs-lesson-mark" aria-hidden="true">{{number}}</span>{{text}}
-                        </li>
-                    {{/practices}}
-                </ul>
-            </div>
-        </section>
-        {{/haspractice}}
-
-        {{! The takeaways used to be a page of their own, directly after a page of advice,
-            which is two pages of advice at the end of a debrief - one too many. They sit
-            under the practice points now, and the actions that used to need a page of their
-            own sit at the bottom of this one. }}
-        {{#hastakeaways}}
-        {{! A scripted page. The picture on the left changes as each card arrives, the card
-            floats up, its own clip reads it with the card marked, and the next arrives when
-            that clip finishes. The whole list is in the markup either way, so a learner with
-            narration off - or a browser that will not play - simply sees the list. The
-            choreography is an enhancement, never the only way in. }}
-        <section class="aibs-card aibs-deckslide aibs-slide aibs-lessons aibs-scripted {{^takeawaycards.0.imageurl}}aibs-noscene{{/takeawaycards.0.imageurl}}"
-                 data-region="deckslide" data-script="1" hidden>
-            {{! Guarded. It rendered unconditionally, so a page whose frames were never
-                generated drew an empty grey column with a broken-image mark in the corner -
-                the two-column silhouette held open by nothing. }}
-            {{#takeawaycards.0.imageurl}}
-                <div class="aibs-scene aibs-script-scene">
-                    <img src="{{takeawaycards.0.imageurl}}" alt="" class="aibs-scene-img" loading="lazy"
-                         data-region="scriptimage">
-                </div>
-            {{/takeawaycards.0.imageurl}}
-            <div class="aibs-node-body">
-                <h3 class="aibs-h3">{{#str}} takeaways, mod_aibranchedscenario {{/str}}</h3>
-                <ul class="aibs-lesson-list aibs-script-list">
-                    {{#takeawaycards}}
-                        <li class="aibs-lesson aibs-script-item" data-region="readable"
-                            data-audio="{{audiourl}}" data-image="{{imageurl}}">
-                            <span class="aibs-lesson-mark" aria-hidden="true">{{number}}</span>
+                {{! What they chose, at the top. Everything below is the comparison, and a
+                    comparison with nothing marked is a quiz. }}
+                <p class="aibs-slide-eyebrow">
+                    {{#str}} decisionnumber, mod_aibranchedscenario, {{seq}} {{/str}}</p>
+                <h3 class="aibs-h3">{{nodetitle}}</h3>
+                <p class="aibs-youchose {{signalclass}}">
+                    <span class="aibs-chip-lead">
+                        {{> mod_aibranchedscenario/feedbackmark }}
+                        {{#str}} youchose, mod_aibranchedscenario {{/str}}</span>
+                    {{choicetext}}
+                </p>
+                {{#principle}}
+                    <p class="aibs-journey-principle">
+                        <span class="aibs-chip-lead">
+                            {{#str}} principletested, mod_aibranchedscenario {{/str}}</span>
+                        {{principle}}
+                    </p>
+                {{/principle}}
+                <ul class="aibs-option-list aibs-script-list">
+                    {{#options}}
+                        <li class="aibs-option aibs-script-item {{signalclass}} {{#chosen}}aibs-is-chosen{{/chosen}}"
+                            data-region="readable" data-audio="{{audiourl}}">
+                            <span class="aibs-option-letter" aria-hidden="true">{{letter}}</span>
                             <span class="aibs-script-body">
-                                <span class="aibs-h4 aibs-script-heading">{{heading}}</span>
-                                {{! Body size, not "small". These cards have a column of
-                                    their own on a scripted page and are read one at a time,
-                                    so the compact size a dense list needed made the only
-                                    text on screen the smallest text in the product. }}
-                                <span class="aibs-prose">{{body}}</span>
+                                <span class="aibs-h4 aibs-option-text">{{text}}</span>
+                                {{#chosen}}
+                                    <span class="aibs-option-badge">
+                                        {{#str}} youroption, mod_aibranchedscenario {{/str}}</span>
+                                {{/chosen}}
+                                <span class="aibs-prose aibs-prose-small">
+                                    {{#noteparas}}<p>{{.}}</p>{{/noteparas}}</span>
                             </span>
                         </li>
-                    {{/takeawaycards}}
+                    {{/options}}
                 </ul>
             </div>
         </section>
-        {{/hastakeaways}}
+        {{/slides}}
 
         {{! The closing card, always.
             It used to be drawn ONLY when a scenario had no takeaways - the reasoning being

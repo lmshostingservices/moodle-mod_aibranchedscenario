@@ -79,17 +79,6 @@ class scenario_mapper {
             ];
         }
 
-        $debrief = (array)($wire['debrief'] ?? []);
-        $takeaways = [];
-        foreach ((array)($wire['takeaways'] ?? []) as $takeaway) {
-            if (is_array($takeaway)) {
-                $takeaways[] = [
-                    'heading' => (string)($takeaway['heading'] ?? ''),
-                    'body'    => (string)($takeaway['body'] ?? ''),
-                ];
-            }
-        }
-
         // The cast was not mapped at all, and everything that depends on knowing who is in
         // the scenario had been quietly running on the fallback ever since.
         //
@@ -137,13 +126,11 @@ class scenario_mapper {
             'principles'     => $principles,
             'startnode'      => (string)($wire['startNodeId'] ?? ''),
             'nodes'          => $nodes,
-            'debrief'        => [
-                'whatmattered'      => self::strings($debrief['whatMattered'] ?? []),
-                'criticaldecisions' => self::strings($debrief['criticalDecisions'] ?? []),
-                'practice'          => self::strings($debrief['practice'] ?? []),
-                'sourceconnection'  => (string)($debrief['sourceConnection'] ?? ''),
-            ],
-            'takeaways'      => $takeaways,
+            // The service's "debrief" block and "takeaways" are no longer mapped. Those
+            // four lists of closing advice have been replaced by one paragraph per option,
+            // carried on the choice itself, so anything still arriving under the old keys
+            // is left on the wire rather than stored against a contract that has no place
+            // for it.
         ];
     }
 
@@ -253,7 +240,13 @@ class scenario_mapper {
         // A node the service called content but gave real alternatives to is a decision
         // whatever it was labelled, so it is mapped as one rather than losing the
         // branching. A genuine one-way beat keeps its single onward link.
-        if ($mapped === 'beat' && count($choices) >= schema::MIN_CHOICES) {
+        // TWO, not schema::MIN_CHOICES. The minimum is three now, and reading the minimum
+        // here meant a node the service gave two real alternatives to was demoted to a
+        // one-way beat - the branching thrown away silently, which is the exact fault this
+        // branch was written to stop. What makes something a decision is having more than
+        // one way out; whether it has ENOUGH ways out is the validator's question, and it
+        // says so with an error a teacher can act on rather than by deleting the choices.
+        if ($mapped === 'beat' && count($choices) >= 2) {
             $out['type'] = 'decision';
             $out['choices'] = $choices;
             return $out;
@@ -336,6 +329,9 @@ class scenario_mapper {
             'signal'      => (string)($choice['signal'] ?? 'neutral'),
             'consequence' => (string)($choice['consequence'] ?? ''),
             'feedback'    => (string)($choice['feedback'] ?? ''),
+            // The paragraph the debrief slide shows against this option. Accepted under
+            // either spelling, like every other field the service may camel-case.
+            'outcomenote' => (string)($choice['outcomeNote'] ?? ($choice['outcomenote'] ?? '')),
             'principleid' => (string)($choice['principleId'] ?? ''),
             'next'        => (string)($choice['nextNodeId'] ?? ''),
             'skills'      => [
@@ -483,22 +479,6 @@ class scenario_mapper {
             }
         }
 
-        return $out;
-    }
-
-    /**
-     * Cast a list to a list of strings, dropping anything that is not scalar.
-     *
-     * @param mixed $value Candidate list.
-     * @return string[]
-     */
-    protected static function strings($value): array {
-        $out = [];
-        foreach ((array)$value as $item) {
-            if (is_scalar($item)) {
-                $out[] = (string)$item;
-            }
-        }
         return $out;
     }
 }

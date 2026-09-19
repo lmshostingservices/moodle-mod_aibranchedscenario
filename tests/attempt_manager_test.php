@@ -148,7 +148,11 @@ final class attempt_manager_test extends \advanced_testcase {
         $this->assertSame('Report faults before the next shift', $result['principle']);
         $this->assertSame(['engagement' => 50, 'trust' => 50, 'tension' => 30], $result['before']);
 
-        // Engagement and trust rise by 40; tension would drop to -10 and clamps at 0.
+        // Engagement and trust rise by 40 as written; tension would drop to -10 and clamps
+        // at 0. These were scaled for one release, against a five-decision reference,
+        // because a teacher could pick any length between three and eight. The length is
+        // fixed at five now, so that reference IS the length, the multiplier was always
+        // one, and the scaling is gone.
         $this->assertSame(90, (int)$attempt->engagement);
         $this->assertSame(90, (int)$attempt->trust);
         $this->assertSame(0, (int)$attempt->tension);

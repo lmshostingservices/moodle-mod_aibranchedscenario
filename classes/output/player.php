@@ -111,6 +111,73 @@ class player implements \renderable, \templatable {
     }
 
     /**
+     * What the learner is walking into, and what they are working towards.
+     *
+     * Assembled from what the definition already carries. Nothing here is generated or
+     * charged for - it is the scenario describing itself, which it could always have done.
+     *
+     * @param array|null $definition The published definition.
+     * @param array $metrics The opening readings, already banded.
+     * @return array Template context for the brief block.
+     */
+    protected function opening_brief($definition, array $metrics): array {
+        if (!is_array($definition)) {
+            return ['hasbrief' => false];
+        }
+
+        // Who is in it. Names and roles only: appearance and behaviour belong to the
+        // picture brief, not to a learner about to start.
+        $cast = [];
+        foreach (
+            array_merge(
+                !empty($definition['facilitator']['name']) ? [$definition['facilitator']] : [],
+                (array)($definition['characters'] ?? [])
+            ) as $person
+        ) {
+            $name = trim((string)($person['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $cast[] = [
+                'name' => $name,
+                'role' => trim((string)($person['role'] ?? '')),
+                'hasrole' => trim((string)($person['role'] ?? '')) !== '',
+            ];
+            if (count($cast) >= 5) {
+                break;
+            }
+        }
+
+        // What the readings are for. Tension reads the other way up - a low one is a good
+        // one - and that is the single most confusing thing about the scoreboard, so it is
+        // said in words rather than left to be inferred from a colour.
+        $goals = [];
+        foreach ($metrics as $metric) {
+            $goals[] = array_merge($metric, [
+                'aim' => get_string(
+                    $metric['key'] === 'tension' ? 'brief:aimdown' : 'brief:aimup',
+                    'mod_aibranchedscenario'
+                ),
+            ]);
+        }
+
+        $decisions = (int)($definition['stats']['decisioncount'] ?? 0);
+        $setting = trim((string)($definition['setting'] ?? ''));
+
+        return [
+            'hasbrief'     => $cast || $goals || $decisions > 0 || $setting !== '',
+            'setting'      => $setting,
+            'hassetting'   => $setting !== '',
+            'cast'         => $cast,
+            'hascast'      => $cast !== [],
+            'goals'        => $goals,
+            'hasgoals'     => $goals !== [],
+            'decisions'    => $decisions,
+            'hasdecisions' => $decisions > 0,
+        ];
+    }
+
+    /**
      * The URL of the opening situation's narration, if it was made.
      *
      * @param stdClass $revision The published revision.
@@ -305,6 +372,26 @@ class player implements \renderable, \templatable {
             // the node payload covered it, and its article carried no audio attribute to
             // play one from. A learner met silence, then heard every screen after it.
             'openingaudio' => $revision ? (string)($this->opening_narration($revision) ?? '') : '',
+            // THE BRIEF: what a learner is walking into, and what they are working towards.
+            //
+            // The opening screen carried a chip, a title, the role and the hook - four short
+            // things in a card sized for a scene, with most of it empty. Everything below is
+            // already in the definition and was shown nowhere: a learner started a scenario
+            // without being told where they were, who they would meet, how many decisions
+            // were ahead, or what the three readings in the bar were for.
+            //
+            // The readings in particular were the gap. They move on every decision and the
+            // whole scoreboard is built on them, and until now the first time a learner
+            // learned what they meant was when one of them dropped.
+            'brief' => $this->opening_brief($definition, $metrics),
+            // A PRINTED RECORD WITH NO NAME AND NO DATE ON IT IS NOT A RECORD.
+            //
+            // Printing gave the debrief deck and nothing else: no learner, no date, and -
+            // because the readings were explicitly hidden for print - not even the final
+            // scores. For an RTO keeping evidence of what a learner did, that is the one
+            // thing the page is for.
+            'learnername' => fullname($GLOBALS['USER']),
+            'printdate'   => userdate(time(), get_string('strftimedatetime', 'core_langconfig')),
         ];
     }
 }

@@ -74,6 +74,31 @@ class validator {
     }
 
     /**
+     * Recover the decoded document from pasted text, without validating it.
+     *
+     * The two halves of validate_json() - getting a usable document out of what somebody
+     * actually pasted, and checking that document against the contract - are separate
+     * jobs, and only the second one knows how long a scenario has to be. Splitting them
+     * lets the repair be tested on its own: a fixture proving that unescaped quoted speech
+     * survives should not also have to be a complete five-decision scenario, or the test
+     * reports on the shape rule every time somebody changes the shape rule.
+     *
+     * @param string $json Pasted text.
+     * @return array|null The decoded document, or null if it could not be recovered.
+     */
+    public static function decode_pasted(string $json): ?array {
+        if (strlen($json) > schema::MAX_SCENARIO_BYTES) {
+            return null;
+        }
+        $document = self::unwrap_json($json);
+        $decoded = json_decode($document, true);
+        if (!is_array($decoded)) {
+            $decoded = json_decode(self::escape_inner_quotes($document), true);
+        }
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    /**
      * Recover the JSON document from what an assistant actually pasted back.
      *
      * The import prompt asks for one JSON document and nothing else. Assistants
@@ -448,12 +473,27 @@ class validator {
         }
         $out['startnode'] = $start;
 
-        $out['debrief'] = $this->normalise_debrief($raw['debrief'] ?? []);
-        $out['takeaways'] = $this->normalise_takeaways($raw['takeaways'] ?? []);
-
+        // The debrief block and the takeaway cards are gone. They were four lists of
+        // advice at the end of a scenario - lessons learnt, critical decisions, practice
+        // points, takeaways - each on its own page, each saying a version of the same
+        // thing, and none of them tied to what the learner actually did. Everything they
+        // carried now lives on each choice's outcome note, on the slide for the decision
+        // it belongs to. Anything a scenario still sends under those keys is dropped here
+        // rather than stored, so the contract has one place a lesson can live.
         $this->check_graph($out);
 
         $out['stats'] = $this->compute_stats($out);
+
+        // Exactly five decisions on the longest path. Not a maximum, not a default: the
+        // length is fixed, the wizard no longer offers a choice, and the debrief is built
+        // out of exactly five slides. A scenario of some other length would render a
+        // debrief with slides missing or slides spare, so it is refused here where a
+        // teacher can be told why, rather than at play time where a learner finds out.
+        if ((int)$out['stats']['longestpath'] !== schema::DECISIONS) {
+            $a = (object)['expected' => schema::DECISIONS,
+                'found' => (int)$out['stats']['longestpath']];
+            $this->fail(get_string('error:decisioncount', 'mod_aibranchedscenario', $a));
+        }
 
         return $out;
     }
@@ -758,22 +798,15 @@ class validator {
         // the second file, so one screen silently gets another screen's picture or another
         // screen's voice.
         $taken[] = 'opening';
-        // The debrief writes ONE PICTURE PER ENTRY since v1.81.0 - debrief_lesson_0,
-        // debrief_takeaway_2 - and the old page-level names were still what was reserved
-        // here, so the families the plugin actually writes were unguarded for a release.
-        // The entry index is not known until the debrief is read, so a whole prefix is
-        // reserved rather than a list: nothing a node or choice is called may begin with
-        // one of these, which is the guarantee a numbered family needs.
-        $reservedprefixes = ['debrief_lesson_', 'debrief_critical_', 'debrief_practice_',
-            'debrief_takeaway_', 'lesson_'];
+        // The debrief used to write one picture per entry across four families of its own -
+        // debrief_lesson_0, debrief_takeaway_2 and the rest. Those pages are gone and the
+        // slides that replaced them reuse the reaction frame of the option the learner
+        // took, so the only numbered family left to guard is the teaching frames.
+        $reservedprefixes = ['lesson_'];
         // The names nothing in the scenario may be called. Separate from $taken, which also
         // holds every node id so that a CHOICE cannot take one - a node checked against
         // $taken would always appear to clash with itself.
         $reservednames = ['opening'];
-        foreach (['whatmattered', 'criticaldecisions', 'practice', 'takeaways'] as $page) {
-            $taken[] = 'debrief_' . $page;
-            $reservednames[] = 'debrief_' . $page;
-        }
         foreach ($principleids as $principleid) {
             $taken[] = 'lesson_' . $principleid;
             $reservednames[] = 'lesson_' . $principleid;
@@ -995,12 +1028,15 @@ class validator {
             return $node;
         }
 
-        if (count($rawchoices) < schema::MIN_CHOICES || count($rawchoices) > schema::MAX_CHOICES) {
-            $a = (object)['node' => $id, 'min' => schema::MIN_CHOICES, 'max' => schema::MAX_CHOICES];
+        // Exactly three, not a range. The debrief gives every decision a slide carrying
+        // one paragraph per option, and a scenario that offers two on one screen and four
+        // on the next produces five slides that do not look like each other.
+        if (count($rawchoices) !== schema::CHOICES) {
+            $a = (object)['node' => $id, 'count' => schema::CHOICES];
             $this->fail(get_string('error:choicecount', 'mod_aibranchedscenario', $a));
         }
 
-        $letters = ['A', 'B', 'C', 'D'];
+        $letters = ['A', 'B', 'C'];
         $position = 0;
         foreach (array_slice($rawchoices, 0, schema::MAX_CHOICES) as $rawchoice) {
             if (!is_array($rawchoice)) {
@@ -1028,6 +1064,17 @@ class validator {
             if ($this->text($rawchoice['consequence'] ?? '', 1800) === '') {
                 $a = (object)['node' => $id, 'letter' => $letters[$position]];
                 $this->fail(get_string('error:choicenoconsequence', 'mod_aibranchedscenario', $a));
+            }
+
+            // The paragraph the debrief slide shows against this option: what it costs,
+            // what it teaches, and how it leaves the people in the room. Required, because
+            // the debrief is now built entirely out of these - a scenario missing one has
+            // a slide with a hole in it, and a hole is not something a teacher should find
+            // out about from a learner.
+            $outcomenote = $this->text($rawchoice['outcomenote'] ?? '', schema::MAX_OUTCOME_NOTE);
+            if ($outcomenote === '') {
+                $a = (object)['node' => $id, 'letter' => $letters[$position]];
+                $this->fail(get_string('error:choicenooutcomenote', 'mod_aibranchedscenario', $a));
             }
 
             $principleid = $this->identifier($rawchoice['principleid'] ?? '');
@@ -1068,6 +1115,7 @@ class validator {
                     ? $rawchoice['signal'] : 'neutral',
                 'consequence' => $this->text($rawchoice['consequence'] ?? '', 1800),
                 'feedback'    => $this->text($rawchoice['feedback'] ?? '', 1800),
+                'outcomenote' => $outcomenote,
                 'principleid' => $principleid,
                 'tags'        => $this->stringlist($rawchoice['tags'] ?? [], schema::choicetags(), 5),
                 'effects'     => [
@@ -1115,71 +1163,6 @@ class validator {
         }
 
         return $node;
-    }
-
-    /**
-     * Normalise the debrief block.
-     *
-     * @param mixed $raw Raw debrief.
-     * @return array
-     */
-    protected function normalise_debrief($raw): array {
-        if (!is_array($raw)) {
-            $raw = [];
-        }
-        $listof = function ($value, $max, $len) {
-            if (!is_array($value)) {
-                return [];
-            }
-            $out = [];
-            foreach (array_slice($value, 0, $max) as $item) {
-                $item = $this->text($item, $len);
-                if ($item !== '') {
-                    $out[] = $item;
-                }
-            }
-            return $out;
-        };
-        // The ceiling matches the principle ceiling deliberately. The debrief carries one
-        // entry per principle, up to eight principles are accepted, and these were capped
-        // at six - so a scenario teaching seven or eight ideas had its debrief silently
-        // truncated by the thing that exists to protect it. A cap that cuts below the
-        // contract is not a guard, it is the fault.
-        return [
-            'whatmattered'      => $listof($raw['whatmattered'] ?? [], 8, 600),
-            'criticaldecisions' => $listof($raw['criticaldecisions'] ?? [], 8, 600),
-            'practice'          => $listof($raw['practice'] ?? [], 8, 600),
-            'sourceconnection'  => $this->text($raw['sourceconnection'] ?? '', 2000),
-        ];
-    }
-
-    /**
-     * Normalise takeaway cards.
-     *
-     * @param mixed $raw Raw takeaways.
-     * @return array
-     */
-    protected function normalise_takeaways($raw): array {
-        if (!is_array($raw)) {
-            return [];
-        }
-        $out = [];
-        // Eight, to match the principle ceiling: one takeaway per principle. Six cut the
-        // debrief below its own contract on a scenario teaching seven or eight ideas.
-        foreach (array_slice($raw, 0, 8) as $item) {
-            if (!is_array($item)) {
-                continue;
-            }
-            $heading = $this->short($item['heading'] ?? '', 160);
-            if ($heading === '') {
-                continue;
-            }
-            $out[] = [
-                'heading' => $heading,
-                'body'    => $this->text($item['body'] ?? '', 900),
-            ];
-        }
-        return $out;
     }
 
     /**

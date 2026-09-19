@@ -61,6 +61,10 @@
     * principles array Decision principles drawn from the source content
     * lessonslides array The opening lesson, one principle to a slide
     * openingimage string Scene image used on the opening slide, or empty
+    * learnername string Who this attempt belongs to, for the printed record
+    * printdate string When it was printed
+    * brief object What the learner is walking into: setting, cast, readings and their
+    *   direction, and how many decisions are ahead
 
     Example context (json):
     {
@@ -96,6 +100,15 @@
      data-audio="{{#enableaudio}}1{{/enableaudio}}{{^enableaudio}}0{{/enableaudio}}"
      data-replay="{{#allowreplay}}1{{/allowreplay}}{{^allowreplay}}0{{/allowreplay}}"
      data-debrief="{{#showdebrief}}1{{/showdebrief}}{{^showdebrief}}0{{/showdebrief}}">
+
+    {{! THE PRINTED RECORD'S HEADER. Hidden on screen, the first thing on paper.
+        Printing gave the debrief deck and nothing else - no learner, no date, and not even
+        the final readings, because those were explicitly hidden for print. An RTO keeping
+        evidence of what a learner did needs all three, and they cost one block. }}
+    <div class="aibs-printhead" aria-hidden="true">
+        <p class="aibs-printhead-title">{{#scenariotitle}}{{scenariotitle}}{{/scenariotitle}}{{^scenariotitle}}{{title}}{{/scenariotitle}}</p>
+        <p class="aibs-printhead-meta">{{learnername}} &middot; {{printdate}}</p>
+    </div>
 
     <div class="aibs-shell">
 
@@ -328,6 +341,55 @@
                                 <h3 class="aibs-h3">{{#scenariotitle}}{{scenariotitle}}{{/scenariotitle}}{{^scenariotitle}}{{title}}{{/scenariotitle}}</h3>
                                 {{#role}}<p class="aibs-role">{{role}}</p>{{/role}}
                                 <div class="aibs-prose">{{#hookparas}}<p>{{.}}</p>{{/hookparas}}</div>
+
+                                {{! THE BRIEF. Where you are, who you will meet, what the
+                                    three readings in the bar are for, and how many decisions
+                                    are ahead. All of it was already in the definition and
+                                    shown nowhere - a learner started without being told what
+                                    the scoreboard measured, and found out when one of the
+                                    numbers dropped.
+
+                                    The readings carry their DIRECTION in words. Tension reads
+                                    the other way up - a low one is a good one - which is the
+                                    single most confusing thing about the scoreboard and was
+                                    left to be inferred from a colour. }}
+                                {{#brief.hasbrief}}
+                                    <div class="aibs-brief-block">
+                                        {{#brief.hasgoals}}
+                                            <p class="aibs-brief-label">
+                                                {{#str}} brief:working, mod_aibranchedscenario {{/str}}</p>
+                                            <ul class="aibs-brief-goals">
+                                                {{#brief.goals}}
+                                                    <li class="aibs-brief-goal {{tone}}">
+                                                        <span class="aibs-brief-goal-mark" aria-hidden="true">
+                                                            {{> mod_aibranchedscenario/metricmark }}
+                                                        </span>
+                                                        <span class="aibs-brief-goal-name">{{label}}</span>
+                                                        <span class="aibs-brief-goal-value">{{value}}</span>
+                                                        <span class="aibs-brief-goal-aim">{{aim}}</span>
+                                                    </li>
+                                                {{/brief.goals}}
+                                            </ul>
+                                        {{/brief.hasgoals}}
+
+                                        <dl class="aibs-brief-facts">
+                                            {{#brief.hassetting}}
+                                                <dt>{{#str}} brief:where, mod_aibranchedscenario {{/str}}</dt>
+                                                <dd>{{brief.setting}}</dd>
+                                            {{/brief.hassetting}}
+                                            {{#brief.hascast}}
+                                                <dt>{{#str}} brief:who, mod_aibranchedscenario {{/str}}</dt>
+                                                <dd>
+                                                    {{#brief.cast}}<span class="aibs-brief-person">{{name}}{{#hasrole}}<span class="aibs-brief-person-role">{{role}}</span>{{/hasrole}}</span>{{/brief.cast}}
+                                                </dd>
+                                            {{/brief.hascast}}
+                                            {{#brief.hasdecisions}}
+                                                <dt>{{#str}} brief:ahead, mod_aibranchedscenario {{/str}}</dt>
+                                                <dd>{{#str}} brief:decisions, mod_aibranchedscenario, {{brief.decisions}} {{/str}}</dd>
+                                            {{/brief.hasdecisions}}
+                                        </dl>
+                                    </div>
+                                {{/brief.hasbrief}}
                             </div>
                         </article>
 

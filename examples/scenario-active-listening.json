@@ -60,11 +60,12 @@
           },
           "principleid": "p1",
           "effects": {
-            "engagement": 5,
-            "trust": 10,
-            "tension": -10
+            "engagement": 10,
+            "trust": 12,
+            "tension": -14
           },
-          "next": "n2a"
+          "next": "n2a",
+          "outcomenote": "The best of the three, and the only one that costs you anything at the time: four awkward seconds while the room waits. Naming what you saw, in the moment, is what makes the interruption a fact rather than an accusation - and it is the only version Priya can build on, because it happens in front of the people who were doing it. She learns that the room will hold still for her, which is what makes her speak up on Friday without being invited."
         },
         {
           "id": "n1_b",
@@ -82,9 +83,10 @@
           "effects": {
             "engagement": 0,
             "trust": 0,
-            "tension": 0
+            "tension": 2
           },
-          "next": "n2b"
+          "next": "n2b",
+          "outcomenote": "The plausible middle, and the one that quietly teaches the wrong thing. You do hear her, which is why it feels like listening - but you hear her alone, at four o'clock, away from the people who needed to. The meeting learns nothing, Dan learns nothing, and Priya learns that her input reaches you through a side channel. The next time she has something, she will wait for the side channel."
         },
         {
           "id": "n1_c",
@@ -100,11 +102,12 @@
           },
           "principleid": "p1",
           "effects": {
-            "engagement": -5,
-            "trust": -10,
-            "tension": 15
+            "engagement": -10,
+            "trust": -12,
+            "tension": 14
           },
-          "next": "n2b"
+          "next": "n2b",
+          "outcomenote": "The most expensive of the three, and it looks like efficiency. Four minutes saved against a rollback: the cost is not the meeting, it is the information that was in the room and left it unsaid. Priya now has evidence that starting a sentence here is not worth finishing, and the next time she will not start it."
         }
       ]
     },
@@ -153,11 +156,12 @@
           },
           "principleid": "p2",
           "effects": {
-            "engagement": 5,
-            "trust": 10,
-            "tension": -10
+            "engagement": 10,
+            "trust": 12,
+            "tension": -14
           },
-          "next": "n4a"
+          "next": "n4a",
+          "outcomenote": "The best available, because it gives Dan something he can act on. A behaviour, a time and a count are checkable - he can disagree with them, which is exactly why he believes them. The discomfort is his own recognition rather than your verdict, and that is the difference between a person who agrees with you and a person who changes."
         },
         {
           "id": "n3_b",
@@ -175,9 +179,10 @@
           "effects": {
             "engagement": 0,
             "trust": 0,
-            "tension": 0
+            "tension": 2
           },
-          "next": "n4b"
+          "next": "n4b",
+          "outcomenote": "The gentle opening that costs the conversation its point. Asking how it is going invites him to answer about the meeting rather than about himself, so you spend the time steering back to the thing you could have said first. He leaves knowing you wanted something and not what it was."
         },
         {
           "id": "n3_c",
@@ -193,11 +198,12 @@
           },
           "principleid": "p2",
           "effects": {
-            "engagement": -5,
-            "trust": -10,
-            "tension": 15
+            "engagement": -10,
+            "trust": -12,
+            "tension": 14
           },
-          "next": "n4b"
+          "next": "n4b",
+          "outcomenote": "The worst of the three, and the one that produces the warmest response. 'How you come across' names no behaviour, so there is nothing to stop doing. He agrees because agreeing is easy and costs him nothing, and you both leave believing the conversation worked. Nothing changes, and the next one is harder because this one apparently went fine."
         }
       ]
     },
@@ -244,11 +250,12 @@
           },
           "principleid": "p3",
           "effects": {
-            "engagement": 5,
-            "trust": 10,
-            "tension": -10
+            "engagement": 10,
+            "trust": 12,
+            "tension": -14
           },
-          "next": "n6"
+          "next": "n6",
+          "outcomenote": "The best of the three: it accepts the workaround and still names what it costs. Priya is not being asked to stop protecting herself, she is being shown the second half of the picture - that a private channel works for her and hides the problem from everyone else. She had not thought about the second part, which is the point: you cannot decide about a cost nobody has said out loud."
         },
         {
           "id": "n5_b",
@@ -266,9 +273,10 @@
           "effects": {
             "engagement": 0,
             "trust": 0,
-            "tension": 0
+            "tension": 2
           },
-          "next": "n6"
+          "next": "n6",
+          "outcomenote": "The comfortable one, and it works for three months, which is what makes it hard to argue with. But 'keeping an eye on it' is a decision to do nothing with a plan attached, and the arrangement hardens into how things are done here. By the time a new starter has copied it, it is not a workaround any more - it is the process."
         },
         {
           "id": "n5_c",
@@ -284,11 +292,12 @@
           },
           "principleid": "p3",
           "effects": {
-            "engagement": -5,
-            "trust": -10,
-            "tension": 15
+            "engagement": -10,
+            "trust": -12,
+            "tension": 14
           },
-          "next": "n6"
+          "next": "n6",
+          "outcomenote": "The worst, and it is worst precisely because she gave you permission. 'I don't mind' is what people say about a cost they have decided to absorb; taking it at face value moves that cost permanently onto her. She stops raising it, and the next thing you hear about it is her asking what roles are open on other teams."
         }
       ]
     },
@@ -315,11 +324,12 @@
           },
           "principleid": "p2",
           "effects": {
-            "engagement": 5,
-            "trust": 10,
-            "tension": -10
+            "engagement": 10,
+            "trust": 12,
+            "tension": -14
           },
-          "next": "n7"
+          "next": "n7",
+          "outcomenote": "The best available, and the only one that does not depend on anybody remembering. Everyone hates the first fortnight, which is the honest price of a structural fix: it changes what the meeting IS rather than asking people to be better at the meeting they already have. By the fourth week Dan is timing himself, which is a habit rather than a favour."
         },
         {
           "id": "n6_b",
@@ -337,9 +347,10 @@
           "effects": {
             "engagement": 0,
             "trust": 0,
-            "tension": 0
+            "tension": 2
           },
-          "next": "n7"
+          "next": "n7",
+          "outcomenote": "The reasonable one, and it puts the work on the two people least able to do it. Dan has to remember something he does without noticing, and Priya has to interrupt the person who interrupts her. It holds when both of them are at their best, which is not what a mechanism is for."
         },
         {
           "id": "n6_c",
@@ -355,11 +366,12 @@
           },
           "principleid": "p2",
           "effects": {
-            "engagement": -5,
-            "trust": -10,
-            "tension": 15
+            "engagement": -10,
+            "trust": -12,
+            "tension": 14
           },
-          "next": "n7"
+          "next": "n7",
+          "outcomenote": "The worst, because it makes you the mechanism. It works while you are watching and stops the first week you are busy - and a release always comes. Worse, the team learns that the rule is your attention rather than the meeting's shape, so when your attention goes, so does the rule."
         }
       ]
     },
@@ -386,11 +398,12 @@
           },
           "principleid": "p3",
           "effects": {
-            "engagement": 5,
-            "trust": 10,
-            "tension": -10
+            "engagement": 10,
+            "trust": 12,
+            "tension": -14
           },
-          "next": "__auto__"
+          "next": "__auto__",
+          "outcomenote": "The best of the three, and the shortest. She asked a real question and this is a real answer: you watched, you were slow, and you are saying so without turning it into an apology she then has to manage. 'Alright' is what being levelled with sounds like, and it is why she brings you the next thing two weeks later."
         },
         {
           "id": "n7_b",
@@ -408,9 +421,10 @@
           "effects": {
             "engagement": 0,
             "trust": 0,
-            "tension": 0
+            "tension": 2
           },
-          "next": "__auto__"
+          "next": "__auto__",
+          "outcomenote": "The line that closes a conversation without answering it. It is not untrue, and that is the trouble - it explains the delay as a property of the world rather than a choice you made. She says 'sure' because there is nothing to say to it. The format holds; the door does not open."
         },
         {
           "id": "n7_c",
@@ -426,11 +440,12 @@
           },
           "principleid": "p3",
           "effects": {
-            "engagement": -5,
-            "trust": -10,
-            "tension": 15
+            "engagement": -10,
+            "trust": -12,
+            "tension": 14
           },
-          "next": "__auto__"
+          "next": "__auto__",
+          "outcomenote": "The worst, and the most tempting, because it is partly fair. Answering a question about your own delay by naming hers turns a moment of trust into a score being settled. She will keep contributing correctly and briefly, and she will never again ask you why something took as long as it did."
         }
       ]
     },
@@ -460,38 +475,6 @@
       "outcome": "highrisk",
       "situation": "Priya's points reach the team through you, when they reach it at all. She is polite, productive and entirely disengaged from the meeting, and at her next review she asks what else is available.\n\nThe cutover incident is still in the retro document. Nobody connected it to the three unfinished sentences that preceded it.",
       "summary": "The information the team needed was in the room and had tried to reach you three times. What follows from not hearing it is rarely a dramatic failure — it is a capable person who stops trying, a decision made without the one fact that mattered, and a resignation that reads as unrelated."
-    }
-  ],
-  "debrief": {
-    "whatmattered": [
-      "Naming the observable behaviour — three unfinished sentences — rather than the conclusion drawn from it.",
-      "Giving the interrupter something specific he could act on, since he was willing and simply unaware.",
-      "Refusing a workaround that worked for the meeting and cost the person her voice in it: the format changed, not everyone's good intentions."
-    ],
-    "criticaldecisions": [
-      "Whether to stop the meeting at the moment Priya withdrew, or catch her afterwards.",
-      "Whether to open with Dan on observation or on character.",
-      "Whether to accept the pre-written messages once they were working."
-    ],
-    "practice": [
-      "In your next meeting, count attempts rather than interruptions. Note who starts a sentence more than once.",
-      "Before giving feedback, write the sentence you plan to open with. If it names a quality rather than an action, rewrite it.",
-      "When someone offers you a workaround that makes your life easier, say out loud what it costs them before you accept it."
-    ],
-    "sourceconnection": "Demonstrating Active Listening Effectively — attending, withholding response, and checking understanding."
-  },
-  "takeaways": [
-    {
-      "heading": "Withdrawal is the signal",
-      "body": "Interruption is noisy and easy to spot. Someone deciding it is not worth finishing the sentence is silent, and is the thing that actually costs you."
-    },
-    {
-      "heading": "Observation beats interpretation",
-      "body": "\"You began three times\" can be accepted. \"You're not being heard\" has to be argued about first."
-    },
-    {
-      "heading": "Don't rely on remembering",
-      "body": "Any fix that depends on attention in the moment fails in the week you most need it. Change what the meeting asks of people instead."
     }
   ]
 }

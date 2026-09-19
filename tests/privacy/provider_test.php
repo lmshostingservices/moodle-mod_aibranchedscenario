@@ -163,7 +163,7 @@ final class provider_test extends \core_privacy\tests\provider_testcase {
         $this->assertSame(attempt_manager::STATUS_FINISHED, $data->status);
         $this->assertSame('strong', $data->outcome);
         $this->assertEqualsWithDelta(100.0, (float)$data->score, 0.001);
-        $this->assertCount(4, $data->journey);
+        $this->assertCount(\mod_aibranchedscenario\local\schema::DECISIONS, $data->journey);
         $this->assertSame('start', $data->journey[0]->nodeid);
         $this->assertSame('start_a', $data->journey[0]->choiceid);
     }

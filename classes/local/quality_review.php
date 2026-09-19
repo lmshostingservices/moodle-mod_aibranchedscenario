@@ -69,6 +69,7 @@ class quality_review {
         // The debrief is a property of the document as well, and it is the part a learner
         // reaches last and remembers longest.
         $spelling = array_merge($spelling, self::debrief_warnings($definition));
+        $spelling = array_merge($spelling, self::reading_range_warnings($definition));
         // Pronouns are a property of the whole document too: the sentence that contradicts
         // a cast record can be anywhere in it.
         $spelling = array_merge($spelling, self::pronoun_warnings($definition));
@@ -353,19 +354,13 @@ class quality_review {
                 $bits[] = (string)($principle[$field] ?? '');
             }
         }
-        $debrief = (array)($definition['debrief'] ?? []);
-        foreach (['whatmattered', 'criticaldecisions', 'practice'] as $page) {
-            foreach ((array)($debrief[$page] ?? []) as $line) {
-                if (is_string($line)) {
-                    $bits[] = $line;
-                }
-            }
-        }
-        $bits[] = (string)($debrief['sourceconnection'] ?? '');
-        foreach ((array)($definition['takeaways'] ?? []) as $takeaway) {
-            if (is_array($takeaway)) {
-                $bits[] = (string)($takeaway['heading'] ?? '');
-                $bits[] = (string)($takeaway['body'] ?? '');
+        // The outcome notes ARE the debrief now, so they are what the spelling check has to
+        // read. The four lists it used to read no longer exist, and a spelling check that
+        // stopped covering the debrief the day the debrief moved is a check that reports
+        // clean because it is looking at nothing.
+        foreach ((array)($definition['nodes'] ?? []) as $node) {
+            foreach ((array)($node['choices'] ?? []) as $choice) {
+                $bits[] = (string)($choice['outcomenote'] ?? '');
             }
         }
         return implode(' ', array_filter($bits, fn($bit) => trim($bit) !== ''));
@@ -411,86 +406,204 @@ class quality_review {
     }
 
     /**
-     * A debrief that closes the loop on fewer ideas than the scenario opened with.
+     * Decisions whose three options do not make a comparison.
      *
-     * The scenario teaches N principles, tests them, and then looks back at them. Those
-     * three counts should be the same number, and nothing checked that they were. Watched
-     * to fail on a live scenario: three principles taught at the start, then two lessons
-     * learnt, two critical decisions and two takeaways - so a third of what the learner was
-     * taught was never looked back at, and the debrief quietly decided which third.
+     * WHAT THIS REPLACED, AND WHY.
      *
-     * Nothing in the definition said how many there should be, so the service chose, and
-     * two is the cheapest number that still reads as a list.
+     * It used to count the four closing lists against the principles taught - three
+     * principles, three lessons learnt, three takeaways - because the debrief was those
+     * lists and a short one meant a principle was never looked back at.
      *
-     * Like the principle check above, this reports rather than rejects. The teacher has
-     * been charged by the time the definition is read, and a scenario that is sound except
-     * for a short debrief is not worth throwing away when the missing entry is a sentence
-     * they can write in the editor. What it will not do any more is say nothing.
+     * The debrief is not lists any more. Each decision gets a slide showing every option
+     * with the paragraph saying where it leads, and the learning is the COMPARISON between
+     * them. So the thing worth reporting changed with it: a slide only teaches anything if
+     * its three notes are three different outcomes. Three paragraphs that say the same
+     * thing, or a note that only restates the option it belongs to, produce a slide that
+     * looks complete and carries nothing.
+     *
+     * Reports rather than rejects, like everything else here: the teacher has been charged
+     * by the time the definition is read, and these are sentences they can edit.
      *
      * @param array $definition A validated definition.
      * @return array Warning rows.
      */
     protected static function debrief_warnings(array $definition): array {
-        $principles = array_values(array_filter(
-            (array)($definition['principles'] ?? []),
-            fn($p) => is_array($p) && trim((string)($p['title'] ?? '')) !== ''
-        ));
-        $wanted = count($principles);
-        if ($wanted < 1) {
-            return [];
-        }
-
-        $debrief = (array)($definition['debrief'] ?? []);
-        // Takeaways are a sibling of the debrief rather than a member of it, so they are
-        // counted from where they actually live. They were missed for exactly that reason.
-        $lists = [
-            'whatmattered'      => (array)($debrief['whatmattered'] ?? []),
-            'criticaldecisions' => (array)($debrief['criticaldecisions'] ?? []),
-            'practice'          => (array)($debrief['practice'] ?? []),
-            'takeaways'         => (array)($definition['takeaways'] ?? []),
-        ];
-
         $out = [];
-        foreach ($lists as $key => $list) {
-            $have = count(array_filter($list, fn($item) => $item !== '' && $item !== []));
-            // MORE than one per principle is a fault too, and `>=` said nothing about it.
-            // Four lessons against three principles means one of them answers no principle
-            // at all - and the fourth has no picture, because the image map is built from
-            // the entries that HAVE a principle behind them.
-            if ($have > $wanted) {
-                $out[] = [
-                    'nodeid'  => 'debrief_' . $key,
-                    'node'    => get_string('debrief:' . $key, 'mod_aibranchedscenario'),
-                    'message' => get_string(
-                        'quality:debrieflong',
-                        'mod_aibranchedscenario',
-                        (object)[
-                            'page'   => get_string('debrief:' . $key, 'mod_aibranchedscenario'),
-                            'have'   => $have,
-                            'wanted' => $wanted,
-                        ]
-                    ),
-                ];
+        foreach ((array)($definition['nodes'] ?? []) as $node) {
+            if (($node['type'] ?? '') !== 'decision') {
                 continue;
             }
-            if ($have === $wanted) {
+            $choices = (array)($node['choices'] ?? []);
+            if (count($choices) < 2) {
+                continue;
+            }
+            $title = trim((string)($node['title'] ?? '')) ?: (string)($node['id'] ?? '');
+
+            // A slide that cannot say which option was best and which worst is not a
+            // comparison. The signals are what the slide bands its options by, so all
+            // three carrying the same one leaves a learner three paragraphs and no ranking.
+            $signals = [];
+            foreach ($choices as $choice) {
+                $signals[(string)($choice['signal'] ?? 'neutral')] = true;
+            }
+            if (count($signals) < 2) {
+                $out[] = [
+                    'nodeid'  => (string)($node['id'] ?? ''),
+                    'node'    => $title,
+                    'message' => get_string('quality:flatsignals', 'mod_aibranchedscenario', $title),
+                ];
+            }
+
+            // Notes that repeat each other. Compared on their normalised words rather than
+            // character for character: the failure this catches is the model writing one
+            // sentiment three times, which rarely comes back byte-identical.
+            $seen = [];
+            foreach ($choices as $choice) {
+                $note = self::normalise_for_compare((string)($choice['outcomenote'] ?? ''));
+                if ($note === '') {
+                    continue;
+                }
+                if (isset($seen[$note])) {
+                    $out[] = [
+                        'nodeid'  => (string)($node['id'] ?? ''),
+                        'node'    => $title,
+                        'message' => get_string(
+                            'quality:duplicateoutcomenote',
+                            'mod_aibranchedscenario',
+                            $title
+                        ),
+                    ];
+                    break;
+                }
+                $seen[$note] = true;
+            }
+
+            // A note that only says the option again. The paragraph exists to say what
+            // taking it COSTS; one that restates the option teaches nothing and reads, on
+            // the slide, as the same line printed twice.
+            foreach ($choices as $choice) {
+                $note = self::normalise_for_compare((string)($choice['outcomenote'] ?? ''));
+                $text = self::normalise_for_compare((string)($choice['text'] ?? ''));
+                if ($note === '' || $text === '') {
+                    continue;
+                }
+                if (
+                    $note === $text || ($note !== '' && strpos($note, $text) === 0
+                        && strlen($note) < strlen($text) * 1.5)
+                ) {
+                    $out[] = [
+                        'nodeid'  => (string)($node['id'] ?? ''),
+                        'node'    => $title,
+                        'message' => get_string(
+                            'quality:restatedoutcomenote',
+                            'mod_aibranchedscenario',
+                            (object)['node' => $title, 'letter' => (string)($choice['letter'] ?? '')]
+                        ),
+                    ];
+                    break;
+                }
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Readings that cannot reach their ends across the five decisions.
+     *
+     * A learner who gets EVERY decision wrong should see the scoreboard say so. The score
+     * does - it is normalised by the decisions taken, so all-wrong is nought. The three
+     * readings are absolute, and whether they bottom out depends entirely on how big the
+     * author wrote the effects.
+     *
+     * This is the length problem in its second form. When a teacher could pick the length,
+     * a three-decision scenario left engagement at 14 after every wrong answer, because
+     * three decisions of effects written for five could not span the range. The length is
+     * fixed now, so that cause is gone - and the same symptom arrives from effects written
+     * too small. Five decisions at minus five is a total failure ending at 25, with the
+     * score beside it reading nought: the two halves of one screen disagreeing, and the
+     * learner told that a run in which they got nothing right went half well.
+     *
+     * Walked by STAGE rather than by node, because a learner passes through one node per
+     * stage. Taking the most damaging option available at each stage is the worst run the
+     * scenario allows; if that cannot reach the end of the scale, nothing can.
+     *
+     * Reports rather than rejects. The teacher has been charged by the time the definition
+     * is read, and the fix is a number in the editor.
+     *
+     * @param array $definition A validated definition.
+     * @return array Warning rows.
+     */
+    protected static function reading_range_warnings(array $definition): array {
+        // A definition with no opening readings is a fragment, not a scenario - the
+        // validator always supplies them. Judging one would report every node fixture in
+        // the review panel as unable to reach a scale it never had.
+        if (!isset($definition['openingmetrics'])) {
+            return [];
+        }
+        $opening = (array)$definition['openingmetrics'];
+        $stages = [];
+        foreach ((array)($definition['nodes'] ?? []) as $node) {
+            if (($node['type'] ?? '') !== 'decision') {
+                continue;
+            }
+            $stage = (int)($node['stage'] ?? 0);
+            foreach ((array)($node['choices'] ?? []) as $choice) {
+                foreach (schema::metrics() as $metric) {
+                    $effect = (int)($choice['effects'][$metric] ?? 0);
+                    $stages[$metric][$stage]['down'] =
+                        min($stages[$metric][$stage]['down'] ?? 0, $effect);
+                    $stages[$metric][$stage]['up'] =
+                        max($stages[$metric][$stage]['up'] ?? 0, $effect);
+                }
+            }
+        }
+
+        $out = [];
+        foreach (schema::metrics() as $metric) {
+            if (empty($stages[$metric])) {
+                continue;
+            }
+            $start = (int)($opening[$metric] ?? 50);
+            $down = 0;
+            $up = 0;
+            foreach ($stages[$metric] as $reach) {
+                $down += (int)($reach['down'] ?? 0);
+                $up += (int)($reach['up'] ?? 0);
+            }
+            // Tension reads the other way up: its bad end is the ceiling, so the reading
+            // that has to be reachable is 100 rather than 0.
+            $worst = $metric === 'tension' ? $start + $up : $start + $down;
+            $reached = $metric === 'tension' ? $worst >= 100 : $worst <= 0;
+            if ($reached) {
                 continue;
             }
             $out[] = [
-                'nodeid'  => 'debrief_' . $key,
-                'node'    => get_string('debrief:' . $key, 'mod_aibranchedscenario'),
+                'nodeid'  => 'metric_' . $metric,
+                'node'    => get_string('metric:' . $metric, 'mod_aibranchedscenario'),
                 'message' => get_string(
-                    'quality:debriefshort',
+                    'quality:readingrange',
                     'mod_aibranchedscenario',
                     (object)[
-                        'page'      => get_string('debrief:' . $key, 'mod_aibranchedscenario'),
-                        'have'      => $have,
-                        'wanted'    => $wanted,
+                        'metric' => get_string('metric:' . $metric, 'mod_aibranchedscenario'),
+                        'worst'  => $worst,
+                        'end'    => $metric === 'tension' ? 100 : 0,
                     ]
                 ),
             ];
         }
         return $out;
+    }
+
+    /**
+     * Lower case, collapsed whitespace, no punctuation - for comparing two pieces of prose.
+     *
+     * @param string $text The text.
+     * @return string
+     */
+    protected static function normalise_for_compare(string $text): string {
+        $text = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $text) ?? '';
+        $text = preg_replace('/\s+/u', ' ', $text) ?? '';
+        return trim(\core_text::strtolower($text));
     }
 
     /**

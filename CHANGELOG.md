@@ -2,6 +2,125 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v2.3.0] - 2026-09-19
+
+### One shape, every time: five decisions, three options
+
+The length used to be the teacher's to pick, anywhere from three decisions to eight, and
+the number of options per decision was whatever the service wrote. Both are fixed now.
+
+Every extra decision was another set of options to write, another set of illustrations to
+pay for, and another screen between a learner and the point - and the debrief had to cope
+with all of it, which is what made the end of a scenario confusing. One shape means the
+debrief can be built to fit it exactly, and the cost of generating a scenario is the same
+every time.
+
+The chooser is gone from the wizard. Nothing else needs changing.
+
+### The debrief is the decisions now
+
+It used to end with a list of the decisions followed by four pages of closing advice -
+lessons learnt, critical decisions, practice points, takeaways. Five ways of saying similar
+things, none of them tied to a choice the learner actually made.
+
+In its place: **one slide per decision**. What they chose at the top, the reaction to that
+choice on the left, and on the right **every option that was open to them**, each with a
+paragraph saying where it would have led - which one was the best available and why, what
+the middle one leaves undone, what the worst one costs.
+
+The lesson is the comparison between the road taken and the roads not taken, so it no
+longer needs pages of its own.
+
+### The pictures carry more feeling
+
+Every frame was briefed to have "natural expressions", on every screen, which a generator
+reads as *no expression in particular* - so a set of illustrations about things going wrong
+came back as people looking mildly attentive. Frames are now briefed for a readable
+emotional state that matches the moment, and each reaction has three readings at different
+strengths so five screens in a row do not look alike.
+
+### The review panel checks two new things
+
+- **A decision whose options do not make a comparison** - all three carrying the same
+  signal, or two explaining their outcome in the same words - so a slide that looks
+  complete but teaches nothing is caught before a learner meets it.
+- **Readings that cannot reach the ends of their scale.** If even the worst option at every
+  decision leaves engagement at 25, a learner who got everything wrong sees a score of 0%
+  next to a reading saying the run went half well. The panel now says so.
+
+### Fewer illustrations, same price
+
+The debrief used to commission a picture for every entry on those four pages - up to
+thirty-two frames for the last two minutes of the activity. Its slides reuse the reaction
+already drawn for the option the learner took, so nothing new is generated. Pricing is
+unchanged.
+
+### Upgrading
+
+Upgrade as normal. Scenarios published before this keep playing. Their debrief slides will
+show the options without the paragraphs underneath, because those were not written at the
+time - regenerating a scenario fills them in.
+
+## [v2.2.0] - 2026-09-18
+
+### The readings now mean the same thing at every scenario length
+
+A teacher picks anywhere from three decisions to eight. The scoring behind the readings was
+written at one size regardless, so the same scenario behaved like two different activities
+at the two ends of that range:
+
+- **At three decisions**, a learner who got *everything* wrong finished with engagement at
+  14. The scoreboard said the run had gone badly; the readings never bottomed out, so it did
+  not look like it.
+- **At eight decisions**, engagement hit zero on the fifth. The last three decisions moved
+  nothing at all — a learner chose, and the numbers did not respond, which reads as the
+  activity having stopped working.
+- **On short scenarios the crisis screens could never appear.** They are shown once tension
+  passes a threshold, and starting from a calm opening a three-decision scenario could not
+  reach it. Those frames were generated, charged for, and could never be shown to anybody.
+
+The readings are now scaled to the length of the scenario they are in, against a
+five-decision reference. A scenario of five decisions is unchanged. Shorter and longer ones
+move by the same total across the run, so every decision counts for something and the last
+one still matters.
+
+The **score itself has not changed** — it was already worked out as a share of the decisions
+actually taken, so nought to a hundred has always meant the same thing at every length. This
+release brings the readings into line with it.
+
+An effect an author wrote as costing something never scales away to nothing, and never
+changes direction.
+
+## [v2.1.0] - 2026-09-18
+
+### The opening screen tells you what you are walking into
+
+It carried a chip, a title, your role and the hook — four short things in a card sized to
+hold a scene, with most of it empty. Everything it now shows was already in the scenario and
+displayed nowhere:
+
+- **What you are working on** — the three readings, where they start, and **which direction
+  is the good one**. Tension reads the other way up, and until now the first time a learner
+  found that out was when one of the numbers dropped.
+- **Where** you are, **who** you will meet, and **how many decisions** are ahead.
+
+Nothing here is generated or charged for. It is the scenario describing itself.
+
+### The printed record is a record
+
+The print control gave the debrief deck and nothing else. It now carries:
+
+- **The learner's name and the date**, at the top
+- **The final readings** — these had been explicitly hidden for print, which took the one set
+  of numbers the record exists to carry off the page. A control is hidden on paper because
+  paper cannot be pressed; a scoreboard is not a control.
+- **What the learner was taught** — the opening principles. A record of what happened that
+  omits what was taught records half of it.
+
+### Checks
+
+1,892.
+
 ## [v2.0.1] - 2026-09-18
 
 Two faults a learner could see, both reported from a live site.

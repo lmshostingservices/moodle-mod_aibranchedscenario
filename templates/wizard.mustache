@@ -41,7 +41,7 @@
     * hasprinciples bool Whether principles are present
     * nodes array Nodes of the working copy
     * nodecount int Number of nodes
-    * decisionoptions array Decision count choices
+    * decisions int How many decisions every scenario contains
     * industries array Option list
     * settings array Option list
     * atmospheres array Option list
@@ -68,7 +68,7 @@
         "hasprinciples": false,
         "nodes": [],
         "nodecount": 0,
-        "decisionoptions": [{"value": 5, "selected": true}],
+        "decisions": 5,
         "industries": [{"key": "training", "label": "Training and assessment", "selected": true}],
         "settings": [{"key": "trainingroom", "label": "Training room", "selected": true}],
         "atmospheres": [{"key": "tension", "label": "Tension building", "selected": true}],
@@ -493,16 +493,13 @@
             <h3 class="aibs-h3">{{#str}} step:design, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:designlead, mod_aibranchedscenario {{/str}}</p>
 
-            <div class="aibs-field">
-                <label class="aibs-field-label" for="aibs-decisions">
-                    {{#str}} field:decisions, mod_aibranchedscenario {{/str}}</label>
-                <span class="aibs-field-hint">{{#str}} field:decisionshint, mod_aibranchedscenario {{/str}}</span>
-                <select class="aibs-select" id="aibs-decisions" data-field="decisions">
-                    {{#decisionoptions}}
-                        <option value="{{value}}" {{#selected}}selected{{/selected}}>{{value}}</option>
-                    {{/decisionoptions}}
-                </select>
-            </div>
+            {{! The decision count used to be chosen here, anywhere from three to eight.
+                It is fixed now, and the screen says so rather than leaving a teacher to
+                wonder where the control went. Every extra decision was another set of
+                options to write and another set of frames to pay for, and the debrief had
+                to cope with all of it. }}
+            <p class="aibs-field-note">
+                {{#str}} field:decisionsfixed, mod_aibranchedscenario, {{decisions}} {{/str}}</p>
 
             <div class="aibs-field">
                 <span class="aibs-field-label" id="aibs-tone-label">

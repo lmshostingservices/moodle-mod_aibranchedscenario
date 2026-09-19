@@ -469,35 +469,22 @@ class media_manager {
         // The debrief was read, not listened to - a decision taken in the player and never
         // stated anywhere a teacher could see it. A learner who turned narration on heard
         // every screen of the scenario and then nothing at all for the half of the product
-        // that explains what just happened. These screens are the same for every attempt,
-        // so one clip each covers them.
+        // that explains what just happened.
+        //
+        // It used to be four families of clips for four pages of closing advice. Those
+        // pages are gone. What the debrief reads now is the outcome note on each option of
+        // each decision - the paragraph saying where that option leads and why - so the
+        // clip for an option is keyed to the option itself and the slide can read them in
+        // the order it shows them.
         if ($wantsaudio) {
-            $debrief = (array)($definition['debrief'] ?? []);
-            // The three list pages are read one item at a time, so each item has a clip of
-            // its own rather than the page having a single recording of the whole list. The
-            // page can then pace itself: a card arrives, the picture behind it changes, the
-            // clip for THAT item plays with the card marked, and the next arrives when it
-            // finishes. One clip for five items can only be played at a list already
-            // entirely on screen, which is a wall of text with a voice over it.
-            $scripted = [
-                'lesson'   => array_values((array)($debrief['whatmattered'] ?? [])),
-                'critical' => array_values((array)($debrief['criticaldecisions'] ?? [])),
-                'practice' => array_values((array)($debrief['practice'] ?? [])),
-                // A takeaway is a heading and a body, so the clip reads both: the heading
-                // alone is a label, and the body alone is advice with nothing to hang it on.
-                'takeaway' => array_values(array_map(
-                    static function ($takeaway) {
-                        return trim(trim((string)($takeaway['heading'] ?? ''), " .") . '. '
-                            . (string)($takeaway['body'] ?? ''));
-                    },
-                    (array)($definition['takeaways'] ?? [])
-                )),
-            ];
-            $bucket = 0;
-            foreach ($scripted as $name => $items) {
-                $bucket++;
-                foreach ($items as $position => $item) {
-                    $text = trim((string)$item);
+            $slot = 0;
+            foreach ((array)($definition['nodes'] ?? []) as $node) {
+                if (($node['type'] ?? '') !== 'decision') {
+                    continue;
+                }
+                foreach ((array)($node['choices'] ?? []) as $choice) {
+                    $slot++;
+                    $text = trim((string)($choice['outcomenote'] ?? ''));
                     if ($text === '') {
                         continue;
                     }
@@ -507,39 +494,12 @@ class media_manager {
                         $text,
                         $scenario->scenariolang,
                         $voice,
-                        self::DEBRIEF_ITEMID_BASE + ($bucket * 20) + $position,
-                        // The same key as the picture for this entry, so one stem finds
-                        // the words, the picture and the voice for a single idea.
-                        self::debrief_key($name, $definition, $position)
+                        self::DEBRIEF_ITEMID_BASE + $slot,
+                        self::outcome_key((string)($choice['id'] ?? ''))
                     );
                     if ($made) {
                         $counts['narrations']++;
                     }
-                }
-            }
-
-            $sections = [
-                'whatmattered' => self::lines_text($debrief['whatmattered'] ?? []),
-                'practice'     => self::lines_text($debrief['practice'] ?? []),
-                'takeaways'    => self::takeaways_text($definition['takeaways'] ?? []),
-            ];
-            $slot = 0;
-            foreach ($sections as $name => $text) {
-                $slot++;
-                if (trim($text) === '') {
-                    continue;
-                }
-                $counts['narrationswanted']++;
-                $made = $this->generate_section_narration(
-                    $provider,
-                    $text,
-                    $scenario->scenariolang,
-                    $voice,
-                    self::DEBRIEF_ITEMID_BASE + $slot,
-                    'debrief_' . $name
-                );
-                if ($made) {
-                    $counts['narrations']++;
                 }
             }
         }
@@ -593,87 +553,18 @@ class media_manager {
             }
         }
 
-        // Every page of the debrief used to redraw the SAME picture - whichever frame the
-        // scenario opened on - so the lessons, the practice points and the takeaways were
-        // all illustrated by a photograph of a room nobody was talking about any more. A
-        // picture that does not reflect the words beside it is decoration, and the honest
-        // fix is not to remove it but to draw the right one: each of these pages gets a
-        // frame briefed from its own text, through the same prompt builder every scene
-        // uses, so it sits in the scenario's own world rather than beside it.
-        // ONE PICTURE PER DEBRIEF ENTRY, NOT PER PAGE.
+        // THE DEBRIEF DRAWS NOTHING OF ITS OWN ANY MORE.
         //
-        // Each page used to get a single frame briefed from the whole page's text, so a
-        // "Lessons learnt" page with three lessons on it showed one photograph for all
-        // three - and, because the brief was the three lessons run together, a photograph
-        // of nothing in particular. The entries are what a learner reads one at a time;
-        // the page is only the container they arrive in.
+        // It used to commission a frame for every entry on four pages of closing advice -
+        // lessons learnt, critical decisions, practice points, takeaways - which at the
+        // contract's ceiling was thirty-two pictures for the last two minutes of the
+        // activity, all of them illustrating a sentence rather than a moment.
         //
-        // The keys match the NARRATION keys already generated above, item for item:
-        // debrief_lesson_0 is the picture for the clip debrief_lesson_0 reads. So the
-        // picture, the words and the voice for one idea travel together and can be looked
-        // up by one stem rather than reconciled by position at play time.
-        //
-        // The debrief now carries one entry per principle - see content_standard's
-        // debriefcount rule and quality_review::debrief_warnings - so lesson 1 is about
-        // principle 1, takeaway 1 is about principle 1, and the pictures follow the same
-        // spine. The principle's own title is passed into the brief so the frame is about
-        // the idea rather than about a sentence lifted out of context.
-        if ($wantsimages) {
-            $debrief = (array)($definition['debrief'] ?? []);
-            $principles = array_values((array)($definition['principles'] ?? []));
-            $entries = [
-                'lesson'   => array_values((array)($debrief['whatmattered'] ?? [])),
-                'critical' => array_values((array)($debrief['criticaldecisions'] ?? [])),
-                'practice' => array_values((array)($debrief['practice'] ?? [])),
-                'takeaway' => array_values(array_map(
-                    static function ($takeaway) {
-                        return trim(trim((string)($takeaway['heading'] ?? ''), " .") . '. '
-                            . (string)($takeaway['body'] ?? ''));
-                    },
-                    (array)($definition['takeaways'] ?? [])
-                )),
-            ];
-            $headings = [
-                'lesson'   => get_string('whatmattered', 'mod_aibranchedscenario'),
-                'critical' => get_string('decisionsthatchanged', 'mod_aibranchedscenario'),
-                'practice' => get_string('applyitinpractice', 'mod_aibranchedscenario'),
-                'takeaway' => get_string('takeaways', 'mod_aibranchedscenario'),
-            ];
-            $bucket = 0;
-            foreach ($entries as $name => $items) {
-                $bucket++;
-                foreach ($items as $position => $item) {
-                    $text = trim((string)$item);
-                    if ($text === '') {
-                        continue;
-                    }
-                    // The principle this entry closes the loop on, when the counts line up.
-                    // Where they do not - a short debrief, which quality_review reports -
-                    // the entry still gets its own frame, briefed from its own words.
-                    $principle = $principles[$position] ?? [];
-                    $title = trim((string)($principle['title'] ?? '')) !== ''
-                        ? (string)$principle['title']
-                        : $headings[$name];
-                    if ($this->wanted(self::debrief_key($name, $definition, $position))) {
-                            $counts['imageswanted']++;
-                    }
-                    $made = $this->generate_scene(
-                        $provider,
-                        $definition,
-                        [
-                            'id'        => self::debrief_key($name, $definition, $position),
-                            'title'     => $title,
-                            'situation' => $text,
-                        ],
-                        $style,
-                        self::DEBRIEF_ITEMID_BASE + ($bucket * 20) + $position
-                    );
-                    if ($made) {
-                        $counts['images']++;
-                    }
-                }
-            }
-        }
+        // Those pages are gone. Each decision now gets one slide, and the picture on it is
+        // the reaction frame already drawn for the option the learner actually took - a
+        // face that has just received the consequence, which is the most relevant image the
+        // scenario owns for that slide and one it has already paid for. Nothing new is
+        // commissioned, and thirty-two frames come off the bill.
 
         // THE OPENING GETS AN ESTABLISHING FRAME OF ITS OWN.
         //
@@ -718,6 +609,36 @@ class media_manager {
     }
 
     /**
+     * The key under which one option's outcome note is recorded.
+     *
+     * THE KEY CONTRACT.
+     *
+     * Until v1.81.0 images were filenames, and a filename is not a link. A key named a
+     * screen rather than an idea, so a picture could not follow its idea from the slide
+     * that taught it to the page that looked back at it - and nothing knew how many
+     * pictures a scenario was supposed to have. "You are four pictures short" was an
+     * unanswerable question. Everything is keyed by what it is about now:
+     *
+     *   opening                  the place, before anyone has done anything
+     *   lesson_<principlekey>    where the idea is taught
+     *   <nodeid>                 the decision that tests it
+     *   <nodeid>_after_<signal>  the reaction, per outcome the node can produce
+     *   <nodeid>_crisis          the escalated variant
+     *   <choiceid>               the consequence, read aloud
+     *   record_<choiceid>        the same choice read again on its record
+     *   outcome_<choiceid>       the outcome note, read aloud on the debrief slide
+     *
+     * The debrief draws no pictures of its own. Its slides show the reaction frame
+     * belonging to the option the learner took, which the scenario has already paid for.
+     *
+     * @param string $choiceid The choice this note belongs to.
+     * @return string
+     */
+    public static function outcome_key(string $choiceid): string {
+        return 'outcome_' . $choiceid;
+    }
+
+    /**
      * Every image key a definition SHOULD have, and what each one illustrates.
      *
      * THE MAP.
@@ -728,50 +649,7 @@ class media_manager {
      * many pictures a scenario was supposed to have. "You are four pictures short" was an
      * unanswerable question.
      *
-     * This is the contract. Everything derived from a principle carries that principle's
-     * position, so lesson 1, decision 1 and takeaway 1 belong together by construction
-     * rather than by something counting them into the same slot and hoping:
-     *
-     *   opening                  the place, before anyone has done anything
-     *   lesson_<principlekey>    where the idea is taught
-     *   <nodeid>                 the decision that tests it
-     *   <nodeid>_after_<signal>  the reaction, per outcome the node can produce
-     *   <nodeid>_crisis          the escalated variant
-     *   debrief_lesson_<n>       lessons learnt, entry n
-     *   debrief_critical_<n>     critical decisions, entry n
-     *   debrief_practice_<n>     how to apply this, entry n
-     *   debrief_takeaway_<n>     key takeaways, entry n
-     *
-     * The debrief keys match the NARRATION keys exactly, so one stem finds the picture, the
-     * words and the voice for a single idea.
-     *
-     * @param array $definition A validated definition.
-     * @return array Key to a short human description of what it illustrates.
-     */
-    public static function debrief_key(string $family, array $definition, int $position): string {
-        $principles = array_values((array)($definition['principles'] ?? []));
-        $principle = $principles[$position] ?? null;
-        // THE PRINCIPLE ID IS THE SPINE.
-        //
-        // These were positional - debrief_lesson_0 - which is "something counted them into
-        // the same slot and hoped", the exact phrase the plan used to describe what was
-        // wrong before. With the id in the key, lesson 1 and takeaway 1 belong to principle
-        // p1 by construction, and reordering the principles moves their pictures with them
-        // instead of silently reassigning every one.
-        //
-        // The position remains the fallback for the entries a short or long debrief leaves
-        // without a principle - those are reported by quality_review, and a key that cannot
-        // be built is worse than one built from a position.
-        if (is_array($principle) && trim((string)($principle['id'] ?? '')) !== '') {
-            return 'debrief_' . $family . '_' . self::principle_key($principle, $position + 1);
-        }
-        return 'debrief_' . $family . '_' . $position;
-    }
-
-    /**
-     * Every image key a definition SHOULD have, and what each one illustrates.
-     *
-     * See debrief_key() above for how a debrief entry's key is built.
+     * See outcome_key() above for the full key contract.
      *
      * @param array $definition A validated definition.
      * @return array Key to a short human description of what it illustrates.
@@ -830,32 +708,9 @@ class media_manager {
             }
         }
 
-        $debrief = (array)($definition['debrief'] ?? []);
-        $entries = [
-            'lesson'   => array_values((array)($debrief['whatmattered'] ?? [])),
-            'critical' => array_values((array)($debrief['criticaldecisions'] ?? [])),
-            'practice' => array_values((array)($debrief['practice'] ?? [])),
-            'takeaway' => array_values(array_map(
-                static function ($takeaway) {
-                    return trim(trim((string)($takeaway['heading'] ?? ''), " .") . '. '
-                        . (string)($takeaway['body'] ?? ''));
-                },
-                (array)($definition['takeaways'] ?? [])
-            )),
-        ];
-        foreach ($entries as $name => $items) {
-            foreach ($items as $position => $item) {
-                if (trim((string)$item) === '') {
-                    continue;
-                }
-                $map[self::debrief_key($name, $definition, $position)] = get_string(
-                    'map:debrief' . $name,
-                    'mod_aibranchedscenario',
-                    $position + 1
-                );
-            }
-        }
-
+        // No debrief entries. The debrief's five slides show the reaction frame of the
+        // option the learner took, which is already in this map under its node, so a
+        // scenario is never reported as short of a picture the debrief will not draw.
         return $map;
     }
 
@@ -1301,42 +1156,6 @@ class media_manager {
     }
 
     /**
-     * Join a list of debrief lines into one piece of narration.
-     *
-     * @param array $lines Plain strings.
-     * @return string
-     */
-    public static function lines_text(array $lines): string {
-        $clean = [];
-        foreach ($lines as $line) {
-            $line = trim((string)$line);
-            if ($line !== '') {
-                $clean[] = rtrim($line, '.') . '.';
-            }
-        }
-        return implode(' ', $clean);
-    }
-
-    /**
-     * Join the takeaways into one piece of narration, heading then body.
-     *
-     * @param array $takeaways Each with a heading and a body.
-     * @return string
-     */
-    public static function takeaways_text(array $takeaways): string {
-        $parts = [];
-        foreach ($takeaways as $takeaway) {
-            $heading = trim((string)($takeaway['heading'] ?? ''));
-            $body = trim((string)($takeaway['body'] ?? ''));
-            $line = trim($heading === '' ? $body : rtrim($heading, '.') . '. ' . $body);
-            if ($line !== '') {
-                $parts[] = $line;
-            }
-        }
-        return implode(' ', $parts);
-    }
-
-    /**
      * Narrate one screen of the debrief.
      *
      * @param provider $provider The generation provider.
@@ -1609,32 +1428,17 @@ class media_manager {
             }
         }
 
-        $debrief = (array)($definition['debrief'] ?? []);
-        // The three list pages and the takeaways are read an item at a time.
-        $items = array_merge(
-            array_values((array)($debrief['whatmattered'] ?? [])),
-            array_values((array)($debrief['criticaldecisions'] ?? [])),
-            array_values((array)($debrief['practice'] ?? [])),
-            array_values((array)($definition['takeaways'] ?? []))
-        );
-        foreach ($items as $item) {
-            $text = is_array($item)
-                ? trim(trim((string)($item['heading'] ?? ''), " .") . '. ' . (string)($item['body'] ?? ''))
-                : trim((string)$item);
-            if ($text !== '') {
-                $count++;
+        // The debrief reads one clip per option: the outcome note saying where that option
+        // leads. It used to be four lists of closing advice read an item at a time plus a
+        // clip for each whole page, which was more recorded advice than recorded story.
+        foreach ((array)($definition['nodes'] ?? []) as $node) {
+            if (($node['type'] ?? '') !== 'decision') {
+                continue;
             }
-        }
-
-        // And one clip for each whole section that has anything in it.
-        $sections = [
-            self::lines_text($debrief['whatmattered'] ?? []),
-            self::lines_text($debrief['practice'] ?? []),
-            self::takeaways_text($definition['takeaways'] ?? []),
-        ];
-        foreach ($sections as $text) {
-            if (trim($text) !== '') {
-                $count++;
+            foreach ((array)($node['choices'] ?? []) as $choice) {
+                if (trim((string)($choice['outcomenote'] ?? '')) !== '') {
+                    $count++;
+                }
             }
         }
 

@@ -115,25 +115,43 @@ class content_standard {
                     . 'taught before the scenario starts, so they are the difference between '
                     . 'a learner who knows the principle and one who can use it.',
             ],
-            // Watched to fail: a scenario that taught three principles closed with two
-            // lessons learnt, two critical decisions and two takeaways, so a third of what
-            // the learner was taught was never looked back at. Nothing asked for a count,
-            // so the model chose one, and two is the cheapest number that still reads as a
-            // list.
-            'debriefcount' => [
-                'short' => 'The debrief carries one entry per principle - the same number of '
-                    . 'lessons learnt, critical decisions and takeaways as there are '
-                    . 'principles, never fewer.',
-                'long'  => '- The debrief closes the loop on what was taught, so it carries '
-                    . 'ONE ENTRY PER PRINCIPLE and never fewer. Three principles means three '
-                    . 'lessons learnt, three critical decisions, three practice points and '
-                    . 'three takeaways. Each entry answers its own principle in the same '
-                    . 'order the principles were taught, so lesson one is about principle '
-                    . 'one, takeaway one is about principle one, and a learner can follow a '
-                    . 'single idea from the slide that taught it, through the decision that '
-                    . 'tested it, to the takeaway that names it. Do not merge two principles '
-                    . 'into one entry and do not drop the principle that was hardest to '
-                    . 'write about - that is usually the one worth keeping.',
+            // The debrief used to be four closing lists, and this rule counted them against
+            // the principles taught. The lists are gone: the debrief is now one slide per
+            // decision showing every option with the paragraph saying where it leads, so
+            // what has to be true is that those three paragraphs are three DIFFERENT
+            // outcomes. Three that say the same thing produce a slide that looks complete
+            // and teaches nothing, which is the same failure in its new shape.
+            'outcomespread' => [
+                'short' => 'The three outcome notes on a decision describe three different '
+                    . 'outcomes, one clearly the best available and one clearly the worst.',
+                'long'  => '- Every option carries an "outcomenote", and the learner is shown '
+                    . 'all three side by side after they finish. They must read as three '
+                    . 'different futures: one option is the best available and the note says '
+                    . 'why, one costs the most and the note says what it costs, and the '
+                    . 'middle one is the plausible compromise with the part it leaves undone '
+                    . 'named. Write the cost in terms of the people in the room - what they '
+                    . 'stop bringing you, what they decide alone next time - not as a verdict '
+                    . 'on the learner. Do not write the same sentiment three times and do not '
+                    . 'restate the option itself: the paragraph exists to say what taking it '
+                    . 'leads to, which the option does not.',
+            ],
+            // Watched to fail twice, once for each cause. A total failure has to LOOK like
+            // one: the score already says nought, and the readings beside it have to agree.
+            // When a teacher could pick the length, three decisions of effects written for
+            // five left engagement at 14. The length is fixed now, and the same symptom
+            // arrives from effects written too small - five decisions at minus five ends a
+            // total failure at 25.
+            'effectrange' => [
+                'short' => 'Effects are large enough that five consistently poor choices '
+                    . 'take a reading all the way to the end of its scale.',
+                'long'  => '- Size the "effects" so the readings can actually reach their '
+                    . 'ends. They start near the middle and there are exactly five '
+                    . 'decisions, so a learner taking the worst option every time must '
+                    . 'finish with engagement and trust at nought and tension at a hundred. '
+                    . 'That means the poor options carry effects around 10 to 20, not 3 to '
+                    . '5. A run in which the learner got nothing right scores 0% - if the '
+                    . 'readings beside that score still sit near the middle, the screen is '
+                    . 'telling them two different things about the same run.',
             ],
             'cast' => [
                 'short' => 'Name the same cast in every scene; no unnamed stand-ins.',
@@ -242,8 +260,10 @@ class content_standard {
                     . 'only to be corrected.',
             ],
             'debrief' => [
-                'short' => 'The debrief names what mattered rather than repeating the story.',
-                'long'  => '- The debrief names what mattered rather than repeating the story.',
+                'short' => 'An outcome note names what mattered rather than repeating the story.',
+                'long'  => '- An outcome note names what mattered rather than repeating the '
+                    . 'story. The learner has just watched what happened; the paragraph is '
+                    . 'for what it cost and why.',
             ],
             'concrete' => [
                 'short' => 'Every principle, consequence and takeaway names a behaviour, a '

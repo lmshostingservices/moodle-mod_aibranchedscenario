@@ -857,5 +857,39 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091901, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091902) {
+        // Release 2.1.0 changes no schema. The opening screen now tells a learner what they
+        // are walking into - where, who, how many decisions, and what the three readings in
+        // the bar are for - and the printed record carries the learner's name, the date, the
+        // final readings and what they were taught, none of which it used to.
+        upgrade_mod_savepoint(true, 2026091902, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091903) {
+        // Release 2.2.0 changes no schema. The three readings are now scaled to the length
+        // of the scenario they sit in. Written at one size whatever the teacher asked for,
+        // they made a three-decision scenario understate a total failure - engagement
+        // stopped at 14 - while an eight-decision one bottomed out on the fifth and left
+        // the last three decisions moving nothing. The crisis screens were unreachable on a
+        // short scenario, so those frames were generated, charged for and never shown. The
+        // score is untouched: it already normalised by the decisions actually taken.
+        upgrade_mod_savepoint(true, 2026091903, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091904) {
+        // Release 2.3.0 changes no schema, and changes the contract more than any release
+        // since 1.0. Every scenario is now exactly five decisions long and every decision
+        // offers exactly three options - the teacher no longer chooses either - and the
+        // four closing pages of the debrief (lessons learnt, critical decisions, practice
+        // points, takeaways) are replaced by one slide per decision showing every option
+        // and what taking it would have cost.
+        //
+        // Scenarios published before this keep playing: the definition is read from the
+        // revision it was published against, and nothing in the player requires the new
+        // field. Their debrief slides will have no paragraphs under the options, because
+        // there were none to write. Regenerating the scenario fills them in.
+        upgrade_mod_savepoint(true, 2026091904, 'aibranchedscenario');
+    }
+
     return true;
 }

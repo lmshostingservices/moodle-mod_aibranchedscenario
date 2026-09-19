@@ -143,14 +143,24 @@ class mod_aibranchedscenario_generator extends testing_module_generator {
                         'bottleneck',
                         3,
                         'The line lead asks you directly what you decided.',
-                        'final',
-                        'final'
+                        'handover',
+                        'handover'
                     ),
                     ['bottleneck' => true, 'title' => 'The line lead asks']
                 ),
+                // Added in v2.3.0. The graph used to run start, pathone, bottleneck, final -
+                // four decisions on the longest path - and every scenario is exactly
+                // schema::DECISIONS long now, so a fixture one short does not validate.
+                self::sample_decision(
+                    'handover',
+                    4,
+                    'The log is open and the night shift lead is waiting for the summary.',
+                    'final',
+                    'final'
+                ),
                 self::sample_decision(
                     'final',
-                    4,
+                    5,
                     'The night shift supervisor arrives for handover.',
                     '__auto__',
                     '__auto__'
@@ -158,7 +168,7 @@ class mod_aibranchedscenario_generator extends testing_module_generator {
                 [
                     'id'      => 'outcomestrong',
                     'type'    => 'outcome',
-                    'stage'   => 5,
+                    'stage'   => 6,
                     'title'   => 'The fault is fixed before anyone is hurt',
                     'outcome' => 'strong',
                     'situation' => 'Maintenance isolates the packer within the hour.',
@@ -167,25 +177,15 @@ class mod_aibranchedscenario_generator extends testing_module_generator {
                 [
                     'id'      => 'outcomerisk',
                     'type'    => 'outcome',
-                    'stage'   => 5,
+                    'stage'   => 6,
                     'title'   => 'The fault runs into the night shift',
                     'outcome' => 'highrisk',
                     'situation' => 'The packer is still running when the night shift starts.',
                     'summary' => 'Nothing was written down, and the next crew inherited the risk.',
                 ],
             ],
-            'debrief'    => [
-                'whatmattered'      => ['Naming the hazard out loud changed what the team did next.'],
-                'criticaldecisions' => ['Whether you stopped the line before handover.'],
-                'practice'          => ['Log a fault the moment you see it.'],
-                'sourceconnection'  => 'The plant safety procedure requires faults to be logged on sight.',
-            ],
-            'takeaways'  => [
-                [
-                    'heading' => 'Write it down',
-                    'body'    => 'A verbal warning does not survive a shift change.',
-                ],
-            ],
+            // No debrief block and no takeaways. Those four closing lists were replaced in
+            // v2.3.0 by one slide per decision, built from each option's outcomenote.
         ];
     }
 
@@ -202,7 +202,16 @@ class mod_aibranchedscenario_generator extends testing_module_generator {
     }
 
     /**
-     * Build a two-choice decision node where A is always the best answer.
+     * Build a three-option decision node where A is always the best answer.
+     *
+     * Two options until v2.3.0. Every decision offers exactly schema::CHOICES now, and the
+     * debrief gives each decision a slide laying out where all three would have led - so a
+     * fixture missing the middle one is a fixture that cannot exercise the screen the
+     * debrief is made of.
+     *
+     * The effects are sized so the readings can reach their ends across the five decisions:
+     * a run of B choices takes engagement and trust to nought and tension to a hundred,
+     * which is what quality_review::reading_range_warnings() exists to insist on.
      *
      * @param string $id Node identifier.
      * @param int $stage Narrative stage.
@@ -236,7 +245,26 @@ class mod_aibranchedscenario_generator extends testing_module_generator {
                     'tags'        => ['escalates-appropriately'],
                     'effects'     => ['engagement' => 40, 'trust' => 40, 'tension' => -40],
                     'skills'      => ['presence' => 2, 'adaptability' => 2, 'empathy' => 2, 'clarity' => 2],
+                    'outcomenote' => 'The best of the three, and the only one that costs '
+                        . 'anything now: the line stops and somebody has to explain why. '
+                        . 'Sam sees that raising a fault gets it dealt with rather than '
+                        . 'noted, which is what makes him raise the next one.',
                     'next'        => $atarget,
+                ],
+                [
+                    'id'          => $id . '_c',
+                    'text'        => 'Mention it at handover and carry on for now.',
+                    'signal'      => 'neutral',
+                    'consequence' => 'The shift runs out and the handover is rushed.',
+                    'feedback'    => 'A plan to say something later is not the same as saying it.',
+                    'principleid' => 'speakup',
+                    'effects'     => ['engagement' => 0, 'trust' => 0, 'tension' => 5],
+                    'skills'      => ['presence' => 0, 'adaptability' => 1, 'empathy' => 0, 'clarity' => 0],
+                    'outcomenote' => 'The plausible middle, and the one that quietly costs '
+                        . 'the most time. Nothing is refused and nothing is done, so the '
+                        . 'decision lands on whoever is still here at six - and by then the '
+                        . 'only person who saw the fault has gone home.',
+                    'next'        => $btarget,
                 ],
                 [
                     'id'          => $id . '_b',
@@ -248,6 +276,10 @@ class mod_aibranchedscenario_generator extends testing_module_generator {
                     'tags'        => ['undermines-trust'],
                     'effects'     => ['engagement' => -40, 'trust' => -40, 'tension' => 40],
                     'skills'      => ['presence' => -2, 'adaptability' => -2, 'empathy' => -2, 'clarity' => -2],
+                    'outcomenote' => 'The worst of the three, and the one that feels like '
+                        . 'trusting the team. The risk does not wait for a shift change: it '
+                        . 'is handed to people who never saw it happen and have no reason to '
+                        . 'look for it.',
                     'next'        => $btarget,
                 ],
             ],

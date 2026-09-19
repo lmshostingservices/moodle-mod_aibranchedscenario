@@ -232,7 +232,7 @@ class image_prompt {
             : '';
 
         $body = self::opener($style) . ' '
-            . rtrim(self::reaction_feel($signal), '.') . '. '
+            . rtrim(self::reaction_feel($signal, (string)($node['id'] ?? '')), '.') . '. '
             . 'Closer than a room shot: head and shoulders, or head and hands, so the '
             . 'reaction on their face is the subject of the picture. '
             . 'The setting is still ' . rtrim($setting, '.') . ', recognisably the same '
@@ -267,20 +267,62 @@ class image_prompt {
      * Behaviour a camera can see, never an emotion word on its own: "relieved" is a label,
      * "the breath they had been holding going out of them" is a photograph.
      *
+     * VARIED, NOT ONE SENTENCE PER BAND.
+     *
+     * There used to be exactly three of these, so every positive reaction in the product
+     * was briefed with the same words and came back as the same picture: the same small
+     * nod, the same set jaw, five times in a row. A set of frames a learner cannot tell
+     * apart is a set they remember none of.
+     *
+     * Each band now has three readings at different strengths, picked by the node so one
+     * scenario's five reactions spread across them rather than landing on one. They are
+     * pitched harder than what they replace: the old negative was somebody absorbing bad
+     * news politely, which is the register everything in the set already had. Disappointment
+     * that shows, and strain somebody is failing to hide, are what make a frame stick.
+     *
      * @param string $signal positive, neutral or negative.
+     * @param string $seed The node id, so one scenario's frames do not all read alike.
      * @return string
      */
-    protected static function reaction_feel(string $signal): string {
-        if ($signal === 'positive') {
-            return 'The moment something goes right: the tension going out of someone\'s '
-                . 'shoulders, a small nod, the beginning of relief rather than celebration';
-        }
-        if ($signal === 'negative') {
-            return 'The moment the cost lands on somebody: the face of a person taking in '
-                . 'news they did not want, jaw set, eyes down, absolutely still';
-        }
-        return 'The moment nothing is settled: a person left holding a question, mouth '
-            . 'half open as if about to say something and not saying it, unresolved';
+    protected static function reaction_feel(string $signal, string $seed = ''): string {
+        $readings = [
+            'positive' => [
+                'The moment something goes right: the breath they had been holding going '
+                    . 'out of them, shoulders dropping an inch, a small nod - relief, not '
+                    . 'celebration',
+                'The moment somebody is taken seriously: eye contact held a beat longer '
+                    . 'than it needs to be, the beginning of a smile that has some tiredness '
+                    . 'still in it, a hand coming off the back of a chair',
+                'The moment the pressure comes off: one person sitting back, the other '
+                    . 'still leaning in, both of them looking at the same thing on the table '
+                    . 'rather than at each other - the easing that follows a hard half hour',
+            ],
+            'negative' => [
+                'The moment the cost lands: the face of somebody taking in news they did '
+                    . 'not want, jaw tight, eyes down and away, absolutely still while they '
+                    . 'decide what to say',
+                'Plain disappointment, and no attempt to hide it: the look of somebody who '
+                    . 'expected better of this, mouth pressed shut, already half turned away, '
+                    . 'the conversation over before it finished',
+                'Strain somebody is failing to hide: colour high, a hand at the back of the '
+                    . 'neck, the other flat on the surface holding them steady, looking past '
+                    . 'the person in front of them at nothing',
+            ],
+            'neutral' => [
+                'The moment nothing is settled: a person left holding a question, mouth '
+                    . 'half open as if about to say something and not saying it',
+                'The moment somebody decides to let it go: a small shrug that is not '
+                    . 'agreement, eyebrows up and down once, reaching for something else to '
+                    . 'do with their hands',
+                'The moment it lands as neither: two people reading the same thing and '
+                    . 'arriving somewhere different, one frowning slightly, the other already '
+                    . 'looking at the door',
+            ],
+        ];
+        $band = $readings[$signal] ?? $readings['neutral'];
+        // Deterministic, so a regeneration of one frame does not change what the rest of
+        // the set was briefed with - and so a check can assert which reading a node gets.
+        return $band[abs(crc32($seed)) % count($band)];
     }
 
     /**
@@ -477,9 +519,17 @@ class image_prompt {
      * @return string
      */
     protected static function look(string $style): string {
-        $common = 'Natural expressions, diverse everyday workers. Landscape orientation, '
-            . 'clean composition with quiet space around the subject. Nobody posing for the '
-            . 'camera and nobody looking at it.';
+        // "Natural expressions" was the single flattest instruction in the brief, and it
+        // was on EVERY frame: a model reads it as "no expression in particular" and returns
+        // a set of people who all look mildly attentive. A scenario is about things going
+        // wrong, and a learner should be able to tell from the picture alone whether this
+        // one went well. What the frame needs is a readable emotional state, pitched at
+        // whatever the moment actually is.
+        $common = 'Diverse everyday workers, and every face carries a readable emotional '
+            . 'state that matches the moment - strain, disappointment, relief, impatience, '
+            . 'concentration - rather than a neutral attentive expression. Landscape '
+            . 'orientation, clean composition with quiet space around the subject. Nobody '
+            . 'posing for the camera and nobody looking at it.';
         $light = [
             'noir' => 'Hard directional light as the treatment describes, with every face '
                 . 'still clearly readable and no part of the subject lost in black.',
@@ -589,7 +639,7 @@ class image_prompt {
      */
     protected static function wants_prop(array $node): bool {
         $id = (string)($node['id'] ?? '');
-        if (strpos($id, 'lesson_') === 0 || strpos($id, 'debrief_') === 0) {
+        if (strpos($id, 'lesson_') === 0) {
             return false;
         }
         return (string)($node['type'] ?? '') !== 'outcome';
@@ -626,13 +676,6 @@ class image_prompt {
                 ? 'A worker doing this part of the job properly and without fuss'
                 : 'A worker doing this part of the job properly and without fuss, while a '
                     . 'workmate nearby sees them do it';
-        }
-        // A debrief page is a summary, not a moment in the story.
-        if (strpos((string)($node['id'] ?? ''), 'debrief_') === 0) {
-            return $alone
-                ? 'A worker at the end of the day, thinking the whole thing over calmly'
-                : 'Workers talking the whole thing over calmly afterwards, nothing urgent '
-                    . 'left between them';
         }
         if ((string)($node['type'] ?? '') === 'outcome') {
             $outcome = (string)($node['outcome'] ?? 'mixed');
@@ -1091,34 +1134,18 @@ class image_prompt {
             }
         }
 
-        // ONE PICTURE PER DEBRIEF ENTRY, not per page, since v1.81.0.
+        // THE DEBRIEF COMMISSIONS NOTHING.
         //
-        // Each of the four pages used to get one frame briefed from the whole page's text.
-        // The entries are what a learner reads one at a time, so each entry has its own
-        // frame, keyed to match the narration clip that reads it.
+        // It used to be one picture per entry across four closing pages - at the contract's
+        // ceiling, thirty-two frames for the last two minutes of the activity. Those pages
+        // are gone: each decision's slide shows the reaction frame for the option the
+        // learner took, which is already counted below under its node.
         //
-        // This estimate has now been wrong three separate times, always the same way: a
-        // picture was added and the count was not. That is why the harness compares this
-        // function against what a REAL run asks for rather than against itself - a mirror
-        // checked only against its own reflection is not a check.
-        $debrief = (array)($definition['debrief'] ?? []);
-        $entries = array_merge(
-            array_values((array)($debrief['whatmattered'] ?? [])),
-            array_values((array)($debrief['criticaldecisions'] ?? [])),
-            array_values((array)($debrief['practice'] ?? [])),
-            array_values(array_map(
-                static function ($takeaway) {
-                    return trim(trim((string)($takeaway['heading'] ?? ''), " .") . '. '
-                        . (string)($takeaway['body'] ?? ''));
-                },
-                (array)($definition['takeaways'] ?? [])
-            ))
-        );
-        foreach ($entries as $entry) {
-            if (trim((string)$entry) !== '') {
-                $count++;
-            }
-        }
+        // This estimate has been wrong three separate times, always the same way: a picture
+        // was added and the count was not. Removing a family is the same risk in reverse -
+        // a count that keeps charging for frames nothing makes. The harness compares this
+        // function against what a REAL run asks for rather than against itself, because a
+        // mirror checked only against its own reflection is not a check.
 
         // The opening establishing frame: the place before anyone has done anything. One
         // picture, and it removes the duplicate every learner saw in the first ten seconds.

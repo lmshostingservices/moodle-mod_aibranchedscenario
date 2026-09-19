@@ -132,8 +132,9 @@ final class scenario_manager_test extends \advanced_testcase {
         $first = scenario_manager::publish($this->scenario, (int)$this->teacher->id);
 
         $this->assertSame(1, (int)$first->revision);
-        $this->assertSame(7, (int)$first->nodecount);
-        $this->assertSame(32, (int)$first->maxskillscore);
+        $this->assertSame(8, (int)$first->nodecount);
+        // Five decisions on the longest path, four skills, two points each.
+        $this->assertSame(40, (int)$first->maxskillscore);
         $this->assertSame('indigo', $first->theme);
         $this->assertSame((int)$this->teacher->id, (int)$first->createdby);
 

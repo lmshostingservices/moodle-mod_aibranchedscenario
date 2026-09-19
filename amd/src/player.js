@@ -883,16 +883,6 @@ class Player {
                 'aibs-tone-warn': 'endverdict:mixed',
                 'aibs-tone-bad': 'endverdict:weak',
             }[endband.tone];
-            // The borrowing that used to live here is gone, and so are the four page-level
-            // image fields it consumed - no template ever referenced them. A debrief page
-            // with no picture of its own used to take the next unused frame from the
-            // scenario, walked once so no two pages got the same one. It was the most
-            // careful of the borrowing paths and still the same mistake: the picture beside
-            // "Lessons learnt" was whichever scene happened to be next in a list, and a page
-            // illustrated by a photograph of something else is illustrated by nothing.
-            //
-            // Each debrief card carries its own frame through the scripted lists, which is
-            // where the pictures actually belong.
             const context = Object.assign({}, response, {
                 outcomeclass: 'aibs-outcome-' + response.outcome,
                 endtone: endband.tone,
@@ -904,25 +894,6 @@ class Player {
                 endwarn: endband.tone === 'aibs-tone-warn',
                 endbad: endband.tone === 'aibs-tone-bad',
                 endverdict: this.strings[verdictkey] || '',
-                hassourceconnection: response.sourceconnectionparas.length > 0,
-                hascritical: response.criticaldecisions.length > 0,
-                haspractice: response.practice.length > 0,
-                // Numbered here rather than in the payload: the web service returns these
-                // as plain strings and other things read it, so the counting belongs to
-                // the screen that draws the numbers. Each list starts again at one.
-                whatmattered: this.numbered(response.whatmattered),
-                criticaldecisions: this.numbered(response.criticaldecisions),
-                practice: this.numbered(response.practice),
-                hastakeaways: response.takeaways.length > 0,
-                // Every screen is picture-left, including these - but for a long time every
-                // one of them borrowed the SAME frame, the one the scenario opened on. The
-                // picture is there so a page is remembered by it, and five pages carrying
-                // one photograph are remembered by none of them.
-                //
-                // A page uses the frame briefed from its own words. Where that frame does
-                // not exist - an older revision, or a generation that was refused - it
-                // takes the next unused scene from the scenario instead of falling back to
-                // the opening frame again, so no two pages in a row look alike.
                 // THE ENDING SHOWS THE ENDING, not the scenario's opening frame.
                 //
                 // This used to scrape the opening screen's picture straight out of the DOM,
@@ -944,17 +915,26 @@ class Player {
                         standing: this.strings[this.band(percent).word],
                     });
                 }),
-                // The debrief is a deck rather than one long page, so the decisions are
-                // handed over a page at a time. Two to a page: one reads as a lot of
-                // clicking, three puts the last one under the fold again.
-                journeypages: this.chunk(response.journey.map((entry) => Object.assign({}, entry, {
-                    signalclass: 'aibs-signal-' + entry.signal,
-                    hasfeedback: entry.feedbackparas.length > 0,
-                })), 2),
+                // ONE SLIDE PER DECISION.
+                //
+                // What used to be here were four pages of closing advice - lessons learnt,
+                // critical decisions, practice points, takeaways - plus a paged list of the
+                // decisions themselves. Five ways of saying the same thing, none of them
+                // tied to a choice the learner made.
+                //
+                // A slide now carries the decision: what they chose at the top, the
+                // reaction frame for that choice on the left, and every option that was
+                // open with the paragraph saying where it would have led. The lesson is the
+                // comparison, so it needs no page of its own.
+                slides: response.slides.map((slide) => Object.assign({}, slide, {
+                    hasimage: Boolean(slide.imageurl),
+                    options: slide.options.map((option, index) => Object.assign({}, option, {
+                        // Mustache cannot count, and the letter is the author's, not the
+                        // screen's: a slide numbers what it shows, in the order it shows it.
+                        number: index + 1,
+                    })),
+                })),
                 outcomeaudiourl: response.outcomeaudiourl || '',
-                whatmatteredaudiourl: response.whatmatteredaudiourl || '',
-                practiceaudiourl: response.practiceaudiourl || '',
-                takeawaysaudiourl: response.takeawaysaudiourl || '',
             });
             this.hideRegion(SELECTORS.node);
             this.hideRegion(SELECTORS.consequence);
@@ -979,35 +959,6 @@ class Player {
             this.setBusy(false);
         }
         return true;
-    }
-
-    /**
-     * Split a list into pages of a given size.
-     *
-     * @param {Array} items The list.
-     * @param {Number} size How many to a page.
-     * @returns {Array} One entry per page, each with first, last and its items.
-     */
-    chunk(items, size) {
-        const pages = [];
-        for (let start = 0; start < items.length; start += size) {
-            const slice = items.slice(start, start + size);
-            pages.push({
-                // The clip for a decision already exists - it is the one played on the
-                // consequence screen when the learner made that choice. The page plays the
-                // first of them, so the record of a decision has the voice the moment had.
-                // The page used to be handed ONE url - `.find()` on the first decision that
-                // had a clip - so a page holding two decisions read one of them and
-                // stopped. The clips travel on the cards instead, which fixes that and buys
-                // something else: the player knows which card each clip belongs to, so the
-                // card being read can say so on screen.
-                pageaudiourl: '',
-                first: start + 1,
-                last: start + slice.length,
-                decisions: slice,
-            });
-        }
-        return pages;
     }
 
     /**
@@ -1773,18 +1724,6 @@ class Player {
         within.querySelectorAll('[data-region="skillvalue"]').forEach((value, index) => {
             this.countUp(value, 0, parseInt(value.dataset.to, 10), index * stagger);
         });
-    }
-
-    /**
-     * Pair each line of a list with its position, one-based.
-     *
-     * Mustache cannot count, and these lists arrive as plain strings.
-     *
-     * @param {String[]} lines The list as the service returned it.
-     * @returns {Object[]} One entry per line, carrying its number and its text.
-     */
-    numbered(lines) {
-        return (lines || []).map((text, index) => ({number: index + 1, text: text}));
     }
 
     /**

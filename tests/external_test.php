@@ -18,6 +18,7 @@ namespace mod_aibranchedscenario;
 
 use core_external\external_api;
 use mod_aibranchedscenario\external\delete_attempt;
+use mod_aibranchedscenario\local\schema;
 use mod_aibranchedscenario\external\get_debrief;
 use mod_aibranchedscenario\external\publish_scenario;
 use mod_aibranchedscenario\external\queue_generation;
@@ -117,7 +118,7 @@ final class external_test extends \externallib_advanced_testcase {
         $this->assertSame(['engagement' => 50, 'trust' => 50, 'tension' => 30], $result['metrics']);
         $this->assertSame('start', $result['node']['id']);
         $this->assertSame('decision', $result['node']['type']);
-        $this->assertCount(2, $result['node']['choices']);
+        $this->assertCount(schema::CHOICES, $result['node']['choices']);
 
         // The player is never told where a choice leads or what it costs.
         foreach ($result['node']['choices'] as $choice) {
@@ -173,11 +174,31 @@ final class external_test extends \externallib_advanced_testcase {
         $this->assertSame($attemptid, $debrief['attemptid']);
         $this->assertSame('strong', $debrief['outcome']);
         $this->assertEqualsWithDelta(100.0, $debrief['score'], 0.001);
-        $this->assertSame(4, $debrief['decisions']);
-        $this->assertCount(4, $debrief['journey']);
+        $this->assertSame(schema::DECISIONS, $debrief['decisions']);
         $this->assertCount(4, $debrief['radar']);
-        $this->assertNotEmpty($debrief['whatmattered']);
-        $this->assertNotEmpty($debrief['takeaways']);
+
+        // ONE SLIDE PER DECISION, CARRYING EVERY OPTION.
+        //
+        // The payload used to return a journey list and four lists of closing advice. It
+        // returns slides: what was chosen, and where each option would have led.
+        $this->assertCount(schema::DECISIONS, $debrief['slides']);
+        foreach ($debrief['slides'] as $slide) {
+            $this->assertCount(schema::CHOICES, $slide['options']);
+            $chosen = array_values(array_filter(
+                $slide['options'],
+                static fn($option) => $option['chosen']
+            ));
+            $this->assertCount(1, $chosen);
+            $this->assertSame($slide['choicetext'], $chosen[0]['text']);
+            foreach ($slide['options'] as $option) {
+                $this->assertNotEmpty($option['noteparas']);
+            }
+        }
+        // The retired lists are gone from the wire, not merely unread by the template: a
+        // payload field with no reader is the next thing to drift.
+        $this->assertArrayNotHasKey('journey', $debrief);
+        $this->assertArrayNotHasKey('whatmattered', $debrief);
+        $this->assertArrayNotHasKey('takeaways', $debrief);
     }
 
     /**
@@ -269,7 +290,7 @@ final class external_test extends \externallib_advanced_testcase {
         $result = external_api::clean_returnvalue(publish_scenario::execute_returns(), $result);
 
         $this->assertSame(1, $result['revision']);
-        $this->assertSame(7, $result['nodecount']);
+        $this->assertSame(8, $result['nodecount']);
 
         $stored = $DB->get_record('aibranchedscenario', ['id' => $this->scenario->id], '*', MUST_EXIST);
         $this->assertSame('published', $stored->status);

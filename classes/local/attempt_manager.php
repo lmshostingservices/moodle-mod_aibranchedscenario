@@ -401,8 +401,25 @@ class attempt_manager {
             'tension'    => (int)$attempt->tension,
         ];
 
+        // The readings move by the effect as written, and the SCENARIO LENGTH IS WHAT MAKES
+        // THAT SAFE.
+        //
+        // For one release these were scaled. A teacher could pick anywhere from three
+        // decisions to eight while the service wrote its effects at one size, so the same
+        // numbers behaved like two different activities at the two ends of that range: at
+        // three decisions a learner who got everything wrong finished with engagement at
+        // 14 and a total failure never looked like one; at eight it hit the floor on the
+        // fifth and the last three decisions moved nothing. Scaling against a five-decision
+        // reference fixed it.
+        //
+        // The length is fixed at five now - see schema::DECISIONS - so that reference IS
+        // the length, the multiplier is always one, and the scaling is an identity function
+        // dressed as a safeguard. It is gone rather than kept: machinery whose interesting
+        // case can no longer occur is not a safety net, it is the next thing to be wrong
+        // about. The properties it existed to guarantee are checked directly instead.
         foreach (schema::metrics() as $metric) {
-            $attempt->{$metric} = max(0, min(100, (int)$attempt->{$metric} + (int)$choice['effects'][$metric]));
+            $attempt->{$metric} = max(0, min(100, (int)$attempt->{$metric}
+                + (int)$choice['effects'][$metric]));
         }
         foreach (schema::skills() as $skill) {
             $attempt->{$skill} = (int)$attempt->{$skill} + (int)$choice['skills'][$skill];
@@ -732,6 +749,76 @@ class attempt_manager {
             ];
         }
         return $journey;
+    }
+
+    /**
+     * One slide per decision: what was chosen, and where every option led.
+     *
+     * THE DEBRIEF, IN ONE SHAPE.
+     *
+     * It used to be four pages of closing advice - lessons learnt, critical decisions,
+     * practice points, takeaways - written independently of the scenario and of each
+     * other, each saying a version of the same thing, and none of them tied to a decision
+     * the learner had actually made. A learner finished a scenario and was handed a
+     * general essay about it.
+     *
+     * This is the replacement, and the shape is the point: one slide per decision, the
+     * choice they made at the top, and underneath it every option that was open to them
+     * with the paragraph saying where that one would have gone. The lesson is no longer a
+     * separate thing to be read after the story - it is the comparison between the road
+     * taken and the roads not taken, at the moment it applies.
+     *
+     * Built from the events, so a slide reflects what this learner did. The options come
+     * from the node, so a learner sees all schema::CHOICES of them whichever one they took.
+     *
+     * @param stdClass $attempt Attempt record.
+     * @return array One entry per decision, in the order they were taken.
+     */
+    public function build_decision_slides(stdClass $attempt): array {
+        $slides = [];
+        foreach (self::get_events((int)$attempt->id) as $event) {
+            $node = $this->get_node($event->nodeid);
+            if (!$node || count($node['choices']) < 2) {
+                // A beat has one way on: the learner pressed Continue, which is not a
+                // decision and does not earn a slide.
+                continue;
+            }
+            $options = [];
+            $chosen = null;
+            foreach ($node['choices'] as $choice) {
+                $ischosen = $choice['id'] === $event->choiceid;
+                if ($ischosen) {
+                    $chosen = $choice;
+                }
+                $options[] = [
+                    'choiceid'    => $choice['id'],
+                    'letter'      => $choice['letter'] ?? '',
+                    'text'        => $choice['text'],
+                    'signal'      => $choice['signal'],
+                    'outcomenote' => (string)($choice['outcomenote'] ?? ''),
+                    'chosen'      => $ischosen,
+                    'principle'   => $this->principle_title($choice['principleid']),
+                ];
+            }
+            if ($chosen === null) {
+                // The event names a choice this node no longer has, which happens when an
+                // attempt outlives the revision it was taken against. Skipped rather than
+                // shown with nothing marked: a slide that cannot say what was chosen is
+                // the one thing this screen exists to say.
+                continue;
+            }
+            $slides[] = [
+                'seq'        => count($slides) + 1,
+                'nodeid'     => $node['id'],
+                'nodetitle'  => $node['title'] !== '' ? $node['title'] : $node['id'],
+                'challenge'  => (string)($node['challenge'] ?? ''),
+                'choiceid'   => $chosen['id'],
+                'choicetext' => $chosen['text'],
+                'signal'     => $chosen['signal'],
+                'options'    => $options,
+            ];
+        }
+        return $slides;
     }
 
     /**

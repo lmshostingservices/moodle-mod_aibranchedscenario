@@ -261,65 +261,91 @@ class helper {
     }
 
     /**
-     * One list page's items, each carrying the clip that reads it and the frame behind it.
+     * Dress one decision's slide for the debrief: the picture, the paragraphs, the clips.
      *
-     * @param mixed $items The list as the debrief holds it.
-     * @param string $key The narration key prefix for this list.
-     * @param array $narration Node key to narration URL.
-     * @param array $scene Node key to scene URL.
+     * The picture is the REACTION frame for the option the learner took - the face that
+     * has just received the consequence - not the decision's own establishing shot. That
+     * is the most relevant image the scenario owns for this slide, and one it has already
+     * paid for, which is why the debrief commissions nothing of its own any more. Where a
+     * revision predates the reaction frames, the node's own scene stands in; where there
+     * is neither, the slide renders without a picture rather than with a borrowed one.
+     *
+     * @param array $slide One entry from attempt_manager::build_decision_slides().
+     * @param array $narration Narration urls by key.
+     * @param array $scene Scene image urls by key.
      * @return array
      */
-    public static function scripted_items(
-        $items,
-        string $key,
-        array $narration,
-        array $scene,
-        array $definition = []
-    ): array {
-        $out = [];
-        foreach (array_values((array)$items) as $index => $text) {
-            // ITS OWN PICTURE, OR NONE.
-            //
-            // Every entry used to borrow one of the scenario's scene photographs, offset by
-            // the length of the list's name so the four lists did not all start from the
-            // same frame. That was an arithmetic trick standing in for a link: the picture
-            // beside "Clear communication and trust-building were essential" was whichever
-            // scene happened to land on that index, and two lists could still collide.
-            //
-            // Each entry has a frame briefed from its own words, stored under the same key
-            // stem as the clip that reads it, and that stem carries the PRINCIPLE ID -
-            // debrief_lesson_p1 - so lesson 1 belongs to principle 1 by construction rather
-            // than by position. The rotation is gone rather than kept as a fallback: a
-            // borrowed picture is not a cheaper version of the right one, it is the
-            // repetition fault arriving quietly, and it is invisible to every check because
-            // it still resolves to a picture.
-            $stem = media_manager::debrief_key($key, $definition, $index);
-            $frame = (string)($scene[$stem] ?? '');
-            $out[] = [
-                'text'     => (string)$text,
-                'audiourl' => (string)($narration[$stem] ?? ''),
-                'imageurl' => $frame,
-                'number'   => $index + 1,
+    public static function decision_slide(array $slide, array $narration, array $scene): array {
+        $reaction = media_manager::reaction_key((string)$slide['nodeid'], (string)$slide['signal']);
+        $options = [];
+        foreach ($slide['options'] as $option) {
+            $options[] = [
+                'letter'     => (string)$option['letter'],
+                'text'       => (string)$option['text'],
+                'signal'     => (string)$option['signal'],
+                'signalclass' => 'aibs-signal-' . (string)$option['signal'],
+                'chosen'     => (bool)$option['chosen'],
+                'principle'  => (string)$option['principle'],
+                'noteparas'  => self::paragraph_list((string)$option['outcomenote']),
+                'audiourl'   => (string)($narration[media_manager::outcome_key((string)$option['choiceid'])] ?? ''),
             ];
         }
-        return $out;
+        // The principle this decision tested, taken from the option the learner actually
+        // took. Every option at a decision normally carries the same one - it is the idea
+        // the decision exists to test - so reading it off the chosen option gives the
+        // slide its heading without needing a field of its own on the node.
+        $principle = '';
+        foreach ($slide['options'] as $option) {
+            if (!empty($option['chosen'])) {
+                $principle = (string)$option['principle'];
+            }
+        }
+        return [
+            'seq'         => (int)$slide['seq'],
+            'nodetitle'   => (string)$slide['nodetitle'],
+            'principle'   => $principle,
+            'challenge'   => (string)$slide['challenge'],
+            'choicetext'  => (string)$slide['choicetext'],
+            'signal'      => (string)$slide['signal'],
+            'signalclass' => 'aibs-signal-' . (string)$slide['signal'],
+            'imageurl'    => (string)($scene[$reaction] ?? $scene[(string)$slide['nodeid']] ?? ''),
+            'options'     => $options,
+        ];
     }
 
     /**
-     * The shape one scripted list returns.
+     * The shape one decision slide returns.
      *
-     * @param string $what What the list holds, for the description.
      * @return external_multiple_structure
      */
-    public static function scripted_shape(string $what): external_multiple_structure {
+    public static function decision_slide_shape(): external_multiple_structure {
         return new external_multiple_structure(
             new external_single_structure([
-                'text'     => new external_value(PARAM_TEXT, 'The item'),
-                'audiourl' => new external_value(PARAM_URL, 'Clip reading it, or empty'),
-                'imageurl' => new external_value(PARAM_URL, 'Frame shown behind it, or empty'),
-                'number'   => new external_value(PARAM_INT, 'Its position, one based'),
+                'seq'         => new external_value(PARAM_INT, 'Its position, one based'),
+                'nodetitle'   => new external_value(PARAM_TEXT, 'Title of the decision'),
+                'principle'   => new external_value(PARAM_TEXT, 'The principle it tested, or empty'),
+                'challenge'   => new external_value(PARAM_TEXT, 'The question that was put'),
+                'choicetext'  => new external_value(PARAM_TEXT, 'The option the learner took'),
+                'signal'      => new external_value(PARAM_ALPHA, 'Signal of the option taken'),
+                'signalclass' => new external_value(PARAM_NOTAGS, 'CSS modifier for that signal'),
+                'imageurl'    => new external_value(PARAM_URL, 'Reaction frame for what they chose, or empty'),
+                'options'     => new external_multiple_structure(
+                    new external_single_structure([
+                        'letter'     => new external_value(PARAM_TEXT, 'A, B or C'),
+                        'text'       => new external_value(PARAM_TEXT, 'The option'),
+                        'signal'     => new external_value(PARAM_ALPHA, 'positive, neutral or negative'),
+                        'signalclass' => new external_value(PARAM_NOTAGS, 'CSS modifier for that signal'),
+                        'chosen'     => new external_value(PARAM_BOOL, 'Whether this is the one taken'),
+                        'principle'  => new external_value(PARAM_TEXT, 'The principle it tests, or empty'),
+                        'noteparas'  => self::paragraphs_structure(
+                            'Where this option leads and why, as plain paragraphs'
+                        ),
+                        'audiourl'   => new external_value(PARAM_URL, 'Clip reading it, or empty'),
+                    ]),
+                    'Every option that was open at this decision'
+                ),
             ]),
-            $what . ', each with the clip that reads it and the frame behind it',
+            'One slide per decision: what was chosen, and where every option led',
             VALUE_DEFAULT,
             []
         );
@@ -638,22 +664,17 @@ class helper {
             $scene = $media['scene'];
         }
 
-        $journey = [];
-        foreach ($manager->build_journey($attempt) as $step) {
-            $step['consequenceparas'] = self::paragraph_list($step['consequence']);
-            $step['feedbackparas'] = self::paragraph_list($step['feedback']);
-            // The record card has a clip of its own that reads the whole card - the moment,
-            // the decision taken, what followed and why it mattered. It used to borrow the
-            // consequence clip, which says what followed and never says which decision it
-            // followed from, so the heading and the choice on the screen went unread. An
-            // older revision has no record clip, so the consequence one still stands in.
-            $step['audiourl'] = (string)($narration['record_' . ($step['choiceid'] ?? '')]
-                ?? $narration[$step['choiceid'] ?? ''] ?? '');
-            $journey[] = $step;
-        }
-
         $outcomenode = $manager->get_node($attempt->currentnode);
-        $debrief = $definition['debrief'];
+
+        // ONE SLIDE PER DECISION, AND NOTHING ELSE.
+        //
+        // What used to follow here were four lists of closing advice and a set of takeaway
+        // cards, each with pictures and clips of its own. They are gone. The debrief is the
+        // decisions now: what was chosen, and what every other option would have cost.
+        $slides = [];
+        foreach ($manager->build_decision_slides($attempt) as $slide) {
+            $slides[] = self::decision_slide($slide, $narration, $scene);
+        }
 
         return [
             'attemptid'    => (int)$attempt->id,
@@ -662,86 +683,17 @@ class helper {
             'outcomelabel' => $attempt->outcome !== ''
                 ? get_string('outcome:' . $attempt->outcome, 'mod_aibranchedscenario') : '',
             'outcometitle' => $outcomenode['title'] ?? '',
-            // The ending, and the three debrief screens that are the same every attempt.
             'outcomeaudiourl'  => (string)($narration[$outcomenode['id'] ?? ''] ?? ''),
-            // The page-level frames. Since v1.81.0 a picture belongs to an ENTRY rather
-            // than to the page holding it, so these four keys are generated by nothing -
-            // they resolved empty on every scenario made since, and the request stayed
-            // behind asking for them. A page still wants a frame behind its heading, so it
-            // takes its own first entry's picture: the same idea, and one that exists.
             // The ending's own frame. The four page-level ones that used to sit beside it -
-            // whatmatteredimageurl and its siblings - are gone: no template referenced any
-            // of them, they were computed, declared, shipped over the wire and assigned into
-            // a mustache context that never read them. A payload field with no reader is the
-            // next thing to drift, and these existed only to feed the borrowing that this
-            // release removed.
+            // whatmatteredimageurl and its siblings - went in v2.0.0, and the pages they
+            // belonged to have now gone with them.
             'outcomeimageurl'  => (string)($scene[$outcomenode['id'] ?? ''] ?? ''),
-            'whatmatteredaudiourl' => (string)($narration['debrief_whatmattered'] ?? ''),
-            'practiceaudiourl' => (string)($narration['debrief_practice'] ?? ''),
-            'takeawaysaudiourl' => (string)($narration['debrief_takeaways'] ?? ''),
             'outcomeparas'  => self::paragraph_list($outcomenode['summary'] ?? ''),
             'score'        => round((float)$attempt->score, 1),
             'decisions'    => (int)($state['decisions'] ?? 0),
             'metrics'      => self::metrics($attempt),
             'radar'        => $radar,
-            'journey'      => $journey,
-            'whatmattered' => array_values($debrief['whatmattered']),
-            // The three list pages are played as sequences rather than shown as lists, so
-            // each item travels with the clip that reads it and the frame that goes behind
-            // it. The frames are the scenario's own scenes - the pictures the learner
-            // already walked through, which is what makes a lesson land as something they
-            // were there for rather than as a line of advice.
-            'lessons'   => self::scripted_items(
-                $debrief['whatmattered'],
-                'lesson',
-                $narration,
-                $scene,
-                $definition
-            ),
-            'criticals' => self::scripted_items(
-                $debrief['criticaldecisions'],
-                'critical',
-                $narration,
-                $scene,
-                $definition
-            ),
-            'practices' => self::scripted_items(
-                $debrief['practice'],
-                'practice',
-                $narration,
-                $scene,
-                $definition
-            ),
-            'takeawaycards' => array_values(array_map(
-                static function ($takeaway, $index) use ($narration, $scene, $definition) {
-                    // Its own frame, or none - see scripted_items() above for why the
-                    // rotation that used to stand in for it was never a link.
-                    return [
-                        'heading'  => (string)($takeaway['heading'] ?? ''),
-                        'body'     => (string)($takeaway['body'] ?? ''),
-                        'bodyparas' => self::paragraph_list((string)($takeaway['body'] ?? '')),
-                        'audiourl' => (string)($narration[media_manager::debrief_key('takeaway', $definition, $index)] ?? ''),
-                        'imageurl' => (string)($scene[media_manager::debrief_key('takeaway', $definition, $index)] ?? ''),
-                        'number'   => $index + 1,
-                    ];
-                },
-                array_values((array)($definition['takeaways'] ?? [])),
-                array_keys(array_values((array)($definition['takeaways'] ?? [])))
-            )),
-            'criticaldecisions' => array_values($debrief['criticaldecisions']),
-            'practice'     => array_values($debrief['practice']),
-            'sourceconnection' => $debrief['sourceconnection'],
-            'sourceconnectionparas' => self::paragraph_list($debrief['sourceconnection']),
-            // Numbered, because the cards are marked with their position and mustache
-            // cannot count. One-based: it is what the learner reads, not an array index.
-            'takeaways'    => array_values(array_map(function ($takeaway, $index) {
-                return [
-                    'heading'  => $takeaway['heading'],
-                    'body'     => $takeaway['body'],
-                    'number'   => $index + 1,
-                    'bodyparas' => self::paragraph_list($takeaway['body']),
-                ];
-            }, $definition['takeaways'], array_keys($definition['takeaways']))),
+            'slides'       => $slides,
         ];
     }
 
@@ -758,26 +710,7 @@ class helper {
             'outcomelabel' => new external_value(PARAM_TEXT, 'Translated outcome band label'),
             'outcometitle' => new external_value(PARAM_TEXT, 'Title of the outcome node'),
             'outcomeaudiourl' => new external_value(PARAM_URL, 'Narration for the ending, or empty'),
-            'lessons' => self::scripted_shape('The lessons'),
-            'criticals' => self::scripted_shape('The critical decisions'),
-            'practices' => self::scripted_shape('The practice points'),
-            'takeawaycards' => new external_multiple_structure(
-                new external_single_structure([
-                    'heading'   => new external_value(PARAM_TEXT, 'Takeaway heading'),
-                    'body'      => new external_value(PARAM_TEXT, 'Takeaway body'),
-                    'bodyparas' => self::paragraphs_structure('Takeaway body as paragraphs'),
-                    'audiourl'  => new external_value(PARAM_URL, 'Clip reading it, or empty'),
-                    'imageurl'  => new external_value(PARAM_URL, 'Frame behind it, or empty'),
-                    'number'    => new external_value(PARAM_INT, 'Its position, one based'),
-                ]),
-                'The takeaways, each with the clip that reads it and the frame behind it',
-                VALUE_DEFAULT,
-                []
-            ),
             'outcomeimageurl' => new external_value(PARAM_URL, 'Picture for the ending, or empty'),
-            'whatmatteredaudiourl' => new external_value(PARAM_URL, 'Narration for what mattered, or empty'),
-            'practiceaudiourl' => new external_value(PARAM_URL, 'Narration for applying it, or empty'),
-            'takeawaysaudiourl' => new external_value(PARAM_URL, 'Narration for the takeaways, or empty'),
             'outcomeparas'  => self::paragraphs_structure('Outcome summary as plain text; escape before use as HTML'),
             'score'        => new external_value(PARAM_FLOAT, 'Decision quality as a percentage'),
             'decisions'    => new external_value(PARAM_INT, 'Number of decisions taken'),
@@ -791,40 +724,11 @@ class helper {
                     'raw'   => new external_value(PARAM_INT, 'Raw accumulated value'),
                 ])
             ),
-            'journey'      => new external_multiple_structure(
-                new external_single_structure([
-                    'seq'             => new external_value(PARAM_INT, 'Decision sequence number'),
-                    'nodetitle'       => new external_value(PARAM_TEXT, 'Title of the decision point'),
-                    'choicetext'      => new external_value(PARAM_TEXT, 'What the learner chose'),
-                    'signal'          => new external_value(PARAM_ALPHA, 'Signal type of the choice'),
-                    'consequence'     => new external_value(PARAM_TEXT, 'What happened next'),
-                    'consequenceparas' => self::paragraphs_structure('Consequence as plain text; escape before use as HTML'),
-                    'feedback'        => new external_value(PARAM_TEXT, 'Instructional feedback'),
-                    'feedbackparas'    => self::paragraphs_structure('Feedback as plain text; escape before use as HTML'),
-                    'principle'       => new external_value(PARAM_TEXT, 'Decision principle tested'),
-                    'choiceid'        => new external_value(PARAM_ALPHANUMEXT, 'The choice this record is of'),
-                    'audiourl'        => new external_value(PARAM_URL, 'Narration for this decision, or empty'),
-                ])
-            ),
-            'whatmattered' => new external_multiple_structure(
-                new external_value(PARAM_TEXT, 'A lesson the scenario demonstrated')
-            ),
-            'criticaldecisions' => new external_multiple_structure(
-                new external_value(PARAM_TEXT, 'A decision that changed the outcome')
-            ),
-            'practice'     => new external_multiple_structure(
-                new external_value(PARAM_TEXT, 'A behaviour to use in practice')
-            ),
-            'sourceconnection' => new external_value(PARAM_TEXT, 'How the lessons connect to the source content'),
-            'sourceconnectionparas' => self::paragraphs_structure('Source connection as plain text; escape before use as HTML'),
-            'takeaways'    => new external_multiple_structure(
-                new external_single_structure([
-                    'heading'  => new external_value(PARAM_TEXT, 'Takeaway heading'),
-                    'body'     => new external_value(PARAM_TEXT, 'Takeaway body'),
-                    'number'   => new external_value(PARAM_INT, 'Position in the list'),
-                    'bodyparas' => self::paragraphs_structure('Takeaway body as plain text; escape before use as HTML'),
-                ])
-            ),
+            // The journey list is gone from here too. It said what was chosen and what
+            // followed; the slides say that and what every other option would have cost,
+            // on the same screen. Two lists of the same decisions on one debrief is the
+            // repetition this release exists to remove.
+            'slides'       => self::decision_slide_shape(),
         ]);
     }
 }

@@ -85,7 +85,6 @@ $string['debriefhidden'] = 'You have reached the end of the scenario. Your teach
 $string['tensionhigh'] = 'Tension is high';
 $string['whatthistests'] = 'What this scenario asks you to apply';
 $string['choosealegend'] = 'Choose what you do next';
-$string['whythismattered'] = 'Why this mattered';
 $string['whatdoyoudo'] = 'What do you do?';
 $string['deltaup'] = 'up {$a}';
 $string['deltadown'] = 'down {$a}';
@@ -144,6 +143,16 @@ $string['pricecredits'] = '{$a->credits} credits ({$a->money})';
 $string['confirmgenerate:price'] = 'This scenario costs {$a->price}. That covers {$a->images} scene images and {$a->narrations} narration clips.';
 $string['listento'] = 'Hear what {$a} is thinking';
 $string['deckposition'] = '{$a->current} of {$a->total}';
+// The opening brief: what a learner is walking into. Everything here was already in the
+// scenario and shown nowhere - a learner started without being told what the three readings
+// in the bar measured, and found out when one of them dropped.
+$string['brief:working'] = 'What you are working on';
+$string['brief:aimup'] = 'get this up';
+$string['brief:aimdown'] = 'keep this down';
+$string['brief:where'] = 'Where';
+$string['brief:who'] = 'Who';
+$string['brief:ahead'] = 'Ahead';
+$string['brief:decisions'] = '{$a} decisions';
 $string['lesson:situation'] = 'The situation';
 $string['lesson:number'] = 'Principle {$a}';
 $string['lesson:saythis'] = 'Sounds like this';
@@ -157,7 +166,6 @@ $string['lesson:pages'] = 'Opening lesson pages';
 $string['deckprev'] = 'Previous';
 $string['decknext'] = 'Next';
 $string['debriefpages'] = 'Debrief pages';
-$string['takeaways'] = 'Key takeaways';
 $string['debriefend'] = 'Debrief complete';
 $string['debriefendlead'] = 'Go back through any page with the arrows, run the scenario again to try a different path, or keep a copy.';
 $string['fullscreen:enter'] = 'Fill the screen';
@@ -192,11 +200,6 @@ $string['attemptsremaining'] = 'Attempts remaining: {$a}';
 $string['tryagain'] = 'Try again';
 $string['printdebrief'] = 'Print or save';
 $string['howyouhandledit'] = 'How you handled it';
-$string['yourdecisions'] = 'Your decisions';
-$string['whatmattered'] = 'Lessons learnt';
-$string['decisionsthatchanged'] = 'Critical decisions';
-$string['applyitinpractice'] = 'How to apply this';
-$string['sourceconnection'] = 'Source material';
 $string['decisionqualityscore'] = 'Decision quality {$a}%';
 $string['decisionstaken'] = 'Decisions taken: {$a}';
 // Labels for the closing card. The three above are sentence templates carrying a {$a}
@@ -220,7 +223,7 @@ $string['step:sourcelead'] = 'Paste what the scenario should teach. Everything a
 $string['step:scenelead'] = 'Where this happens and how it feels when the learner walks in. This is the first thing they read, so it sets whether the scenario feels real or generic.';
 $string['step:challengelead'] = 'The problem the learner has to handle. Say why it is hard and what is at stake — a decision with nothing riding on it is not a decision.';
 $string['step:peoplelead'] = 'Who the learner is, and who else is in the room. The other people are what makes a choice cost something.';
-$string['step:designlead'] = 'How long the scenario runs and how it looks. More decisions means a longer scenario, not a harder one.';
+$string['step:designlead'] = 'How the scenario looks and reads.';
 $string['step:buildlead'] = 'Generate the scenario, read every branch, then publish when you are happy. Nothing reaches learners until you publish.';
 
 $string['autofill'] = 'Fill the wizard from this content';
@@ -264,12 +267,12 @@ $string['published'] = 'Published';
 $string['publishedrevision'] = 'Published revision {$a}';
 $string['previewscenario'] = 'Preview as a learner';
 $string['review:title'] = 'Review the draft';
-// The debrief pages, named for the quality review so a warning can say which page is
-// short without repeating the heading the player already uses.
-$string['debrief:whatmattered'] = 'Lessons learnt';
-$string['debrief:criticaldecisions'] = 'Critical decisions';
-$string['debrief:practice'] = 'How to apply this';
-$string['debrief:takeaways'] = 'Key takeaways';
+// The decision slides. One per decision, replacing the four pages of closing advice.
+$string['whythismattered'] = 'Why this mattered';
+$string['principletested'] = 'Principle tested:';
+$string['decisionnumber'] = 'Decision {$a}';
+$string['youchose'] = 'You chose';
+$string['youroption'] = 'Your choice';
 $string['quality:pronounconflict'] = 'The cast record says {$a->name} is {$a->gender}, but the scenario calls them "{$a->pronoun}". The illustrations are briefed from the record, so a learner will read one thing and see another. Fix the pronoun in the editor, or change the character\'s gender, before publishing.';
 // What each picture in the image map illustrates. Shown to a teacher when a revision is
 // short of pictures, so "you are four short" can name which four rather than leaving them
@@ -281,13 +284,13 @@ $string['map:crisis'] = 'The escalated version of "{$a}"';
 $string['map:reactionpositive'] = 'The reaction after "{$a}" goes well';
 $string['map:reactionneutral'] = 'The reaction after "{$a}" settles nothing';
 $string['map:reactionnegative'] = 'The reaction after "{$a}" costs something';
-$string['map:debrieflesson'] = 'Lessons learnt, entry {$a}';
-$string['map:debriefcritical'] = 'Critical decisions, entry {$a}';
-$string['map:debriefpractice'] = 'How to apply this, entry {$a}';
-$string['map:debrieftakeaway'] = 'Key takeaways, entry {$a}';
-$string['quality:debrieflong'] = '"{$a->page}" carries {$a->have} entries for the {$a->wanted} principles this scenario teaches, so at least one answers no principle at all - and it will have no picture, because the illustrations follow the principles. Remove the extra entries or teach another principle.';
+// The decision slides: what makes one teach something, and what makes it look complete
+// and carry nothing.
+$string['quality:flatsignals'] = 'Every option at "{$a}" carries the same signal, so the debrief slide for it has three paragraphs and no ranking - nothing on it says which choice was the better one. Give the options different signals in the editor before publishing.';
+$string['quality:duplicateoutcomenote'] = 'Two options at "{$a}" explain their outcome in the same words. The slide for this decision exists to show three different consequences side by side; two that read alike teach nothing by being next to each other.';
+$string['quality:restatedoutcomenote'] = 'Option {$a->letter} at "{$a->node}" explains its outcome by repeating the option itself. The paragraph is there to say what taking it costs and what it teaches, and on the slide it will read as the same line printed twice.';
+$string['quality:readingrange'] = 'Even taking the worst option at every decision, {$a->metric} only reaches {$a->worst} and never {$a->end}. A learner who gets everything wrong will see a score of 0% next to a reading that says the run went half well. Make the effects on the poor options larger in the editor - across five decisions they need to span the whole scale.';
 $string['quality:skillnameleak'] = 'The skill name "{$a->skill}" appears in {$a->where}. Skill names are the scoring language of the debrief; a learner who meets one mid-scenario is being shown the marking scheme while they are being marked. Rewrite it in the words of the job.';
-$string['quality:debriefshort'] = '"{$a->page}" closes the loop on {$a->have} of the {$a->wanted} principles this scenario teaches. Add the missing {$a->page} entries in the editor before publishing, one for each principle, or a learner is taught something at the start that is never looked back at.';
 $string['quality:principleneedsexample'] = 'The principle "{$a}" teaches a rule with no example. Add the words a learner could actually say or the action they could take, in the editor before publishing - a learner remembers the words they can use, not the rule.';
 $string['quality:principleneedspitfall'] = 'The principle "{$a}" has no pitfall. Add the plausible-sounding version that does not work, and why - that is the thing a learner needs warning about.';
 $string['quality:spelling'] = 'This scenario is set to {$a->language}, but the writing uses the other variety\'s spelling in places: {$a->words}. Correct them in the editor before publishing, or the learner reads them.';
@@ -312,7 +315,6 @@ $string['bandred_help'] = 'A reading below this counts as a problem and is shown
 Set both thresholds for the conversation you are teaching. A de-escalation exercise and a sales conversation do not agree about what a trust of 55 means.';
 $string['error:bandorder'] = 'The good threshold has to be above the problem threshold.';
 $string['error:bandrange'] = 'Thresholds are percentages, so they have to be between 0 and 100.';
-$string['principletested'] = 'Principle tested:';
 $string['report:eyebrow'] = 'Attempts and results';
 $string['requirelisten'] = 'Hear each screen out before moving on';
 $string['requirelisten_help'] = 'When narration is on, the way forward normally dims while a screen is being read but can still be pressed. Turn this on to hold it closed until the reading finishes, so a learner cannot click past the teaching.
@@ -416,8 +418,7 @@ $string['field:charactergenderhelp'] = 'Chooses the voice this person\'s spoken 
 $string['gender:female'] = 'Female';
 $string['gender:male'] = 'Male';
 $string['gender:nonbinary'] = 'Non-binary';
-$string['field:decisions'] = 'Decision points';
-$string['field:decisionshint'] = 'How many decisions the learner makes on the longest path through the scenario.';
+$string['field:decisionsfixed'] = 'Every scenario runs to {$a} decisions. The length is fixed so the debrief can give each decision a screen of its own, and so the number of illustrations is the same every time.';
 $string['field:tone'] = 'Tone';
 $string['field:complexity'] = 'Complexity';
 $string['field:imagestyle'] = 'Image style';
@@ -707,7 +708,9 @@ $string['error:duplicatenodeid'] = 'More than one node uses the identifier {$a}.
 $string['error:nodenosituation'] = 'Node {$a} has no situation text.';
 $string['error:nodenochoices'] = 'Node {$a} offers no way forward.';
 $string['error:beatnonext'] = 'Node {$a} does not say what follows it.';
-$string['error:choicecount'] = 'Node {$a->node} must offer between {$a->min} and {$a->max} choices.';
+$string['error:choicecount'] = 'Node {$a->node} must offer exactly {$a->count} options.';
+$string['error:choicenooutcomenote'] = 'Option {$a->letter} on node {$a->node} does not say what taking it would have led to. The debrief shows that paragraph against every option.';
+$string['error:decisioncount'] = 'A scenario contains exactly {$a->expected} decisions. This one has {$a->found}.';
 $string['error:choicenotext'] = 'A choice on node {$a} has no text.';
 $string['error:choicenonext'] = 'Choice {$a->letter} on node {$a->node} does not lead anywhere.';
 $string['error:choicenoconsequence'] = 'Choice {$a->letter} on node {$a->node} does not say what happened as a result.';

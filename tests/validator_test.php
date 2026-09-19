@@ -90,14 +90,16 @@ final class validator_test extends \advanced_testcase {
         $this->assertSame(schema::CONTRACT_VERSION, $clean['version']);
         $this->assertSame('The vibrating machine', $clean['title']);
         $this->assertSame('start', $clean['startnode']);
-        $this->assertCount(7, $clean['nodes']);
+        $this->assertCount(8, $clean['nodes']);
 
-        $this->assertSame(7, $clean['stats']['nodecount']);
-        $this->assertSame(5, $clean['stats']['decisioncount']);
-        $this->assertSame(4, $clean['stats']['longestpath']);
+        $this->assertSame(8, $clean['stats']['nodecount']);
+        // SIX decision nodes, FIVE decisions on any path a learner walks. The two differ
+        // because the fixture branches, and it is the walk the contract fixes.
+        $this->assertSame(6, $clean['stats']['decisioncount']);
+        $this->assertSame(schema::DECISIONS, $clean['stats']['longestpath']);
         $this->assertSame(2, $clean['stats']['outcomecount']);
-        // Four decisions on the longest path, four skills, two points each.
-        $this->assertSame(32, $clean['stats']['maxskillscore']);
+        // Five decisions on the longest path, four skills, two points each.
+        $this->assertSame(40, $clean['stats']['maxskillscore']);
 
         // The bottleneck flag survives normalisation.
         $bottleneck = null;
@@ -249,9 +251,8 @@ final class validator_test extends \advanced_testcase {
         $this->assertNull(validator::try_validate($definition, $problems));
         $this->assertContains(
             get_string('error:choicecount', 'mod_aibranchedscenario', (object)[
-                'node' => 'pathone',
-                'min'  => schema::MIN_CHOICES,
-                'max'  => schema::MAX_CHOICES,
+                'node'  => 'pathone',
+                'count' => schema::CHOICES,
             ]),
             $problems
         );
@@ -298,7 +299,7 @@ final class validator_test extends \advanced_testcase {
         $clean = validator::validate($definition);
 
         $this->assertArrayNotHasKey('injected', $clean);
-        $this->assertSame(7, $clean['stats']['nodecount']);
+        $this->assertSame(8, $clean['stats']['nodecount']);
 
         foreach ($clean['nodes'] as $candidate) {
             $this->assertArrayNotHasKey('injected', $candidate);

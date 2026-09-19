@@ -36,11 +36,16 @@ class import_prompt {
     /**
      * The prompt text.
      *
-     * @param int $decisions How many decisions the scenario should contain.
+     * The decision count used to be a parameter, because a teacher used to pick it. They
+     * no longer can: every scenario is exactly schema::DECISIONS decisions long. The
+     * argument is kept so old callers do not break, and ignored.
+     *
+     * @param int $decisions Ignored. The length is fixed.
      * @return string
      */
-    public static function text(int $decisions = 5): string {
-        $decisions = max(3, min(8, $decisions));
+    public static function text(int $decisions = schema::DECISIONS): string {
+        unset($decisions);
+        $decisions = schema::DECISIONS;
         $metrics = implode(', ', schema::metrics());
         $skills = implode(', ', schema::skills());
         $tones = implode(', ', schema::tones());
@@ -79,10 +84,23 @@ class import_prompt {
                 . '"facilitatorspeech" and "feedback".',
             '- "version" is 1. "startnode" must be the id of a decision node.',
             '- There must be exactly ' . $decisions . ' nodes of type "decision", numbered in '
-                . '"stage" from 1 upwards, plus between two and four nodes of type "outcome".',
-            '- Every decision node needs between two and four choices. Every choice\'s "next" '
-                . 'must be the id of another node, or "__auto__" to let the activity pick the '
-                . 'next stage.',
+                . '"stage" from 1 upwards, plus between two and four nodes of type "outcome". '
+                . 'A scenario with any other number of decisions is rejected whole. If the '
+                . 'source content has more material than ' . $decisions . ' decisions can '
+                . 'carry, choose the ' . $decisions . ' moments that matter most and leave '
+                . 'the rest out - do not add a sixth.',
+            '- Every decision node needs exactly ' . schema::CHOICES . ' choices. Not two, '
+                . 'not four. Every choice\'s "next" must be the id of another node, or '
+                . '"__auto__" to let the activity pick the next stage.',
+            '- EVERY choice carries "outcomenote": one paragraph, written to the learner, '
+                . 'saying where THIS option leads and why - what it costs, what it teaches, '
+                . 'and how it leaves the people in the room feeling. The learner is shown '
+                . 'all ' . schema::CHOICES . ' of a decision\'s notes side by side after '
+                . 'they finish, so the three must read as three different outcomes and '
+                . 'together explain why one option is the best available and another the '
+                . 'worst. This is where the lesson lives: do not write a bare restatement '
+                . 'of the choice, and do not write the same sentiment three times. Up to '
+                . schema::MAX_OUTCOME_NOTE . ' characters each.',
             '- Emit exactly one outcome node for each of: ' . implode(', ', schema::outcomes())
                 . '. Use "highrisk" for the ending where the consequence actually lands. A '
                 . 'band with no ending of its own does not fail: the learner who earned it '
@@ -182,7 +200,13 @@ class import_prompt {
                 . 'question she had.",',
             '     "feedback": "Ending on your certainty left her holding a question she '
                 . 'had not finished asking, so she stopped asking. The next gap will be '
-                . 'found by someone on the next shift."},',
+                . 'found by someone on the next shift.",',
+            '     "outcomenote": "This is the option that costs the most, and it does not '
+                . 'feel like it at the time. Answering from memory is not the error - '
+                . 'ending the conversation is. She had a third question and did not ask '
+                . 'it, and what she learns is that checking with you costs her something. '
+                . 'The gap stays in the chart, and the next person to find it will be '
+                . 'someone with less context than either of you."},',
             '    {"id": "n2_b", "signal": "positive", "next": "n3",',
             '     "text": "Sit down, open the chart, and read the last two entries out '
                 . 'with her.",',
@@ -190,7 +214,13 @@ class import_prompt {
                 . 'noticed and marks it.",',
             '     "feedback": "Reading it out together made the chart hers to check '
                 . 'rather than yours to defend, so she found the gap and marked it. She '
-                . 'will open the next one without waiting to be asked."},',
+                . 'will open the next one without waiting to be asked.",',
+            '     "outcomenote": "The best of the three, and the only one that costs you '
+                . 'anything up front - four minutes at the end of a long shift. Reading '
+                . 'it out together moves the chart from something you are defending to '
+                . 'something you are both checking, which is why she finds the gap '
+                . 'instead of taking your word for it. She leaves having been taken '
+                . 'seriously, and she opens the next one herself."},',
             '    {"id": "n2_c", "signal": "neutral", "next": "__auto__",',
             '     "text": "Ask her to put her questions in the ward group chat so you '
                 . 'can answer them properly later.",',
@@ -198,7 +228,13 @@ class import_prompt {
                 . 'made her own call on it.",',
             '     "feedback": "Moving it to the chat told her the question was real but '
                 . 'not urgent, so she made the call alone and is now less likely to bring '
-                . 'you the next one."}',
+                . 'you the next one.",',
+            '     "outcomenote": "This looks like the responsible middle and behaves like '
+                . 'a deferral. Nothing is refused and nothing is answered: by the time you '
+                . 'reply she has decided alone, so the decision was made with less '
+                . 'information than either of you had. She reads the delay as a ranking, '
+                . 'and the cost is not this question - it is the next one, which she does '
+                . 'not bring you."}',
             '  ]',
             '}',
         ]);
@@ -250,6 +286,9 @@ class import_prompt {
                         'id' => 'n1_a', 'text' => 'What the learner does',
                         'signal' => 'positive', 'consequence' => 'What happens next',
                         'feedback' => 'What this told us', 'principleid' => 'p1',
+                        'outcomenote' => 'ONE OF THREE. Where this option leads and why: '
+                            . 'what it costs, what it teaches, how it leaves the people in '
+                            . 'the room. Shown beside the other two after the scenario ends',
                         'effects' => ['engagement' => 5, 'trust' => 10, 'tension' => -10],
                         'skills' => ['presence' => 2, 'adaptability' => 0, 'empathy' => 1, 'clarity' => 2],
                         'tags' => ['gathers-information'],
@@ -279,6 +318,8 @@ class import_prompt {
                             'id' => 'n5_a', 'text' => 'The choice that earns the best ending',
                             'signal' => 'positive', 'consequence' => 'What happens next',
                             'feedback' => 'What this told us', 'principleid' => 'p1',
+                            'outcomenote' => 'Why this is the best of the three: what it '
+                                . 'protects, and what the learner should take from it',
                             'effects' => ['engagement' => 5, 'trust' => 5, 'tension' => -5],
                             'skills' => ['presence' => 2, 'adaptability' => 1, 'empathy' => 1, 'clarity' => 2],
                             'tags' => ['closes-well'],
@@ -288,6 +329,8 @@ class import_prompt {
                             'id' => 'n5_b', 'text' => 'The choice that half works',
                             'signal' => 'neutral', 'consequence' => 'What happens next',
                             'feedback' => 'What this told us', 'principleid' => 'p1',
+                            'outcomenote' => 'Why this only half works: what it gets right, '
+                                . 'and the cost of the part it leaves undone',
                             'effects' => ['engagement' => 0, 'trust' => 0, 'tension' => 0],
                             'skills' => ['presence' => 1, 'adaptability' => 1, 'empathy' => 0, 'clarity' => 1],
                             'tags' => ['partial'],
@@ -297,6 +340,8 @@ class import_prompt {
                             'id' => 'n5_c', 'text' => 'The choice that costs',
                             'signal' => 'negative', 'consequence' => 'What happens next',
                             'feedback' => 'What this told us', 'principleid' => 'p1',
+                            'outcomenote' => 'Why this is the worst of the three: what it '
+                                . 'costs, and what it leaves the people in the room carrying',
                             'effects' => ['engagement' => -5, 'trust' => -10, 'tension' => 15],
                             'skills' => ['presence' => 0, 'adaptability' => 0, 'empathy' => 0, 'clarity' => 1],
                             'tags' => ['misses-the-point'],
@@ -323,11 +368,11 @@ class import_prompt {
                     'summary' => 'What their decisions came to',
                 ],
             ],
-            'debrief' => [
-                'whatmattered' => ['...'], 'criticaldecisions' => ['...'],
-                'practice' => ['...'], 'sourceconnection' => 'How this ties back to the source',
-            ],
-            'takeaways' => [['heading' => 'Short heading', 'body' => 'One or two sentences']],
+            // No "debrief" block and no "takeaways". There used to be four lists of advice
+            // at the end - lessons learnt, critical decisions, practice points, takeaways -
+            // each on its own page and none of them tied to what the learner actually did.
+            // The lesson lives in each choice's "outcomenote" now, on the slide for the
+            // decision it belongs to. Anything sent under the old keys is discarded.
         ];
 
         return json_encode($document, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
