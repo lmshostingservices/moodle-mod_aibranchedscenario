@@ -2,6 +2,32 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v2.5.2] - 2026-09-19
+
+### Fixed: the wizard could not save, fill in or suggest anything
+
+Every service that carries the wizard's source was refusing every call with **"Invalid
+parameter value detected"** — Save, "fill this in for me", and every suggestion button.
+
+The source structure declared `decisions` as a **required** key. The teacher's
+decision-count control was removed back when the scenario length was fixed at five, so the
+wizard stopped sending it — and a required key the form cannot supply fails the whole call
+before the method is ever reached. The real reason, *"Missing required key in single
+structure: decisions"*, sits in `debuginfo`, which a production site does not display, so
+all a teacher saw was the generic message.
+
+`decisions` is now declared with the fixed length as its default. It was never the
+teacher's to set — `source_normaliser` overwrites it with `schema::DECISIONS` whatever
+arrives — so a caller that omits it is agreeing with the plugin, not making a mistake.
+
+**Why nothing caught it.** The harness built its own source payloads by hand, and every one
+of them included `decisions`, because they were written when the control still existed. The
+check now **derives the payload from the template**: every `data-field` and `data-group` the
+wizard actually renders, assembled the way the browser assembles it. Remove a control from
+the form and the check changes with it. All three services are covered, and the dispatch
+helper now validates return descriptions as well as parameters — the same fault in the other
+direction fails after the work is done, which is the worse half.
+
 ## [v2.5.1] - 2026-09-19
 
 ### Fixed: three web services were refusing every call
@@ -18,9 +44,12 @@ value detected"**:
 
 The rung is declared last in all three now, matching the signatures. Nothing else changed.
 
-The upgrade step for this release deliberately touches no schema: a site does not re-read a
-plugin's service descriptions until its version moves, so a site that replaced the files in
-place would otherwise keep v2.5.0's broken parameter lists in `external_functions`.
+The upgrade step for this release touches no schema; the version moves because a release
+moves it. *(Corrected in v2.5.2: this entry originally claimed the bump was what delivered
+the fix, on the grounds that a site would otherwise keep the old parameter descriptions.
+That was wrong — `external_functions` stores only a class and a method name, and the
+parameter descriptions are read from the class on every call, so replacing the files
+corrects them immediately.)*
 
 **Why nothing caught it.** Every check in the harness called these functions directly, with
 positional arguments — which is to say every check agreed with the mistake. Two checks now

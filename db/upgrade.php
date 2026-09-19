@@ -1072,20 +1072,29 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026091910) {
-        // NO SCHEMA CHANGE. THIS STEP EXISTS TO MOVE THE VERSION, AND THAT IS THE FIX.
+        // No schema change. v2.5.1 corrected three web services whose parameter lists were
+        // declared in a different order from the arguments they take - Moodle validates a
+        // call's arguments by name and then invokes the method POSITIONALLY, in the order
+        // the parameter list declares, so the rung number was handed to whichever argument
+        // sat in that position.
         //
-        // v2.5.0 shipped three web services whose parameter lists were declared in a
-        // different order from the arguments they take. Moodle validates a call's arguments
-        // by name and then invokes the method POSITIONALLY, in the order the parameter list
-        // declares - so saving an edited scene, pasting a scenario in and reporting the
-        // picture shortfall were all refused with "Invalid parameter value detected".
-        //
-        // The declarations are corrected in code, but a site does not re-read them until
-        // the plugin's version moves: external_update_descriptions() runs from the upgrade,
-        // so a site that replaced the files in place would keep v2.5.0's broken parameter
-        // descriptions in its external_functions table and stay broken. Hence a step that
-        // touches nothing: the version bump is the delivery mechanism.
+        // The version moves because a release moves it, and because Moodle's caches are
+        // keyed on it. It is NOT what delivers the fix: external_functions stores only a
+        // class and a method name, and the parameter descriptions are read from the class
+        // every time. Replacing the files corrects those immediately. An earlier note here
+        // claimed otherwise and was wrong.
         upgrade_mod_savepoint(true, 2026091910, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091911) {
+        // No schema change. v2.5.2 makes the source structure's 'decisions' key optional.
+        //
+        // It was required, and the teacher's decision-count control was removed when the
+        // scenario length was fixed at five - so the wizard stopped sending it, and every
+        // service carrying a source was refused: Save, "fill this in for me" and every
+        // suggestion button. The reason was in debuginfo, which a production site does not
+        // show, so all a teacher saw was "Invalid parameter value detected".
+        upgrade_mod_savepoint(true, 2026091911, 'aibranchedscenario');
     }
 
     return true;

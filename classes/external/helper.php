@@ -544,7 +544,25 @@ class helper {
             // an external structure and the payload that fills it are one description in
             // two places, and taking a field out of one of them is a breaking change of
             // exactly the kind this release was already caught by.
-            'decisions'        => new external_value(PARAM_INT, 'Decisions, fixed by the plugin'),
+            //
+            // AND IT MUST NOT BE REQUIRED, which is what it was.
+            //
+            // The teacher's decision-count control was removed when the length was fixed at
+            // five, so the wizard stopped sending this key - and a required key that the
+            // form cannot supply fails the whole call. Every service that carries a source
+            // was refused: Save, "fill this in for me", and every suggestion button, all
+            // reporting "Invalid parameter value detected" with the reason buried in
+            // debuginfo where a production site never shows it.
+            //
+            // Declared with the fixed length as its default, so a caller that does not send
+            // it is not making a mistake - it is agreeing with the plugin. The value is
+            // overwritten by source_normaliser either way.
+            'decisions'        => new external_value(
+                PARAM_INT,
+                'Decisions, fixed by the plugin',
+                VALUE_DEFAULT,
+                schema::DECISIONS
+            ),
             'tone'             => new external_value(PARAM_ALPHANUMEXT, 'Writing tone', VALUE_DEFAULT, 'neutral'),
             'complexity'       => new external_value(
                 PARAM_ALPHANUMEXT,
