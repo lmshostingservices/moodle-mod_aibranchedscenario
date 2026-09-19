@@ -104,7 +104,12 @@ class source_normaliser {
         $out['whyhard'] = self::filtered_list($raw['whyhard'] ?? [], schema::whyhard());
         $out['stakes'] = self::filtered_list($raw['stakes'] ?? [], schema::stakes());
 
-        $out['decisions'] = self::intrange($raw['decisions'] ?? 5, 3, 8, 5);
+        // NOT read from the draft any more. The length is fixed at schema::DECISIONS and
+        // the wizard no longer offers a choice - but a draft saved before that still holds
+        // whatever was picked at the time, and it was still being sent to the service. A
+        // teacher who chose seven in August would have had seven generated and then
+        // rejected, and nothing on the screen would have explained why.
+        $out['decisions'] = schema::DECISIONS;
 
         foreach (schema::metrics() as $metric) {
             $default = $out['openingmetrics'][$metric];

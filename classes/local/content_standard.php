@@ -266,10 +266,10 @@ class content_standard {
                     . 'for what it cost and why.',
             ],
             'concrete' => [
-                'short' => 'Every principle, consequence and takeaway names a behaviour, a '
+                'short' => 'Every principle, consequence and outcome note names a behaviour, a '
                     . 'decision or a consequence a person could watch happen. No concept is '
                     . 'left as an abstract explanation.',
-                'long'  => '- Every principle, every consequence and every takeaway lands on '
+                'long'  => '- Every principle, every consequence and every outcome note lands on '
                     . 'something someone could watch happen: a behaviour, a sentence spoken, '
                     . 'a decision taken, a result that followed. No concept is left as an '
                     . 'abstract explanation. "Use active listening" is abstract and is wrong. '

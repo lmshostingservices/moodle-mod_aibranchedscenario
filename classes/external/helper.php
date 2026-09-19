@@ -496,7 +496,13 @@ class helper {
                 VALUE_DEFAULT,
                 []
             ),
-            'decisions'        => new external_value(PARAM_INT, 'Target number of decision points', VALUE_DEFAULT, 5),
+            // Still declared, and no longer the teacher's to set: source_normaliser
+            // overwrites it with schema::DECISIONS. Removing it from the structure while
+            // source_payload() still emitted it broke every call that carries a source -
+            // an external structure and the payload that fills it are one description in
+            // two places, and taking a field out of one of them is a breaking change of
+            // exactly the kind this release was already caught by.
+            'decisions'        => new external_value(PARAM_INT, 'Decisions, fixed by the plugin'),
             'tone'             => new external_value(PARAM_ALPHANUMEXT, 'Writing tone', VALUE_DEFAULT, 'neutral'),
             'complexity'       => new external_value(
                 PARAM_ALPHANUMEXT,
@@ -543,7 +549,7 @@ class helper {
             'participantrole'  => (string)($source['participantrole'] ?? ''),
             'characters'       => array_values((array)($source['characters'] ?? [])),
             'principles'       => array_values((array)($source['principles'] ?? [])),
-            'decisions'        => (int)($source['decisions'] ?? 5),
+            'decisions'        => schema::DECISIONS,
             'tone'             => (string)($source['tone'] ?? 'neutral'),
             'complexity'       => (string)($source['complexity'] ?? 'intermediate'),
             'imagestyle'       => (string)($source['imagestyle'] ?? 'cinematic'),

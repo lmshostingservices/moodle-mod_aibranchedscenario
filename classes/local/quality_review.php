@@ -478,6 +478,33 @@ class quality_review {
                 $seen[$note] = true;
             }
 
+            // A note the plugin assembled rather than one the writer wrote. Derived notes
+            // are the consequence and the feedback run together - the scenario's own words,
+            // and better than a hole - but they were written for a different screen, so
+            // they read as a summary of what happened rather than as what this option
+            // would have cost. Reported once per decision, because a teacher who sees it
+            // on every slide learns nothing from the fifth.
+            foreach ($choices as $choice) {
+                $note = trim((string)($choice['outcomenote'] ?? ''));
+                $joined = trim(trim((string)($choice['consequence'] ?? '')) . ' '
+                    . trim((string)($choice['feedback'] ?? '')));
+                if ($note === '' || $joined === '') {
+                    continue;
+                }
+                if (self::normalise_for_compare($note) === self::normalise_for_compare($joined)) {
+                    $out[] = [
+                        'nodeid'  => (string)($node['id'] ?? ''),
+                        'node'    => $title,
+                        'message' => get_string(
+                            'quality:derivedoutcomenote',
+                            'mod_aibranchedscenario',
+                            $title
+                        ),
+                    ];
+                    break;
+                }
+            }
+
             // A note that only says the option again. The paragraph exists to say what
             // taking it COSTS; one that restates the option teaches nothing and reads, on
             // the slide, as the same line printed twice.

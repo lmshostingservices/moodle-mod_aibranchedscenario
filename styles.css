@@ -2292,6 +2292,52 @@
     transform: translateY(-2px);
 }
 
+/* The word count under the source box. Sits close under the field it counts, in the same
+   size as a field hint - it is guidance, not a heading, and a count that shouted would
+   compete with the box it is about. */
+.aibs-sourcecount {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-meta);
+    margin: 6px 0 0;
+}
+
+.aibs-sourcecount.aibs-tone-warn {
+    color: var(--aibs-warn);
+}
+
+/* The three worked directions. A label, the example in its own voice, and a button that
+   puts it in the box - reading an example and retyping it is a step nobody should have
+   to take. */
+.aibs-example-list {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.aibs-example {
+    background: var(--aibs-surface-alt);
+    border: 1px solid var(--aibs-border-soft);
+    border-radius: var(--aibs-radius-sm);
+    display: grid;
+    gap: 6px;
+    justify-items: start;
+    padding: 13px 16px;
+}
+
+.aibs-example-label {
+    color: var(--aibs-text);
+    font-weight: var(--aibs-weight-strong);
+}
+
+/* Quoted, because it is an example of something a teacher would write rather than an
+   instruction to them. */
+.aibs-example-text {
+    color: var(--aibs-muted);
+}
+
 /* THE DECISION SLIDE.
 
    One per decision, and the only thing the debrief is made of now. The choice the learner

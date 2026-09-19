@@ -88,9 +88,17 @@ class scenario_manager {
      * @param array|null $generationmeta Non-secret metadata about how it was produced.
      * @return array The validated definition as stored.
      */
-    public static function save_definition(stdClass $scenario, array $definition, ?array $generationmeta = null): array {
+    public static function save_definition(
+        stdClass $scenario,
+        array $definition,
+        ?array $generationmeta = null,
+        bool $strictshape = true
+    ): array {
         global $DB;
-        $clean = validator::validate($definition);
+        // Strict by default, because most callers are saving something newly made. An edit
+        // to a draft that already exists passes false - see publish() for why an upgrade
+        // must not make a teacher's own work unsaveable.
+        $clean = validator::validate($definition, $strictshape);
         $encoded = json_encode($clean, JSON_UNESCAPED_UNICODE);
         if (strlen($encoded) > schema::MAX_SCENARIO_BYTES) {
             throw new validation_exception([get_string('error:scenariotoolarge', 'mod_aibranchedscenario')]);
@@ -200,7 +208,13 @@ class scenario_manager {
         if ($definition === null) {
             throw new moodle_exception('error:nothingtopublish', 'mod_aibranchedscenario');
         }
-        $clean = validator::validate($definition);
+        // The STORED validator: this draft is already ours. Publishing re-validates, and
+        // re-validating a draft written in August against a rule introduced in September
+        // made every pre-v2.3.0 scenario on a site unpublishable - for a shape the teacher
+        // could not have written and cannot now fix, because the editor has no control for
+        // adding the third option the rule demands. The shape is enforced where a scenario
+        // is MADE; here it is reported by the review panel and left to the teacher.
+        $clean = validator::validate_stored($definition);
 
         $transaction = $DB->start_delegated_transaction();
 

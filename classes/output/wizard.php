@@ -129,6 +129,9 @@ class wizard implements \renderable, \templatable {
                         'text'        => $choice['text'],
                         'consequence' => $choice['consequence'],
                         'feedback'    => $choice['feedback'],
+                        // Read with a fallback: a draft written before v2.3.0 has no note,
+                        // and the editor is where a teacher writes the missing one.
+                        'outcomenote' => (string)($choice['outcomenote'] ?? ''),
                         'signal'      => $choice['signal'],
                         'next'        => $choice['next'],
                         'signaloptions' => $this->options(schema::signals(), 'signal', $choice['signal']),
@@ -196,6 +199,16 @@ class wizard implements \renderable, \templatable {
             // Not a list of options any more - the length is fixed. Passed so the screen
             // can name the number rather than hard-coding it in the template.
             'decisions'    => schema::DECISIONS,
+            'maxoutcomenote' => schema::MAX_OUTCOME_NOTE,
+            // Three worked examples for the extra-direction box, built here rather than
+            // written into the template so each one is a translatable string with its
+            // label beside it.
+            'briefexamples' => array_map(static function ($key) {
+                return [
+                    'label' => get_string('briefexample:' . $key, 'mod_aibranchedscenario'),
+                    'text'  => get_string('briefexample:' . $key . 'text', 'mod_aibranchedscenario'),
+                ];
+            }, ['audience', 'focus', 'situation']),
             'industries'   => $this->options(schema::industries(), 'industry', $source['industry']),
             'settings'     => $this->options(schema::settings_list(), 'setting', $source['setting']),
             'atmospheres'  => $this->options(schema::atmospheres(), 'atmosphere', $source['atmosphere']),

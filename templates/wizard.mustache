@@ -264,13 +264,63 @@
                     {{#str}} field:sourcecontenthint, mod_aibranchedscenario, {{maxsourcechars}} {{/str}}</span>
                 <textarea class="aibs-textarea" id="aibs-sourcecontent" data-field="sourcecontent" rows="10"
                     aria-describedby="aibs-sourcecontent-hint" maxlength="{{maxsourcechars}}">{{source.sourcecontent}}</textarea>
+                {{! The count says whether what is in the box is the right AMOUNT, while
+                    there is still time to do something about it. A teacher who pastes a
+                    heading and two bullets otherwise finds out by reading a generic
+                    scenario they have already paid for. Polite until it is worth saying
+                    something - see sourceCount() in wizard.js. }}
+                <p class="aibs-sourcecount" data-region="sourcecount" role="status"
+                   aria-live="polite"></p>
             </div>
+
+            {{! WHAT GOES IN THE BOX.
+
+                Teachers ask what "source content" means, and the honest answer is specific
+                enough that showing beats describing. Closed by default: somebody who
+                already knows what to paste should not have to scroll past six hundred
+                words to reach the box. }}
+            <details class="aibs-disclosure">
+                <summary class="aibs-disclosure-summary">
+                    {{#str}} sourceexample, mod_aibranchedscenario {{/str}}</summary>
+                <div class="aibs-disclosure-body">
+                    <h4 class="aibs-h4">{{#str}} sourceexamplewhat, mod_aibranchedscenario {{/str}}</h4>
+                    <div class="aibs-prose aibs-prose-small">
+                        {{#str}} sourceexamplebody, mod_aibranchedscenario {{/str}}</div>
+                    <p class="aibs-field-hint">
+                        {{#str}} sourceexamplelead, mod_aibranchedscenario {{/str}}</p>
+                    <pre class="aibs-promptsource" data-region="sourceexample">{{#str}} sourceexampletext, mod_aibranchedscenario {{/str}}</pre>
+                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="useexample">
+                        {{#str}} useexample, mod_aibranchedscenario {{/str}}</button>
+                </div>
+            </details>
 
             <div class="aibs-field">
                 <label class="aibs-field-label" for="aibs-brief">
                     {{#str}} field:brief, mod_aibranchedscenario {{/str}}</label>
                 <span class="aibs-field-hint">{{#str}} field:briefhint, mod_aibranchedscenario {{/str}}</span>
                 <textarea class="aibs-textarea" id="aibs-brief" data-field="brief" rows="3">{{source.brief}}</textarea>
+                {{! Three worked examples rather than a description. Every teacher asked
+                    what belongs here answers with one of these three shapes, and none of
+                    them are obvious from the phrase "extra direction". Each is a button:
+                    reading an example and retyping it is a step nobody should have to
+                    take. }}
+                <details class="aibs-disclosure">
+                    <summary class="aibs-disclosure-summary">
+                        {{#str}} briefexample, mod_aibranchedscenario {{/str}}</summary>
+                    <div class="aibs-disclosure-body">
+                        <ul class="aibs-example-list">
+                            {{#briefexamples}}
+                                <li class="aibs-example">
+                                    <span class="aibs-example-label">{{label}}</span>
+                                    <q class="aibs-example-text">{{text}}</q>
+                                    <button type="button" class="aibs-btn aibs-btn-secondary"
+                                            data-action="usebrief" data-text="{{text}}">
+                                        {{#str}} useexample, mod_aibranchedscenario {{/str}}</button>
+                                </li>
+                            {{/briefexamples}}
+                        </ul>
+                    </div>
+                </details>
             </div>
 
             <p class="aibs-field-label">{{#str}} whatnext, mod_aibranchedscenario {{/str}}</p>
@@ -672,6 +722,18 @@
                                         {{#str}} field:feedback, mod_aibranchedscenario {{/str}}</label>
                                     <textarea class="aibs-textarea" id="aibs-choice-fb-{{id}}"
                                         data-choice-field="feedback" rows="3">{{feedback}}</textarea>
+                                    {{! The paragraph the debrief slide shows against this
+                                        option. It was the one field the whole debrief is
+                                        made of and the only one with no control here, so
+                                        the review panel's advice to write one "in the
+                                        editor" named something that did not exist. }}
+                                    <label class="aibs-field-label" for="aibs-choice-note-{{id}}">
+                                        {{#str}} field:outcomenote, mod_aibranchedscenario {{/str}}</label>
+                                    <span class="aibs-field-hint">
+                                        {{#str}} field:outcomenotehint, mod_aibranchedscenario {{/str}}</span>
+                                    <textarea class="aibs-textarea" id="aibs-choice-note-{{id}}"
+                                        data-choice-field="outcomenote" rows="3"
+                                        maxlength="{{maxoutcomenote}}">{{outcomenote}}</textarea>
                                 </fieldset>
                             {{/choices}}
                             <button type="button" class="aibs-btn aibs-btn-secondary" data-action="savenode">

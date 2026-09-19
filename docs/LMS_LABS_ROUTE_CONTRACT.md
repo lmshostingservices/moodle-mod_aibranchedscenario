@@ -183,6 +183,7 @@ Response `data.scenario` must be a scenario definition in the contract below.
           "consequence": "…",
           "feedback": "…",
           "principleid": "p1",
+          "outcomeNote": "The best of the three, and the only one that costs anything now: the line stops and somebody has to explain why. Sam sees that raising a fault gets it dealt with rather than noted, which is what makes him raise the next one.",
           "tags": ["escalates-appropriately"],
           "effects": {"engagement": 5, "trust": 10, "tension": -10},
           "skills": {"presence": 2, "adaptability": 0, "empathy": 1, "clarity": 2},
@@ -199,15 +200,13 @@ Response `data.scenario` must be a scenario definition in the contract below.
       "summary": "…"
     }
   ],
-  "debrief": {
-    "whatmattered": ["…"],
-    "criticaldecisions": ["…"],
-    "practice": ["…"],
-    "sourceconnection": "…"
-  },
-  "takeaways": [{"heading": "Speak early", "body": "…"}]
 }
 ```
+
+**Removed in plugin v2.3.0:** the top-level `debrief` block (`whatmattered`,
+`criticaldecisions`, `practice`, `sourceconnection`) and `takeaways`. They are ignored if
+still sent. Everything they carried now lives in `outcomeNote` on each choice, shown on
+that decision's own debrief slide beside the options that were not taken.
 
 ### Rules the generator must satisfy
 
@@ -223,8 +222,25 @@ finalised and refund if its own check fails.
    modelled as a forward path back to the main line, not a loop.
 5. **At least one `outcome` node**, reachable from the start. Ideally one per band:
    `strong`, `mixed`, `highrisk`.
-6. **Decision nodes** carry two to four choices; `outcome` nodes carry none. A
-   `beat` node carries a single `next` instead of choices.
+6. **Decision nodes carry exactly three choices** (plugin v2.3.0; two to four before
+   that); `outcome` nodes carry none. A `beat` node carries a single `next` instead of
+   choices. More than three is trimmed by the plugin, keeping one of each signal where it
+   can — **fewer than three is rejected**, because the plugin cannot write the missing
+   option.
+6b. **Exactly five decisions on the longest path** (plugin v2.3.0). The request carries
+   `decisions` and `choicesPerDecision` for this reason. A scenario of any other length is
+   rejected: the debrief gives every decision a screen of its own and is built for five.
+6c. **Every choice carries `outcomeNote`** — one paragraph, written to the learner, saying
+   where THAT option leads and why: what it costs, what it teaches, how it leaves the
+   people in the room. The learner is shown all three side by side after finishing, so the
+   three must read as three different outcomes and together explain why one is the best
+   available and another the worst. Up to 700 characters.
+
+   **Not yet required.** A choice sent without one is accepted, and the plugin builds a
+   stand-in by running the choice's `consequence` and `feedback` together. That is the
+   scenario's own words, and it reads as a summary of what happened rather than as what
+   taking the option would have cost — the review panel says so to the teacher. Sending a
+   written note is strictly better and is what the field is for.
 7. **Branch and bottleneck** — different choices lead to genuinely different nodes,
    and those branches reconverge at nodes marked `"bottleneck": true`. Do not emit a
    graph in which every choice from a node points at the same target.

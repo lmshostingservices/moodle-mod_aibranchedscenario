@@ -2,6 +2,45 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v2.3.1] - 2026-09-19
+
+### Generation works again
+
+**Version 2.3.0 broke scenario generation.** It made a new field on every option — the
+paragraph the debrief slide shows — a requirement. That field is newer than the service
+that writes scenarios, so every generation came back, was rejected by the plugin's own
+check, and the teacher was charged for nothing. If you hit this, that is what happened, and
+it was not anything about your source content.
+
+The field is now filled in when it is missing, from what the option already says about
+itself: what happened, and why it mattered. That is the scenario's own words rather than a
+gap, and the review panel tells you which scenarios have notes written for the slide and
+which were assembled. You can now write your own against each option in the editor, which
+2.3.0 forgot to give you a box for.
+
+### Scenarios made before 2.3.0 work again
+
+2.3.0 applied the new five-decision, three-option shape to scenarios that already existed.
+Publishing re-checks a scenario, and so does editing a single line of it — so a scenario
+written in August could not be published, could not be edited, and the error named a screen
+you were not working on.
+
+The shape now applies to scenarios being **made**. One you already have is left alone, and
+the review panel mentions it rather than blocking you.
+
+### Fixes
+
+- **The opening screen said how many decisions were coming, and could be wrong.** It
+  counted the decision screens in the scenario rather than the ones a learner walks
+  through, so a scenario that branches promised six and gave five.
+- **Four options is now trimmed to three rather than rejected**, keeping one of each kind
+  so the debrief slide still has a best and a worst to compare. Two is still refused — the
+  plugin cannot write the option that is missing.
+- **The picture and narration counts shown before you generate** were about half of what is
+  actually made. They are now measured against a real scenario.
+- A scenario that remembers a decision count from before the length was fixed no longer
+  asks the service for that length.
+
 ## [v2.3.0] - 2026-09-19
 
 ### One shape, every time: five decisions, three options

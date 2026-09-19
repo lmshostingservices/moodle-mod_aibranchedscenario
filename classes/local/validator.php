@@ -28,6 +28,15 @@ namespace mod_aibranchedscenario\local;
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class validator {
+    /**
+     * @var bool Whether the fixed shape is enforced or merely expected.
+     *
+     * True for anything being made: a generated scenario, a pasted one, an import. False
+     * for something already stored, which was written under whatever contract was current
+     * at the time and must not be made unpublishable by an upgrade. See validate_stored().
+     */
+    protected $strictshape = true;
+
     /** @var string[] Accumulated problems. */
     protected $problems = [];
 
@@ -38,13 +47,39 @@ class validator {
      * @return array Normalised scenario definition.
      * @throws validation_exception when the definition cannot be made valid.
      */
-    public static function validate(array $raw): array {
+    public static function validate(array $raw, bool $strictshape = true): array {
         $v = new self();
+        $v->strictshape = $strictshape;
         $clean = $v->normalise($raw);
         if ($v->problems) {
             throw new validation_exception($v->problems);
         }
         return $clean;
+    }
+
+    /**
+     * Validate something this plugin is ALREADY HOLDING, rather than something new.
+     *
+     * THE SHAPE RULES ARE ABOUT WHAT GETS MADE, NOT ABOUT WHAT EXISTS.
+     *
+     * v2.3.0 fixed the length at schema::DECISIONS and the width at schema::CHOICES.
+     * Applied to new content that is the point of the release. Applied to a draft written
+     * in August it is a plugin update that makes a teacher's own work unpublishable and
+     * uneditable, for a rule that did not exist when they wrote it: publish() re-validates,
+     * so does every single-node text edit, and there is no control in the editor for adding
+     * the third option the rule now demands. The scenario is then stuck, and nothing on
+     * screen suggests a way out.
+     *
+     * So the shape rules hold for new scenarios - generated, pasted, imported - and are
+     * reported rather than enforced for one already stored. Everything else in the
+     * contract is checked exactly as before: this is not a lenient validator, it is the
+     * same validator with two rules that only a NEW scenario has to satisfy.
+     *
+     * @param array $raw The stored definition.
+     * @return array
+     */
+    public static function validate_stored(array $raw): array {
+        return self::validate($raw, false);
     }
 
     /**
@@ -489,7 +524,7 @@ class validator {
         // out of exactly five slides. A scenario of some other length would render a
         // debrief with slides missing or slides spare, so it is refused here where a
         // teacher can be told why, rather than at play time where a learner finds out.
-        if ((int)$out['stats']['longestpath'] !== schema::DECISIONS) {
+        if ((int)$out['stats']['longestpath'] !== schema::DECISIONS && $this->strictshape) {
             $a = (object)['expected' => schema::DECISIONS,
                 'found' => (int)$out['stats']['longestpath']];
             $this->fail(get_string('error:decisioncount', 'mod_aibranchedscenario', $a));
@@ -1028,10 +1063,31 @@ class validator {
             return $node;
         }
 
-        // Exactly three, not a range. The debrief gives every decision a slide carrying
-        // one paragraph per option, and a scenario that offers two on one screen and four
-        // on the next produces five slides that do not look like each other.
-        if (count($rawchoices) !== schema::CHOICES) {
+        // Exactly three. The debrief gives every decision a slide carrying one paragraph
+        // per option, and a scenario offering two on one screen and four on the next
+        // produces five slides that do not look like each other.
+        //
+        // TOO MANY IS TRIMMED; TOO FEW IS REFUSED.
+        //
+        // The difference is whether the plugin can fix it without inventing meaning. A
+        // fourth option can be dropped - the three that remain are the author's own, and
+        // the ones kept are chosen to span the signals so the slide still has a best and a
+        // worst to compare. A missing third option cannot be written here: anything this
+        // code produced would be a choice a learner could take that nobody wrote.
+        //
+        // This distinction is the whole lesson of the outcomenote fault below. A rule that
+        // refuses what it could repair does not protect the contract, it just moves the
+        // failure onto a teacher who has already been charged.
+        if (count($rawchoices) > schema::CHOICES) {
+            $rawchoices = self::trim_choices($rawchoices);
+        }
+        if (count($rawchoices) !== schema::CHOICES && $this->strictshape) {
+            $a = (object)['node' => $id, 'count' => schema::CHOICES];
+            $this->fail(get_string('error:choicecount', 'mod_aibranchedscenario', $a));
+        }
+        // Still a floor, in both modes: a decision with one way out is not a decision, and
+        // that rule predates the fixed width by two years.
+        if (count($rawchoices) < 2) {
             $a = (object)['node' => $id, 'count' => schema::CHOICES];
             $this->fail(get_string('error:choicecount', 'mod_aibranchedscenario', $a));
         }
@@ -1067,14 +1123,34 @@ class validator {
             }
 
             // The paragraph the debrief slide shows against this option: what it costs,
-            // what it teaches, and how it leaves the people in the room. Required, because
-            // the debrief is now built entirely out of these - a scenario missing one has
-            // a slide with a hole in it, and a hole is not something a teacher should find
-            // out about from a learner.
+            // what it teaches, and how it leaves the people in the room.
+            //
+            // DERIVED WHEN IT IS MISSING, NEVER REJECTED FOR IT.
+            //
+            // This was a hard requirement for exactly one afternoon, and it broke live
+            // generation completely. The field is new, the LMS Labs service does not send
+            // it yet, and a plugin release cannot make a running service start sending a
+            // field it has never heard of. So every generation came back, was rejected by
+            // this rule, and the teacher was charged for a scenario they never saw. The
+            // paste route worked, because that prompt was updated in the same release -
+            // which is exactly how a fault like this hides: the half you can see is fine.
+            //
+            // The lesson is a rule, not a patch: a NEW REQUIRED FIELD IS A BREAKING CHANGE
+            // to every producer that has not shipped it yet. It can be required of the
+            // prompt, which is ours, and it cannot be required of the wire.
+            //
+            // Derived from the choice's own consequence and feedback, which every scenario
+            // already carries and which together say close to what the note is for: the
+            // consequence is what happened, the feedback is why it mattered. That is the
+            // scenario's own words about that option, not something invented here - and
+            // quality_review reports it, so a teacher knows which notes were written for
+            // the slide and which were assembled from what was already there.
             $outcomenote = $this->text($rawchoice['outcomenote'] ?? '', schema::MAX_OUTCOME_NOTE);
             if ($outcomenote === '') {
-                $a = (object)['node' => $id, 'letter' => $letters[$position]];
-                $this->fail(get_string('error:choicenooutcomenote', 'mod_aibranchedscenario', $a));
+                $outcomenote = self::derive_outcome_note(
+                    $this->text($rawchoice['consequence'] ?? '', 1800),
+                    $this->text($rawchoice['feedback'] ?? '', 1800)
+                );
             }
 
             $principleid = $this->identifier($rawchoice['principleid'] ?? '');
@@ -1163,6 +1239,83 @@ class validator {
         }
 
         return $node;
+    }
+
+    /**
+     * Keep schema::CHOICES options out of a node that offered more, spanning the signals.
+     *
+     * A service that writes four options is not producing a broken scenario, it is
+     * producing one the debrief slide cannot lay out. Dropping one is a repair the plugin
+     * can make honestly, because every option kept was written by the author.
+     *
+     * Which one goes matters. Taking the first three would happily keep three positives
+     * and drop the only option that costs anything, leaving a slide with nothing to
+     * compare - so one option is kept from each signal where there is one, and the
+     * remaining place goes to whatever came first among the rest.
+     *
+     * @param array $rawchoices The choices as written, more than schema::CHOICES of them.
+     * @return array Exactly schema::CHOICES of them, in the author's order.
+     */
+    protected static function trim_choices(array $rawchoices): array {
+        $keep = [];
+        foreach (schema::signals() as $signal) {
+            foreach ($rawchoices as $at => $choice) {
+                if (isset($keep[$at]) || !is_array($choice)) {
+                    continue;
+                }
+                if ((string)($choice['signal'] ?? '') === $signal) {
+                    $keep[$at] = true;
+                    break;
+                }
+            }
+        }
+        foreach ($rawchoices as $at => $choice) {
+            if (count($keep) >= schema::CHOICES) {
+                break;
+            }
+            if (is_array($choice)) {
+                $keep[$at] = true;
+            }
+        }
+        // Back into the order the author wrote them, then cut to length: the signal walk
+        // above collects them in signal order, and a slide that reordered the options
+        // would disagree with the decision screen the learner actually saw.
+        ksort($keep);
+        $out = [];
+        foreach (array_keys($keep) as $at) {
+            $out[] = $rawchoices[$at];
+        }
+        return array_slice($out, 0, schema::CHOICES);
+    }
+
+    /**
+     * Build an outcome note from what the choice already says about itself.
+     *
+     * Used when a producer has not sent one - which today means every scenario from the
+     * LMS Labs route, because the field is newer than the service.
+     *
+     * The consequence says what happened; the feedback says why it mattered. Run together
+     * they are close to what the debrief slide needs, and they are the scenario's own
+     * words rather than anything invented here. A purpose-written note is better and the
+     * prompt asks for one; this is what stops a missing field being a rejected scenario a
+     * teacher has already paid for.
+     *
+     * @param string $consequence What happened when this option was taken.
+     * @param string $feedback Why it mattered.
+     * @return string The note, or empty when there is nothing to build one from.
+     */
+    public static function derive_outcome_note(string $consequence, string $feedback): string {
+        $parts = [];
+        foreach ([$consequence, $feedback] as $part) {
+            $part = trim(preg_replace('/\s+/u', ' ', $part) ?? '');
+            if ($part !== '') {
+                $parts[] = $part;
+            }
+        }
+        if ($parts === []) {
+            return '';
+        }
+        return self::clip_to_words(implode(' ', $parts), schema::MAX_OUTCOME_NOTE);
     }
 
     /**

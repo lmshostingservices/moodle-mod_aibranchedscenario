@@ -790,12 +790,26 @@ class attempt_manager {
                 if ($ischosen) {
                     $chosen = $choice;
                 }
+                // Derived when the revision predates the field, which is every revision
+                // published before v2.3.0. An attempt is bound to the revision it started
+                // on and cannot be migrated, so a learner finishing one of those would
+                // otherwise meet five slides listing the options with nothing under them -
+                // the whole point of the screen, missing, on scenarios that were working
+                // the day before the upgrade. Derived from the scenario's own consequence
+                // and feedback rather than left blank.
+                $note = (string)($choice['outcomenote'] ?? '');
+                if (trim($note) === '') {
+                    $note = validator::derive_outcome_note(
+                        (string)($choice['consequence'] ?? ''),
+                        (string)($choice['feedback'] ?? '')
+                    );
+                }
                 $options[] = [
                     'choiceid'    => $choice['id'],
                     'letter'      => $choice['letter'] ?? '',
                     'text'        => $choice['text'],
                     'signal'      => $choice['signal'],
-                    'outcomenote' => (string)($choice['outcomenote'] ?? ''),
+                    'outcomenote' => $note,
                     'chosen'      => $ischosen,
                     'principle'   => $this->principle_title($choice['principleid']),
                 ];

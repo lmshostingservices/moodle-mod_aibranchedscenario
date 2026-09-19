@@ -161,7 +161,14 @@ class player implements \renderable, \templatable {
             ]);
         }
 
-        $decisions = (int)($definition['stats']['decisioncount'] ?? 0);
+        // Longestpath, NOT decisioncount. The same confusion that was caught in
+        // attempt_manager::metric_scale() the day before, still sitting here on the screen
+        // a learner reads FIRST: decisioncount counts the decision NODES in the graph, and
+        // a branching scenario has more of those than anybody walks. A scenario whose
+        // stage two forks into two alternatives has six nodes and five decisions, so the
+        // opening brief promised six and the learner made five - and the closing card,
+        // which counts what they actually did, then disagreed with the opening by one.
+        $decisions = (int)($definition['stats']['longestpath'] ?? 0);
         $setting = trim((string)($definition['setting'] ?? ''));
 
         return [

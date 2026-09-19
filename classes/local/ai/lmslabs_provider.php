@@ -756,12 +756,22 @@ class lmslabs_provider implements provider {
             }
         }
 
-        $decisions = (int)($request['decisions'] ?? 0);
-        if ($decisions >= 3 && $decisions <= 8) {
-            $payload['decisions'] = $decisions;
-            // One node per decision, plus the beats between them and three outcomes.
-            $payload['maxNodes'] = max(3, min(schema::MAX_NODES, ($decisions * 2) + 3));
-        }
+        // The fixed length, always, whatever the request happens to carry. It used to be
+        // sent only when it fell inside three-to-eight, so a request that omitted it got a
+        // scenario of whatever length the service chose - and the validator now refuses
+        // any length but this one.
+        $payload['decisions'] = schema::DECISIONS;
+        // One node per decision, plus the beats between them and three outcomes.
+        $payload['maxNodes'] = max(3, min(schema::MAX_NODES, (schema::DECISIONS * 2) + 3));
+        // NO choicesPerDecision KEY. It was added here for one run and the route-schema
+        // check refused it: the service rejects a request carrying any key its schema does
+        // not name, whole. So a well-meant "ask for three options" would have broken every
+        // generation - the same fault as the required outcomenote, committed while fixing
+        // the required outcomenote, and caught only because a check for it already existed.
+        //
+        // The option count is asked for in the PROMPT, which is ours, and handled on the
+        // way back in: four is trimmed to three, two is refused. Until the route schema
+        // names a field for it, that is the whole of what this plugin can do about it.
 
         $objectives = [];
         foreach ((array)($request['principles'] ?? []) as $principle) {

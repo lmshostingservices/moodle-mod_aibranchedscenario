@@ -18,6 +18,7 @@ namespace mod_aibranchedscenario;
 
 use mod_aibranchedscenario\local\attempt_manager;
 use mod_aibranchedscenario\local\scenario_manager;
+use mod_aibranchedscenario\local\schema;
 use mod_aibranchedscenario\local\validation_exception;
 use stdClass;
 
@@ -79,7 +80,10 @@ final class scenario_manager_test extends \advanced_testcase {
         $this->assertSame('minesite', $clean['setting']);
         $this->assertSame(['timepressure'], $clean['whyhard']);
         $this->assertSame(['learnersafety'], $clean['stakes']);
-        $this->assertSame(8, $clean['decisions']);
+        // The length is no longer the teacher's to set: source_normaliser overwrites whatever a
+        // draft carries with schema::DECISIONS, so a draft saved when the chooser existed
+        // does not get generated at a length the validator then refuses.
+        $this->assertSame(schema::DECISIONS, $clean['decisions']);
         $this->assertSame(100, $clean['openingmetrics']['engagement']);
         $this->assertSame(0, $clean['openingmetrics']['trust']);
         $this->assertSame(30, $clean['openingmetrics']['tension']);

@@ -61,22 +61,42 @@ class get_generation_plan extends external_api {
 
         $source = scenario_manager::get_source($scenario);
         $source = $source ? source_normaliser::normalise($source) : source_normaliser::blank();
-        $decisions = max(3, min(8, (int)$source['decisions']));
-
-        // One image per scene, and a scene per decision plus the beats between them and
-        // the endings, which is the same arithmetic the generation request uses.
-        $scenes = min(schema::MAX_NODES, ($decisions * 2) + 3);
+        // THE SHAPE IS FIXED, SO THE ESTIMATE CAN BE BUILT FROM IT.
+        //
+        // This read the teacher's chosen decision count and clamped it into three-to-eight
+        // - a range that no longer exists - and then counted images and clips with
+        // arithmetic that had drifted a long way from what the run actually makes. The
+        // figures are shown to the teacher verbatim before they spend credits, so a wrong
+        // count is a wrong promise even though the PRICE is flat and unaffected.
+        $decisions = schema::DECISIONS;
+        $choices = schema::CHOICES;
+        $outcomes = count(schema::outcomes());
+        // Three is what the content standard asks for and what the debrief was built
+        // around; a scenario may teach more, which makes this an estimate rather than a
+        // count - stated as one, and checked against a real run by the harness.
+        $principles = 3;
         $tariff = schema::tariff();
 
         $wantsimages = !empty($scenario->enableimages) && get_config('mod_aibranchedscenario', 'allowimages');
         $wantsaudio = !empty($scenario->enableaudio) && get_config('mod_aibranchedscenario', 'allowaudio');
 
-        $images = $wantsimages ? $scenes : 0;
-        // What the speech bill actually looks like: one clip for the situation on every
-        // node that is not an ending, one for each named character's line, and one for
-        // each branch of a decision when consequence narration is on. Beats are not
-        // counted: their single "continue" consequence is filler and is never recorded.
-        $narrations = $wantsaudio ? (($scenes - 3) + $decisions + ($decisions * 3)) : 0;
+        // Every frame the run commissions: the establishing shot, one per decision, one
+        // per ending, the slide that teaches each principle, and a reaction for each
+        // signal a decision can produce. The debrief commissions nothing of its own - its
+        // slides reuse the reaction already drawn for the option the learner took.
+        $scenes = 1 + $decisions + $outcomes;
+        // Plus the escalated variants: the content standard asks for one or two, and each
+        // is a frame of its own.
+        $crisis = 2;
+        $images = $wantsimages
+            ? $scenes + $principles + ($decisions * count(schema::signals())) + $crisis
+            : 0;
+        // Every clip: the situation on each node that is not an ending, the opening, one
+        // spoken line per decision, and then three per option - the consequence, the same
+        // choice read again on its record, and the outcome note the debrief slide reads.
+        $narrations = $wantsaudio
+            ? ($decisions + 1 + $decisions + ($decisions * $choices * 3) + $outcomes)
+            : 0;
         // What the run costs this site to produce, which is not what the teacher pays and
         // is not shown to them. It is kept because the daily allowance is a budget of
         // service operations rather than of sales.

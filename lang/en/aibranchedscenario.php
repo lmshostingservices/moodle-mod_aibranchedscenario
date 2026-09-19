@@ -219,7 +219,7 @@ $string['step:challenge'] = 'The challenge';
 $string['step:people'] = 'The people';
 $string['step:design'] = 'Design';
 $string['step:build'] = 'Build and publish';
-$string['step:sourcelead'] = 'Paste what the scenario should teach. Everything after this is built from it, so the more concrete the source, the more specific the situation.';
+$string['step:sourcelead'] = 'Paste what the scenario should teach. Everything after this is built from it, so the more concrete the source, the more specific the situation. Five key points, 500 to 800 words, is the shape that works.';
 $string['step:scenelead'] = 'Where this happens and how it feels when the learner walks in. This is the first thing they read, so it sets whether the scenario feels real or generic.';
 $string['step:challengelead'] = 'The problem the learner has to handle. Say why it is hard and what is at stake — a decision with nothing riding on it is not a decision.';
 $string['step:peoplelead'] = 'Who the learner is, and who else is in the room. The other people are what makes a choice cost something.';
@@ -290,6 +290,7 @@ $string['quality:flatsignals'] = 'Every option at "{$a}" carries the same signal
 $string['quality:duplicateoutcomenote'] = 'Two options at "{$a}" explain their outcome in the same words. The slide for this decision exists to show three different consequences side by side; two that read alike teach nothing by being next to each other.';
 $string['quality:restatedoutcomenote'] = 'Option {$a->letter} at "{$a->node}" explains its outcome by repeating the option itself. The paragraph is there to say what taking it costs and what it teaches, and on the slide it will read as the same line printed twice.';
 $string['quality:readingrange'] = 'Even taking the worst option at every decision, {$a->metric} only reaches {$a->worst} and never {$a->end}. A learner who gets everything wrong will see a score of 0% next to a reading that says the run went half well. Make the effects on the poor options larger in the editor - across five decisions they need to span the whole scale.';
+$string['quality:derivedoutcomenote'] = 'The options at "{$a}" have no paragraph of their own, so the debrief slide is showing what happened and why it mattered, run together. That is the scenario\'s own words and it reads as a summary rather than as what taking each option would have cost. Write a sentence or two against each option in the editor, or regenerate once your service is sending them.';
 $string['quality:skillnameleak'] = 'The skill name "{$a->skill}" appears in {$a->where}. Skill names are the scoring language of the debrief; a learner who meets one mid-scenario is being shown the marking scheme while they are being marked. Rewrite it in the words of the job.';
 $string['quality:principleneedsexample'] = 'The principle "{$a}" teaches a rule with no example. Add the words a learner could actually say or the action they could take, in the editor before publishing - a learner remembers the words they can use, not the rule.';
 $string['quality:principleneedspitfall'] = 'The principle "{$a}" has no pitfall. Add the plausible-sounding version that does not work, and why - that is the thing a learner needs warning about.';
@@ -393,9 +394,61 @@ $string['copyprompthint'] = 'Copies a prompt describing this plugin\'s scenario 
 $string['promptcopied'] = 'The prompt is on your clipboard.';
 $string['fillingfields'] = 'Filling the fields the first pass left empty...';
 $string['field:sourcecontent'] = 'Source content';
-$string['field:sourcecontenthint'] = 'Paste the policy, procedure, unit content or notes the scenario should be built from. Up to {$a} characters.';
+$string['field:sourcecontenthint'] = 'Paste the policy, procedure, unit content or notes the scenario should be built from. <strong>Aim for five key points and 500 to 800 words.</strong> That is the amount one scenario can carry: five decisions, one per point. Up to {$a} characters.';
+// The word count under the box. A teacher pasting a heading and two bullets has no way to
+// know that is too little until the scenario comes back generic, and one pasting a
+// thirty-page policy has no way to know most of it will be ignored. The count says so
+// while there is still time to do something about it.
+$string['sourcecount'] = '{$a} words';
+$string['sourcecount:thin'] = '{$a} words - thin. Under 200 words gives the writer nothing specific to build on, and the scenario comes back generic.';
+$string['sourcecount:good'] = '{$a} words - about right for five decisions.';
+$string['sourcecount:long'] = '{$a} words - longer than one scenario can use. Everything here is read, but five decisions can only carry about five ideas: cut to the points that matter most, or build a second scenario.';
+// The worked example. Teachers ask what "source content" means and the honest answer is
+// specific enough that showing beats describing.
+$string['sourceexample'] = 'Show me an example';
+$string['sourceexamplelead'] = 'This is about 600 words on one topic, written as five points. Yours does not need to look like this - it is the level of detail that matters, not the format.';
+$string['sourceexamplewhat'] = 'What makes a good source';
+$string['sourceexamplebody'] = '<p><strong>Five points, because there are five decisions.</strong> Each point becomes one moment where the learner has to choose. Fewer than five and the writer invents the rest; many more and the ones you care about get dropped.</p>
+<p><strong>Rules with consequences beat definitions.</strong> "Faults are logged on sight" is a rule. "Faults are logged on sight because the night shift starts the machine without being told what happened on ours" is a rule with a consequence, and the consequence is what makes a decision worth taking.</p>
+<p><strong>Say what goes wrong in practice.</strong> The plausible wrong answers are the hardest part of a scenario to write, and they are the part you already know. If people put it off until the end of shift, or tell someone in the corridor instead of writing it down, say so - those become the options that are tempting rather than obviously wrong.</p>
+<p><strong>Name the pressure.</strong> Time, cost, somebody senior in the room, a target that competes with the rule. Without it every decision has an obvious right answer and nothing is learnt.</p>
+<p><strong>Leave real people out.</strong> The scenario invents its own cast. Describe roles - shift supervisor, new starter - not names of people at your organisation.</p>';
+$string['sourceexampletext'] = 'Reporting equipment faults on the packing line
+
+Why this matters. A fault that is seen and not written down is a fault the next shift does not know about. Our incident record for the last two years shows that in four of the six machine injuries, somebody on an earlier shift had noticed something and mentioned it verbally to one person. The information existed. It just did not survive the handover.
+
+1. Log a fault the moment it is seen, not at the end of the shift.
+The log entry takes about ninety seconds. The reason it gets deferred is that stopping to write during a run feels like the expensive option, and at the end of a shift it feels like the cheap one - by which time the detail has gone. What we need in the entry is what the machine was doing, when it started, and whether it changed. "Number three is noisy" is not a record. "Number three started a knocking sound around 1pm, worse under load" is.
+
+2. Stopping the line is a decision you are allowed to make.
+Supervisors defer this because the line stopping is visible and a fault running is not. Nobody has ever been disciplined here for stopping a line. Two people have been disciplined for running one they had been told was unsafe. The rule is that if you are asking yourself whether it should be stopped, that question is the answer.
+
+3. Escalate to the person who can decide, not the person who is nearest.
+Telling a colleague is not escalation, and neither is a note left on a desk. The shift manager can authorise a repair and reschedule the run; nobody else on the floor can do either. If they are not contactable, the duty number is on the board and it is answered.
+
+4. A handover names what is unresolved, not just what happened.
+The common failure is a handover that reports the shift as a series of completed events. What the incoming supervisor needs is the list of things still open: what is being watched, what has been logged and not yet fixed, and what you would want to know if you were starting now. If you delayed something, say that you delayed it - the delay is usually the useful part.
+
+5. The written record is read by people who were not there.
+It will be read by maintenance deciding what to strip down, and by an investigator if something goes wrong later. Both of them need the sequence and the timings. A record that leaves out the hour the fault ran is not neutral - it points the next person away from the thing that mattered.
+
+What tends to go wrong. Operators raise faults and then soften them, because the supervisor is busy. Supervisors watch a fault through to the end of shift because the run is nearly finished. Handovers are given while both people are walking. And everybody writes a shorter log entry than they would want to read.';
+$string['field:outcomenote'] = 'Where this option leads';
+$string['field:outcomenotehint'] = 'Shown on the debrief slide for this decision, beside the other options. Say what taking this one costs and what it teaches - not what happened, which the consequence above already says.';
 $string['field:brief'] = 'Extra direction (optional)';
-$string['field:briefhint'] = 'Anything the source content does not say: who this is for, what you want them to practise, a situation you have in mind.';
+$string['field:briefhint'] = 'Anything the source content does not say: who this is for, what you want them to practise, a situation you have in mind. One or two sentences is plenty.';
+// Three examples rather than a description. Every teacher asked what belongs here answers
+// with one of these three shapes - who it is for, what to make it turn on, or a real
+// situation to reuse - and none of them are obvious from the phrase "extra direction".
+$string['briefexample'] = 'Three things worth putting here';
+$string['briefexample:audience'] = 'Who it is for, when the source does not say.';
+$string['briefexample:audiencetext'] = 'For new supervisors in their first six months, who know the rule and have not yet had to enforce it with somebody more senior than them.';
+$string['briefexample:focus'] = 'What you want the decisions to turn on.';
+$string['briefexample:focustext'] = 'Make the hard part the conversation rather than the paperwork. They can all fill in the form; what they avoid is telling somebody their work has to stop.';
+$string['briefexample:situation'] = 'A real situation to build from, with the names taken out.';
+$string['briefexample:situationtext'] = 'Set it on a late shift with a delivery deadline, where the person raising the fault is agency staff on their second week and the supervisor has met them once.';
+$string['useexample'] = 'Use this example';
+$string['usedexample'] = 'The example has been put in the box. Replace it with your own content before you generate.';
 $string['field:title'] = 'Scenario title';
 $string['field:audience'] = 'Audience';
 $string['field:industry'] = 'Subject area';
@@ -709,7 +762,6 @@ $string['error:nodenosituation'] = 'Node {$a} has no situation text.';
 $string['error:nodenochoices'] = 'Node {$a} offers no way forward.';
 $string['error:beatnonext'] = 'Node {$a} does not say what follows it.';
 $string['error:choicecount'] = 'Node {$a->node} must offer exactly {$a->count} options.';
-$string['error:choicenooutcomenote'] = 'Option {$a->letter} on node {$a->node} does not say what taking it would have led to. The debrief shows that paragraph against every option.';
 $string['error:decisioncount'] = 'A scenario contains exactly {$a->expected} decisions. This one has {$a->found}.';
 $string['error:choicenotext'] = 'A choice on node {$a} has no text.';
 $string['error:choicenonext'] = 'Choice {$a->letter} on node {$a->node} does not lead anywhere.';

@@ -42,6 +42,10 @@ const SELECTORS = {
     loadingEta: '[data-region="loadingeta"]',
     workSteps: '[data-region="worksteps"]',
     workDialog: '[data-region="workdialog"]',
+    sourceCount: '[data-region="sourcecount"]',
+    sourceField: '[data-field="sourcecontent"]',
+    briefField: '[data-field="brief"]',
+    sourceExample: '[data-region="sourceexample"]',
     workLive: '[data-region="worklive"]',
 };
 
@@ -99,6 +103,7 @@ class Wizard {
             'fillingfields', 'promptcopied', 'restore:nothing', 'mediaqueued',
             'work:checking', 'work:saving', 'work:media', 'work:reading', 'work:filling',
             'work:writing', 'work:done', 'worknote',
+            'sourcecount:thin', 'sourcecount:good', 'sourcecount:long', 'usedexample',
         ];
         const values = await getStrings(keys.map((key) => ({key, component: 'mod_aibranchedscenario'})));
         keys.forEach((key, index) => {
@@ -122,9 +127,15 @@ class Wizard {
             this.handle(target.dataset.action, target);
         });
 
-        this.root.addEventListener('input', () => {
+        this.root.addEventListener('input', (event) => {
             this.dirty = true;
+            if (event.target && event.target.matches(SELECTORS.sourceField)) {
+                this.sourceCount();
+            }
         });
+        // Drawn once on load, so a teacher returning to a half-written draft sees where
+        // they were rather than a blank line that only appears once they type.
+        this.sourceCount();
 
         // Work in flight blocks the page as firmly as the browser allows. Leaving mid-way
         // through an import abandons a scenario half-written; leaving mid-way through a
@@ -200,6 +211,12 @@ class Wizard {
                 break;
             case 'populate':
                 this.populate();
+                break;
+            case 'useexample':
+                this.useExample();
+                break;
+            case 'usebrief':
+                this.useBrief(element);
                 break;
             case 'suggest':
                 this.suggest(element);
@@ -377,6 +394,86 @@ class Wizard {
     }
 
     /**
+     * Say whether what is in the source box is the right AMOUNT, while it can still change.
+     *
+     * A scenario is five decisions, and five decisions can carry about five ideas. Under
+     * two hundred words there is nothing specific for the writer to build on and the
+     * scenario comes back generic; past about twelve hundred, most of what was pasted is
+     * read and then not used, because there is nowhere for it to go.
+     *
+     * Neither of those is discoverable today. A teacher finds out by reading a scenario
+     * they have already paid for. The count is the cheapest possible reader for it.
+     *
+     * Polite by default: it states the number and says nothing else until there is
+     * something worth saying.
+     *
+     * @returns {void}
+     */
+    sourceCount() {
+        const field = this.root.querySelector(SELECTORS.sourceField);
+        const region = this.root.querySelector(SELECTORS.sourceCount);
+        if (!field || !region) {
+            return;
+        }
+        const words = (field.value.trim().match(/\S+/g) || []).length;
+        if (!words) {
+            region.textContent = '';
+            region.className = 'aibs-sourcecount';
+            return;
+        }
+        let key = 'sourcecount:good';
+        let tone = 'aibs-tone-good';
+        if (words < 200) {
+            key = 'sourcecount:thin';
+            tone = 'aibs-tone-warn';
+        } else if (words > 1200) {
+            key = 'sourcecount:long';
+            tone = 'aibs-tone-warn';
+        }
+        region.textContent = (this.strings[key] || '{$a} words').replace('{$a}', String(words));
+        region.className = 'aibs-sourcecount ' + tone;
+    }
+
+    /**
+     * Put the worked example in the source box.
+     *
+     * Reading an example and then retyping it is a step nobody should have to take. It
+     * replaces rather than appends - the example is a starting point, not something to
+     * paste your own content underneath - and the toast says so, because a teacher who
+     * generates from the example gets a scenario about a packing line they do not run.
+     *
+     * @returns {void}
+     */
+    useExample() {
+        const field = this.root.querySelector(SELECTORS.sourceField);
+        const example = this.root.querySelector('[data-region="sourceexample"]');
+        if (!field || !example) {
+            return;
+        }
+        field.value = example.textContent.trim();
+        this.dirty = true;
+        this.sourceCount();
+        field.focus();
+        Toast.show(this.strings.usedexample || '', 'info');
+    }
+
+    /**
+     * Put one of the three worked directions in the extra-direction box.
+     *
+     * @param {HTMLElement} element The button, carrying the text it stands for.
+     * @returns {void}
+     */
+    useBrief(element) {
+        const field = this.root.querySelector(SELECTORS.briefField);
+        if (!field || !element.dataset.text) {
+            return;
+        }
+        field.value = element.dataset.text;
+        this.dirty = true;
+        field.focus();
+    }
+
+    /**
      * Read the current wizard values out of the form controls.
      *
      * @returns {Object} The wizard values.
@@ -385,7 +482,10 @@ class Wizard {
         const source = {};
         this.root.querySelectorAll('[data-field]').forEach((element) => {
             const name = element.dataset.field;
-            source[name] = name === 'decisions' ? parseInt(element.value, 10) : element.value;
+            // The decision count used to be a select here and is fixed now, so there is
+            // no numeric field left to special-case. The server sets it from
+            // schema::DECISIONS whatever arrives.
+            source[name] = element.value;
         });
 
         this.root.querySelectorAll('[data-group]').forEach((group) => {

@@ -83,6 +83,19 @@ class generator {
 
         $tariff = schema::tariff();
         $refunded = $DB->sql_like('errormsg', ':refunded', false, false);
+        // A SCENARIO THIS PLUGIN REFUSED STILL SPENDS THE ALLOWANCE, AND THAT IS RIGHT.
+        //
+        // Briefly changed, and changed back. The argument for excluding it is that the
+        // rejection is ours, so the teacher is charged twice for a decision they had no
+        // part in. The argument against is the one that wins: this allowance is a budget
+        // of SERVICE OPERATIONS, not of successes. The service did the work and billed for
+        // it, and a run that did not count would let one teacher with a source the service
+        // keeps choking on spend the site's budget all day without ever reaching a limit.
+        //
+        // The teacher's real loss is credits, and this plugin cannot refund what LMS Labs
+        // charged - only the service can. The answer to a rule of ours that is wrong is
+        // not to move its cost onto the allowance; it is to stop the rule refusing what it
+        // could repair. See validator::derive_outcome_note() and trim_choices().
 
         // A media run is ONE job row covering every picture and every clip in a scenario.
         //

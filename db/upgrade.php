@@ -891,5 +891,26 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091904, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091905) {
+        // Release 2.3.1 repairs 2.3.0, which broke live generation completely.
+        //
+        // 2.3.0 made the outcome note a required field. Scenarios come from the LMS Labs
+        // service, which does not send it, so every generation came back, was refused by
+        // this plugin's own validator, and the teacher was charged for nothing. The paste
+        // route worked, because that prompt was updated in the same release - which is how
+        // it hid. The same release also made a pre-2.3.0 draft unpublishable and
+        // uneditable, because publishing and every single-node edit re-validate against
+        // the new shape.
+        //
+        // The rule, now enforced by checks: a new required field, or a newly narrowed
+        // rule, is a breaking change to every producer that has not shipped it. It can be
+        // required of this plugin's own prompt. It cannot be required of the wire, or of
+        // anything an earlier version wrote.
+        //
+        // No schema change. Nothing to migrate: the missing notes are derived wherever
+        // they are read, including on revisions published before the field existed.
+        upgrade_mod_savepoint(true, 2026091905, 'aibranchedscenario');
+    }
+
     return true;
 }

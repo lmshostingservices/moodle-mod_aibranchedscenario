@@ -54,6 +54,12 @@ class save_node_text extends external_api {
                     'text'        => new external_value(PARAM_TEXT, 'Choice text', VALUE_OPTIONAL),
                     'consequence' => new external_value(PARAM_TEXT, 'Consequence text', VALUE_OPTIONAL),
                     'feedback'    => new external_value(PARAM_TEXT, 'Instructional feedback', VALUE_OPTIONAL),
+                    // The paragraph the debrief slide shows against this option. It was
+                    // the one field the whole debrief is made of and the only one that
+                    // could not be edited - so the review panel's advice to "write a
+                    // sentence or two against each option in the editor" named a control
+                    // that did not exist.
+                    'outcomenote' => new external_value(PARAM_TEXT, 'Where this option leads', VALUE_OPTIONAL),
                     'signal'      => new external_value(PARAM_ALPHA, 'positive, neutral or negative', VALUE_OPTIONAL),
                     'next'        => new external_value(PARAM_ALPHANUMEXT, 'Node this choice leads to', VALUE_OPTIONAL),
                 ]),
@@ -128,6 +134,7 @@ class save_node_text extends external_api {
                         'signal'      => 'neutral',
                         'consequence' => '',
                         'feedback'    => '',
+                        'outcomenote' => '',
                         'principleid' => '',
                         'tags'        => [],
                         'effects'     => [],
@@ -154,7 +161,11 @@ class save_node_text extends external_api {
             throw new \moodle_exception('error:unknownnode', 'mod_aibranchedscenario');
         }
 
-        scenario_manager::save_definition($resolved['scenario'], $definition);
+        // Not strict: this is an edit to a draft that already exists. Validating a single
+        // typo fix against the fixed shape refused the whole definition, naming a node the
+        // teacher was not editing - so an old draft was uneditable as well as
+        // unpublishable, and the only route out of both was to throw it away.
+        scenario_manager::save_definition($resolved['scenario'], $definition, null, false);
 
         return ['saved' => true];
     }
@@ -181,7 +192,7 @@ class save_node_text extends external_api {
      * @return array
      */
     protected static function apply_choice(array $choice, array $edited): array {
-        foreach (['text', 'consequence', 'feedback', 'next'] as $key) {
+        foreach (['text', 'consequence', 'feedback', 'outcomenote', 'next'] as $key) {
             if (array_key_exists($key, $edited)) {
                 $choice[$key] = $edited[$key];
             }
