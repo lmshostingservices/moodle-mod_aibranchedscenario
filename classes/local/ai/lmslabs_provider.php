@@ -338,16 +338,47 @@ class lmslabs_provider implements provider {
         if ($status === 429) {
             throw new generation_exception('error:serviceratelimited');
         }
+        $code = is_array($decoded) ? (string)($decoded['error'] ?? '') : '';
+
+        // NOT EVERY 409 IS A REPLAY.
+        //
         // The service answers a handle it has seen before, carrying a different body, with
-        // 409 and this code. It neither generates nor charges. Branching on the code rather
-        // than the message is the service's own instruction - the wording is not a contract.
-        // A teacher should be told to generate again rather than shown a conflict they had
-        // no part in.
-        if ($status === 409 || (is_array($decoded) && ($decoded['error'] ?? '') === 'IDEMPOTENCY_CONFLICT')) {
+        // 409 IDEMPOTENCY_CONFLICT. It neither generates nor charges, and a teacher should
+        // be told to generate again rather than shown a conflict they had no part in.
+        //
+        // It answers 409 TARIFF_MISMATCH as well, and that is a completely different
+        // sentence: the price this plugin quoted and the price the service charges do not
+        // agree, which is a configuration fault between two systems and not something
+        // pressing the button again will ever fix. Reading both as "try again" would have
+        // sent every teacher on the site around the same loop forever.
+        //
+        // Branching on the CODE rather than on the status is the service's own instruction,
+        // and it is what makes the two separable at all.
+        if ($code === 'TARIFF_MISMATCH') {
+            throw new generation_exception('error:tariffmismatch');
+        }
+        if ($status === 409 || $code === 'IDEMPOTENCY_CONFLICT') {
             throw new generation_exception('error:generationconflict');
         }
         if (!is_array($decoded)) {
             throw new generation_exception('error:serviceunreadable');
+        }
+
+        // A FAILURE IS NOT A REFUND UNLESS THE SERVICE SAYS SO.
+        //
+        // Every failure used to come back as error:servicefailed, and the daily allowance
+        // excludes that prefix on the reasoning that the service refunds what it could not
+        // deliver. That reasoning holds for an ordinary failure and does not hold for these
+        // two: CREDIT_REFUND_FAILED says the debit stands and somebody has to put it right
+        // by hand, and CREDIT_DEBIT_UNCERTAIN says nobody knows yet. Treating either as
+        // refunded spends a teacher's credits and then hands them the allowance back as
+        // though nothing had happened, which is the one direction of this error that costs
+        // real money and cannot be noticed from the screen.
+        //
+        // A separate code, deliberately NOT under the servicefailed prefix, so the
+        // allowance counts it. Uncertainty is preserved rather than resolved in our favour.
+        if ($code === 'CREDIT_REFUND_FAILED' || $code === 'CREDIT_DEBIT_UNCERTAIN') {
+            throw new generation_exception('error:servicecharged', self::failure_detail($decoded, $status));
         }
         if ($status < 200 || $status >= 300 || empty($decoded['ok'])) {
             throw new generation_exception('error:servicefailed', self::failure_detail($decoded, $status));

@@ -778,15 +778,19 @@ $string['error:generic'] = 'Something went wrong. Please try again.';
 $string['error:missingidandcmid'] = 'You must supply a course module id or an instance id.';
 $string['error:minscorerange'] = 'The minimum decision quality must be between 0 and 100.';
 $string['error:nogeneratecap'] = 'You can edit this scenario but not generate one. Generating spends the site\'s credits, so it is a separate permission — ask whoever administers your Moodle to grant you \'Generate scenarios with AI\' on this activity.';
-$string['error:nocredentials'] = 'AI generation is unavailable because no LMS Labs credentials are configured. Ask a site administrator to set them up.';
+$string['error:nocredentials'] = 'AI generation is unavailable because no LMS Labs credentials are configured. Nothing was sent and no credits were used. Ask a site administrator to set them up.';
 $string['error:insufficientcredits'] = 'There are not enough LMS Labs credits to complete this request.';
 $string['error:generationconflict'] = 'This generation could not be resumed because the request had already been used for a different one. Nothing was generated and no credits were used. Please generate again.';
-$string['error:serviceunauthorised'] = 'The LMS Labs service rejected the site credentials.';
-$string['error:serviceratelimited'] = 'The LMS Labs service is rate limiting requests. Try again shortly.';
+$string['error:serviceunauthorised'] = 'The LMS Labs service rejected the site credentials. Nothing was generated and no credits were used. Ask a site administrator to check the site ID and API key.';
+$string['error:serviceratelimited'] = 'The LMS Labs service is rate limiting requests. Nothing was generated and no credits were used. Try again shortly.';
 $string['error:servicetimeout'] = 'The LMS Labs service did not respond in time. No scenario was saved.';
 $string['error:serviceunreadable'] = 'The LMS Labs service returned a response this plugin could not read.';
 $string['error:sourcetooshort'] = 'The source content is too short. The LMS Labs service needs at least {$a} characters to work from.';
 $string['error:servicefailed'] = 'The LMS Labs service could not complete the request ({$a}).';
+// A FAILURE IS NOT A REFUND UNLESS THE SERVICE SAYS SO. These two say the opposite, and the
+// wording must not promise a refund the service has not made.
+$string['error:servicecharged'] = 'The LMS Labs service could not complete the request, and the credits for it may still have been charged ({$a}). This one needs checking against your LMS Labs account rather than simply generating again.';
+$string['error:tariffmismatch'] = 'The LMS Labs service refused this request because the price it charges does not match the price this activity quoted. Nothing was generated and no credits were used. This is a configuration fault between the plugin and the service — generating again will not fix it, and your site administrator should raise it with LMS Labs.';
 $string['error:nodetail'] = 'no reason given';
 $string['error:validationdetail'] = 'What was wrong: {$a}';
 $string['error:servicenoscenario'] = 'The LMS Labs service did not return a scenario.';

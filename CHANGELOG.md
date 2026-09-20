@@ -2,6 +2,44 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v3.0.1] - 2026-09-20
+
+### A failure is not a refund
+
+The daily allowance excluded every job whose error began `error:servicefailed`, on the
+reasoning that the service refunds what it could not deliver. That reasoning is right for an
+ordinary failure and wrong for two of them: **`CREDIT_REFUND_FAILED` says the debit stands
+and somebody has to put it right by hand, and `CREDIT_DEBIT_UNCERTAIN` says nobody knows
+yet.** Under a prefix match both read as refunded — spending a teacher's credits and then
+handing their allowance back as though nothing had happened. That is the one direction of
+this error that costs real money, and nothing on any screen would have shown it.
+
+The allowance now **names** the failures that genuinely cost nothing rather than matching a
+prefix, and the test for membership is what the teacher was told: a code belongs on that list
+only if its message promises no credits were used. The plugin does not get to say "no credits
+were used" and then spend the budget anyway, or the reverse.
+
+Everything not on that list counts, which is the safe direction — a timeout where no reply
+arrived, a run the service completed that this plugin then refused, and both credit codes.
+Those failures now carry their own message, which says the credits **may** still have been
+charged and that the run needs checking against the LMS Labs account, rather than promising a
+refund nobody made.
+
+### Not every 409 is a replay
+
+`IDEMPOTENCY_CONFLICT` means a request handle was reused; pressing the button again fixes it.
+`TARIFF_MISMATCH` means the price the activity quoted and the price the service charges do not
+agree — a configuration fault between two systems that generating again will **never** fix.
+Both arrive as HTTP 409 and both used to read as "try again", which would have sent every
+teacher on the site around the same loop indefinitely. They are now branched on the service's
+own code rather than on the status, and they say different things.
+
+### Not changed
+
+Pricing is unchanged: a full scenario generation is **200 credits ($20 USD)**, and the
+quotes remain 100 / 150 / 150 / 200 at 10 credits to the dollar. Nothing in this release
+alters what a teacher is quoted or what the service charges.
+
 ## [v3.0.0] - 2026-09-20
 
 A major version, and the reason is what it asks a learner to do. Until now every decision

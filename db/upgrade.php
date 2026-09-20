@@ -1172,5 +1172,15 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026092001, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026092002) {
+        // Version 3.0.1. No schema change. A failure is no longer assumed to be a refund:
+        // the daily allowance now names the failures that genuinely cost nothing instead
+        // of matching a prefix, so a debit that stands or is unresolved is counted rather
+        // than handed back. Also tells a tariff mismatch apart from an idempotency replay,
+        // which previously both read as "generate again" - advice that can never fix the
+        // first of them.
+        upgrade_mod_savepoint(true, 2026092002, 'aibranchedscenario');
+    }
+
     return true;
 }

@@ -63,6 +63,40 @@ class generator {
     }
 
     /**
+     * The failures that genuinely cost the teacher nothing.
+     *
+     * THE TEST FOR MEMBERSHIP IS WHAT THE TEACHER WAS TOLD.
+     *
+     * Each of these shows a message that states in so many words that no credits were
+     * used, so the daily allowance has to agree with it. The plugin does not get to
+     * promise somebody they were not charged and then spend their budget anyway.
+     *
+     * Everything NOT on this list counts, and that is the safe direction. A timeout where
+     * no reply ever arrived, a run the service completed and this plugin then refused, and
+     * the two credit codes that say the debit stands or is unresolved - none of those
+     * establish a zero debit, so none of them hand the allowance back.
+     *
+     * The stored value is the error identifier, sometimes followed by a detail, so each is
+     * matched exactly or as itself followed by a space - never as a bare prefix. A bare
+     * prefix is how the two uncertain codes came to read as refunded in the first place.
+     *
+     * @return string[] Stored error identifiers that mean nothing was charged.
+     */
+    public static function no_charge_errors(): array {
+        return [
+            // The service could not do the work and reversed its own debit.
+            'error:servicefailed',
+            // Refused before any work, and before any charge.
+            'error:insufficientcredits',
+            'error:generationconflict',
+            'error:tariffmismatch',
+            'error:serviceunauthorised',
+            'error:serviceratelimited',
+            'error:nocredentials',
+        ];
+    }
+
+    /**
      * The spend counted against a user's daily allowance in the last day.
      *
      * A call the service refused without charging must not be counted. Three scenario
@@ -82,7 +116,38 @@ class generator {
         global $DB;
 
         $tariff = schema::tariff();
-        $refunded = $DB->sql_like('errormsg', ':refunded', false, false);
+        // WHICH FAILURES COST NOTHING, NAMED RATHER THAN MATCHED ON A PREFIX.
+        //
+        // This used to be a LIKE on 'error:servicefailed%', on the reasoning that the
+        // service refunds what it could not deliver. The reasoning is right for an
+        // ordinary failure and wrong for two of them: CREDIT_REFUND_FAILED says the debit
+        // stands and needs putting right by hand, and CREDIT_DEBIT_UNCERTAIN says nobody
+        // knows yet. Under a prefix match both would have read as refunded, handing the
+        // teacher their allowance back while their credits were gone - the one direction
+        // of this that costs real money and is invisible from the screen.
+        //
+        // So the list is explicit, and the test it has to pass is simple: a code belongs
+        // here only if the message shown to the teacher PROMISES no credits were used.
+        // The plugin must not tell somebody they were not charged and then quietly bill
+        // their budget as though they were, and it must not do the reverse either.
+        // THE STORED VALUE IS THE CODE, SOMETIMES FOLLOWED BY A DETAIL.
+        //
+        // A refused scenario is stored as "error:servicefailed GENERATION_FAILED: ..." and
+        // a bare refusal as "error:insufficientcredits" with nothing after it. So each code
+        // is matched exactly OR as a prefix followed by a space - never as a bare prefix,
+        // which is what let error:servicecharged read as error:servicefailed and started
+        // this.
+        $nochargeparams = [];
+        $clauses = [];
+        foreach (array_values(self::no_charge_errors()) as $index => $errorcode) {
+            $exact = 'nochargeexact' . $index;
+            $prefix = 'nochargeprefix' . $index;
+            $clauses[] = '(errormsg = :' . $exact . ' OR '
+                . $DB->sql_like('errormsg', ':' . $prefix, false, false) . ')';
+            $nochargeparams[$exact] = $errorcode;
+            $nochargeparams[$prefix] = $DB->sql_like_escape($errorcode) . ' %';
+        }
+        $refunded = '(' . implode(' OR ', $clauses) . ')';
         // A SCENARIO THIS PLUGIN REFUSED STILL SPENDS THE ALLOWANCE, AND THAT IS RIGHT.
         //
         // Briefly changed, and changed back. The argument for excluding it is that the
@@ -119,13 +184,12 @@ class generator {
             'aibranchedscenario_jobs',
             'userid = :userid AND timecreated > :since AND jobtype = :media
                 AND NOT (status = :errored AND ' . $refunded . ')',
-            [
+            array_merge([
                 'userid'   => $userid,
                 'since'    => time() - DAYSECS,
                 'media'    => 'media',
                 'errored'  => self::JOB_ERROR,
-                'refunded' => 'error:servicefailed%',
-            ],
+            ], $nochargeparams),
             '',
             'id, resultjson'
         );
@@ -148,13 +212,12 @@ class generator {
                 AND jobtype <> :media
                 AND NOT (status = :errored AND ' . $refunded . ')
            GROUP BY jobtype',
-            [
+            array_merge([
                 'userid'   => $userid,
                 'since'    => time() - DAYSECS,
                 'media'    => 'media',
                 'errored'  => self::JOB_ERROR,
-                'refunded' => 'error:servicefailed%',
-            ]
+            ], $nochargeparams)
         );
         foreach ($counts as $row) {
             $spent += (int)$row->total * (int)($tariff[$row->jobtype] ?? 1);
