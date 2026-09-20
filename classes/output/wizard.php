@@ -40,7 +40,7 @@ class wizard implements \renderable, \templatable {
     /** @var context_module Module context. */
     protected $context;
 
-    /** @var int Which of the activity's three scenarios is being written. */
+    /** @var int Which stored rung this writes. Always one - see schema::TIERS. */
     protected $tier;
 
     /**
@@ -56,37 +56,6 @@ class wizard implements \renderable, \templatable {
         $this->cm = $cm;
         $this->context = $context;
         $this->tier = isset(schema::tiers()[$tier]) ? $tier : 1;
-    }
-
-    /**
-     * The three rungs, as something a teacher can move between.
-     *
-     * The wizard writes one scenario at a time, so the activity's other two have to be
-     * reachable from it or they are invisible - a teacher would have no way of knowing
-     * the activity holds three, let alone of writing the other two. Each one says whether
-     * it is started and whether it is live, because "which of these have I done" is the
-     * question a teacher opens this page with.
-     *
-     * @return array
-     */
-    protected function rungs(): array {
-        $out = [];
-        foreach (schema::tiers() as $tier => $complexity) {
-            $row = scenario_manager::tier_row((int)$this->scenario->id, $tier);
-            $out[] = [
-                'tier'      => $tier,
-                'name'      => get_string('tier:' . $complexity, 'mod_aibranchedscenario'),
-                'current'   => $tier === $this->tier,
-                'started'   => !empty($row->scenariojson),
-                'live'      => $row->status === scenario_manager::STATUS_PUBLISHED
-                    && (int)$row->revision > 0,
-                'url'       => (new \moodle_url(
-                    '/mod/aibranchedscenario/edit.php',
-                    ['id' => $this->cm->id, 'tier' => $tier]
-                ))->out(false),
-            ];
-        }
-        return $out;
     }
 
     /**
@@ -222,7 +191,24 @@ class wizard implements \renderable, \templatable {
                 '/mod/aibranchedscenario/review.php',
                 ['id' => $this->cm->id, 'tier' => $this->tier]
             ))->out(false),
-            'aiavailable'  => $credentials['source'] !== credentials::SOURCE_NONE,
+            // WHETHER THE SERVICE IS CONFIGURED AND WHETHER THIS PERSON MAY USE IT ARE
+            // TWO DIFFERENT QUESTIONS, and only the first was ever asked.
+            //
+            // Every control that spends credits or publishes was shown whenever the site
+            // had credentials, whatever the person looking at it was allowed to do. A role
+            // with manage but not generate - an ordinary split in a training organisation,
+            // where authoring and spending are different jobs - got a Generate button that
+            // answered "you do not currently have permissions to do that". An offered
+            // control that refuses the person it was offered to is worse than no control:
+            // it reads as the product being broken rather than as a permission they do
+            // not have.
+            'aiavailable'  => $credentials['source'] !== credentials::SOURCE_NONE
+                && has_capability('mod/aibranchedscenario:generate', $this->context),
+            'canpublish'   => has_capability('mod/aibranchedscenario:publish', $this->context),
+            // Said out loud rather than left as an absence, because a teacher who cannot
+            // find the Generate button needs to know it is a permission and not a fault.
+            'cannotgenerate' => $credentials['source'] !== credentials::SOURCE_NONE
+                && !has_capability('mod/aibranchedscenario:generate', $this->context),
             // Per RUNG, not per activity. Read from the instance, the wizard for the
             // unwritten advanced scenario announced itself as published at revision 3,
             // because the foundation scenario was - and offered Restore draft on a rung
@@ -233,10 +219,6 @@ class wizard implements \renderable, \templatable {
             'hasdraft'     => is_array($definition),
             'hasprevious'  => !empty($tierrow->previousjson),
             'tier'         => $this->tier,
-            'tiercount'    => schema::TIERS,
-            'tiername'     => get_string('tier:' . schema::tiers()[$this->tier], 'mod_aibranchedscenario'),
-            'rungs'        => $this->rungs(),
-            'isladder'     => true,
             'source'       => $source,
             'characters'   => $characters,
             'principles'   => array_values($source['principles']),
@@ -262,6 +244,14 @@ class wizard implements \renderable, \templatable {
             'whyhard'      => $this->options(schema::whyhard(), 'whyhard', $source['whyhard']),
             'stakes'       => $this->options(schema::stakes(), 'stakes', $source['stakes']),
             'tones'        => $this->options(schema::tones(), 'tone', $source['tone']),
+            // HOW HARD THIS SCENARIO IS, AND THE TEACHER DECIDES.
+            //
+            // The control was removed when an activity briefly held three scenarios and
+            // the rung decided the level. An activity is one scenario again, so the choice
+            // comes back to the person making it - and a teacher who wants a progression
+            // builds three activities, one at each level, sequenced with Moodle's own
+            // availability restrictions.
+            'complexities' => $this->options(schema::complexities(), 'complexity', $source['complexity']),
             'imagestyles'  => $this->options(schema::imagestyles(), 'imagestyle', $source['imagestyle']),
             'openingmetrics' => [
                 ['key' => 'engagement', 'label' => get_string('metric:engagement', 'mod_aibranchedscenario'),

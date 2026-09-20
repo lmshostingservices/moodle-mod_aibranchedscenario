@@ -215,7 +215,10 @@ class import_definition extends external_api {
                 VALUE_DEFAULT,
                 0
             ),
-            'problems'  => new external_value(PARAM_TEXT, 'Validation problems when the import was rejected'),
+            'problems'  => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'Validation problems when the import was rejected'
+            ),
         ]);
     }
 

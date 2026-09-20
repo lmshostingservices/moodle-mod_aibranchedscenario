@@ -254,6 +254,158 @@ class content_standard {
                     . 'the longest, the kindest sounding, or the only one that mentions '
                     . 'asking a question.',
             ],
+            // WITHOUT PRESSURE, A SAFETY OR CONDUCT DECISION ANSWERS ITSELF.
+            //
+            // The strongest single lever on whether a scenario teaches anything. A learner
+            // who is not under pressure picks the careful option every time, which measures
+            // whether they can read rather than whether they can act.
+            'pressure' => [
+                'short' => 'The learner is under named pressure - time, authority, peer, '
+                    . 'customer, cost, convenience or embarrassment - and at least two '
+                    . 'decisions are made under it.',
+                'long'  => '- The learner must be under PRESSURE, named in the scene rather '
+                    . 'than described in the abstract, and at least two of the five decisions '
+                    . 'are made while it is on them. Use the pressures that actually operate '
+                    . 'on people at work: time ("we need this before lunch"), authority ("I '
+                    . 'have been doing this twenty years, it is fine"), peer ("everyone does '
+                    . 'it this way"), customer ("they are waiting"), cost ("there is not '
+                    . 'another one"), convenience ("it will take a minute") and embarrassment '
+                    . '("you are the new one and everybody else has started"). Put it in '
+                    . 'somebody\'s mouth or in the state of the room, never as narration '
+                    . 'saying the learner feels pressured. Without it the careful option is '
+                    . 'obvious and the scenario measures reading, not judgement.',
+            ],
+            // Experience first, rule second. A learner who has just watched it happen has
+            // somewhere to put the rule; one who is told the rule first has nowhere.
+            'noticing' => [
+                'short' => 'The opening scene contains something to notice and does not point '
+                    . 'at it; the learner looks before they are told.',
+                'long'  => '- The scenario opens on a scene that CONTAINS the problem rather '
+                    . 'than announcing it. Something is wrong, or about to be, and the writing '
+                    . 'does not point at it: describe the room as a person standing in it '
+                    . 'would see it, and let the learner find what matters. The imageprompt '
+                    . 'for that scene must put the same thing in the picture - a lead across a '
+                    . 'walkway, glasses pushed up on a helmet, a pallet half across an exit - '
+                    . 'so the illustration is part of the problem and not decoration. Never '
+                    . 'write "you notice the damaged lead" on the screen where noticing is the '
+                    . 'point; write what is there, and let the decision reveal whether they '
+                    . 'saw it.',
+            ],
+            // People do not talk like policies, and a learner who reads dialogue that nobody
+            // would say stops believing the situation.
+            'spoken' => [
+                'short' => 'Dialogue is what a person would actually say out loud, never '
+                    . 'procedure language in quotation marks.',
+                'long'  => '- Everything anybody says must be what a person would actually say '
+                    . 'out loud, in their own register. "It will be right, we only need it for '
+                    . 'another ten minutes" is dialogue. "You must immediately cease operation '
+                    . 'of this equipment in accordance with organisational procedures" is a '
+                    . 'procedure with quotation marks around it, and it tells the learner they '
+                    . 'are reading a compliance module. The options a learner chooses between '
+                    . 'are also things they would say - short, spoken, sometimes awkward.',
+            ],
+            // The near miss is the cheapest memory the product can make: the rule attaches
+            // to the moment it was nearly broken, which is where it will be recalled.
+            'closecall' => [
+                'short' => 'Where the story allows it, a plausible poor choice produces a near '
+                    . 'miss - something almost happens, nobody is hurt, and the scenario '
+                    . 'carries on.',
+                'long'  => '- Where the subject allows it, one plausible poor choice should '
+                    . 'produce a CLOSE CALL rather than a disaster: something almost happens, '
+                    . 'nobody is hurt, and the story carries on with everyone slightly quieter. '
+                    . 'Write it as the moment it was, not as a warning about it - the sound, '
+                    . 'the pause, what somebody said afterwards. A near miss attaches the rule '
+                    . 'to the moment it was nearly broken, which is where a learner will '
+                    . 'actually recall it. Do not follow it with a lecture; the next decision '
+                    . 'is the lesson.',
+            ],
+            // Remembering the answer is not learning the principle. The last decision is
+            // where the difference shows.
+            'transfer' => [
+                'short' => 'The final decision applies the same principle in a DIFFERENT '
+                    . 'situation, so the learner demonstrates the rule rather than recalling '
+                    . 'the earlier answer.',
+                'long'  => '- The last decision must apply the same principle to a DIFFERENT '
+                    . 'situation from the one the scenario has been working in. If the '
+                    . 'scenario taught "unsafe equipment is stopped, isolated and reported" '
+                    . 'through a damaged lead, the final decision is about a guard, a ladder '
+                    . 'or a vehicle - near enough that the principle carries, far enough that '
+                    . 'the remembered answer does not. This is the difference between a '
+                    . 'learner who knows the rule and one who memorised "the damaged lead was '
+                    . 'option B", and it is the only decision in the scenario that can tell '
+                    . 'them apart.',
+            ],
+            // Closure, and a second test: can they do for somebody else what was done for
+            // them?
+            'callback' => [
+                'short' => 'Something set up in the opening returns near the end and the '
+                    . 'learner has to act on it.',
+                'long'  => '- Something established in the first scene must RETURN near the '
+                    . 'end in a way that asks the learner to act. The new starter who said '
+                    . '"tell me if I am doing anything wrong" is about to do the thing the '
+                    . 'learner has just been taught not to do; the supervisor who dismissed a '
+                    . 'concern in scene one asks the learner\'s opinion in scene seven. It '
+                    . 'closes the story and it tests the principle a second way - whether they '
+                    . 'can do for somebody else what the scenario did for them.',
+            ],
+            // The cheapest way to teach noticing, and the only one a list of sentences
+            // cannot do.
+            'spotit' => [
+                'short' => 'Where a decision is about noticing something in the scene, give '
+                    . 'each option a "hotspot" - x, y, w, h as percentages of the frame - so '
+                    . 'the learner can answer by pointing at it.',
+                'long'  => '- Where a decision is really about NOTICING something, let the '
+                    . 'learner answer by pointing at it. Give each option a "hotspot" of '
+                    . '{"x": 0-100, "y": 0-100, "w": 0-100, "h": 0-100} - percentages of the '
+                    . 'frame, measured from the top left - locating that option in the '
+                    . 'scene\'s own illustration, and write the imageprompt so the thing is '
+                    . 'actually there to be found. "Take a look around before you start" with '
+                    . 'a damaged lead across a walkway, a pallet half over an exit and a '
+                    . 'worker with their glasses pushed up teaches noticing; "which of these '
+                    . 'three is the hazard?" teaches reading. Use it on one or two decisions '
+                    . 'where looking is the skill, not on all five. Options without a hotspot '
+                    . 'still work normally, and the lettered list is always there as well, so '
+                    . 'nothing is lost for a learner who cannot use a pointer.',
+            ],
+            // The paper the judgement is actually made over. Free to produce, unlike the
+            // picture of it, and unlike the picture of it, readable.
+            'artefact' => [
+                'short' => 'Where the judgement turns on a document, give the node an '
+                    . '"artefact" - kind, title, subtitle, fields of {label, value, flagged} '
+                    . 'and lines - instead of summarising the document in the situation text.',
+                'long'  => '- Where the judgement turns on a DOCUMENT, put the document in '
+                    . 'the learner\'s hands rather than summarising it. Give the node an '
+                    . '"artefact": {"kind": one of permit, sds, checklist, email, sign, '
+                    . 'record, document; "title"; "subtitle" for a reference or a location; '
+                    . '"fields": [{"label", "value", "flagged": true on the line that is '
+                    . 'wrong}]; "lines": [plain lines of body text]; "footer"}. Eight fields '
+                    . 'at most - a permit with twenty lines is a form, and nobody reads past '
+                    . 'the fourth. "The permit expired at two o\'clock and it is half past" '
+                    . 'is a comprehension question with the answer already in it; a permit '
+                    . 'whose "Valid until" line says 14:00 while the scene says the shift is '
+                    . 'running late is the job. Do not write the artefact as an image prompt: '
+                    . 'a generated photograph of a permit is unreadable on a phone, invisible '
+                    . 'to a screen reader, and comes back with invented words on it. Mark the '
+                    . 'wrong line with "flagged" - nothing is drawn on it during the decision, '
+                    . 'it is what lets the debrief name what they should have caught - and '
+                    . 'make sure at least one option actually acts on it.',
+            ],
+            // The world remembering in the picture as well as in the words.
+            'remembers' => [
+                'short' => 'Where an earlier choice would leave a visible trace, give the '
+                    . 'later node "marks": [{flag, label, tone, x, y}] so the picture shows it.',
+                'long'  => '- Where a choice leaves something you would SEE later - a lockout '
+                    . 'tag, a barrier, a sign on a door, a machine still running - give the '
+                    . 'later node "marks": [{"flag": the flag that choice sets, "label": up to '
+                    . 'about four words, "tone": neutral, caution, danger or resolved, "x" and '
+                    . '"y": percentages of the frame}]. The tag appears only for a learner who '
+                    . 'set that flag, so two learners see different pictures of the same room. '
+                    . 'Four marks at most on one picture. This is the visual half of the same '
+                    . 'memory the variants give you in words; use both on the decision that '
+                    . 'matters most, because a learner who sees the tag they hung two stages '
+                    . 'ago understands that the world kept what they did in a way no sentence '
+                    . 'achieves.',
+            ],
             'moment' => [
                 'short' => 'Second person, present tense, in the moment; never open with '
                     . '"Imagine" or "In this scenario".',

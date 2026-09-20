@@ -84,9 +84,9 @@
           },
           "principleid": "p1",
           "effects": {
-            "engagement": 0,
-            "trust": 0,
-            "tension": 2
+            "engagement": 2,
+            "trust": -7,
+            "tension": -6
           },
           "next": "n2b",
           "outcomenote": "The plausible middle, and the one that quietly teaches the wrong thing. You do hear her, which is why it feels like listening - but you hear her alone, at four o'clock, away from the people who needed to. The meeting learns nothing, Dan learns nothing, and Priya learns that her input reaches you through a side channel. The next time she has something, she will wait for the side channel.",
@@ -186,9 +186,9 @@
           },
           "principleid": "p2",
           "effects": {
-            "engagement": 0,
-            "trust": 0,
-            "tension": 2
+            "engagement": 2,
+            "trust": -7,
+            "tension": -6
           },
           "next": "n4b",
           "outcomenote": "The gentle opening that costs the conversation its point. Asking how it is going invites him to answer about the meeting rather than about himself, so you spend the time steering back to the thing you could have said first. He leaves knowing you wanted something and not what it was."
@@ -291,9 +291,9 @@
           },
           "principleid": "p3",
           "effects": {
-            "engagement": 0,
-            "trust": 0,
-            "tension": 2
+            "engagement": 2,
+            "trust": -7,
+            "tension": -6
           },
           "next": "n6",
           "outcomenote": "The plausible middle, and it looks like discretion. She raised it in front of everyone, which was the brave part; taking it out of the room hands the privacy back to the person who did not need it. Nothing is refused and nothing changes."
@@ -370,9 +370,9 @@
           },
           "principleid": "p3",
           "effects": {
-            "engagement": 0,
-            "trust": 0,
-            "tension": 2
+            "engagement": 2,
+            "trust": -7,
+            "tension": -6
           },
           "next": "n6",
           "outcomenote": "The comfortable one, and it works for three months, which is what makes it hard to argue with. But 'keeping an eye on it' is a decision to do nothing with a plan attached, and the arrangement hardens into how things are done here. By the time a new starter has copied it, it is not a workaround any more - it is the process."
@@ -447,9 +447,9 @@
           },
           "principleid": "p2",
           "effects": {
-            "engagement": 0,
-            "trust": 0,
-            "tension": 2
+            "engagement": 2,
+            "trust": -7,
+            "tension": -6
           },
           "next": "n7",
           "outcomenote": "The reasonable one, and it puts the work on the two people least able to do it. Dan has to remember something he does without noticing, and Priya has to interrupt the person who interrupts her. It holds when both of them are at their best, which is not what a mechanism is for."
@@ -521,9 +521,9 @@
           },
           "principleid": "p2",
           "effects": {
-            "engagement": 0,
-            "trust": 0,
-            "tension": 2
+            "engagement": 2,
+            "trust": -7,
+            "tension": -6
           },
           "next": "n7",
           "outcomenote": "It is true, it is kind, and it is not what she is going on. She has watched a room for three weeks and drawn a conclusion; being told the opposite once does not outweigh that. Permission is not evidence."
@@ -597,9 +597,9 @@
           },
           "principleid": "p3",
           "effects": {
-            "engagement": 0,
-            "trust": 0,
-            "tension": 2
+            "engagement": 2,
+            "trust": -7,
+            "tension": -6
           },
           "next": "__auto__",
           "outcomenote": "The line that closes a conversation without answering it. It is not untrue, and that is the trouble - it explains the delay as a property of the world rather than a choice you made. She says 'sure' because there is nothing to say to it. The format holds; the door does not open."

@@ -94,7 +94,10 @@ class suggest_field extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'field'      => new external_value(PARAM_ALPHANUMEXT, 'Field the suggestion is for'),
-            'suggestion' => new external_value(PARAM_TEXT, 'Suggested value for a text field'),
+            'suggestion' => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'Suggested value for a text field'
+            ),
             'values'     => new external_multiple_structure(
                 new external_value(PARAM_ALPHANUMEXT, 'Suggested option key'),
                 'Suggested values for a multi-select field'

@@ -176,12 +176,19 @@ class attempt_manager {
      */
     public function get_open_attempt(int $userid): ?stdClass {
         global $DB;
-        $records = $DB->get_records('aibranchedscenario_attempts', [
-            'scenarioid' => $this->scenario->id,
-            'tier'       => $this->tier,
-            'userid'     => $userid,
-            'status'     => self::STATUS_INPROGRESS,
-        ], 'attemptno DESC', '*', 0, 1);
+        $records = $DB->get_records(
+            'aibranchedscenario_attempts',
+            [
+                'scenarioid' => $this->scenario->id,
+                'tier'       => $this->tier,
+                'userid'     => $userid,
+                'status'     => self::STATUS_INPROGRESS,
+            ],
+            'attemptno DESC',
+            '*',
+            0,
+            1
+        );
         return $records ? reset($records) : null;
     }
 
@@ -193,11 +200,15 @@ class attempt_manager {
      */
     public function get_user_attempts(int $userid): array {
         global $DB;
-        return $DB->get_records('aibranchedscenario_attempts', [
-            'scenarioid' => $this->scenario->id,
-            'tier'       => $this->tier,
-            'userid'     => $userid,
-        ], 'attemptno DESC');
+        return $DB->get_records(
+            'aibranchedscenario_attempts',
+            [
+                'scenarioid' => $this->scenario->id,
+                'tier'       => $this->tier,
+                'userid'     => $userid,
+            ],
+            'attemptno DESC'
+        );
     }
 
     /**
@@ -376,9 +387,16 @@ class attempt_manager {
      * @param string $nodeid Node the browser believes it is on.
      * @param string $choiceid Chosen choice id.
      * @param int $seq Client sequence number, starting at 1.
+     * @param bool $unsure Whether the learner said they were not sure, before they saw the outcome.
      * @return array Result payload with the consequence, feedback and next node.
      */
-    public function submit_choice(stdClass &$attempt, string $nodeid, string $choiceid, int $seq): array {
+    public function submit_choice(
+        stdClass &$attempt,
+        string $nodeid,
+        string $choiceid,
+        int $seq,
+        bool $unsure = false
+    ): array {
         global $DB;
 
         // Always work from the stored row. A retried request arrives in a fresh PHP
@@ -448,8 +466,8 @@ class attempt_manager {
         // case can no longer occur is not a safety net, it is the next thing to be wrong
         // about. The properties it existed to guarantee are checked directly instead.
         foreach (schema::metrics() as $metric) {
-            $attempt->{$metric} = max(0, min(100, (int)$attempt->{$metric}
-                + (int)$choice['effects'][$metric]));
+            $moved = (int)$attempt->{$metric} + (int)$choice['effects'][$metric];
+            $attempt->{$metric} = max(0, min(100, $moved));
         }
         foreach (schema::skills() as $skill) {
             $attempt->{$skill} = (int)$attempt->{$skill} + (int)$choice['skills'][$skill];
@@ -488,6 +506,10 @@ class attempt_manager {
             'engagement'  => (int)$attempt->engagement,
             'trust'       => (int)$attempt->trust,
             'tension'     => (int)$attempt->tension,
+            // RECORDED BEFORE THE OUTCOME IS KNOWN, which is the only thing that makes it
+            // worth anything. Asked afterwards it would be a memory of how sure they were,
+            // edited by having just been told whether they were right.
+            'unsure'      => $unsure ? 1 : 0,
             'timecreated' => time(),
         ];
         $event->id = $DB->insert_record('aibranchedscenario_events', $event);
@@ -788,6 +810,10 @@ class attempt_manager {
                 'nodetitle'   => $node['title'] !== '' ? $node['title'] : $node['id'],
                 'choicetext'  => $chosen['text'],
                 'signal'      => $chosen['signal'],
+                // Whether somebody was leaning on the learner when they decided this.
+                // Pressure lives in the scene as a spoken line, so this is the same fact
+                // the content standard asks an author to put there, read back out.
+                'underpressure' => trim((string)($node['facilitatorspeech'] ?? '')) !== '',
                 'consequence' => $chosen['consequence'],
                 'feedback'    => $chosen['feedback'],
                 // Carried so the debrief can find the clip already recorded for this
@@ -1040,9 +1066,12 @@ class attempt_manager {
         if (!$attempts) {
             return null;
         }
-        $scores = array_map(function ($attempt) {
-            return (float)$attempt->score;
-        }, $attempts);
+        $scores = array_map(
+            function ($attempt) {
+                return (float)$attempt->score;
+            },
+            $attempts
+        );
         switch ($scenario->grademethod) {
             case 'first':
                 return reset($scores);

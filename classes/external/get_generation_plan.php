@@ -206,7 +206,10 @@ class get_generation_plan extends external_api {
         return new external_single_structure([
             'decisions'     => new external_value(PARAM_INT, 'Decision points the scenario will contain'),
             'scenes'        => new external_value(PARAM_INT, 'Scenes the scenario will contain'),
-            'price'         => new external_value(PARAM_TEXT, 'What this scenario costs, formatted'),
+            'price'         => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'What this scenario costs, formatted'
+            ),
             'pricetotal'    => new external_value(PARAM_INT, 'What this scenario costs, in credits'),
             'pricecurrency' => new external_value(PARAM_ALPHA, 'ISO currency code for the price'),
             'images'        => new external_value(PARAM_INT, 'Images that will be generated'),

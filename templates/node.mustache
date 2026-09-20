@@ -43,6 +43,12 @@
     * imageurl string Scene image URL, or empty
     * imagealt string Scene image alternative text
     * hasimage bool Whether an image is present
+    * hasspots bool Whether the options can be pointed at in the picture
+    * marks array Tags pinned to the picture for what this learner did earlier
+    * hasmarks bool Whether there are any
+    * hasartefact bool Whether a workplace document is in their hands
+    * artefact object That document, see mod_aibranchedscenario/artefact
+    * askconfidence bool Whether to offer the "not sure" tick
     * choices array The available choices
 
     Example context (json):
@@ -63,6 +69,13 @@
         "imageurl": "",
         "imagealt": "",
         "hasimage": false,
+        "hasspots": false,
+        "marks": [],
+        "hasmarks": false,
+        "hasartefact": false,
+        "artefact": {"kind": "", "kindlabel": "", "title": "", "subtitle": "",
+            "fields": [], "hasfields": false, "lines": [], "haslines": false, "footer": ""},
+        "askconfidence": true,
         "choices": [{"id": "n2_a", "letter": "A", "text": "Log the fault now and tell the supervisor."}]
     }
 }}
@@ -97,6 +110,49 @@
                     {{/hasspeechaudio}}
                 </span>
             {{/hasspeaker}}
+
+            {{! SPOT IT. When the options are things you can point at, the scene becomes the
+                question: look around, find what matters, and answer by pointing at it.
+                Teaching somebody to notice is not the same as asking them which of three
+                sentences is the hazard, and this is the only way the product can tell the
+                difference.
+
+                Deliberately AN ADDITIONAL WAY TO ANSWER, never the only one. The lettered
+                options are still below, still keyboard reachable, still read by a screen
+                reader - so nothing here is the sole route to a decision, and a learner who
+                cannot use a pointer loses nothing but the picture. Each region is a real
+                button with the option's own words on it, so it is announced properly
+                rather than as an unlabelled box. }}
+            {{#hasspots}}
+                <div class="aibs-spots" data-region="spots">
+                    {{#choices}}
+                        {{#hashotspot}}
+                        <button type="button" class="aibs-spot" data-action="choose"
+                                data-choiceid="{{id}}" tabindex="-1" aria-hidden="true"
+                                style="left:{{spotx}}%;top:{{spoty}}%;width:{{spotw}}%;height:{{spoth}}%"
+                                title="{{text}}">
+                            <span class="aibs-spot-ring" aria-hidden="true"></span>
+                            <span class="aibs-visually-hidden">{{text}}</span>
+                        </button>
+                        {{/hashotspot}}
+                    {{/choices}}
+                </div>
+            {{/hasspots}}
+
+            {{! THE ENVIRONMENT REMEMBERING. A tag pinned to the frame for something this
+                learner did earlier - the machine they locked out, the guard they left off.
+                Only the marks they have actually earned reach the browser, so the picture
+                cannot leak what the next decision is about. Drawn rather than generated,
+                which is why it is legible on a phone and costs nothing. }}
+            {{#hasmarks}}
+                <ul class="aibs-marks">
+                    {{#marks}}
+                        <li class="aibs-mark aibs-mark-{{tone}}" style="left:{{x}}%;top:{{y}}%">
+                            <span class="aibs-mark-label">{{label}}</span>
+                        </li>
+                    {{/marks}}
+                </ul>
+            {{/hasmarks}}
         </div>
     {{/hasimage}}
 
@@ -118,6 +174,15 @@
         {{#title}}<h3 class="aibs-h3">{{title}}</h3>{{/title}}
 
         <div class="aibs-prose">{{#situationparas}}<p>{{.}}</p>{{/situationparas}}</div>
+
+        {{! THE DOCUMENT IN THEIR HANDS. Placed after the situation and before the question,
+            because that is the order it happens in: you are told what is going on, you pick
+            the paper up, then somebody asks you what you want to do. }}
+        {{#hasartefact}}
+            {{#artefact}}
+                {{> mod_aibranchedscenario/artefact }}
+            {{/artefact}}
+        {{/hasartefact}}
 
         {{#speech}}
             <blockquote class="aibs-speech">
@@ -153,6 +218,26 @@
                 {{/choices}}
             </div>
         {{/iscontinue}}
+
+        {{! NOT SURE. One box, volunteered, never required, and read at the moment of the
+            click so it is recorded BEFORE the outcome is known - asked afterwards it would
+            be a memory of how sure they were, edited by having just been told whether they
+            were right.
+
+            The obvious design was to ask on every decision. The obvious design is wrong: it
+            puts a second interaction on the one screen the product is built around, and what
+            it measures is how willing somebody is to answer a question about themselves. The
+            fact a trainer most needs is produced by NOT ticking this - a poor decision taken
+            by somebody who was sure is a misconception, not a gap - and producing it costs
+            the learner nothing at all. }}
+        {{#askconfidence}}
+            <p class="aibs-unsure">
+                <input type="checkbox" class="aibs-unsure-box" data-region="unsure"
+                       id="aibs-unsure-{{id}}">
+                <label class="aibs-unsure-label" for="aibs-unsure-{{id}}">
+                    {{#str}} notsure, mod_aibranchedscenario {{/str}}</label>
+            </p>
+        {{/askconfidence}}
 
         {{^iscontinue}}
         <fieldset class="aibs-choices">

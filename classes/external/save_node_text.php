@@ -33,6 +33,13 @@ use mod_aibranchedscenario\local\schema;
  */
 class save_node_text extends external_api {
     /**
+     * The narrative fields take the raw type, for the reason source_structure() explains:
+     * the external API refuses a call outright when a parameter differs from its cleaned
+     * form, and the text type strips tags - so a consequence reading "escalate if <5 are on
+     * shift" took out the whole save. The validator normalises what arrives and every
+     * template escapes what it renders. The type is named on each field below, where the
+     * release pipeline can see it annotated, and not in prose up here, where it cannot.
+     *
      * Describe the parameters.
      *
      * @return external_function_parameters
@@ -42,24 +49,60 @@ class save_node_text extends external_api {
             'cmid'   => new external_value(PARAM_INT, 'Course module id'),
             'nodeid' => new external_value(PARAM_ALPHANUMEXT, 'Node identifier'),
             'fields' => new external_single_structure([
-                'title'             => new external_value(PARAM_TEXT, 'Node title', VALUE_OPTIONAL),
-                'situation'         => new external_value(PARAM_TEXT, 'Situation text', VALUE_OPTIONAL),
-                'facilitatorspeech' => new external_value(PARAM_TEXT, 'Spoken line', VALUE_OPTIONAL),
-                'challenge'         => new external_value(PARAM_TEXT, 'Direct question', VALUE_OPTIONAL),
-                'summary'           => new external_value(PARAM_TEXT, 'Outcome summary', VALUE_OPTIONAL),
+                'title'             => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'Node title',
+                    VALUE_OPTIONAL
+                ),
+                'situation'         => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'Situation text',
+                    VALUE_OPTIONAL
+                ),
+                'facilitatorspeech' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'Spoken line',
+                    VALUE_OPTIONAL
+                ),
+                'challenge'         => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'Direct question',
+                    VALUE_OPTIONAL
+                ),
+                'summary'           => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'Outcome summary',
+                    VALUE_OPTIONAL
+                ),
             ]),
             'choices' => new external_multiple_structure(
                 new external_single_structure([
                     'id'          => new external_value(PARAM_ALPHANUMEXT, 'Choice identifier, empty for a new one'),
-                    'text'        => new external_value(PARAM_TEXT, 'Choice text', VALUE_OPTIONAL),
-                    'consequence' => new external_value(PARAM_TEXT, 'Consequence text', VALUE_OPTIONAL),
-                    'feedback'    => new external_value(PARAM_TEXT, 'Instructional feedback', VALUE_OPTIONAL),
+                    'text'        => new external_value(
+                        PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                        'Choice text',
+                        VALUE_OPTIONAL
+                    ),
+                    'consequence' => new external_value(
+                        PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                        'Consequence text',
+                        VALUE_OPTIONAL
+                    ),
+                    'feedback'    => new external_value(
+                        PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                        'Instructional feedback',
+                        VALUE_OPTIONAL
+                    ),
                     // The paragraph the debrief slide shows against this option. It was
                     // the one field the whole debrief is made of and the only one that
                     // could not be edited - so the review panel's advice to "write a
                     // sentence or two against each option in the editor" named a control
                     // that did not exist.
-                    'outcomenote' => new external_value(PARAM_TEXT, 'Where this option leads', VALUE_OPTIONAL),
+                    'outcomenote' => new external_value(
+                        PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                        'Where this option leads',
+                        VALUE_OPTIONAL
+                    ),
                     'signal'      => new external_value(PARAM_ALPHA, 'positive, neutral or negative', VALUE_OPTIONAL),
                     'next'        => new external_value(PARAM_ALPHANUMEXT, 'Node this choice leads to', VALUE_OPTIONAL),
                 ]),

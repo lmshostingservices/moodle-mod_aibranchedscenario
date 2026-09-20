@@ -85,6 +85,7 @@ class provider implements
             'engagement'  => 'privacy:metadata:aibranchedscenario_events:engagement',
             'trust'       => 'privacy:metadata:aibranchedscenario_events:trust',
             'tension'     => 'privacy:metadata:aibranchedscenario_events:tension',
+            'unsure'      => 'privacy:metadata:aibranchedscenario_events:unsure',
             'timecreated' => 'privacy:metadata:aibranchedscenario_events:timecreated',
         ], 'privacy:metadata:aibranchedscenario_events');
 
@@ -329,6 +330,9 @@ class provider implements
                 'engagement'  => (int)$event->engagement,
                 'trust'       => (int)$event->trust,
                 'tension'     => (int)$event->tension,
+                // Something the learner said about themselves rather than something the
+                // product measured, which is exactly why it has to be in the export.
+                'unsure'      => transform::yesno((int)$event->unsure),
                 'timecreated' => transform::datetime($event->timecreated),
             ];
         }

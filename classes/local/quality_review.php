@@ -60,6 +60,25 @@ class quality_review {
     const MIN_FUZZY_CHARS = 40;
 
     /**
+     * @var int How many of the five decisions must have somebody speaking at the learner.
+     *
+     * Pressure arrives through people. Two is the floor rather than five, because a
+     * scenario where every single decision has somebody leaning on the learner stops being
+     * pressure and becomes noise.
+     */
+    const MIN_SPOKEN_DECISIONS = 2;
+
+    /**
+     * @var int Below this many decisions, a definition is a fragment rather than a scenario.
+     *
+     * Both the trade-off check and the pressure check are properties of a WHOLE scenario -
+     * "most of the decisions decide nothing", "nobody anywhere puts the learner under
+     * pressure" - and neither means anything about a single node examined on its own. The
+     * shipped shape is five decisions; anything under three is a piece of one.
+     */
+    const MIN_DECISIONS_TO_JUDGE = 3;
+
+    /**
      * Inspect a normalised working definition.
      *
      * @param array $definition A definition that has already passed the validator.
@@ -80,6 +99,10 @@ class quality_review {
         $spelling = array_merge($spelling, self::debrief_warnings($definition));
         $spelling = array_merge($spelling, self::reading_range_warnings($definition));
         $spelling = array_merge($spelling, self::branching_warnings($definition));
+        // Whether the decisions are decisions at all, which is the thing every other
+        // mechanism in the product depends on.
+        $spelling = array_merge($spelling, self::tradeoff_warnings($definition));
+        $spelling = array_merge($spelling, self::pressure_warnings($definition));
         // Pronouns are a property of the whole document too: the sentence that contradicts
         // a cast record can be anywhere in it.
         $spelling = array_merge($spelling, self::pronoun_warnings($definition));
@@ -99,6 +122,142 @@ class quality_review {
 
         $scenario = self::scenario_warnings($nodes);
         return array_merge($spelling, $scenario, $out);
+    }
+
+    /**
+     * Is every option on a decision either plainly good or plainly bad?
+     *
+     * THE ONE CHECK THE REST OF THE PRODUCT DEPENDS ON.
+     *
+     * Branching, carried-forward flags, recovery paths, delayed consequences and the
+     * debrief's comparison of the road taken to the roads not taken all assume a learner
+     * might genuinely take the weaker road. If the weaker options are obviously weak, none
+     * of that machinery ever runs: every learner takes the good path, the alternative
+     * scenes are dead content nobody is shown, and the scenario measures whether somebody
+     * can read rather than whether they can act.
+     *
+     * A tempting option is tempting because it GAINS something. "Move it out of the
+     * walkway and finish the job first" buys time and costs safety; that is a decision.
+     * "Carry on using the damaged lead" buys nothing and costs everything; that is a
+     * comprehension question wearing a scenario's clothes.
+     *
+     * So the test is mechanical and does not need to read the prose: on a real decision at
+     * least one option trades - it moves at least one reading the right way and at least
+     * one the wrong way. Tension reads upside down, so it is flipped before comparing.
+     *
+     * @param array $definition The working definition.
+     * @return array Warnings.
+     */
+    protected static function tradeoff_warnings(array $definition): array {
+        $out = [];
+        $flat = [];
+        $decisions = 0;
+        foreach (($definition['nodes'] ?? []) as $node) {
+            if (($node['type'] ?? '') !== 'decision') {
+                continue;
+            }
+            $decisions++;
+            $trades = false;
+            foreach (($node['choices'] ?? []) as $choice) {
+                if (self::choice_trades($choice)) {
+                    $trades = true;
+                    break;
+                }
+            }
+            if (!$trades) {
+                $flat[] = $node['title'] !== '' ? $node['title'] : $node['id'];
+            }
+        }
+
+        // One flat decision in five is a bottleneck a designer may have meant - a moment
+        // where there genuinely is only one defensible answer. Most of them flat is a
+        // scenario where nothing is being decided.
+        if (
+            $decisions >= self::MIN_DECISIONS_TO_JUDGE
+                && count($flat) > max(1, (int)floor($decisions / 2))
+        ) {
+            $out[] = [
+                'nodeid'  => '',
+                'node'    => trim((string)($definition['title'] ?? '')),
+                'message' => get_string(
+                    'quality:notradeoff',
+                    'mod_aibranchedscenario',
+                    (object)['flat' => count($flat), 'total' => $decisions,
+                    'names' => implode(
+                        ', ',
+                        array_slice($flat, 0, 3)
+                    )]
+                ),
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * Does this option buy the learner something as well as costing them something?
+     *
+     * @param array $choice A validated choice.
+     * @return bool
+     */
+    protected static function choice_trades(array $choice): bool {
+        $gains = false;
+        $costs = false;
+        foreach (schema::metrics() as $metric) {
+            $effect = (int)($choice['effects'][$metric] ?? 0);
+            if ($effect === 0) {
+                continue;
+            }
+            // Tension is the one reading where less is better, so its sign is flipped
+            // before it is compared with the others.
+            $good = $metric === 'tension' ? -$effect : $effect;
+            if ($good > 0) {
+                $gains = true;
+            } else {
+                $costs = true;
+            }
+        }
+        return $gains && $costs;
+    }
+
+    /**
+     * Is anybody putting the learner under pressure?
+     *
+     * Pressure is what makes a conduct or safety decision hard, and it arrives through
+     * people: somebody says the job is late, or that they have done it this way for
+     * twenty years, or that the customer is waiting. A scenario where nobody speaks is a
+     * scenario where the careful option costs the learner nothing to take.
+     *
+     * Checked structurally rather than by hunting for phrases: a decision carries a spoken
+     * line or it does not, and a word list would only ever find the pressures somebody
+     * thought to list.
+     *
+     * @param array $definition The working definition.
+     * @return array Warnings.
+     */
+    protected static function pressure_warnings(array $definition): array {
+        $decisions = 0;
+        $spoken = 0;
+        foreach (($definition['nodes'] ?? []) as $node) {
+            if (($node['type'] ?? '') !== 'decision') {
+                continue;
+            }
+            $decisions++;
+            if (trim((string)($node['facilitatorspeech'] ?? '')) !== '') {
+                $spoken++;
+            }
+        }
+        if ($decisions < self::MIN_DECISIONS_TO_JUDGE || $spoken >= self::MIN_SPOKEN_DECISIONS) {
+            return [];
+        }
+        return [[
+            'nodeid'  => '',
+            'node'    => trim((string)($definition['title'] ?? '')),
+            'message' => get_string(
+                'quality:nopressure',
+                'mod_aibranchedscenario',
+                (object)['spoken' => $spoken, 'wanted' => self::MIN_SPOKEN_DECISIONS]
+            ),
+        ]];
     }
 
     /**
@@ -496,8 +655,9 @@ class quality_review {
             // on every slide learns nothing from the fifth.
             foreach ($choices as $choice) {
                 $note = trim((string)($choice['outcomenote'] ?? ''));
-                $joined = trim(trim((string)($choice['consequence'] ?? '')) . ' '
-                    . trim((string)($choice['feedback'] ?? '')));
+                $said = trim((string)($choice['consequence'] ?? ''))
+                    . ' ' . trim((string)($choice['feedback'] ?? ''));
+                $joined = trim($said);
                 if ($note === '' || $joined === '') {
                     continue;
                 }
@@ -659,6 +819,7 @@ class quality_review {
         // for, illustrated, and unreachable.
         $set = [];
         $read = [];
+        $marks = [];
         foreach ($nodes as $node) {
             foreach ((array)($node['choices'] ?? []) as $choice) {
                 foreach (array_keys((array)($choice['setflags'] ?? [])) as $flag) {
@@ -669,6 +830,18 @@ class quality_review {
                 if (isset($variant['when']['flag'])) {
                     $read[(string)$variant['when']['flag']] = true;
                 }
+            }
+            // A mark on a picture READS a flag exactly as a variant does. It has to count,
+            // or a scenario that remembers a decision visually rather than in words would be
+            // told the flag it depends on is never read - which is the review nagging about
+            // the more sophisticated of the two ways of doing the same thing.
+            foreach ((array)($node['marks'] ?? []) as $mark) {
+                $flag = (string)($mark['flag'] ?? '');
+                if ($flag === '') {
+                    continue;
+                }
+                $read[$flag] = true;
+                $marks[] = ['node' => $node, 'mark' => $mark];
             }
         }
         foreach (array_keys($read) as $flag) {
@@ -690,6 +863,67 @@ class quality_review {
             }
         }
 
+        // A FAULT ON A DOCUMENT THE LEARNER CANNOT ACT ON.
+        //
+        // A flagged line is the author saying "this is the thing to catch". On a beat there
+        // is nothing to catch it WITH - one way forward, and the learner clicks past the
+        // fault they were meant to notice. That is worse than not showing the document,
+        // because it teaches that reading the permit changes nothing.
+        foreach ($nodes as $node) {
+            $artefact = (array)($node['artefact'] ?? []);
+            if (!$artefact || ($node['type'] ?? '') === 'decision') {
+                continue;
+            }
+            $flagged = false;
+            foreach ((array)($artefact['fields'] ?? []) as $field) {
+                $flagged = $flagged || !empty($field['flagged']);
+            }
+            if (!$flagged) {
+                continue;
+            }
+            // The review runs on stored definitions as well as on freshly validated ones,
+            // so the kind is checked against the list here rather than assumed - a string
+            // identifier built from unchecked data is a fatal error, not a warning.
+            $kind = schema::in_list($artefact['kind'] ?? '', schema::artefactkinds())
+                ? (string)$artefact['kind'] : 'document';
+            $out[] = [
+                'nodeid'  => (string)($node['id'] ?? ''),
+                'node'    => (string)($node['title'] ?? ''),
+                'message' => get_string(
+                    'quality:artefactnotread',
+                    'mod_aibranchedscenario',
+                    (object)[
+                        'kind' => \core_text::strtolower(
+                            get_string('artefact:' . $kind, 'mod_aibranchedscenario')
+                        ),
+                        'node' => (string)($node['title'] ?? $node['id'] ?? ''),
+                    ]
+                ),
+            ];
+        }
+
+        // A TAG THAT CAN NEVER APPEAR. Reported per mark rather than per flag, because the
+        // author needs to know which picture is waiting for something that never happens -
+        // "nothing sets warn_left_running" sends them looking through five nodes.
+        foreach ($marks as $entry) {
+            if (isset($set[(string)$entry['mark']['flag']])) {
+                continue;
+            }
+            $out[] = [
+                'nodeid'  => (string)($entry['node']['id'] ?? ''),
+                'node'    => (string)($entry['node']['title'] ?? ''),
+                'message' => get_string(
+                    'quality:markneverset',
+                    'mod_aibranchedscenario',
+                    (object)[
+                        'node'  => (string)($entry['node']['title'] ?? $entry['node']['id'] ?? ''),
+                        'label' => (string)$entry['mark']['label'],
+                        'flag'  => (string)$entry['mark']['flag'],
+                    ]
+                ),
+            ];
+        }
+
         // JUDGED ON THE SCENARIO, NOT ON EACH DECISION.
         //
         // The first cut of this reported every decision whose options converge, which
@@ -701,20 +935,23 @@ class quality_review {
         // Two branch points is what the content standard asks for, and the message names
         // the flat decisions so the teacher has somewhere to start rather than a verdict.
         if ($decisions > 1 && $branching < self::MIN_BRANCHING_DECISIONS) {
-            array_unshift($out, [
-                'nodeid'  => 'scenario',
-                'node'    => trim((string)($definition['title'] ?? '')),
-                'message' => get_string(
-                    $branching === 0
-                    ? 'quality:nobranchingatall' : 'quality:notenoughbranching',
-                    'mod_aibranchedscenario',
-                    (object)[
-                        'have'   => $branching,
-                        'wanted' => self::MIN_BRANCHING_DECISIONS,
-                        'flat'   => implode('", "', array_slice($flat, 0, 4)),
-                    ]
-                ),
-            ]);
+            array_unshift(
+                $out,
+                [
+                    'nodeid'  => 'scenario',
+                    'node'    => trim((string)($definition['title'] ?? '')),
+                    'message' => get_string(
+                        $branching === 0
+                            ? 'quality:nobranchingatall' : 'quality:notenoughbranching',
+                        'mod_aibranchedscenario',
+                        (object)[
+                            'have'   => $branching,
+                            'wanted' => self::MIN_BRANCHING_DECISIONS,
+                            'flat'   => implode('", "', array_slice($flat, 0, 4)),
+                        ]
+                    ),
+                ]
+            );
         }
         return $out;
     }
@@ -881,10 +1118,14 @@ class quality_review {
         return [[
             'nodeid'  => '',
             'node'    => get_string('quality:spellingnode', 'mod_aibranchedscenario'),
-            'message' => get_string('quality:spelling', 'mod_aibranchedscenario', (object)[
-                'language' => $language,
-                'words'    => implode(', ', $shown),
-            ]),
+            'message' => get_string(
+                'quality:spelling',
+                'mod_aibranchedscenario',
+                (object)[
+                    'language' => $language,
+                    'words'    => implode(', ', $shown),
+                ]
+            ),
         ]];
     }
 

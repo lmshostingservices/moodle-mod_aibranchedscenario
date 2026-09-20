@@ -1093,27 +1093,7 @@ class media_manager {
         string $voice,
         int $index
     ): bool {
-        // The narrator reads the whole screen, in the order a person reads it: the scene's
-        // title, the situation, the line to think about, and the question being put. It
-        // used to read the situation alone, which meant a learner listening rather than
-        // reading was never told what the scene was called and - worse - never heard the
-        // question they were being asked to answer. The options themselves are separate
-        // clips, so they are not repeated here.
-        //
-        // A line spoken by a named character is its own clip in that character's voice.
-        // The narrator only reads it when nobody with a voice of their own says it, which
-        // is why a scenario no longer sounds like one person reading a play aloud.
-        $parts = [
-            trim((string)($node['title'] ?? '')),
-            trim((string)$node['situation']),
-        ];
-        if (!self::has_own_voice($node)) {
-            $parts[] = trim((string)($node['facilitatorspeech'] ?? ''));
-        }
-        $parts[] = trim((string)($node['challenge'] ?? ''));
-        $text = trim(implode("\n\n", array_filter($parts, static function ($part) {
-            return $part !== '';
-        })));
+        $text = self::narration_script($node);
         if ($text === '') {
             return false;
         }
@@ -1126,6 +1106,111 @@ class media_manager {
             mtrace('Narration generation skipped: ' . $e->errorcode);
             return false;
         }
+    }
+
+    /**
+     * Every word the narrator says on a decision screen, in the order a person reads them.
+     *
+     * A SEPARATE METHOD BECAUSE IT IS THE THING THAT GOES WRONG.
+     *
+     * Narration completeness has failed twice, silently, in ways no check could see: the
+     * options were left out of the clip for a release, and the question being asked was left
+     * out for longer than that. Both times the code that built the words was buried inside
+     * the method that calls the speech provider, so the only way to test it was to read the
+     * source with a regular expression - which tests that a line exists, not that the right
+     * words come out. This can be called with a node and compared against what a learner
+     * would hear.
+     *
+     * THE NARRATOR READS THE WHOLE SCREEN. The scene's title, the situation, the document in
+     * the learner's hands, the question being put, AND THE OPTIONS. The options were once
+     * left out on the grounds that they get clips of their own. They do - but those play on
+     * the decision RECORD, after the choice has been made, so a learner listening to this
+     * screen heard a question and then silence where the three answers should have been.
+     * They had to stop listening and start reading at the one moment the product asks them
+     * to decide something, which is a hole in the narration and an accessibility fault
+     * besides. It costs nothing: more words in a clip that was already being made, not a new
+     * clip.
+     *
+     * A line spoken by a named character is its own clip in that character's voice, so the
+     * narrator only reads it when nobody with a voice of their own says it - which is why a
+     * scenario no longer sounds like one person reading a play aloud.
+     *
+     * @param array $node Normalised node.
+     * @return string The script, or empty when there is nothing to say.
+     */
+    public static function narration_script(array $node): string {
+        // The narrator reads the whole screen, in the order a person reads it: the scene's
+        // title, the situation, the line to think about, the question being put, AND THE
+        // OPTIONS. It used to read the situation alone, which meant a learner listening
+        // rather than reading was never told what the scene was called and - worse - never
+        // heard the question they were being asked to answer.
+        //
+        // The options were left out on the grounds that they get clips of their own. They
+        // do - but those play on the decision RECORD, after the choice has been made, so a
+        // learner listening to this screen heard a question and then silence where the
+        // three answers should have been. They had to stop listening and start reading at
+        // the one moment the product asks them to decide something, which is a hole in the
+        // narration and an accessibility fault besides.
+        //
+        // Costs nothing: it is more words in a clip that was already being made, not a new
+        // clip. Hearing the chosen option again on the record is not a repeat - by then it
+        // is the one they took, read back to them, which is the point of that screen.
+        //
+        // A line spoken by a named character is its own clip in that character's voice.
+        // The narrator only reads it when nobody with a voice of their own says it, which
+        // is why a scenario no longer sounds like one person reading a play aloud.
+        $parts = [
+            trim((string)($node['title'] ?? '')),
+            trim((string)$node['situation']),
+        ];
+        if (!self::has_own_voice($node)) {
+            $parts[] = trim((string)($node['facilitatorspeech'] ?? ''));
+        }
+        // THE DOCUMENT, READ OUT.
+        //
+        // Placed between the situation and the question because that is where it is on the
+        // screen and where it happens in the room: you are told what is going on, you pick
+        // the paper up, then somebody asks you what you want to do. A learner listening who
+        // never heard the permit would be asked to judge a permit they were never shown,
+        // which is the same hole the lettered options used to leave.
+        //
+        // Read straight, with no mention of which line is the wrong one. The flag is for
+        // the debrief; saying it here would be the narrator answering the question.
+        $artefact = (array)($node['artefact'] ?? []);
+        if ($artefact) {
+            $sheet = [trim((string)($artefact['title'] ?? ''))];
+            $subtitle = trim((string)($artefact['subtitle'] ?? ''));
+            if ($subtitle !== '') {
+                $sheet[] = $subtitle;
+            }
+            foreach ((array)($artefact['fields'] ?? []) as $field) {
+                $sheet[] = trim((string)$field['label']) . ': ' . trim((string)$field['value']);
+            }
+            foreach ((array)($artefact['lines'] ?? []) as $line) {
+                $sheet[] = trim((string)$line);
+            }
+            $footer = trim((string)($artefact['footer'] ?? ''));
+            if ($footer !== '') {
+                $sheet[] = $footer;
+            }
+            $parts[] = implode('. ', array_filter($sheet));
+        }
+        $parts[] = trim((string)($node['challenge'] ?? ''));
+        // Lettered the way the screen letters them, so somebody listening and somebody
+        // reading are working from the same list and can talk to each other about it.
+        $choices = (array)($node['choices'] ?? []);
+        if (count($choices) > 1) {
+            foreach (array_values($choices) as $position => $choice) {
+                $text = trim((string)($choice['text'] ?? ''));
+                if ($text === '') {
+                    continue;
+                }
+                $parts[] = chr(65 + $position) . '. ' . $text;
+            }
+        }
+        return trim(implode("\n\n", array_filter($parts, static function ($part) {
+            return $part !== '';
+        })));
     }
 
     /**

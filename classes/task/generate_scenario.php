@@ -105,8 +105,10 @@ class generate_scenario extends adhoc_task {
         $live = $fresh ? scenario_manager::get_current_revision($fresh, (int)($job->tier ?? 1)) : null;
         if ($media && $live && generate_media::same_scenes($live->scenariojson, $definition)) {
             $copied = $media->publish_media((int)$live->revision);
-            mtrace('Scenario ' . $scenario->id . ' media copied into revision '
-                . $live->revision . ' (' . $copied . ' files).');
+            mtrace(
+                'Scenario ' . $scenario->id . ' media copied into revision '
+                    . $live->revision . ' (' . $copied . ' files).'
+            );
         }
 
         // Only now is the job finished. Until this point the wizard keeps showing

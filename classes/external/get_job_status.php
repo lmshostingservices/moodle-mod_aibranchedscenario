@@ -117,9 +117,12 @@ class get_job_status extends external_api {
         return new external_single_structure([
             'jobid'         => new external_value(PARAM_INT, 'Job identifier'),
             'status'        => new external_value(PARAM_ALPHA, 'Job status'),
-            'errormessage'  => new external_value(PARAM_TEXT, 'Translated failure message, or empty'),
+            'errormessage'  => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'Translated failure message, or empty'
+            ),
             'mediamessage'  => new external_value(
-                PARAM_TEXT,
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
                 'Warning when fewer images were produced than the scenario called for',
                 VALUE_DEFAULT,
                 ''

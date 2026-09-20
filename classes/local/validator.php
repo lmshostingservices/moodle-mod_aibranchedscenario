@@ -359,6 +359,193 @@ class validator {
     }
 
     /**
+     * A region of the scene, as percentages of the frame.
+     *
+     * Null when the option is not something you can point at, which is most of them. A
+     * hotspot that is missing, malformed or off the edge of the picture is dropped rather
+     * than clamped: half a hotspot in the wrong place is worse than none, because the
+     * learner clicks where the thing is and nothing happens.
+     *
+     * @param mixed $value Raw hotspot.
+     * @return array|null ['x','y','w','h'] or null.
+     */
+    protected function hotspot($value): ?array {
+        if (!is_array($value)) {
+            return null;
+        }
+        $out = [];
+        foreach (['x', 'y', 'w', 'h'] as $part) {
+            if (!isset($value[$part]) || !is_numeric($value[$part])) {
+                return null;
+            }
+            $out[$part] = (float)$value[$part];
+        }
+        // Wide enough and tall enough to hit on a phone, and inside the frame.
+        if ($out['w'] < 5 || $out['h'] < 5 || $out['w'] > 100 || $out['h'] > 100) {
+            return null;
+        }
+        if (
+            $out['x'] < 0 || $out['y'] < 0
+                || $out['x'] + $out['w'] > 100 || $out['y'] + $out['h'] > 100
+        ) {
+            return null;
+        }
+        return $out;
+    }
+
+    /**
+     * A document off the wall of the workplace.
+     *
+     * THE THING THE DECISION IS ACTUALLY ABOUT.
+     *
+     * Almost every real workplace judgement is made while holding a piece of paper: a permit
+     * that is signed by the wrong person, a safety data sheet whose storage line contradicts
+     * what is in the cupboard, a handover email that says the machine is fine when the
+     * checklist says it is not. A scenario that puts that paper into prose - "the permit has
+     * expired" - has done the reading for the learner and left them a comprehension question.
+     * A scenario that SHOWS the permit has left them the job.
+     *
+     * Deliberately NOT a picture. A generated photograph of a document is unreadable at phone
+     * width, unsearchable, untranslatable and inaccessible; it also costs an image credit and
+     * comes back with invented words on it. This is structured text rendered as a document,
+     * which means it is real text to a screen reader, it reflows, it can be corrected without
+     * regenerating anything, and it is free.
+     *
+     * Deliberately NOT a new node type either, for the same reason Spot It is not: the
+     * artefact hangs off the node the learner is already on, so it inherits the branching,
+     * the variants, the scoring, the backup format and the privacy export untouched.
+     *
+     * @param mixed $value Raw artefact.
+     * @return array|null Normalised artefact, or null when there is nothing worth showing.
+     */
+    protected function artefact($value): ?array {
+        if (!is_array($value)) {
+            return null;
+        }
+        $kind = schema::in_list($value['kind'] ?? '', schema::artefactkinds())
+            ? $value['kind'] : 'document';
+
+        $fields = [];
+        foreach ((array)($value['fields'] ?? []) as $rawfield) {
+            if (!is_array($rawfield)) {
+                continue;
+            }
+            $label = $this->short($rawfield['label'] ?? '', 60);
+            $text = $this->short($rawfield['value'] ?? '', 160);
+            if ($label === '' || $text === '') {
+                continue;
+            }
+            // A flag on a field is what makes an artefact a decision rather than a prop: it
+            // is the line that is wrong. It is NOT rendered as a warning triangle - that
+            // would answer the question - it is carried so the debrief can say afterwards
+            // which line the learner should have caught.
+            $fields[] = [
+                'label'   => $label,
+                'value'   => $text,
+                'flagged' => !empty($rawfield['flagged']),
+            ];
+            if (count($fields) >= schema::MAX_ARTEFACT_FIELDS) {
+                break;
+            }
+        }
+
+        $lines = [];
+        foreach ((array)($value['lines'] ?? []) as $rawline) {
+            $line = $this->short(is_scalar($rawline) ? $rawline : '', 200);
+            if ($line !== '') {
+                $lines[] = $line;
+            }
+            if (count($lines) >= schema::MAX_ARTEFACT_LINES) {
+                break;
+            }
+        }
+
+        $artefact = [
+            'kind'     => $kind,
+            'title'    => $this->short($value['title'] ?? '', 120),
+            'subtitle' => $this->short($value['subtitle'] ?? '', 160),
+            'fields'   => $fields,
+            'lines'    => $lines,
+            'footer'   => $this->short($value['footer'] ?? '', 200),
+        ];
+
+        // A document with a heading and nothing under it is a stage prop. Dropped rather
+        // than shown, so the screen never carries an empty frame where a permit should be.
+        if ($artefact['title'] === '' || (!$fields && !$lines)) {
+            return null;
+        }
+        return $artefact;
+    }
+
+    /**
+     * Marks the world keeps, pinned to the picture.
+     *
+     * THE ENVIRONMENT REMEMBERING, VISUALLY.
+     *
+     * World flags already let a scenario remember what the learner did in its WORDS - stage
+     * seven says "the guard you left off is still off". This is the same memory in the
+     * picture: a small tag sitting on the frame, shown only when its flag is set.
+     *
+     * It is drawn by the player rather than generated, which is the entire reason it is
+     * affordable. Making the environment remember visually by regenerating the image for
+     * every combination of flags would be two-to-the-number-of-flags pictures per node; this
+     * is one picture and a label, and it is legible at phone width, which a detail burned
+     * into a generated photograph never is.
+     *
+     * @param mixed $value Raw list of marks.
+     * @return array Normalised marks, possibly empty.
+     */
+    protected function marks($value): array {
+        if (!is_array($value)) {
+            return [];
+        }
+        $out = [];
+        foreach ($value as $rawmark) {
+            if (!is_array($rawmark)) {
+                continue;
+            }
+            $flag = $this->identifier($rawmark['flag'] ?? '');
+            $label = $this->short($rawmark['label'] ?? '', 40);
+            // A mark with no flag would be permanent scenery, which is what the image is
+            // for; a mark with no label is a coloured rectangle on a photograph.
+            if ($flag === '' || $label === '') {
+                continue;
+            }
+            $tone = schema::in_list($rawmark['tone'] ?? '', schema::marktones())
+                ? $rawmark['tone'] : 'neutral';
+            $out[] = [
+                'flag'  => $flag,
+                'label' => $label,
+                'tone'  => $tone,
+                'x'     => $this->percent($rawmark['x'] ?? null, 50.0),
+                'y'     => $this->percent($rawmark['y'] ?? null, 50.0),
+            ];
+            if (count($out) >= schema::MAX_MARKS) {
+                break;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * A position on the frame, 0-100.
+     *
+     * Unlike a hotspot, a stray mark is placed rather than dropped: a tag two percent off the
+     * edge is still a readable tag, and losing the fact that the machine was locked out
+     * because a number was 101 would be a worse outcome than moving it.
+     *
+     * @param mixed $value Raw value.
+     * @param float $default Where to put it when the value is unusable.
+     * @return float
+     */
+    protected function percent($value, float $default): float {
+        if (!is_numeric($value)) {
+            return $default;
+        }
+        return max(0.0, min(100.0, (float)$value));
+    }
+
+    /**
      * Normalise an identifier used as a node or choice key.
      *
      * @param mixed $value Raw value.
@@ -979,6 +1166,8 @@ class validator {
             'imagealt'           => $this->short($raw['imagealt'] ?? '', 250),
             'crisisvariant'      => null,
             'variants'           => [],
+            'artefact'           => $this->artefact($raw['artefact'] ?? null),
+            'marks'              => $this->marks($raw['marks'] ?? null),
             'choices'            => [],
             'outcome'            => '',
             'summary'            => '',
@@ -1244,6 +1433,20 @@ class validator {
                 // Stored in the attempt's state blob, which is free-form, so this needs no
                 // schema change and no upgrade step.
                 'setflags'    => $this->flags($rawchoice['setflags'] ?? []),
+                // WHERE THIS OPTION IS IN THE PICTURE, when the scene is the question.
+                //
+                // "Look around before you start" is a far better way to teach noticing
+                // than "which of these three is the hazard?", and it was tempting to build
+                // it as a new kind of node. It is not one. It is a DECISION whose options
+                // happen to be things you can point at - so it reuses the branching, the
+                // flags, the readings, the scoring, the debrief, the backup format and the
+                // privacy export exactly as they are, and a scenario written before any of
+                // this can gain one by adding four numbers to a choice.
+                //
+                // Percentages of the frame, not pixels: the same scene is served at every
+                // width from a phone to a projector, and a hotspot fixed in pixels would
+                // be in the wrong place on all but one of them.
+                'hotspot'     => $this->hotspot($rawchoice['hotspot'] ?? null),
                 'principleid' => $principleid,
                 'tags'        => $this->stringlist($rawchoice['tags'] ?? [], schema::choicetags(), 5),
                 'effects'     => [
@@ -1392,8 +1595,8 @@ class validator {
         }
         $metric = (string)($raw['metric'] ?? '');
         if (schema::in_list($metric, schema::metrics())) {
-            // isset() is not enough: the wire mapper writes an explicit null for a bound
-            // the service did not send, so a condition with neither would otherwise be read
+            // A plain isset() is not enough: the wire mapper writes an explicit null for a
+            // bound the service did not send, so a condition with neither would be read
             // as "at least null", which is nought, which is always true - a variant that
             // fires on every attempt and replaces the node behind it.
             if (($raw['atleast'] ?? null) !== null) {

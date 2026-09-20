@@ -120,9 +120,20 @@ final class external_test extends \externallib_advanced_testcase {
         $this->assertSame('decision', $result['node']['type']);
         $this->assertCount(schema::CHOICES, $result['node']['choices']);
 
-        // The player is never told where a choice leads or what it costs.
+        // THE PLAYER IS NEVER TOLD WHERE A CHOICE LEADS OR WHAT IT COSTS.
+        //
+        // Asserted two ways on purpose. The exact key list catches a field added to the
+        // payload without anybody thinking about it; the forbidden list says what the rule
+        // actually is, so it keeps holding when the list legitimately grows - which it did
+        // when options gained a position in the picture.
+        $allowed = ['id', 'letter', 'text', 'hashotspot', 'spotx', 'spoty', 'spotw', 'spoth'];
+        $leaks = ['next', 'signal', 'effects', 'skills', 'setflags', 'consequence',
+            'feedback', 'outcomenote', 'principleid'];
         foreach ($result['node']['choices'] as $choice) {
-            $this->assertSame(['id', 'letter', 'text'], array_keys($choice));
+            $this->assertSame($allowed, array_keys($choice));
+            foreach ($leaks as $leak) {
+                $this->assertArrayNotHasKey($leak, $choice);
+            }
         }
 
         // Resuming reports the same attempt.

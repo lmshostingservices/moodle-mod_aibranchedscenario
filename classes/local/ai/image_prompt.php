@@ -130,14 +130,14 @@ class image_prompt {
         // the calm version, so the frame whose situation is "the machine is screaming and
         // people have stepped back" was given the prop belonging to the quiet scene before
         // it.
-        $object = self::focal_object(
-            $situation . ' '
-            . (string)($crisis && !empty($node['crisisvariant']['challenge'])
-                ? $node['crisisvariant']['challenge'] : ($node['challenge'] ?? '')) . ' '
-            . implode(' ', array_map(static function ($choice) {
-                return (string)($choice['text'] ?? '');
-            }, (array)($node['choices'] ?? [])))
-        );
+        $challenge = $crisis && !empty($node['crisisvariant']['challenge'])
+            ? $node['crisisvariant']['challenge']
+            : ($node['challenge'] ?? '');
+        $choicewords = '';
+        foreach ((array)($node['choices'] ?? []) as $choice) {
+            $choicewords .= ' ' . (string)($choice['text'] ?? '');
+        }
+        $object = self::focal_object($situation . ' ' . (string)$challenge . ' ' . $choicewords);
 
         // ONE PARAGRAPH DESCRIBING A PHOTOGRAPH, not a page of stage directions.
         //
@@ -239,10 +239,9 @@ class image_prompt {
             . 'place as the wider frames in this set, but out of focus behind them. '
             . $cast
             . 'What has just happened: '
-            . self::sentence(self::dequote(self::clip(
-                trim(preg_replace('/\s+/u', ' ', $consequence)),
-                600
-            ))) . ' '
+            . self::sentence(
+                self::dequote(self::clip(trim(preg_replace('/\s+/u', ' ', $consequence)), 600))
+            ) . ' '
             . 'Show the moment just after it landed, not the moment it was decided. '
             . 'Nobody is speaking. ';
 
@@ -519,9 +518,9 @@ class image_prompt {
      * @return string
      */
     protected static function look(string $style): string {
-        // "Natural expressions" was the single flattest instruction in the brief, and it
-        // was on EVERY frame: a model reads it as "no expression in particular" and returns
-        // a set of people who all look mildly attentive. A scenario is about things going
+        // The phrase "natural expressions" was the flattest instruction in the brief, and
+        // it was on EVERY frame: a model reads it as "no expression in particular" and
+        // returns people who all look mildly attentive. A scenario is about things going
         // wrong, and a learner should be able to tell from the picture alone whether this
         // one went well. What the frame needs is a readable emotional state, pitched at
         // whatever the moment actually is.
@@ -597,11 +596,12 @@ class image_prompt {
         // what every assistant-written scenario uses. Stripping it turned "I don't think
         // we're ready" into "I dont think were ready" - the scenario's own words, mangled,
         // in a paid request. Only paired quotation marks come off; the apostrophe stays.
-        return trim((string)preg_replace(
+        $stripped = (string)preg_replace(
             '/["\x{201C}\x{201D}\x{00AB}\x{00BB}\x{201E}\x{300C}\x{300D}]/u',
             '',
             $text
-        ));
+        );
+        return trim($stripped);
     }
 
     /**
@@ -873,15 +873,17 @@ class image_prompt {
         // anchor above says who they are, so the model has a person to draw rather than an
         // invitation to invent one.
         if (!$described) {
-            $known = array_values(array_filter(array_map(
+            $cast = array_merge(
+                !empty($definition['facilitator']['name']) ? [$definition['facilitator']] : [],
+                (array)($definition['characters'] ?? [])
+            );
+            $names = array_map(
                 static function ($person) {
                     return trim((string)($person['name'] ?? ''));
                 },
-                array_merge(
-                    !empty($definition['facilitator']['name']) ? [$definition['facilitator']] : [],
-                    (array)($definition['characters'] ?? [])
-                )
-            )));
+                $cast
+            );
+            $known = array_values(array_filter($names));
             if ($known) {
                 return implode(' and ', array_slice($known, 0, 2))
                     . ', looking as the cast sheet describes them';
@@ -1006,11 +1008,12 @@ class image_prompt {
         // dialogue condensed to nothing, and the model was left inventing a generic
         // office. The quotation marks come off instead, so the words describe what is
         // being said while the safety direction below keeps text out of the picture.
-        $text = trim((string)preg_replace(
+        $unquoted = (string)preg_replace(
             '/["\x{201C}\x{201D}]([^"\x{201C}\x{201D}]*)["\x{201C}\x{201D}]/u',
             '$1',
             $text
-        ));
+        );
+        $text = trim($unquoted);
         // Two sentences and 600 characters, out of a 3,000-character budget of which the
         // brief was using barely a third. On a five-sentence situation three sentences were
         // thrown away before the model ever saw them, so it was asked to picture a fragment

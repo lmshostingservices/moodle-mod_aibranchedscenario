@@ -342,6 +342,12 @@ class player implements \renderable, \templatable {
             'cmid'         => (int)$this->cm->id,
             'tier'         => (int)$this->tier,
             'instanceid'   => (int)$this->scenario->id,
+            // Whether this site lets the product make a sound at all. Nothing to do with
+            // narration, which is about paying for a generated voice.
+            'cues'         => (bool)get_config('mod_aibranchedscenario', 'allowcues'),
+            // Whether a learner may say they are not sure before they decide. Site-level,
+            // because what it feeds is a picture of a cohort rather than of one activity.
+            'askconfidence' => (bool)get_config('mod_aibranchedscenario', 'askconfidence'),
             'theme'        => $this->scenario->theme,
             'themeclass'   => schema::theme_class((string)$this->scenario->theme),
             'title'        => format_string($this->scenario->name, true, ['context' => $this->context]),

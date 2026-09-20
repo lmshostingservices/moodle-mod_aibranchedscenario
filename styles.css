@@ -39,8 +39,7 @@
 /* ------------------------------------------------------------------ tokens */
 
 .aibs-player,
-.aibs-wizard,
-.aibs-ladder {
+.aibs-wizard {
     --aibs-canvas: #f5f6f8;
     --aibs-surface: #fff;
     --aibs-surface-alt: #eef0f4;
@@ -171,7 +170,6 @@
    behaviour that shipped before. */
 .aibs-player[data-aibs-scheme="dark"],
 .aibs-wizard[data-aibs-scheme="dark"],
-.aibs-ladder[data-aibs-scheme="dark"],
 .aibs-toasts[data-aibs-scheme="dark"],
 .aibs-toasts[data-aibs-scheme="dark"] .aibs-toast {
     --aibs-canvas: #11141a;
@@ -209,8 +207,7 @@
    and the border a mid tone that can still be seen against both. */
 
 .aibs-player[data-aibs-scheme="dark"].aibs-theme-slate,
-.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-slate,
-.aibs-ladder[data-aibs-scheme="dark"].aibs-theme-slate {
+.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-slate {
     --aibs-accent: #60a5fa;
     --aibs-accent-strong: #93c5fd;
     --aibs-accent-soft: #16233b;
@@ -218,8 +215,7 @@
 }
 
 .aibs-player[data-aibs-scheme="dark"].aibs-theme-emerald,
-.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-emerald,
-.aibs-ladder[data-aibs-scheme="dark"].aibs-theme-emerald {
+.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-emerald {
     --aibs-accent: #34d399;
     --aibs-accent-strong: #6ee7b7;
     --aibs-accent-soft: #10281f;
@@ -228,8 +224,7 @@
 
 
 .aibs-player[data-aibs-scheme="dark"].aibs-theme-amber,
-.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-amber,
-.aibs-ladder[data-aibs-scheme="dark"].aibs-theme-amber {
+.aibs-wizard[data-aibs-scheme="dark"].aibs-theme-amber {
     --aibs-accent: #fbbf24;
     --aibs-accent-strong: #fcd34d;
     --aibs-accent-soft: #2c2109;
@@ -276,8 +271,7 @@
 /* ------------------------------------------------------------------- shell */
 
 .aibs-player,
-.aibs-wizard,
-.aibs-ladder {
+.aibs-wizard {
     background: var(--aibs-canvas);
     /* Stated on the shell, not only on what is inside it. Every descendant was told, and
        the shell itself was left to whatever the host page happened to set - which is
@@ -326,8 +320,7 @@
    Stated on the roots, so it applies to everything inside the player and the wizard and to
    nothing else on the page. A site that wants its own face can still override it. */
 .aibs-player,
-.aibs-wizard,
-.aibs-ladder {
+.aibs-wizard {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
         "Noto Sans", sans-serif;
 }
@@ -336,8 +329,7 @@
 .aibs-player h1, .aibs-player h2, .aibs-player h3, .aibs-player h4,
 .aibs-player h5, .aibs-player h6,
 .aibs-wizard h1, .aibs-wizard h2, .aibs-wizard h3, .aibs-wizard h4,
-.aibs-wizard h5, .aibs-wizard h6,
-.aibs-ladder h2, .aibs-ladder h3 {
+.aibs-wizard h5, .aibs-wizard h6 {
     font-family: inherit;
 }
 
@@ -348,8 +340,7 @@
 }
 
 .aibs-player *,
-.aibs-wizard *,
-.aibs-ladder * {
+.aibs-wizard * {
     box-sizing: border-box;
 }
 
@@ -371,8 +362,7 @@
    Neither is a rule about how the plugin should look; both are about not leaving a value to
    whoever happens to own the page. */
 .aibs-player li,
-.aibs-wizard li,
-.aibs-ladder li {
+.aibs-wizard li {
     margin-block: 0;
 }
 
@@ -1216,7 +1206,6 @@
 .path-mod-aibranchedscenario [hidden],
 .aibs-player [hidden],
 .aibs-wizard [hidden],
-.aibs-ladder [hidden],
 .aibs-region[hidden] {
     display: none !important;
 }
@@ -6077,354 +6066,562 @@ button.aibs-avatar:focus-visible {
 }
 
 
-/* ============================================================ the ladder ====
-   The chooser an activity with more than one scenario opens on: three cards, in
-   order, one open and the rest waiting.
+/* --------------------------------------------------- what they did, named
+   Not a trophy cabinet. A short list of behaviours, set as quietly as the rest of
+   the ending card: the achievement is the sentence, and a gold badge beside it
+   would turn something true about the learner into a prize. */
 
-   The cards are a numbered list in the markup because they are a sequence - the
-   order carries the meaning, which is the whole design. A locked card is drawn
-   quietly rather than hidden, because what is ahead is the reason to finish what
-   is in front of you. */
-
-.aibs-ladder {
-    padding: clamp(18px, 2.2vw, 32px);
+.aibs-awards {
+    border-block-start: 1px solid var(--aibs-border-soft);
+    margin-block: 18px 0;
+    padding-block-start: 16px;
+    text-align: start;
 }
 
-.aibs-ladder-head {
-    margin-block-end: clamp(16px, 2vw, 26px);
-    max-width: 62ch;
-}
-
-.aibs-ladder-title {
-    color: var(--aibs-text);
-    font-size: var(--aibs-text-head);
-    font-weight: var(--aibs-weight-strong);
-    line-height: var(--aibs-leading-tight);
-    margin: 0;
-    text-wrap: balance;
-}
-
-.aibs-ladder-lead {
+.aibs-awards-heading {
     color: var(--aibs-muted);
-    font-size: var(--aibs-text-lead);
-    line-height: var(--aibs-leading-snug);
-    margin: 6px 0 0;
-}
-
-/* How far along, said once and in words. A learner who has passed one of three has
-   a fact about themselves, not a progress bar to watch fill. */
-.aibs-ladder-progress {
-    color: var(--aibs-accent);
     font-size: var(--aibs-text-micro);
     font-weight: var(--aibs-weight-label);
-    letter-spacing: .06em;
-    margin: 12px 0 0;
+    letter-spacing: .07em;
+    margin: 0 0 10px;
     text-transform: uppercase;
 }
 
-.aibs-ladder-cards {
-    display: grid;
-    gap: clamp(12px, 1.6vw, 20px);
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+.aibs-awards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     list-style: none;
     margin: 0;
     padding: 0;
 }
 
-.aibs-ladder-item {
+.aibs-award {
+    column-gap: 10px;
     display: flex;
-    min-width: 0;
 }
 
-/* One target over the whole card. The three cards are the same height because they
-   are grid items stretching to the tallest, and the foot is pushed to the bottom so
-   the three action lines agree with each other across the row. */
-.aibs-ladder-card {
-    background: var(--aibs-surface);
-    border: 1px solid var(--aibs-border);
-    border-radius: var(--aibs-radius);
-    box-shadow: var(--aibs-shadow-sm);
-    color: var(--aibs-text);
+.aibs-award-mark {
+    align-items: center;
+    background: var(--aibs-positive-soft);
+    border-radius: 999px;
+    color: var(--aibs-positive);
+    display: flex;
+    flex: 0 0 auto;
+    height: 22px;
+    justify-content: center;
+    margin-block-start: 2px;
+    width: 22px;
+}
+
+.aibs-award-mark svg {
+    height: 14px;
+    width: 14px;
+}
+
+.aibs-award-text {
     display: flex;
     flex-direction: column;
+    gap: 2px;
     min-width: 0;
-    overflow: hidden;
-    text-decoration: none;
-    transition: box-shadow .18s var(--aibs-ease), transform .18s var(--aibs-ease),
-        border-color .18s var(--aibs-ease);
-    width: 100%;
 }
 
-/* A lift, and nothing else - no tint, no colour change, no border that appears from
-   nowhere. The card is a physical object under the pointer. */
-.path-mod-aibranchedscenario a.aibs-ladder-card:hover,
-.path-mod-aibranchedscenario a.aibs-ladder-card:focus-visible,
-a.aibs-ladder-card:hover,
-a.aibs-ladder-card:focus-visible {
-    border-color: var(--aibs-accent-border);
-    box-shadow: var(--aibs-shadow-hover);
+.aibs-award-title {
     color: var(--aibs-text);
-    text-decoration: none;
-    transform: translateY(-2px);
+    font-size: var(--aibs-text-sub);
+    font-weight: var(--aibs-weight-strong);
+    line-height: var(--aibs-leading-tight);
 }
 
-a.aibs-ladder-card:focus-visible {
+.aibs-award-detail {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-small);
+    line-height: var(--aibs-leading-snug);
+}
+
+/* One that was never advertised. Marked only by being said, not by a different
+   colour: a learner who is shown that hidden achievements exist starts replaying to
+   collect them, which is the behaviour the whole product is built to avoid. */
+.aibs-award-hidden .aibs-award-mark {
+    background: var(--aibs-accent-soft);
+    color: var(--aibs-accent);
+}
+
+
+/* ------------------------------------------------------------------ spot it
+   When the options are things you can point at, the scene becomes the question.
+   The regions sit over the photograph and are the same decision the lettered
+   options below are - the same ids, the same handler, the same scoring.
+
+   They are an ADDITIONAL way to answer and never the only one, which is why they
+   are aria-hidden and out of the tab order: the real buttons are below, properly
+   labelled and keyboard reachable, and announcing every option twice would make
+   the screen worse for the people who depend on that. */
+
+.aibs-spots {
+    inset: 0;
+    position: absolute;
+}
+
+.aibs-spot {
+    background: transparent;
+    border: 0;
+    border-radius: var(--aibs-radius-sm);
+    cursor: pointer;
+    padding: 0;
+    position: absolute;
+}
+
+/* Nothing is outlined until the pointer is near it. A photograph with three boxes
+   drawn on it has already answered the question - the whole point is that the
+   learner looks. */
+.aibs-spot-ring {
+    border: 2px solid transparent;
+    border-radius: var(--aibs-radius-sm);
+    inset: 0;
+    position: absolute;
+    transition: border-color .15s var(--aibs-ease), background-color .15s var(--aibs-ease);
+}
+
+.path-mod-aibranchedscenario .aibs-spot:hover .aibs-spot-ring,
+.aibs-spot:hover .aibs-spot-ring,
+.aibs-spot:focus-visible .aibs-spot-ring {
+    background: rgba(255, 255, 255, .12);
+    border-color: var(--aibs-on-photo);
+    /* The ring carries no text of its own, but it lightens a photograph underneath it, and
+       anything that ever lands inside it inherits from here. Stated rather than left to the
+       page, because the surface behind it is a picture and nothing else can be assumed. */
+    color: var(--aibs-on-photo);
+}
+
+.aibs-spot:focus-visible {
+    outline: 2px solid var(--aibs-on-photo);
+    outline-offset: 2px;
+}
+
+.aibs-spot:disabled {
+    cursor: default;
+}
+
+.aibs-spot:disabled .aibs-spot-ring {
+    background: transparent;
+    border-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aibs-spot-ring {
+        transition: none;
+    }
+}
+
+/* ------------------------------------------------------------------------------------
+   MARKS THE WORLD KEEPS.
+
+   A small tag pinned to the frame for something this learner did earlier: the machine
+   they locked out, the guard they left off, the permit they signed. World flags already
+   let the SCENE TEXT remember; this is the same memory in the picture.
+
+   Drawn rather than generated, and that is the whole economics of it. Making the
+   environment remember visually by regenerating the photograph for every combination of
+   flags is two-to-the-number-of-flags images per node; this is one image and a label. It
+   is also the only version that stays legible on a phone, because a detail burned into a
+   generated photograph is forty pixels wide by the time it reaches one.
+
+   Positioned as a percentage of the frame for the same reason the hotspots are: the
+   picture is fluid from a phone to a projector and a tag fixed in pixels would drift off
+   the thing it is pointing at. ------------------------------------------------------ */
+
+.aibs-marks {
+    inset: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    /* Never in the way of a decision. The tags are a record, not a control, and a learner
+       reaching for a region in the picture must not hit one of these instead. */
+    pointer-events: none;
+    position: absolute;
+}
+
+.aibs-mark {
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius-sm);
+    box-shadow: var(--aibs-shadow-sm);
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-label);
+    letter-spacing: .02em;
+    line-height: var(--aibs-leading-tight);
+    max-width: 46%;
+    padding: 4px 8px;
+    position: absolute;
+    /* The coordinates name where the tag POINTS, so the label hangs off that point rather
+       than starting at it - which is what stops a tag on the right-hand edge of the frame
+       running out of the picture. */
+    transform: translate(-50%, -50%);
+}
+
+.aibs-mark-caution {
+    background: var(--aibs-warn-soft);
+    border-color: var(--aibs-warn-border);
+    color: var(--aibs-warn);
+}
+
+.aibs-mark-danger {
+    background: var(--aibs-negative-soft);
+    border-color: var(--aibs-negative-border);
+    color: var(--aibs-negative);
+}
+
+.aibs-mark-resolved {
+    background: var(--aibs-positive-soft);
+    border-color: var(--aibs-positive-border);
+    color: var(--aibs-positive);
+}
+
+.aibs-mark-label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------------------------
+   WORKPLACE ARTEFACTS.
+
+   The permit, the data sheet, the checklist, the handover email. Almost every real
+   workplace judgement is made while holding a piece of paper, and a scenario that
+   summarises the paper in prose - "the permit has expired" - has done the reading for the
+   learner and left them a comprehension question.
+
+   Styled as a DOCUMENT and not as a card: a tighter corner, a printed-looking rule under
+   the heading, and label/value rows that line up the way a form does. The point of the
+   styling is that the learner recognises it as a thing off a wall before they read a word
+   of it, which is what makes them read it the way they would read the real one.
+
+   The flagged line is NOT highlighted here. There is a `flagged` marker in the data and
+   it deliberately draws nothing on the decision screen, because a red line on the permit
+   answers the question the permit exists to ask. It is carried for the debrief.
+   ---------------------------------------------------------------------------------- */
+
+.aibs-artefact {
+    margin: 16px 0 0;
+}
+
+.aibs-artefact-kind {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-label);
+    letter-spacing: .06em;
+    margin: 0 0 6px;
+    text-transform: uppercase;
+}
+
+.aibs-artefact-sheet {
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    /* Squarer than everything else on the screen. Paper does not have a 16px radius, and
+       the difference is most of what makes this read as a document rather than as another
+       panel of the interface. */
+    border-radius: 4px;
+    box-shadow: var(--aibs-shadow-sm);
+    padding: 14px 16px;
+}
+
+.aibs-artefact-head {
+    border-bottom: 1px solid var(--aibs-border-soft);
+    margin: 0 0 10px;
+    padding: 0 0 8px;
+}
+
+.aibs-artefact-title {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-strong);
+    line-height: var(--aibs-leading-snug);
+    margin: 0;
+}
+
+.aibs-artefact-sub {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-meta);
+    margin: 2px 0 0;
+}
+
+.aibs-artefact-fields {
+    display: grid;
+    gap: 6px 14px;
+    margin: 0;
+}
+
+.aibs-artefact-row {
+    display: grid;
+    /* Labels share one column so the values line up down the sheet, and the column is
+       sized to the longest label rather than guessed. Collapses to one column on a phone,
+       where two columns would leave four words of value per line. */
+    gap: 2px 14px;
+    grid-template-columns: minmax(7rem, max-content) 1fr;
+}
+
+.aibs-artefact-label {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-meta);
+    font-weight: var(--aibs-weight-label);
+    margin: 0;
+}
+
+.aibs-artefact-value {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-meta);
+    /* Dates, reference numbers and times are most of what a document like this carries,
+       and they are read by comparing them down the column. */
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+}
+
+.aibs-artefact-lines {
+    display: grid;
+    gap: 5px;
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+}
+
+.aibs-artefact-line {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-meta);
+    line-height: var(--aibs-leading-body);
+    padding-left: 16px;
+    position: relative;
+}
+
+.aibs-artefact-line::before {
+    color: var(--aibs-muted);
+    content: "\2014";
+    left: 0;
+    position: absolute;
+}
+
+/* A checklist is read as ticked boxes, not as dashes. The kind is what changes the
+   drawing, which is why the kinds are a closed list rather than free text. */
+.aibs-artefact-checklist .aibs-artefact-line::before {
+    content: "\25A1";
+}
+
+/* An email is a message, and a message has a body rather than a list of points. */
+.aibs-artefact-email .aibs-artefact-line {
+    padding-left: 0;
+}
+
+.aibs-artefact-email .aibs-artefact-line::before {
+    content: none;
+}
+
+/* A safety sign is the one artefact that is read at a glance rather than line by line,
+   so it is centred, short, and given the weight a sign has on a wall. */
+.aibs-artefact-sign .aibs-artefact-sheet {
+    border-width: 2px;
+    text-align: center;
+}
+
+.aibs-artefact-sign .aibs-artefact-title {
+    font-size: var(--aibs-text-body);
+    letter-spacing: .03em;
+    text-transform: uppercase;
+}
+
+.aibs-artefact-sign .aibs-artefact-head {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.aibs-artefact-footer {
+    border-top: 1px solid var(--aibs-border-soft);
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
+    line-height: var(--aibs-leading-snug);
+    margin: 10px 0 0;
+    padding: 8px 0 0;
+}
+
+@media (max-width: 600px) {
+    .aibs-artefact-row {
+        grid-template-columns: 1fr;
+    }
+
+    .aibs-mark {
+        max-width: 70%;
+    }
+}
+
+/* ------------------------------------------------------------------------------------
+   NOT SURE.
+
+   One box, above the options, volunteered and never required. Deliberately QUIET: it is
+   not a question the learner has to answer, and anything that looked like a required
+   field would turn every decision into two.
+
+   The valuable signal is the one produced by leaving it alone. A poor decision taken by
+   somebody who was sure is a misconception; the same decision taken by somebody who said
+   so is a gap, and a trainer does completely different things about the two. That the
+   more important of the two costs the learner nothing to report is the whole design.
+   ---------------------------------------------------------------------------------- */
+
+.aibs-unsure {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+
+.aibs-unsure-box {
+    accent-color: var(--aibs-accent);
+    flex: none;
+    height: 16px;
+    margin: 0;
+    width: 16px;
+}
+
+.aibs-unsure-label {
+    color: var(--aibs-muted);
+    cursor: pointer;
+    font-size: var(--aibs-text-meta);
+    line-height: var(--aibs-leading-snug);
+    margin: 0;
+}
+
+.aibs-unsure-box:focus-visible {
     outline: 2px solid var(--aibs-accent);
     outline-offset: 2px;
 }
 
-/* Waiting, not broken. Enough colour left to read the situation on it. */
-.aibs-ladder-card.aibs-is-locked {
-    background: var(--aibs-surface-alt);
-    border-color: var(--aibs-border-soft);
-    box-shadow: none;
-}
+/* ------------------------------------------------------------------------------------
+   WHERE PEOPLE GO WRONG.
 
-.aibs-ladder-figure {
-    aspect-ratio: 16 / 9;
-    background: var(--aibs-surface-alt);
-    display: block;
-    position: relative;
-    width: 100%;
-}
+   The trainer's half of the report. A list of scores says who to worry about; this says
+   what to teach on Monday, and every number on it is a count of decisions people actually
+   made rather than anything predicted.
 
-.aibs-ladder-img {
-    border: 0;
-    display: block;
-    height: 100%;
-    max-width: 100%;
-    object-fit: cover;
-    width: 100%;
-}
+   Designed to be read standing up, between classes: the decisions worth a session are at
+   the top with a sentence saying what to do about each, and the full option-by-option
+   breakdown is below for anyone who wants it. A column of percentages is read one number
+   at a time; three bars against a common baseline are read at a glance, which is the
+   difference between noticing the split and not. ------------------------------------- */
 
-.aibs-ladder-card.aibs-is-locked .aibs-ladder-img {
-    filter: grayscale(.85);
-    opacity: .55;
-}
-
-/* A rung with no picture yet still needs a shape in that space, or the card below it
-   starts at a different height from its neighbours. */
-.aibs-ladder-plate {
-    background: linear-gradient(140deg, var(--aibs-surface-alt), var(--aibs-border-soft));
-    display: block;
-    height: 100%;
-    width: 100%;
-}
-
-/* Which rung this is, on the picture. It repeats what the order already says, which
-   is the point: the number is what a learner refers to it by afterwards. */
-.aibs-ladder-step {
-    align-items: center;
-    background: var(--aibs-accent);
-    border-radius: 999px;
-    color: var(--aibs-on-accent);
+.aibs-reporttabs {
+    border-bottom: 1px solid var(--aibs-border);
     display: flex;
-    font-size: var(--aibs-text-meta);
-    font-weight: var(--aibs-weight-strong);
-    height: 30px;
-    inset-block-start: 12px;
-    inset-inline-start: 12px;
-    justify-content: center;
-    position: absolute;
-    width: 30px;
+    gap: 4px;
+    margin: 0 0 20px;
 }
 
-.aibs-ladder-card.aibs-is-locked .aibs-ladder-step {
-    background: var(--aibs-neutral);
-}
-
-.aibs-ladder-body {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
-    padding: clamp(14px, 1.4vw, 20px);
-}
-
-.aibs-ladder-name {
+.aibs-reporttab {
+    border-bottom: 2px solid transparent;
     color: var(--aibs-muted);
-    font-size: var(--aibs-text-micro);
-    font-weight: var(--aibs-weight-label);
-    letter-spacing: .07em;
-    margin: 0;
-    text-transform: uppercase;
-}
-
-.aibs-ladder-heading {
-    color: var(--aibs-text);
-    font-size: var(--aibs-text-title);
-    font-weight: var(--aibs-weight-strong);
-    line-height: var(--aibs-leading-tight);
-    margin: 0;
-    text-wrap: balance;
-}
-
-.aibs-ladder-sub {
-    color: var(--aibs-text);
-    font-size: var(--aibs-text-sub);
-    line-height: var(--aibs-leading-snug);
-    margin: 0;
-}
-
-.aibs-ladder-blurb {
-    color: var(--aibs-muted);
+    display: inline-block;
     font-size: var(--aibs-text-small);
-    line-height: var(--aibs-leading-body);
-    margin: 0;
-}
-
-/* The bottom line of every card sits on the same baseline, because the body above it
-   grows and this does not. */
-.aibs-ladder-foot {
-    align-items: center;
-    border-block-start: 1px solid var(--aibs-border-soft);
-    column-gap: 10px;
-    display: flex;
-    flex-wrap: wrap;
-    margin: 0;
-    padding: 12px clamp(14px, 1.4vw, 20px);
-    row-gap: 4px;
-}
-
-.aibs-ladder-mark {
-    align-items: center;
-    color: var(--aibs-positive);
-    display: inline-flex;
-    font-size: var(--aibs-text-meta);
     font-weight: var(--aibs-weight-label);
-    gap: 5px;
-}
-
-.aibs-ladder-mark .aibs-icon {
-    height: 16px;
-    width: 16px;
-}
-
-.aibs-ladder-best,
-.aibs-ladder-reason {
-    color: var(--aibs-muted);
-    font-size: var(--aibs-text-meta);
-}
-
-/* Not a button: the card is the control. This is the card telling you what happens
-   when you use it. */
-.aibs-ladder-go {
-    color: var(--aibs-accent);
-    font-size: var(--aibs-text-meta);
-    font-weight: var(--aibs-weight-strong);
-    margin-inline-start: auto;
-}
-
-@media (max-width: 899px) {
-    .aibs-ladder-cards {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .aibs-ladder-figure {
-        aspect-ratio: 21 / 9;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .aibs-ladder-card {
-        transition: none;
-    }
-
-    .path-mod-aibranchedscenario a.aibs-ladder-card:hover,
-    a.aibs-ladder-card:hover {
-        transform: none;
-    }
-}
-
-/* The way back to the chooser, sitting above the player rather than inside it, so it is
-   not one of the scenario's own controls. It is outside every shell, so it carries the two
-   tokens it needs rather than borrowing a palette it is not inside. */
-.aibs-backlink {
-    --aibs-accent: #2563eb;
-    --aibs-text-meta: .8125rem;
-    --aibs-weight-strong: 600;
-    color: var(--aibs-accent);
-    font-size: var(--aibs-text-meta);
-    font-weight: var(--aibs-weight-strong);
+    padding: 8px 12px;
     text-decoration: none;
 }
 
-.path-mod-aibranchedscenario .aibs-backlink:hover,
-.path-mod-aibranchedscenario .aibs-backlink:focus-visible,
-.aibs-backlink:hover,
-.aibs-backlink:focus-visible {
-    text-decoration: underline;
+.aibs-reporttab:hover {
+    background: var(--aibs-surface-alt);
+    color: var(--aibs-text);
 }
 
-
-/* -------------------------------------------------- the rungs, in the wizard
-   Which of the activity's three scenarios this wizard is writing, and what state
-   the other two are in. A strip rather than a dropdown, because the states are the
-   information: a teacher wants to see at a glance which rungs are live. */
-
-.aibs-rungs {
-    align-items: center;
-    column-gap: 8px;
-    display: flex;
-    flex-wrap: wrap;
-    margin-block-end: 14px;
-    row-gap: 6px;
+.aibs-reporttab.aibs-is-current {
+    border-bottom-color: var(--aibs-accent);
+    color: var(--aibs-accent);
 }
 
-.aibs-rungs-label {
-    color: var(--aibs-muted);
-    font-size: var(--aibs-text-micro);
-    font-weight: var(--aibs-weight-label);
-    letter-spacing: .07em;
-    text-transform: uppercase;
-}
-
-.aibs-rung {
-    align-items: baseline;
+.aibs-misconception {
     background: var(--aibs-surface);
     border: 1px solid var(--aibs-border);
-    border-radius: 999px;
-    color: var(--aibs-text);
-    column-gap: 7px;
-    display: inline-flex;
+    border-radius: var(--aibs-radius);
+    margin: 0 0 12px;
+    padding: 16px 18px;
+}
+
+/* The one that matters most, and the only thing on the page that gets a colour of its
+   own. Confidently wrong is not a worse score than unsure and wrong - it is a different
+   problem, needing a different lesson, and the page is worth nothing if a trainer reads
+   past that distinction. */
+.aibs-misconception-confident {
+    border-color: var(--aibs-warn-border);
+}
+
+.aibs-decisionbreakdown {
+    border-top: 1px solid var(--aibs-border-soft);
+    margin: 0;
+    padding: 16px 0;
+}
+
+.aibs-optionbar {
+    align-items: center;
+    display: grid;
+    gap: 4px 12px;
+    /* Letter, words, bar, figure. The bar and the figure hold their columns down the list
+       so the shape of the answer is legible without reading any of the numbers. */
+    grid-template-columns: auto 1fr 120px 3.5rem;
+    margin: 0 0 8px;
+}
+
+.aibs-optionbar-letter {
+    color: var(--aibs-muted);
     font-size: var(--aibs-text-meta);
-    padding: 5px 13px;
-    text-decoration: none;
-}
-
-.path-mod-aibranchedscenario a.aibs-rung:hover,
-.path-mod-aibranchedscenario a.aibs-rung:focus-visible,
-a.aibs-rung:hover,
-a.aibs-rung:focus-visible {
-    border-color: var(--aibs-accent-border);
-    color: var(--aibs-text);
-    text-decoration: none;
-}
-
-.aibs-rung.aibs-is-current {
-    background: var(--aibs-accent-soft);
-    border-color: var(--aibs-accent-border);
-}
-
-.aibs-rung-name {
     font-weight: var(--aibs-weight-strong);
 }
 
-.aibs-rung-state {
+.aibs-optionbar-text {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-meta);
+    line-height: var(--aibs-leading-snug);
+}
+
+.aibs-optionbar-track {
+    background: var(--aibs-surface-alt);
+    border-radius: 999px;
+    height: 8px;
+    overflow: hidden;
+}
+
+.aibs-optionbar-fill {
+    background: var(--aibs-neutral);
+    height: 100%;
+}
+
+/* The signal is the scenario's own verdict on the option, so the bar is coloured by what
+   the option IS rather than by how many people took it. A popular poor answer and a
+   popular good one must not look the same. */
+.aibs-signal-positive .aibs-optionbar-fill {
+    background: var(--aibs-positive);
+}
+
+.aibs-signal-negative .aibs-optionbar-fill {
+    background: var(--aibs-negative);
+}
+
+.aibs-optionbar-share {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-meta);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--aibs-weight-label);
+    text-align: end;
+}
+
+.aibs-optionbar-unsure {
     color: var(--aibs-muted);
     font-size: var(--aibs-text-micro);
+    grid-column: 2 / -1;
 }
 
-.aibs-rung-state.aibs-is-live {
-    color: var(--aibs-positive);
-    font-weight: var(--aibs-weight-label);
-}
+@media (max-width: 600px) {
+    .aibs-optionbar {
+        grid-template-columns: auto 1fr 3.5rem;
+    }
 
-/* A statement where a control used to be. */
-.aibs-field-note {
-    color: var(--aibs-muted);
-    font-size: var(--aibs-text-small);
-    line-height: var(--aibs-leading-snug);
-    margin: 0;
+    .aibs-optionbar-track {
+        grid-column: 2 / -1;
+    }
 }

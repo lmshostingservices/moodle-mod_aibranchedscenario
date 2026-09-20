@@ -43,6 +43,8 @@
     * outcomelabel string Translated outcome band label
     * outcometitle string Title of the outcome node
     * outcomeparas string Outcome summary, array of plain-text paragraphs
+    * awards array Behaviours this learner showed, derived from their decisions
+    * hasawards bool Whether any were earned
     * score float Decision quality as a percentage
     * decisions int Number of decisions taken
     * radar array Skill values, each with label, percent and raw
@@ -62,6 +64,8 @@
         "outcomelabel": "Mixed outcome",
         "outcometitle": "The line restarts, late",
         "outcomeparas": ["The fault was fixed, but two hours were lost."],
+        "hasawards": true,
+        "awards": [{"id": "recovered", "hidden": false, "title": "Strong recovery", "detail": "A decision went badly and you put it right."}],
         "score": 62.5,
         "decisions": 5,
         "radar": [{"skill": "clarity", "label": "Clarity", "percent": 70, "raw": 3}],
@@ -263,6 +267,35 @@
                         <span class="aibs-endstat-label">{{#str}} endstat:decisions, mod_aibranchedscenario {{/str}}</span>
                     </div>
                 </div>
+
+                {{! WHAT THEY DID, NAMED. Not points and not "answered five questions" -
+                    an achievement that counts actions rewards persistence, which the
+                    learner already had. These name behaviours the scenario exists to
+                    teach, so reading the list tells somebody something true about how
+                    they handled it. Absent entirely when nothing was earned: an empty
+                    trophy shelf says "you got none of them", which is not the note to
+                    end on. }}
+                {{#hasawards}}
+                <div class="aibs-awards">
+                    <p class="aibs-awards-heading">{{#str}} award:heading, mod_aibranchedscenario {{/str}}</p>
+                    <ul class="aibs-awards-list">
+                        {{#awards}}
+                        <li class="aibs-award{{#hidden}} aibs-award-hidden{{/hidden}}">
+                            <span class="aibs-award-mark" aria-hidden="true">
+                                <svg viewBox="0 0 20 20" focusable="false">
+                                    <path d="M4.5 10.4l3.4 3.4 7.6-7.6" fill="none" stroke="currentColor"
+                                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            <span class="aibs-award-text">
+                                <span class="aibs-award-title">{{title}}</span>
+                                <span class="aibs-award-detail">{{detail}}</span>
+                            </span>
+                        </li>
+                        {{/awards}}
+                    </ul>
+                </div>
+                {{/hasawards}}
 
                 <p class="aibs-prose">{{#str}} debriefendlead, mod_aibranchedscenario {{/str}}</p>
                 {{> mod_aibranchedscenario/debriefactions }}

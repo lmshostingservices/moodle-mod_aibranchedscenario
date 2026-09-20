@@ -22,6 +22,7 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use html_writer;
+use mod_aibranchedscenario\local\achievements;
 use mod_aibranchedscenario\local\attempt_manager;
 use mod_aibranchedscenario\local\media_manager;
 use mod_aibranchedscenario\local\schema;
@@ -245,12 +246,24 @@ class helper {
             }
         }
 
+        $marks = self::marks_payload((array)($node['marks'] ?? []), $state);
+
         $choices = [];
         foreach ($node['choices'] as $choice) {
+            $hotspot = $choice['hotspot'] ?? null;
             $choices[] = [
                 'id'     => $choice['id'],
                 'letter' => $choice['letter'],
                 'text'   => $choice['text'],
+                // WHERE THIS OPTION IS IN THE PICTURE, when there is one. Sent as four
+                // numbers and a flag rather than as a nested structure, because an
+                // external_single_structure that is sometimes absent is the shape that
+                // needs VALUE_OPTIONAL everywhere and gets it wrong somewhere.
+                'hashotspot' => $hotspot !== null,
+                'spotx'  => (float)($hotspot['x'] ?? 0),
+                'spoty'  => (float)($hotspot['y'] ?? 0),
+                'spotw'  => (float)($hotspot['w'] ?? 0),
+                'spoth'  => (float)($hotspot['h'] ?? 0),
             ];
         }
 
@@ -295,11 +308,155 @@ class helper {
             'speechurl'     => $mediaurls['narration'][$node['id'] . '_said'] ?? '',
             'speaker'       => (string)($node['speaker'] ?? ''),
             'choices'       => $choices,
+            // THE DOCUMENT IN THEIR HANDS, and THE MARKS THE WORLD HAS KEPT.
+            //
+            // Both are worked out here rather than in the player because both depend on
+            // state the browser is not trusted with: a mark appears only when its flag is
+            // set, and the flags are the record of what this learner actually did.
+            'artefact'      => self::artefact_payload($node['artefact'] ?? null),
+            'hasartefact'   => !empty($node['artefact']),
+            'marks'         => $marks,
+            'hasmarks'      => (bool)$marks,
             // A beat carries the story forward and has one synthesised way on. Rendered
             // in the lettered choice list it read as a multiple-choice question with a
             // single answer, which is not a decision and should not look like one.
             'iscontinue'    => $node['type'] === 'beat' && count($choices) === 1,
         ];
+    }
+
+    /**
+     * A workplace document, ready to be drawn.
+     *
+     * Always the same shape, present or not, because the external API has no way to say
+     * "this field is sometimes a structure and sometimes nothing" that survives a strict
+     * validator. Absence is an empty title and no lines, and the template asks `hasartefact`.
+     *
+     * The `flagged` marker travels but is NOT what draws the eye on the decision screen: a
+     * red line on the permit would point at the answer. It is carried so the debrief can name
+     * the line afterwards, which is the moment naming it teaches anything.
+     *
+     * @param array|null $artefact The normalised artefact, or null.
+     * @return array
+     */
+    public static function artefact_payload(?array $artefact): array {
+        $artefact = $artefact ?? [];
+        $fields = [];
+        foreach ((array)($artefact['fields'] ?? []) as $field) {
+            $fields[] = [
+                'label'   => (string)$field['label'],
+                'value'   => (string)$field['value'],
+                'flagged' => !empty($field['flagged']),
+            ];
+        }
+        $lines = [];
+        foreach ((array)($artefact['lines'] ?? []) as $line) {
+            $lines[] = ['text' => (string)$line];
+        }
+        $kind = (string)($artefact['kind'] ?? '');
+        return [
+            'kind'      => $kind,
+            // The document says what it is in words as well as in styling, because "this is
+            // a permit to work" is information a learner needs and a border radius is not.
+            'kindlabel' => $kind !== '' ? get_string('artefact:' . $kind, 'mod_aibranchedscenario') : '',
+            'title'     => (string)($artefact['title'] ?? ''),
+            'subtitle'  => (string)($artefact['subtitle'] ?? ''),
+            'fields'    => $fields,
+            'hasfields' => (bool)$fields,
+            'lines'     => $lines,
+            'haslines'  => (bool)$lines,
+            'footer'    => (string)($artefact['footer'] ?? ''),
+        ];
+    }
+
+    /**
+     * The marks this learner has earned on this picture.
+     *
+     * Filtered by the flags actually set, so the list that reaches the browser contains only
+     * what is true for this attempt. Sending all of them with a "show me" boolean would put
+     * the record of what the learner did into the page source, where the next learner along
+     * can read it.
+     *
+     * @param array $marks Normalised marks from the node.
+     * @param array $state Decoded attempt state, carrying the flags.
+     * @return array
+     */
+    public static function marks_payload(array $marks, array $state): array {
+        $out = [];
+        foreach ($marks as $mark) {
+            if (empty($state['flags'][$mark['flag']])) {
+                continue;
+            }
+            $out[] = [
+                'label' => (string)$mark['label'],
+                'tone'  => (string)$mark['tone'],
+                'x'     => (float)$mark['x'],
+                'y'     => (float)$mark['y'],
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * The external shape of a workplace document.
+     *
+     * @return external_single_structure
+     */
+    public static function artefact_structure(): external_single_structure {
+        return new external_single_structure([
+            'kind'      => new external_value(PARAM_ALPHA, 'Which kind of document it is'),
+            'kindlabel' => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'That kind, in the site language'
+            ),
+            'title'     => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'The document heading'
+            ),
+            'subtitle'  => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'A reference or a line under the heading'
+            ),
+            'fields'    => new external_multiple_structure(new external_single_structure([
+                'label'   => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'Field name'
+                ),
+                'value'   => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'What it says'
+                ),
+                'flagged' => new external_value(PARAM_BOOL, 'Whether this is the line that is wrong'),
+            ]), 'The labelled lines'),
+            'hasfields' => new external_value(PARAM_BOOL, 'Whether there are any'),
+            'lines'     => new external_multiple_structure(new external_single_structure([
+                'text' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'One body line'
+                ),
+            ]), 'Body lines'),
+            'haslines'  => new external_value(PARAM_BOOL, 'Whether there are any'),
+            'footer'    => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'A signature line or a note at the bottom'
+            ),
+        ], 'The document in the learner\'s hands');
+    }
+
+    /**
+     * The external shape of the marks pinned to a picture.
+     *
+     * @return external_multiple_structure
+     */
+    public static function marks_structure(): external_multiple_structure {
+        return new external_multiple_structure(new external_single_structure([
+            'label' => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'What the tag says'
+            ),
+            'tone'  => new external_value(PARAM_ALPHA, 'neutral, caution, danger or resolved'),
+            'x'     => new external_value(PARAM_FLOAT, 'Left edge, per cent of the frame'),
+            'y'     => new external_value(PARAM_FLOAT, 'Top edge, per cent of the frame'),
+        ]), 'What the world is still carrying from earlier decisions');
     }
 
     /**
@@ -364,21 +521,42 @@ class helper {
         return new external_multiple_structure(
             new external_single_structure([
                 'seq'         => new external_value(PARAM_INT, 'Its position, one based'),
-                'nodetitle'   => new external_value(PARAM_TEXT, 'Title of the decision'),
-                'principle'   => new external_value(PARAM_TEXT, 'The principle it tested, or empty'),
-                'challenge'   => new external_value(PARAM_TEXT, 'The question that was put'),
-                'choicetext'  => new external_value(PARAM_TEXT, 'The option the learner took'),
+                'nodetitle'   => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'Title of the decision'
+                ),
+                'principle'   => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'The principle it tested, or empty'
+                ),
+                'challenge'   => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'The question that was put'
+                ),
+                'choicetext'  => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'The option the learner took'
+                ),
                 'signal'      => new external_value(PARAM_ALPHA, 'Signal of the option taken'),
                 'signalclass' => new external_value(PARAM_NOTAGS, 'CSS modifier for that signal'),
                 'imageurl'    => new external_value(PARAM_URL, 'Reaction frame for what they chose, or empty'),
                 'options'     => new external_multiple_structure(
                     new external_single_structure([
-                        'letter'     => new external_value(PARAM_TEXT, 'A, B or C'),
-                        'text'       => new external_value(PARAM_TEXT, 'The option'),
+                        'letter'     => new external_value(
+                            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                            'A, B or C'
+                        ),
+                        'text'       => new external_value(
+                            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                            'The option'
+                        ),
                         'signal'     => new external_value(PARAM_ALPHA, 'positive, neutral or negative'),
                         'signalclass' => new external_value(PARAM_NOTAGS, 'CSS modifier for that signal'),
                         'chosen'     => new external_value(PARAM_BOOL, 'Whether this is the one taken'),
-                        'principle'  => new external_value(PARAM_TEXT, 'The principle it tests, or empty'),
+                        'principle'  => new external_value(
+                            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                            'The principle it tests, or empty'
+                        ),
                         'noteparas'  => self::paragraphs_structure(
                             'Where this option leads and why, as plain paragraphs'
                         ),
@@ -400,7 +578,13 @@ class helper {
      * @return external_multiple_structure
      */
     public static function paragraphs_structure(string $description): external_multiple_structure {
-        return new external_multiple_structure(new external_value(PARAM_TEXT, 'A paragraph'), $description);
+        return new external_multiple_structure(
+            new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'A paragraph'
+            ),
+            $description
+        );
     }
 
     /**
@@ -412,12 +596,24 @@ class helper {
         return new external_single_structure([
             'id'            => new external_value(PARAM_ALPHANUMEXT, 'Node identifier'),
             'type'          => new external_value(PARAM_ALPHA, 'Node type'),
-            'title'         => new external_value(PARAM_TEXT, 'Short node title'),
+            'title'         => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'Short node title'
+            ),
             'stage'         => new external_value(PARAM_INT, 'Narrative stage number'),
-            'situation'     => new external_value(PARAM_TEXT, 'Situation text'),
+            'situation'     => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'Situation text'
+            ),
             'situationparas' => self::paragraphs_structure('Situation rendered as plain text; escape before use as HTML'),
-            'speech'        => new external_value(PARAM_TEXT, 'What a character says'),
-            'challenge'     => new external_value(PARAM_TEXT, 'The direct question put to the learner'),
+            'speech'        => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'What a character says'
+            ),
+            'challenge'     => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'The direct question put to the learner'
+            ),
             'challengeisquestion' => new external_value(
                 PARAM_BOOL,
                 'Whether the challenge line is already phrased as a question'
@@ -428,13 +624,22 @@ class helper {
             ),
             'crisis'        => new external_value(PARAM_BOOL, 'Whether the crisis variant is showing'),
             'outcome'       => new external_value(PARAM_ALPHA, 'Outcome band for terminal nodes'),
-            'summary'       => new external_value(PARAM_TEXT, 'Outcome summary text'),
+            'summary'       => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'Outcome summary text'
+            ),
             'summaryparas'   => self::paragraphs_structure('Outcome summary as plain text; escape before use as HTML'),
             'imageurl'      => new external_value(PARAM_URL, 'Scene image URL, or empty'),
-            'imagealt'      => new external_value(PARAM_TEXT, 'Scene image alternative text'),
+            'imagealt'      => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'Scene image alternative text'
+            ),
             'audiourl'      => new external_value(PARAM_URL, 'Narration audio URL, or empty'),
             'speechurl'     => new external_value(PARAM_URL, 'The speaker\'s own line, or empty'),
-            'speaker'       => new external_value(PARAM_TEXT, 'Who says the spoken line, or empty'),
+            'speaker'       => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'Who says the spoken line, or empty'
+            ),
             'iscontinue'    => new external_value(
                 PARAM_BOOL,
                 'Whether this node offers one way on rather than a decision'
@@ -443,9 +648,21 @@ class helper {
                 new external_single_structure([
                     'id'     => new external_value(PARAM_ALPHANUMEXT, 'Choice identifier'),
                     'letter' => new external_value(PARAM_ALPHA, 'Display letter'),
-                    'text'   => new external_value(PARAM_TEXT, 'Choice text'),
+                    'text'   => new external_value(
+                        PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                        'Choice text'
+                    ),
+                    'hashotspot' => new external_value(PARAM_BOOL, 'Whether it is in the picture'),
+                    'spotx'  => new external_value(PARAM_FLOAT, 'Hotspot left edge, per cent'),
+                    'spoty'  => new external_value(PARAM_FLOAT, 'Hotspot top edge, per cent'),
+                    'spotw'  => new external_value(PARAM_FLOAT, 'Hotspot width, per cent'),
+                    'spoth'  => new external_value(PARAM_FLOAT, 'Hotspot height, per cent'),
                 ])
             ),
+            'artefact'      => self::artefact_structure(),
+            'hasartefact'   => new external_value(PARAM_BOOL, 'Whether there is a document to read'),
+            'marks'         => self::marks_structure(),
+            'hasmarks'      => new external_value(PARAM_BOOL, 'Whether the world is carrying any'),
         ]);
     }
 
@@ -481,107 +698,219 @@ class helper {
      *
      * @return external_single_structure
      */
+    /**
+     * HUMAN-AUTHORED FREE TEXT IS RAW AT THE BOUNDARY, AND CLEANED INSIDE.
+     *
+     * The type each field actually uses is on the field, annotated for the release
+     * pipeline. It is named there and nowhere else: the pipeline reads this file line by
+     * line, so a type name written out in prose here reads to it as an unannotated use and
+     * blocks the release - twice, so far.
+     *
+     * These were PARAM_TEXT, which sounds like the careful choice and is the opposite of
+     * one. Moodle's external API does not CLEAN a parameter it dislikes - it compares the
+     * value against its cleaned form and REFUSES THE WHOLE CALL if they differ. PARAM_TEXT
+     * strips tags, so a single angle bracket anywhere in the field killed the request:
+     *
+     *     "Respond in <24 hours"      -> Invalid parameter value detected
+     *     "Escalate if <5 are on shift" -> Invalid parameter value detected
+     *
+     * That is ordinary prose, in the box the product asks a teacher to paste a policy
+     * into. It took out Save, "fill this in for me" and every suggestion button, and the
+     * reason was buried in debuginfo where a production site never shows it - so all a
+     * teacher saw was a generic refusal on content that is obviously fine.
+     *
+     * The raw type accepts the text as written. It is not a loosening of anything: the
+     * validator already strips control characters and normalises whitespace, nothing here
+     * is ever rendered unescaped - every template uses {{ }}, never {{{ }}} - and the
+     * angle bracket the teacher typed is the angle bracket they meant.
+     *
+     * The picker keys, which are the plugin's own vocabulary rather than the teacher's
+     * words, stay PARAM_ALPHANUMEXT.
+     *
+     * THE RETURN STRUCTURES IN THIS FILE ARE THE SAME DECISION, IN THE OTHER DIRECTION.
+     * A return value that differs from its cleaned form is refused just as a parameter is,
+     * and the text going back to the player is the same authored prose. A scenario whose
+     * situation reads "a shift with <5 people on it" would have failed for the LEARNER,
+     * mid-attempt, on a screen they cannot get past. The player renders through Moodle's
+     * Mustache and only ever clears with innerHTML, so nothing is inserted unescaped.
+     */
     public static function source_structure(): external_single_structure {
         return new external_single_structure([
-            'brief'            => new external_value(PARAM_TEXT, 'Quick start brief', VALUE_DEFAULT, ''),
-            'sourcecontent'    => new external_value(PARAM_TEXT, 'Pasted source content', VALUE_DEFAULT, ''),
-            'title'            => new external_value(PARAM_TEXT, 'Scenario title', VALUE_DEFAULT, ''),
-            'industry'         => new external_value(PARAM_ALPHANUMEXT, 'Subject domain', VALUE_DEFAULT, 'training'),
-            'industryother'    => new external_value(PARAM_TEXT, 'Industry when Other is chosen', VALUE_DEFAULT, ''),
-            'audience'         => new external_value(PARAM_TEXT, 'Intended audience', VALUE_DEFAULT, ''),
-            'setting'          => new external_value(
-                PARAM_ALPHANUMEXT,
-                'Physical or virtual setting',
-                VALUE_DEFAULT,
-                'trainingroom'
-            ),
-            'settingother'     => new external_value(PARAM_TEXT, 'Setting when Other is chosen', VALUE_DEFAULT, ''),
-            'atmosphere'       => new external_value(
-                PARAM_ALPHANUMEXT,
-                'Emotional register',
-                VALUE_DEFAULT,
-                'tension'
-            ),
-            'openingsituation' => new external_value(PARAM_TEXT, 'Opening situation', VALUE_DEFAULT, ''),
-            'centralproblem'   => new external_value(PARAM_TEXT, 'Central problem', VALUE_DEFAULT, ''),
-            'whyhard'          => new external_multiple_structure(
-                new external_value(PARAM_ALPHANUMEXT, 'Complication key'),
-                'Why the situation is hard',
-                VALUE_DEFAULT,
-                []
-            ),
-            'stakes'           => new external_multiple_structure(
-                new external_value(PARAM_ALPHANUMEXT, 'Stake key'),
-                'What is at stake',
-                VALUE_DEFAULT,
-                []
-            ),
-            'participantrole'  => new external_value(PARAM_TEXT, 'The role the learner plays', VALUE_DEFAULT, ''),
-            'characters'       => new external_multiple_structure(
-                new external_single_structure([
-                    'name'       => new external_value(PARAM_TEXT, 'Character name'),
-                    'role'       => new external_value(PARAM_TEXT, 'Character role', VALUE_DEFAULT, ''),
-                    'trait'      => new external_value(PARAM_TEXT, 'Defining trait', VALUE_DEFAULT, ''),
-                    'appearance' => new external_value(PARAM_TEXT, 'Appearance notes', VALUE_DEFAULT, ''),
-                    'gender' => new external_value(PARAM_ALPHA, 'male or female', VALUE_DEFAULT, ''),
-                ]),
-                'Characters in the scenario',
-                VALUE_DEFAULT,
-                []
-            ),
-            'principles'       => new external_multiple_structure(
-                new external_single_structure([
-                    'title'   => new external_value(PARAM_TEXT, 'Principle title'),
-                    'summary' => new external_value(PARAM_TEXT, 'Principle summary', VALUE_DEFAULT, ''),
-                ]),
-                'Decision principles drawn from the source content',
-                VALUE_DEFAULT,
-                []
-            ),
-            // Still declared, and no longer the teacher's to set: source_normaliser
-            // overwrites it with schema::DECISIONS. Removing it from the structure while
-            // source_payload() still emitted it broke every call that carries a source -
-            // an external structure and the payload that fills it are one description in
-            // two places, and taking a field out of one of them is a breaking change of
-            // exactly the kind this release was already caught by.
-            //
-            // AND IT MUST NOT BE REQUIRED, which is what it was.
-            //
-            // The teacher's decision-count control was removed when the length was fixed at
-            // five, so the wizard stopped sending this key - and a required key that the
-            // form cannot supply fails the whole call. Every service that carries a source
-            // was refused: Save, "fill this in for me", and every suggestion button, all
-            // reporting "Invalid parameter value detected" with the reason buried in
-            // debuginfo where a production site never shows it.
-            //
-            // Declared with the fixed length as its default, so a caller that does not send
-            // it is not making a mistake - it is agreeing with the plugin. The value is
-            // overwritten by source_normaliser either way.
-            'decisions'        => new external_value(
-                PARAM_INT,
-                'Decisions, fixed by the plugin',
-                VALUE_DEFAULT,
-                schema::DECISIONS
-            ),
-            'tone'             => new external_value(PARAM_ALPHANUMEXT, 'Writing tone', VALUE_DEFAULT, 'neutral'),
-            'complexity'       => new external_value(
-                PARAM_ALPHANUMEXT,
-                'Narrative complexity',
-                VALUE_DEFAULT,
-                'intermediate'
-            ),
-            'imagestyle'       => new external_value(
-                PARAM_ALPHANUMEXT,
-                'Scene image style',
-                VALUE_DEFAULT,
-                'cinematic'
-            ),
-            'imageprompt'      => new external_value(PARAM_TEXT, 'Extra image direction', VALUE_DEFAULT, ''),
-            'openingmetrics'   => new external_single_structure([
-                'engagement' => new external_value(PARAM_INT, 'Opening engagement', VALUE_DEFAULT, 50),
-                'trust'      => new external_value(PARAM_INT, 'Opening trust', VALUE_DEFAULT, 50),
-                'tension'    => new external_value(PARAM_INT, 'Opening tension', VALUE_DEFAULT, 30),
-            ], 'Opening room dynamics', VALUE_DEFAULT, ['engagement' => 50, 'trust' => 50, 'tension' => 30]),
+        'brief'            => new external_value(
+            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+            'Quick start brief',
+            VALUE_DEFAULT,
+            ''
+        ),
+        'sourcecontent'    => new external_value(
+            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+            'Pasted source content',
+            VALUE_DEFAULT,
+            ''
+        ),
+        'title'            => new external_value(
+            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+            'Scenario title',
+            VALUE_DEFAULT,
+            ''
+        ),
+        'industry'         => new external_value(PARAM_ALPHANUMEXT, 'Subject domain', VALUE_DEFAULT, 'training'),
+        'industryother'    => new external_value(
+            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+            'Industry when Other is chosen',
+            VALUE_DEFAULT,
+            ''
+        ),
+        'audience'         => new external_value(
+            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+            'Intended audience',
+            VALUE_DEFAULT,
+            ''
+        ),
+        'setting'          => new external_value(
+            PARAM_ALPHANUMEXT,
+            'Physical or virtual setting',
+            VALUE_DEFAULT,
+            'trainingroom'
+        ),
+        'settingother'     => new external_value(
+            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+            'Setting when Other is chosen',
+            VALUE_DEFAULT,
+            ''
+        ),
+        'atmosphere'       => new external_value(
+            PARAM_ALPHANUMEXT,
+            'Emotional register',
+            VALUE_DEFAULT,
+            'tension'
+        ),
+        'openingsituation' => new external_value(
+            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+            'Opening situation',
+            VALUE_DEFAULT,
+            ''
+        ),
+        'centralproblem'   => new external_value(
+            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+            'Central problem',
+            VALUE_DEFAULT,
+            ''
+        ),
+        'whyhard'          => new external_multiple_structure(
+            new external_value(PARAM_ALPHANUMEXT, 'Complication key'),
+            'Why the situation is hard',
+            VALUE_DEFAULT,
+            []
+        ),
+        'stakes'           => new external_multiple_structure(
+            new external_value(PARAM_ALPHANUMEXT, 'Stake key'),
+            'What is at stake',
+            VALUE_DEFAULT,
+            []
+        ),
+        'participantrole'  => new external_value(
+            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+            'The role the learner plays',
+            VALUE_DEFAULT,
+            ''
+        ),
+        'characters'       => new external_multiple_structure(
+            new external_single_structure([
+                'name'       => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'Character name'
+                ),
+                'role'       => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'Character role',
+                    VALUE_DEFAULT,
+                    ''
+                ),
+                'trait'      => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'Defining trait',
+                    VALUE_DEFAULT,
+                    ''
+                ),
+                'appearance' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'Appearance notes',
+                    VALUE_DEFAULT,
+                    ''
+                ),
+                'gender' => new external_value(PARAM_ALPHA, 'male or female', VALUE_DEFAULT, ''),
+            ]),
+            'Characters in the scenario',
+            VALUE_DEFAULT,
+            []
+        ),
+        'principles'       => new external_multiple_structure(
+            new external_single_structure([
+                'title'   => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'Principle title'
+                ),
+                'summary' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                    'Principle summary',
+                    VALUE_DEFAULT,
+                    ''
+                ),
+            ]),
+            'Decision principles drawn from the source content',
+            VALUE_DEFAULT,
+            []
+        ),
+        // Still declared, and no longer the teacher's to set: source_normaliser
+        // overwrites it with schema::DECISIONS. Removing it from the structure while
+        // source_payload() still emitted it broke every call that carries a source -
+        // an external structure and the payload that fills it are one description in
+        // two places, and taking a field out of one of them is a breaking change of
+        // exactly the kind this release was already caught by.
+        //
+        // AND IT MUST NOT BE REQUIRED, which is what it was.
+        //
+        // The teacher's decision-count control was removed when the length was fixed at
+        // five, so the wizard stopped sending this key - and a required key that the
+        // form cannot supply fails the whole call. Every service that carries a source
+        // was refused: Save, "fill this in for me", and every suggestion button, all
+        // reporting "Invalid parameter value detected" with the reason buried in
+        // debuginfo where a production site never shows it.
+        //
+        // Declared with the fixed length as its default, so a caller that does not send
+        // it is not making a mistake - it is agreeing with the plugin. The value is
+        // overwritten by source_normaliser either way.
+        'decisions'        => new external_value(
+            PARAM_INT,
+            'Decisions, fixed by the plugin',
+            VALUE_DEFAULT,
+            schema::DECISIONS
+        ),
+        'tone'             => new external_value(PARAM_ALPHANUMEXT, 'Writing tone', VALUE_DEFAULT, 'neutral'),
+        'complexity'       => new external_value(
+            PARAM_ALPHANUMEXT,
+            'Narrative complexity',
+            VALUE_DEFAULT,
+            'intermediate'
+        ),
+        'imagestyle'       => new external_value(
+            PARAM_ALPHANUMEXT,
+            'Scene image style',
+            VALUE_DEFAULT,
+            'cinematic'
+        ),
+        'imageprompt'      => new external_value(
+            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+            'Extra image direction',
+            VALUE_DEFAULT,
+            ''
+        ),
+        'openingmetrics'   => new external_single_structure([
+            'engagement' => new external_value(PARAM_INT, 'Opening engagement', VALUE_DEFAULT, 50),
+            'trust'      => new external_value(PARAM_INT, 'Opening trust', VALUE_DEFAULT, 50),
+            'tension'    => new external_value(PARAM_INT, 'Opening tension', VALUE_DEFAULT, 30),
+        ], 'Opening room dynamics', VALUE_DEFAULT, ['engagement' => 50, 'trust' => 50, 'tension' => 30]),
         ]);
     }
 
@@ -760,7 +1089,29 @@ class helper {
             'metrics'      => self::metrics($attempt),
             'radar'        => $radar,
             'slides'       => $slides,
+            // WHAT THEY DID, NAMED. Derived from the decisions already recorded, so a
+            // teacher authors nothing and a scenario written before any of this existed
+            // earns them the moment somebody plays it.
+            'awards'       => achievements::cards(
+                $manager->build_journey($attempt),
+                self::metric_values($attempt),
+                (int)($scenario->bandred ?? 34)
+            ),
         ];
+    }
+
+    /**
+     * The closing readings as plain numbers, for anything that has to reason about them.
+     *
+     * @param stdClass $attempt The finished attempt.
+     * @return array Metric key to value.
+     */
+    protected static function metric_values(stdClass $attempt): array {
+        $out = [];
+        foreach (schema::metrics() as $metric) {
+            $out[$metric] = (int)($attempt->{$metric} ?? 0);
+        }
+        return $out;
     }
 
     /**
@@ -773,8 +1124,14 @@ class helper {
             'attemptid'    => new external_value(PARAM_INT, 'Attempt identifier'),
             'attemptno'    => new external_value(PARAM_INT, 'Attempt number'),
             'outcome'      => new external_value(PARAM_ALPHA, 'Outcome band reached'),
-            'outcomelabel' => new external_value(PARAM_TEXT, 'Translated outcome band label'),
-            'outcometitle' => new external_value(PARAM_TEXT, 'Title of the outcome node'),
+            'outcomelabel' => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'Translated outcome band label'
+            ),
+            'outcometitle' => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'Title of the outcome node'
+            ),
             'outcomeaudiourl' => new external_value(PARAM_URL, 'Narration for the ending, or empty'),
             'outcomeimageurl' => new external_value(PARAM_URL, 'Picture for the ending, or empty'),
             'outcomeparas'  => self::paragraphs_structure('Outcome summary as plain text; escape before use as HTML'),
@@ -784,8 +1141,14 @@ class helper {
             'radar'        => new external_multiple_structure(
                 new external_single_structure([
                     'skill' => new external_value(PARAM_ALPHA, 'Skill key'),
-                    'label' => new external_value(PARAM_TEXT, 'Translated skill label'),
-                    'description' => new external_value(PARAM_TEXT, 'What the skill measures'),
+                    'label' => new external_value(
+                        PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                        'Translated skill label'
+                    ),
+                    'description' => new external_value(
+                        PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                        'What the skill measures'
+                    ),
                     'value' => new external_value(PARAM_FLOAT, 'Normalised value between 0 and 1'),
                     'raw'   => new external_value(PARAM_INT, 'Raw accumulated value'),
                 ])
@@ -795,6 +1158,23 @@ class helper {
             // on the same screen. Two lists of the same decisions on one debrief is the
             // repetition this release exists to remove.
             'slides'       => self::decision_slide_shape(),
+            'awards'       => new external_multiple_structure(
+                new external_single_structure([
+                    'id'     => new external_value(PARAM_ALPHANUMEXT, 'Which achievement'),
+                    'hidden' => new external_value(PARAM_BOOL, 'Whether it was never advertised'),
+                    'title'  => new external_value(
+                        PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                        'What it is called'
+                    ),
+                    'detail' => new external_value(
+                        PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                        'What the learner actually did'
+                    ),
+                ]),
+                'Behaviours this learner showed, derived from their decisions',
+                VALUE_DEFAULT,
+                []
+            ),
         ]);
     }
 }

@@ -31,7 +31,9 @@
     * cmid int Course module id
     * themeclass string CSS class applying the chosen accent theme
     * viewurl string URL of the learner view
-    * aiavailable bool Whether LMS Labs credentials are configured
+    * aiavailable bool Whether the service is configured AND this person may generate
+    * canpublish bool Whether this person may publish
+    * cannotgenerate bool Configured, but this person may not spend credits
     * published bool Whether a revision is published
     * revision int Current published revision number
     * hasdraft bool Whether a working copy exists
@@ -48,10 +50,8 @@
     * whyhard array Option list
     * stakes array Option list
     * tones array Option list
-    * tier int Which rung of the ladder is being written
-    * tiercount int How many scenarios one activity holds
-    * tiername string That rung's name
-    * rungs array The three rungs, for moving between them
+    * tier int Which stored rung this writes; always one
+    * complexities array Option list for how hard the scenario is
     * imagestyles array Option list
     * openingmetrics array Opening dynamics
     * maxsourcechars int Character ceiling for pasted content
@@ -62,6 +62,8 @@
         "themeclass": "aibs-theme-slate",
         "viewurl": "https://example.com/mod/aibranchedscenario/view.php?id=42",
         "aiavailable": true,
+        "canpublish": true,
+        "cannotgenerate": false,
         "published": false,
         "revision": 0,
         "hasdraft": false,
@@ -79,50 +81,25 @@
         "stakes": [{"key": "teamtrust", "label": "Team trust", "selected": false}],
         "tones": [{"key": "neutral", "label": "Neutral", "selected": true}],
         "tier": 1,
-        "tiercount": 3,
-        "tiername": "Foundation",
-        "rungs": [{"tier": 1, "name": "Foundation", "current": true, "started": true, "live": false, "url": "#"}],
+        "complexities": [{"key": "foundation", "label": "Foundation", "selected": true}],
         "imagestyles": [{"key": "cinematic", "label": "Cinematic", "selected": true}],
         "openingmetrics": [{"key": "trust", "label": "Trust", "value": 50}],
         "maxsourcechars": 60000
     }
 }}
-<div class="aibs-wizard {{themeclass}}" data-region="wizard" data-cmid="{{cmid}}" data-tier="{{tier}}"
-     data-tiers="{{tiercount}}">
+<div class="aibs-wizard {{themeclass}}" data-region="wizard" data-cmid="{{cmid}}" data-tier="{{tier}}">
     <div class="aibs-shell">
 
         {{^aiavailable}}
+            {{! Two different reasons the AI controls are not here, and a teacher needs to
+                know which: the site has no credentials, or this account may not spend them. }}
+            {{#cannotgenerate}}
+            <div class="aibs-error" role="alert">{{#str}} error:nogeneratecap, mod_aibranchedscenario {{/str}}</div>
+            {{/cannotgenerate}}
+            {{^cannotgenerate}}
             <div class="aibs-error" role="alert">{{#str}} error:nocredentials, mod_aibranchedscenario {{/str}}</div>
+            {{/cannotgenerate}}
         {{/aiavailable}}
-
-        {{! WHICH OF THE THREE SCENARIOS THIS IS.
-            An activity holds a foundation, an intermediate and an advanced scenario, and
-            the wizard writes one at a time. Without this strip the other two are
-            unreachable and, worse, invisible: a teacher would finish the foundation one
-            and have no reason to believe there was anything else to write. Each rung says
-            whether it has been started and whether it is live, because that is the
-            question this page gets opened with. }}
-        <nav class="aibs-rungs" aria-label="{{#str}} ladder:whichscenario, mod_aibranchedscenario {{/str}}">
-            <span class="aibs-rungs-label">{{#str}} ladder:whichscenario, mod_aibranchedscenario {{/str}}</span>
-            {{#rungs}}
-                {{#current}}
-                <span class="aibs-rung aibs-is-current" aria-current="page">
-                    <span class="aibs-rung-name">{{tier}}. {{name}}</span>
-                    {{#live}}<span class="aibs-rung-state aibs-is-live">{{#str}} ladder:live, mod_aibranchedscenario {{/str}}</span>{{/live}}
-                    {{^live}}{{#started}}<span class="aibs-rung-state">{{#str}} ladder:draftonly, mod_aibranchedscenario {{/str}}</span>{{/started}}{{/live}}
-                    {{^started}}<span class="aibs-rung-state">{{#str}} ladder:empty, mod_aibranchedscenario {{/str}}</span>{{/started}}
-                </span>
-                {{/current}}
-                {{^current}}
-                <a class="aibs-rung" href="{{url}}">
-                    <span class="aibs-rung-name">{{tier}}. {{name}}</span>
-                    {{#live}}<span class="aibs-rung-state aibs-is-live">{{#str}} ladder:live, mod_aibranchedscenario {{/str}}</span>{{/live}}
-                    {{^live}}{{#started}}<span class="aibs-rung-state">{{#str}} ladder:draftonly, mod_aibranchedscenario {{/str}}</span>{{/started}}{{/live}}
-                    {{^started}}<span class="aibs-rung-state">{{#str}} ladder:empty, mod_aibranchedscenario {{/str}}</span>{{/started}}
-                </a>
-                {{/current}}
-            {{/rungs}}
-        </nav>
 
         <ol class="aibs-wizard-steps" data-region="steps">
             <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="1"
@@ -599,15 +576,20 @@
                 </div>
             </div>
 
-            {{! Complexity used to be a picker here. It is the rung now: the activity's
-                three scenarios ARE foundation, intermediate and advanced, so a control
-                setting it separately could only ever disagree with the scenario it was
-                sitting in - and a teacher who left it alone would have generated an
-                advanced scenario at whatever the picker happened to say. It is stated
-                rather than asked. }}
+            {{! How hard this scenario is, and the teacher decides. A progression is three
+                activities, one at each level, sequenced with Moodle's own availability
+                restrictions - not three scenarios stacked inside one activity. }}
             <div class="aibs-field">
-                <span class="aibs-field-label">{{#str}} field:complexity, mod_aibranchedscenario {{/str}}</span>
-                <p class="aibs-field-note">{{#str}} field:complexityfixed, mod_aibranchedscenario, {{tiername}} {{/str}}</p>
+                <span class="aibs-field-label" id="aibs-complexity-label">
+                    {{#str}} field:complexity, mod_aibranchedscenario {{/str}}</span>
+                <p class="aibs-field-hint">{{#str}} field:complexityhint, mod_aibranchedscenario {{/str}}</p>
+                <div class="aibs-optiongrid" role="group" aria-labelledby="aibs-complexity-label"
+                     data-group="complexity" data-multiple="0">
+                    {{#complexities}}
+                        <button type="button" class="aibs-option" data-action="option" data-value="{{key}}"
+                            aria-pressed="{{#selected}}true{{/selected}}{{^selected}}false{{/selected}}">{{label}}</button>
+                    {{/complexities}}
+                </div>
             </div>
 
             <div class="aibs-field">
@@ -648,19 +630,8 @@
 
             <div class="aibs-brief-actions">
                 {{#aiavailable}}
-                    {{! ALL THREE IS THE PRIMARY ACTION, because an activity is three
-                        scenarios. They are written from the same source material and test
-                        the same principles, so there is nothing for a teacher to fill in
-                        between them - pressing this three times and waiting three times
-                        for a result they described once is work the product should do.
-                        Generating one rung stays available beside it, for fixing one
-                        scenario without paying to rewrite the other two. }}
-                    <button type="button" class="aibs-btn aibs-btn-primary" data-action="generateladder">
-                        {{#str}} generateladder, mod_aibranchedscenario {{/str}}
-                    </button>
-                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="generate"
-                        title="{{#str}} generateonehint, mod_aibranchedscenario {{/str}}">
-                        {{#str}} generateone, mod_aibranchedscenario, {{tiername}} {{/str}}
+                    <button type="button" class="aibs-btn aibs-btn-primary" data-action="generate">
+                        {{#str}} generatescenario, mod_aibranchedscenario {{/str}}
                     </button>
                 {{/aiavailable}}
                 {{#hasdraft}}
@@ -671,9 +642,11 @@
                             title="{{#str}} restoredrafthint, mod_aibranchedscenario {{/str}}">
                             {{#str}} restoredraft, mod_aibranchedscenario {{/str}}</button>
                     {{/hasprevious}}
+                    {{#canpublish}}
                     <button type="button" class="aibs-btn aibs-btn-secondary" data-action="publish">
                         {{#str}} publishscenario, mod_aibranchedscenario {{/str}}
                     </button>
+                    {{/canpublish}}
                 {{/hasdraft}}
                 {{#published}}
                     <a class="aibs-btn aibs-btn-ghost" href="{{viewurl}}">

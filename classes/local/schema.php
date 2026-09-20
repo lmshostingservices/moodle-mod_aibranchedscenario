@@ -93,29 +93,41 @@ class schema {
     const MAX_OUTCOME_NOTE = 700;
 
     /**
-     * @var int How many scenarios one activity holds, in rising difficulty.
+     * @var int How many scenarios one activity holds.
      *
-     * THE LADDER. An activity used to be one scenario, which is a single sample of a
-     * learner's judgement. Three, testing the same principles at rising difficulty and
-     * each unlocked by passing the one before, is a trend - and a trend is what an RTO is
-     * actually assessing.
+     * ONE. AN ACTIVITY IS ONE SCENARIO, AND THE TEACHER CHOOSES HOW HARD IT IS.
      *
-     * The rungs line up with the complexity levels the wizard has always offered:
-     * foundation, intermediate, advanced.
+     * It briefly held three, at rising difficulty, each unlocked by passing the one below
+     * - on the argument that one scenario is a single sample of a learner's judgement and
+     * three is a trend. The argument still holds; it was the PACKAGING that was wrong.
+     * Three scenarios in one activity meant three generations' credits before a teacher
+     * had seen a single result, three scenarios to read and correct, and a concept -
+     * the rung - threaded through every screen, every service and every file area, which
+     * is where this week's two worst faults came from.
+     *
+     * A teacher who wants the progression still gets it, and gets it better: three
+     * activities, each at the level they choose, sequenced with Moodle's own availability
+     * restrictions. That is native, familiar, not limited to three, and it puts each
+     * scenario in the gradebook on its own - which is what an RTO evidencing competence
+     * across a progression actually wants.
+     *
+     * The storage layer still keys by rung, because the tables and the backup format are
+     * written that way and rewriting them buys nothing. Everything simply uses rung one.
      */
-    const TIERS = 3;
+    const TIERS = 1;
 
     /**
-     * The rungs of the ladder, lowest first.
+     * The rungs an activity holds. One, always.
      *
-     * @return array Tier number to the complexity it is written at.
+     * Kept as a list rather than collapsed away so the storage layer, the backup format
+     * and the privacy export keep working unchanged. The complexity a scenario is written
+     * at is the teacher's choice now - see complexities() - and is no longer implied by
+     * which rung it sits on.
+     *
+     * @return array Tier number to its default complexity.
      */
     public static function tiers(): array {
-        return [
-            1 => 'foundation',
-            2 => 'intermediate',
-            3 => 'advanced',
-        ];
+        return [1 => 'foundation'];
     }
 
     /** @var int Tension level at or above which a crisis variant is shown. */
@@ -350,6 +362,45 @@ class schema {
      */
     public static function nodetypes(): array {
         return ['decision', 'beat', 'outcome'];
+    }
+
+    /**
+     * @var int How many labelled lines a workplace document may carry.
+     *
+     * Small on purpose. A permit with twenty fields is a form, and a learner asked to read a
+     * form on a decision screen stops reading at line four. The limit forces the author to
+     * include the lines the judgement turns on and leave out the rest, which is also what a
+     * competent person does when they pick a document up.
+     */
+    const MAX_ARTEFACT_FIELDS = 8;
+
+    /** @var int How many body lines a workplace document may carry. */
+    const MAX_ARTEFACT_LINES = 10;
+
+    /** @var int How many remembered marks may sit on one picture before it is clutter. */
+    const MAX_MARKS = 4;
+
+    /**
+     * The workplace documents a decision can put in the learner's hands.
+     *
+     * A closed list rather than free text, because the kind drives how the document is
+     * DRAWN - a permit looks like a permit, an email looks like an email - and a scenario
+     * that invented a kind would get a generic box, which is the one outcome worse than not
+     * having the feature.
+     *
+     * @return string[]
+     */
+    public static function artefactkinds(): array {
+        return ['permit', 'sds', 'checklist', 'email', 'sign', 'record', 'document'];
+    }
+
+    /**
+     * How a remembered mark reads on the picture.
+     *
+     * @return string[]
+     */
+    public static function marktones(): array {
+        return ['neutral', 'caution', 'danger', 'resolved'];
     }
 
     /**

@@ -45,16 +45,12 @@ class custom_completion extends activity_custom_completion {
             return COMPLETION_INCOMPLETE;
         }
 
-        // FINISHING THE ACTIVITY MEANS CLIMBING THE LADDER.
+        // FINISHING THE ACTIVITY MEANS FINISHING ITS SCENARIO.
         //
-        // An activity holds three scenarios at rising difficulty. Marking it complete on
-        // one finished attempt would mark it complete for somebody who had done the
-        // foundation scenario and never opened the other two - which is precisely the
-        // learner the ladder exists to distinguish from a competent one.
-        //
-        // Every rung that is PUBLISHED has to be passed. A rung the teacher has not written
-        // is not held against the learner: a half-built ladder is the teacher's problem,
-        // not a permanent incomplete on somebody's record.
+        // Written as a loop over the rungs because the storage is keyed that way, and
+        // there is exactly one of them - see schema::TIERS. A scenario the teacher has not
+        // written yet is not held against the learner: an unfinished activity is the
+        // teacher's problem, not a permanent incomplete on somebody's record.
         $minscore = (float)$instance->completionminscore;
         $wanted = 0;
         $passed = 0;

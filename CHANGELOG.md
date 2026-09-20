@@ -2,6 +2,285 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v2.9.0] - 2026-09-20
+
+### The document in their hands
+
+Almost every real workplace judgement is made while holding a piece of paper: a permit signed
+by the wrong person, a data sheet whose storage line contradicts what is in the cupboard, a
+handover email that says the machine is fine when the checklist says it is not. A scenario
+that summarises that paper in prose — *"the permit has expired"* — has done the reading for
+the learner and handed them a comprehension question with the answer already in it.
+
+A decision can now carry the document itself: a permit, safety data sheet, checklist, email,
+sign or record, with labelled lines, body text and a footer. It is **structured text, not a
+generated picture**, and that is the whole design. A photograph of a permit is unreadable at
+phone width, invisible to a screen reader, untranslatable, costs an image credit and comes
+back with invented words on it. This reflows, is read aloud with the rest of the screen, and
+a wrong line can be corrected without regenerating anything.
+
+The line that is wrong is marked in the data and **draws nothing on the decision screen** —
+a red line on the permit would answer the question the permit exists to ask. The marking is
+carried so the debrief can name it afterwards, which is the moment naming it teaches
+anything. A fault placed on a screen with no decision on it is reported by the review, since
+a learner who reads the fault and then clicks past it has been taught that reading the permit
+changes nothing.
+
+### The environment remembers, visually
+
+World flags already let a later scene *say* "the guard you left off is still off". Now the
+picture can show it: a small tag pinned to the frame — a lockout tag, a barrier, a sign on a
+door — that appears only for the learner who set that flag. Two people see different
+photographs of the same room.
+
+Drawn by the player rather than generated, which is the entire economics of it. Regenerating
+the photograph for every combination of flags would be two-to-the-number-of-flags images per
+node; this is one image and a label, and it is the only version still legible on a phone. A
+tag waiting on a flag nothing ever sets is reported, and a tag counts as *reading* a flag, so
+a scenario that remembers visually is no longer told the flag it depends on is unused.
+
+### Where people go wrong
+
+The trainer's half of the report, and the thing a training manager is actually buying. A list
+of scores says who to worry about; it does not say what to teach on Monday.
+
+For every decision: which option the group took, drawn as bars against a common baseline so
+the split reads at a glance, coloured by what the scenario says the option *is* rather than by
+how many took it. Above that, the decisions worth a session, worst first.
+
+**The distinction the whole page is built on.** Somebody who chose badly *and said they were
+unsure* has a gap — they know the edge of what they know, and telling them the rule closes it.
+Somebody who chose badly *while sure* has a misconception — they will not ask, because as far
+as they are concerned there is nothing to ask about, and only being shown the consequence
+shifts it. Both score 60%, and they are not the same problem.
+
+To tell them apart, a learner may tick one box above the options: *I am not sure about this
+one*. Volunteered, never required, read at the moment of the click and so recorded **before**
+the outcome is known — asked afterwards it would be a memory edited by having just been told
+whether they were right. The obvious design was to ask on every decision, and the obvious
+design is wrong: it puts a second interaction on the screen the product is built around, and
+measures willingness to answer questions about oneself. The signal that matters most is
+produced by leaving the box alone, which costs the learner nothing at all.
+
+A misconception is reported as a **decision**, never as a person — "this one catches people
+out and they do not know it", which a trainer can act on, rather than a list of who to talk
+to. Nothing is profiled and nothing is predicted; every number is a count of decisions people
+made. Below five answers a decision says so instead of showing a percentage as fact, and
+"no problems found" is reported with the number of decisions that had enough data to judge,
+because otherwise it reads identically to having no data at all.
+
+Behind one new column on the event log — the only storage the whole slice needed, because
+everything else was already in a log that had never been read across attempts.
+
+### Fixed
+
+- **The wire mapper deleted three features on the way in.** Everything the service returns
+  from `/generate` goes through `scenario_mapper::from_wire()`, which builds each node and
+  each choice field by field — so `artefact`, `marks` and `hotspot` could have been emitted
+  by the service, accepted by the validator and still never reached a learner. Nothing would
+  have looked broken: the scenario generates, validates and publishes, and the feature is
+  simply absent. Found while writing the service handover, which is to say: found by having
+  to state the contract out loud.
+- **The teacher's attempt table has been a column out of alignment since v2.6.0.** When the
+  ladder was withdrawn, the "which of the three" heading was removed and the cell under it was
+  left behind as a `get_string()` call with its identifier deleted and its component left in
+  place. Every row was handed to the table with one cell more than the header. Nothing could
+  see it: the page rendered, the query was right, and the figures above it were correct.
+- Narration's script is now built by a method of its own rather than inside the method that
+  calls the speech provider, so what a learner hears can be tested directly. Narration
+  completeness has failed silently twice, both times in code that could only be checked by
+  reading the source with a regular expression.
+
+### Not built, deliberately
+
+**Adaptive difficulty.** v2.6.0 withdrew the three-scenario ladder on purpose: an activity is
+one scenario, and the teacher chooses its level. Moving a learner between levels mid-attempt
+would reintroduce exactly what was taken out, and it would do it invisibly — two learners
+receiving different scenarios from the same activity, with a grade that no longer compares.
+If difficulty should adapt, it should adapt because a teacher decided it, which is what
+creating a second activity already does.
+
+## [v2.8.0] - 2026-09-19
+
+### What you did, named
+
+Four achievements on the ending card. **Not points, and not "answered five questions"** — an
+achievement that counts actions rewards persistence, which the learner already had. These
+name the behaviours the scenario exists to teach:
+
+- **Held your ground** — the safe call made *while somebody was pushing*. The one thing a
+  written test cannot ask.
+- **Strong recovery** — a decision went badly, you saw what it cost, and you put it right.
+  Harder than never slipping, and the product used to report it only as lost marks.
+- **Not a foot wrong** — every decision the best available. **Hidden**: a learner told this
+  is possible starts replaying to collect it rather than deciding.
+- **Nothing left behind** — finished with the room settled and people still willing to bring
+  you things. A scenario can be finished with a good score and a wrecked room.
+
+**Every one is derived, never authored.** They come from the decisions already recorded, so a
+teacher writes nothing extra, no table stores anything extra, and a scenario written months
+ago earns them the moment somebody plays it. Derived also means honest: the product *cannot*
+award "held your ground" in a scenario where nobody was pushing, because the pressure has to
+be in the data for the test to pass at all. "Nothing left behind" is judged against the
+teacher's own bands, so moving them moves what settled means.
+
+A learner who earned none is shown nothing — an empty trophy shelf says "you got none of
+them", which is not the note to end on.
+
+### The narrator reads the options
+
+On a decision screen the narrator read the scene, the line to think about and the question —
+then went silent exactly where the three options are. Those do have clips, but they play on
+the decision *record*, after the choice is made. So at the one moment the product asks
+somebody to decide something, it stopped talking to them. An accessibility fault as much as a
+voiceover gap.
+
+They are read now, lettered to match the screen. **It costs nothing** — more words in a clip
+that was already being made, and a check asserts the clip count stays unchanged so this
+cannot quietly raise a teacher's bill.
+
+### Fixed: controls offered to people who could not use them
+
+Generate, Publish and the suggestion buttons were shown whenever the *site* had credentials,
+whatever the person looking at them was allowed to do. A role with **manage but not
+generate** — an ordinary split in a training organisation, where authoring and owning the
+credit budget are different jobs — got a Generate button that then answered *"you do not
+currently have permissions to do that"*. An offered control that refuses the person it was
+offered to reads as the product being broken rather than as a permission they lack.
+
+They are gated on capability now, and the wizard says which of the two reasons applies.
+
+## [v2.7.0] - 2026-09-19
+
+### A decision now has to be a decision
+
+The product already had branching, carried-forward flags, recovery paths and delayed
+consequences. What it lacked was anything forcing the generator to write decisions worth
+having — and **if the weaker options are obviously weaker, none of that machinery ever runs.**
+Every learner walks the good path, the alternative scenes are content nobody is shown, and
+the scenario measures whether somebody can read rather than whether they can act.
+
+Six new rules in the content standard:
+
+- **pressure** — the learner is under named pressure (time, authority, peer, customer, cost,
+  convenience, embarrassment), put in somebody's mouth rather than narrated, with at least
+  two decisions made while it is on them.
+- **noticing** — the opening scene *contains* the problem instead of announcing it, and the
+  illustration puts the same thing in the picture.
+- **spoken** — dialogue is what a person would say out loud, not procedure language in
+  quotation marks.
+- **closecall** — a plausible poor choice produces a near miss: something almost happens,
+  nobody is hurt, and the story carries on.
+- **transfer** — the final decision applies the principle in a *different* situation, so the
+  learner demonstrates the rule rather than recalling the earlier answer.
+- **callback** — something set up in the opening returns near the end and has to be acted on.
+
+And a review warning with a mechanical test behind it: **a tempting option is tempting because
+it buys something.** On a real decision at least one option moves a reading the right way and
+another the wrong way. A scenario where most decisions fail that test is flagged.
+
+**It caught the shipped worked example.** All seven of its decisions were flat — good options
+all-good, bad options all-bad, nothing traded. The example and the harness's own fixture now
+have middle options that buy a calmer room and cost the person who was not heard.
+
+### The sound language
+
+Five graded cues, synthesised rather than shipped — nothing downloaded, nothing cached,
+nothing hosted:
+
+| | |
+|---|---|
+| **good** | one quiet note, an ordinary good decision |
+| **strong** | a rising pair, a good decision taken under pressure |
+| **flat** | two notes on the same pitch going nowhere — acknowledged, never rewarded |
+| **danger** | low and slow, something is developing |
+| **incident** | two low notes falling, it has happened |
+| **complete** | the only three-note cue, kept for the end and nothing else |
+
+**There is no buzzer**, and that is enforced by a check rather than a style note: the cues are
+sine tones, and square and sawtooth waveforms are banned outright.
+
+The mapping is context-aware — the same poor decision is a *warning* in a calm room and an
+*incident* in one that has already gone wrong — and lives in one place so the product cannot
+drift into playing a celebration over bad news. The player's second synthesis engine is gone;
+there is one vocabulary now.
+
+**Sound is no longer tied to narration.** Narration is a voice the site pays to have
+generated; a synthesised cue costs nothing, so an organisation that turned the first off has
+not asked the product to go silent. New site setting **allowcues**, on by default, and
+learners keep their own mute. The decision cues also stopped being gated on reduced motion —
+that preference is about movement, and once the animation is gone a quiet cue may be the only
+feedback a learner gets.
+
+## [v2.6.0] - 2026-09-19
+
+### An activity is one scenario again, and the teacher picks how hard it is
+
+The three-scenario ladder is withdrawn. **Foundation, Intermediate and Advanced come back
+as a choice the teacher makes** for the one scenario they are building.
+
+The argument for the ladder still stands — one scenario is a single sample of a learner's
+judgement, three is a trend — but the packaging was wrong. Three scenarios in one activity
+meant three generations' credits before a teacher had seen a single result, three scenarios
+to read and correct, and a rung threaded through every screen, every service and every file
+area.
+
+**A progression is still available, and is better built the Moodle way:** three activities,
+one at each level, sequenced with the course's own availability restrictions. That is native,
+familiar, not limited to three, and it puts each scenario in the gradebook on its own — which
+is what evidencing competence across a progression actually needs.
+
+Gone: the chooser screen, the unlock gate, the three-at-once generation and its service, the
+rung strip in the wizard, and their styles, strings and JavaScript.
+
+### Fixed: a one-scenario activity was grading every learner at 33%
+
+`aggregate_score` divided by a hard three **however many scenarios the activity had**. So on
+the only shape the product now ships — and on every activity that existed before the rungs
+did — a learner who played it perfectly was marked **33%**, with the scenarios nobody had
+written counted as nought against them. It reached the gradebook.
+
+### Kept
+
+The storage keeps its rung key: `aibranchedscenario_tiers`, and the `tier` column on
+revisions, attempts and jobs. Rewriting them buys nothing and would put every site through a
+migration for four bytes. Everything uses rung one, and a site that did write a second or
+third scenario keeps those rows — they are simply not served, and nothing is deleted from
+under a teacher.
+
+## [v2.5.3] - 2026-09-19
+
+### Fixed: ordinary prose was being refused
+
+**A single `<` or `>` anywhere in a teacher's writing broke the call.**
+
+Every free-text field was declared `PARAM_TEXT`. Moodle's external API does not *clean* a
+value it dislikes — it compares the value against its cleaned form and **refuses the whole
+call when they differ** — and `PARAM_TEXT` strips tags. So:
+
+> "Escalate if <5 people are on shift"
+
+was enough to kill **Save**, **"fill this in for me"** and **every suggestion button**, with
+the reason buried in `debuginfo` where a production site never shows it.
+
+The same trap sat on the **return** side, which is the worse half: a published scenario whose
+situation or consequence contained an angle bracket would have failed for the **learner**,
+part way through an attempt, on a screen they can neither pass nor edit. Found by a check
+that plays such a scenario through, not by reading the code.
+
+Every field carrying human or AI-written text — in parameters and in returns, across all
+sixteen services — is now `PARAM_RAW`. That is not a loosening: the validator already strips
+control characters and normalises whitespace, the player renders through Mustache and only
+ever clears with `innerHTML`, and no template in the plugin uses `{{{ }}}`. The angle bracket
+a teacher typed is the angle bracket they meant, and it survives the round trip intact. The
+picker keys, which are the plugin's own vocabulary, stay strict.
+
+**Checks:** awkward prose — angle brackets, pasted tags, entities, smart quotes, em dashes,
+bullets, emoji, accents — is now dispatched through every service that carries text, in both
+directions, and asserted to come back unchanged. `PARAM_TEXT` is banned outright in every
+external, with comments stripped before the check so documenting the decision is not
+punished.
+
 ## [v2.5.2] - 2026-09-19
 
 ### Fixed: the wizard could not save, fill in or suggest anything

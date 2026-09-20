@@ -144,6 +144,32 @@ if ($ADMIN->fulltree) {
         1
     ));
 
+    // Synthesised, so it costs nothing and is nothing to do with whether the site pays for
+    // a generated voice. Separate switch for exactly that reason: an organisation that has
+    // turned narration off to control spend has not asked the product to go silent.
+    $settings->add(new admin_setting_configcheckbox(
+        'mod_aibranchedscenario/allowcues',
+        get_string('settings:allowcues', 'mod_aibranchedscenario'),
+        get_string('settings:allowcues_desc', 'mod_aibranchedscenario'),
+        1
+    ));
+
+    // ONE TICK, VOLUNTEERED, NEVER REQUIRED.
+    //
+    // The obvious way to measure confidence is to ask on every decision, and the obvious
+    // way is wrong: it puts a second interaction on the one screen the product is built
+    // around, and it measures how willing somebody is to answer a question about
+    // themselves. This is a box a learner may tick before they choose, and the fact that
+    // matters most is produced by NOT ticking it - a poor decision taken by somebody who
+    // was sure is the misconception a trainer needs to see, and it costs the learner
+    // nothing to report.
+    $settings->add(new admin_setting_configcheckbox(
+        'mod_aibranchedscenario/askconfidence',
+        get_string('settings:askconfidence', 'mod_aibranchedscenario'),
+        get_string('settings:askconfidence_desc', 'mod_aibranchedscenario'),
+        1
+    ));
+
     // Three voices, so a scenario does not sound like one person reading a play. The
     // narrator reads the situation; a character's own line is spoken in the voice that
     // matches the gender recorded for them, and falls back to the narrator when the

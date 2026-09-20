@@ -84,14 +84,11 @@ class Wizard {
     constructor(root) {
         this.root = root;
         this.cmid = parseInt(root.dataset.cmid, 10);
-        // Which of the activity's three scenarios this wizard is writing. Sent on the
-        // calls that write or publish a scenario, and left off the ones that work on the
-        // activity's source material, which all three rungs are generated from.
+        // Which stored rung this writes. Always one: an activity is one scenario, and the
+        // storage layer keeps the key because the tables and the backup format are written
+        // that way. Sent on the calls that write or publish, so those services need no
+        // special case for a plugin that once held three.
         this.tier = parseInt(root.dataset.tier, 10) || 1;
-        // How many scenarios an activity holds. Read from the page rather than written
-        // here: schema::TIERS decides it, and a copy of a number in a second language is
-        // a copy that gets left behind when the first one moves.
-        this.tiers = parseInt(root.dataset.tiers, 10) || 1;
         this.step = 1;
         this.stepCount = root.querySelectorAll(SELECTORS.step).length;
         this.strings = {};
@@ -112,7 +109,6 @@ class Wizard {
             'fillingfields', 'promptcopied', 'restore:nothing', 'mediaqueued',
             'work:checking', 'work:saving', 'work:media', 'work:reading', 'work:filling',
             'work:writing', 'work:done', 'worknote',
-            'work:writingladder', 'generationladderqueued',
             'sourcecount:thin', 'sourcecount:good', 'sourcecount:long', 'usedexample',
         ];
         const values = await getStrings(keys.map((key) => ({key, component: 'mod_aibranchedscenario'})));
@@ -233,9 +229,6 @@ class Wizard {
                 break;
             case 'generate':
                 this.generate();
-                break;
-            case 'generateladder':
-                this.generateLadder();
                 break;
             case 'publish':
                 this.publish();
@@ -1082,127 +1075,14 @@ class Wizard {
     }
 
     /**
-     * Save the wizard values then queue all three scenarios and follow them together.
-     *
-     * @returns {Promise} Resolves once every rung finishes or one of them fails.
-     */
-    async generateLadder() {
-        this.clearError();
-        if (!await this.save(false)) {
-            return false;
-        }
-        if (!await this.confirmGeneration(this.tiers)) {
-            return false;
-        }
-
-        this.setBusy(true, this.strings.generationladderqueued, true);
-        this.workSteps([
-            {text: this.strings.generationladderqueued, state: 'doing'},
-            {text: this.strings['work:writingladder'], state: 'todo'},
-            {text: this.strings['work:media'], state: 'todo'},
-        ]);
-        try {
-            const queued = await this.call('queue_ladder', {});
-            await this.pollLadder(queued.jobs.map((job) => job.jobid));
-        } catch (error) {
-            this.setBusy(false);
-            this.showError(error);
-        }
-        return true;
-    }
-
-    /**
-     * Follow three generation jobs at once.
-     *
-     * Reporting is deliberately by COUNT rather than by rung - "two of three written" is
-     * what a teacher wants to know, and naming which rung is in progress is a detail about
-     * the queue rather than about their work. Cron decides the order and it is not the
-     * order they were queued in.
-     *
-     * A failure on any rung stops the wait and is reported. The rungs that did finish are
-     * kept: they are written, they are paid for, and throwing them away because a sibling
-     * failed would cost a teacher work the service actually produced.
-     *
-     * @param {Array} jobids The queued job identifiers.
-     * @returns {Promise} Resolves true once every job is ready.
-     */
-    async pollLadder(jobids) {
-        const outstanding = new Set(jobids);
-        const total = jobids.length;
-
-        for (let attempt = 0; attempt < POLL_LIMIT * total; attempt++) {
-            await new Promise((resolve) => {
-                window.setTimeout(resolve, POLL_INTERVAL);
-            });
-
-            for (const jobid of Array.from(outstanding)) {
-                let status;
-                try {
-                    status = await this.call('get_job_status', {jobid: jobid});
-                } catch (error) {
-                    this.setBusy(false);
-                    this.showError(error);
-                    return false;
-                }
-                if (status.status === 'ready') {
-                    outstanding.delete(jobid);
-                    if (status.mediamessage) {
-                        // Held rather than shown now: three of these arriving one after
-                        // another is three dialogues to dismiss before the page reloads.
-                        this.ladderNotes = (this.ladderNotes || []).concat(status.mediamessage);
-                    }
-                }
-                if (status.status === 'error') {
-                    this.setBusy(false);
-                    this.showError({message: status.errormessage});
-                    return false;
-                }
-            }
-
-            const done = total - outstanding.size;
-            const progress = await getString('generationladderprogress', 'mod_aibranchedscenario',
-                {done: done, total: total});
-            this.setBusy(true, progress, true);
-            this.workSteps([
-                {text: this.strings.generationladderqueued, state: 'done'},
-                {text: progress, state: outstanding.size ? 'doing' : 'done'},
-                {text: this.strings['work:media'], state: outstanding.size ? 'todo' : 'doing'},
-            ]);
-
-            if (!outstanding.size) {
-                if (this.ladderNotes && this.ladderNotes.length) {
-                    this.setBusy(false);
-                    await Notification.alert(
-                        this.strings.generationready,
-                        this.ladderNotes.join(' ')
-                    );
-                }
-                this.dirty = false;
-                this.leaving = true;
-                window.location.reload();
-                return true;
-            }
-        }
-
-        this.setBusy(false);
-        this.showError({message: this.strings['error:generic']});
-        return false;
-    }
-
-    /**
      * Ask before spending credits, and say what the run will cost.
      *
-     * @param {Number} tiers How many scenarios this press will write.
      * @returns {Promise} Resolves true when the teacher confirms.
      */
-    async confirmGeneration(tiers) {
-        const rungs = tiers || 1;
+    async confirmGeneration() {
         let plan;
         try {
-            // The rung count goes to the server, which multiplies the price there. Doing
-            // it here would make the browser a second place that decides what something
-            // costs, and the prices are a fixed product decision.
-            plan = await this.call('get_generation_plan', {tiers: rungs});
+            plan = await this.call('get_generation_plan', {});
         } catch (error) {
             // The estimate is a courtesy. Losing it should not stop a teacher who has
             // decided to generate, but the warning about replacing a draft still holds.
@@ -1219,11 +1099,6 @@ class Wizard {
         }
 
         const lines = [];
-        // Said first and in plain words, because "three scenarios" is the thing being
-        // decided about and the price below only makes sense once it has been said.
-        if (rungs > 1) {
-            lines.push(await getString('confirmgenerate:ladder', 'mod_aibranchedscenario'));
-        }
         if (plan) {
             // The price comes first, because it is the thing a teacher is deciding about.
             lines.push(await getString('confirmgenerate:price', 'mod_aibranchedscenario', {
@@ -1246,27 +1121,18 @@ class Wizard {
                     plan.allowanceremaining));
             }
             if (plan.replacesdraft) {
-                lines.push(await getString(
-                    rungs > 1 ? 'confirmgenerate:replacesladder' : 'confirmgenerate:replaces',
-                    'mod_aibranchedscenario'
-                ));
+                lines.push(await getString('confirmgenerate:replaces', 'mod_aibranchedscenario'));
             }
         } else {
             lines.push(await getString('confirmgenerate:noestimate', 'mod_aibranchedscenario'));
-            lines.push(await getString(
-                rungs > 1 ? 'confirmgenerate:replacesladder' : 'confirmgenerate:replaces',
-                'mod_aibranchedscenario'
-            ));
+            lines.push(await getString('confirmgenerate:replaces', 'mod_aibranchedscenario'));
         }
 
         const modal = await ModalSaveCancel.create({
             title: await getString('confirmgenerate:title', 'mod_aibranchedscenario'),
             body: lines.map((line) => `<p>${line}</p>`).join(''),
         });
-        modal.setSaveButtonText(await getString(
-            rungs > 1 ? 'generateladder' : 'generatescenario',
-            'mod_aibranchedscenario'
-        ));
+        modal.setSaveButtonText(await getString('generatescenario', 'mod_aibranchedscenario'));
 
         return new Promise((resolve) => {
             modal.getRoot().on(ModalEvents.save, () => resolve(true));

@@ -38,7 +38,7 @@
 
     Context variables required for this template:
     * cmid int Course module id
-    * tier int Which rung of the ladder is being played, 1 to 3
+    * tier int Which stored rung is being played; always 1
     * themeclass string CSS class applying the chosen accent theme
     * title string Activity name
     * scenariotitle string Title of the published scenario
@@ -52,6 +52,8 @@
     * showtimeline bool Whether to render the progress rail
     * showmetrics bool Whether to render the dynamics meters
     * enableaudio bool Whether narration controls are offered
+    * cues bool Whether this site allows the synthesised sound cues
+    * askconfidence bool Whether a learner may say they are not sure before deciding
     * maxattempts int Attempt ceiling, 0 for unlimited
     * attemptsused int Attempts already started
     * attemptsleft int Attempts remaining, -1 for unlimited
@@ -84,6 +86,8 @@
         "showtimeline": true,
         "showmetrics": true,
         "enableaudio": false,
+        "cues": true,
+        "askconfidence": true,
         "maxattempts": 0,
         "attemptsused": 0,
         "attemptsleft": -1,
@@ -101,6 +105,8 @@
      data-bandgreen="{{bandgreen}}" data-bandred="{{bandred}}"
      data-requirelisten="{{#requirelisten}}1{{/requirelisten}}{{^requirelisten}}0{{/requirelisten}}"
      data-audio="{{#enableaudio}}1{{/enableaudio}}{{^enableaudio}}0{{/enableaudio}}"
+     data-cues="{{#cues}}1{{/cues}}{{^cues}}0{{/cues}}"
+     data-confidence="{{#askconfidence}}1{{/askconfidence}}{{^askconfidence}}0{{/askconfidence}}"
      data-replay="{{#allowreplay}}1{{/allowreplay}}{{^allowreplay}}0{{/allowreplay}}"
      data-debrief="{{#showdebrief}}1{{/showdebrief}}{{^showdebrief}}0{{/showdebrief}}">
 

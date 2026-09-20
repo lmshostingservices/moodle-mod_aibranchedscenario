@@ -44,6 +44,20 @@ class submit_choice extends external_api {
             'nodeid'    => new external_value(PARAM_ALPHANUMEXT, 'Node the learner is answering'),
             'choiceid'  => new external_value(PARAM_ALPHANUMEXT, 'Chosen choice identifier'),
             'seq'       => new external_value(PARAM_INT, 'Sequence number of this decision, starting at 1'),
+            // DECLARED LAST, AND IT MATTERS. The external dispatcher validates arguments by
+            // name and then calls execute() POSITIONALLY in this declaration order, so a
+            // parameter inserted in the middle of this list silently shifts every argument
+            // after it. That fault shipped once, in v2.5.1, and cost three releases.
+            //
+            // VALUE_DEFAULT rather than required, because a browser holding a cached copy of
+            // the player will not send it, and a learner mid-attempt when the site upgrades
+            // must not have their next decision refused.
+            'unsure'    => new external_value(
+                PARAM_BOOL,
+                'Whether the learner said they were not sure, before seeing the outcome',
+                VALUE_DEFAULT,
+                false
+            ),
         ]);
     }
 
@@ -55,14 +69,22 @@ class submit_choice extends external_api {
      * @param string $nodeid Node identifier.
      * @param string $choiceid Choice identifier.
      * @param int $seq Sequence number.
+     * @param bool $unsure Whether the learner said they were not sure.
      * @return array
      */
-    public static function execute(int $cmid, int $attemptid, string $nodeid, string $choiceid, int $seq): array {
+    public static function execute(
+        int $cmid,
+        int $attemptid,
+        string $nodeid,
+        string $choiceid,
+        int $seq,
+        bool $unsure = false
+    ): array {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'cmid' => $cmid, 'attemptid' => $attemptid, 'nodeid' => $nodeid,
-            'choiceid' => $choiceid, 'seq' => $seq,
+            'choiceid' => $choiceid, 'seq' => $seq, 'unsure' => $unsure,
         ]);
         $resolved = helper::resolve($params['cmid'], 'mod/aibranchedscenario:attempt');
 
@@ -72,7 +94,13 @@ class submit_choice extends external_api {
         }
 
         $manager = attempt_manager::for_attempt($resolved['scenario'], $attempt);
-        $result = $manager->submit_choice($attempt, $params['nodeid'], $params['choiceid'], $params['seq']);
+        $result = $manager->submit_choice(
+            $attempt,
+            $params['nodeid'],
+            $params['choiceid'],
+            $params['seq'],
+            (bool)$params['unsure']
+        );
 
         $node = $manager->get_node($result['nextnodeid']);
         if (!$node) {
@@ -131,11 +159,20 @@ class submit_choice extends external_api {
         return new external_single_structure([
             'seq'             => new external_value(PARAM_INT, 'Sequence number recorded'),
             'signal'          => new external_value(PARAM_ALPHA, 'Whether the choice read as positive, neutral or negative'),
-            'consequence'     => new external_value(PARAM_TEXT, 'What happened next'),
+            'consequence'     => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'What happened next'
+            ),
             'consequenceparas' => helper::paragraphs_structure('Consequence as plain text; escape before use as HTML'),
-            'feedback'        => new external_value(PARAM_TEXT, 'Instructional feedback'),
+            'feedback'        => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'Instructional feedback'
+            ),
             'feedbackparas'    => helper::paragraphs_structure('Feedback as plain text; escape before use as HTML'),
-            'principle'       => new external_value(PARAM_TEXT, 'Decision principle this choice tested'),
+            'principle'       => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'Decision principle this choice tested'
+            ),
             'audiourl'        => new external_value(PARAM_URL, 'Narration for this consequence, or empty'),
             'reactionimageurl' => new external_value(
                 PARAM_URL,

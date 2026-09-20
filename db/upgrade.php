@@ -1097,5 +1097,64 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091911, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026091912) {
+        // No schema change. v2.5.3 stops the web services refusing ordinary prose.
+        //
+        // Every free-text field was declared PARAM_TEXT. Moodle's external API does not
+        // CLEAN a value it dislikes - it compares the value against its cleaned form and
+        // refuses the whole call when they differ - and PARAM_TEXT strips tags. So a single
+        // angle bracket anywhere in a teacher's writing killed the request: "escalate if
+        // <5 are on shift" was enough to break Save, "fill this in for me" and every
+        // suggestion button, and the same trap on the RETURN side would have stopped a
+        // learner mid-attempt on a scenario whose text contained one.
+        upgrade_mod_savepoint(true, 2026091912, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091913) {
+        // No schema change. v2.6.0 returns an activity to being ONE scenario, whose level
+        // the teacher chooses, and withdraws the three-scenario ladder.
+        //
+        // The tables keep their rung key - aibranchedscenario_tiers, and the tier column on
+        // revisions, attempts and jobs - because rewriting them buys nothing and would put
+        // every site through a migration for a column that costs four bytes. Everything now
+        // uses rung one. Any site that wrote a second or third scenario keeps those rows;
+        // they are simply not served, and nothing is deleted from under a teacher.
+        upgrade_mod_savepoint(true, 2026091913, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091914) {
+        // No schema change. v2.7.0 adds the content rules that make a decision a decision -
+        // pressure, noticing, spoken dialogue, the close call, the transfer problem and the
+        // callback - and the graded sound language that marks what they produce. A new site
+        // setting, allowcues, takes its default from settings.php.
+        upgrade_mod_savepoint(true, 2026091914, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026091915) {
+        // No schema change. v2.8.0 adds behaviour achievements, which are DERIVED from the
+        // decisions already recorded against an attempt - so nothing is stored, nothing is
+        // authored, and a scenario written before this existed earns them the moment
+        // somebody plays it. Also narrates the options on a decision screen, and stops the
+        // wizard offering controls to people who may not use them.
+        upgrade_mod_savepoint(true, 2026091915, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026092000) {
+        // Version 2.9.0. One new column, and it is the only storage the whole analytics slice
+        // needs: whether the learner said they were not sure BEFORE they saw the outcome.
+        //
+        // Everything else a trainer wants to know - which option people take, where a
+        // cohort goes wrong, which wrong answer is the popular one - was already in the
+        // event log and had simply never been read across attempts. This is the one fact
+        // that was not, and it cannot be derived from anything, because it is the only
+        // thing in the product the learner tells us about themselves.
+        $table = new xmldb_table('aibranchedscenario_events');
+        $field = new xmldb_field('unsure', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'tension');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_mod_savepoint(true, 2026092000, 'aibranchedscenario');
+    }
+
     return true;
 }

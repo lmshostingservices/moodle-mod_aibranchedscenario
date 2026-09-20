@@ -22,8 +22,6 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use mod_aibranchedscenario\local\attempt_manager;
-use mod_aibranchedscenario\local\scenario_manager;
-use mod_aibranchedscenario\local\schema;
 
 /**
  * Starts or resumes the current user's attempt and returns the current node.
@@ -78,19 +76,11 @@ class start_attempt extends external_api {
             throw new \moodle_exception('error:replaynotallowed', 'mod_aibranchedscenario');
         }
 
-        // THE LADDER'S ORDER IS ENFORCED HERE, NOT ON THE CHOOSER.
-        //
-        // The chooser draws a locked card as locked, which is a picture of the rule. The
-        // tier arrives as a parameter, so without this a learner could open the advanced
-        // scenario by changing a number - and the whole point of the ladder is that they
-        // build up to it. Asked of the database, where it is answerable.
-        $tier = (int)$params['tier'];
-        if (!isset(schema::tiers()[$tier])) {
-            throw new \moodle_exception('error:tierunknown', 'mod_aibranchedscenario');
-        }
-        if (!scenario_manager::tier_open($scenario, (int)$USER->id, $tier)) {
-            throw new \moodle_exception('error:tierlocked', 'mod_aibranchedscenario');
-        }
+        // The rung arrives from a browser, so it is clamped rather than trusted. An
+        // activity holds one scenario - see schema::TIERS - so any other number is a
+        // number nobody set, and answering it with rung one is the honest reading of
+        // what was asked for rather than an error a learner can do nothing about.
+        $tier = helper::tier($params['tier']);
 
         // A RESUMED ATTEMPT IS PLAYED ON THE REVISION IT STARTED ON.
         //
@@ -172,8 +162,14 @@ class start_attempt extends external_api {
             'journey'   => new external_multiple_structure(
                 new external_single_structure([
                     'seq'        => new external_value(PARAM_INT, 'Decision number'),
-                    'nodetitle'  => new external_value(PARAM_TEXT, 'The decision point'),
-                    'choicetext' => new external_value(PARAM_TEXT, 'What the learner chose'),
+                    'nodetitle'  => new external_value(
+                        PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                        'The decision point'
+                    ),
+                    'choicetext' => new external_value(
+                        PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                        'What the learner chose'
+                    ),
                     'signal'     => new external_value(PARAM_ALPHA, 'How the choice was judged'),
                 ])
             ),

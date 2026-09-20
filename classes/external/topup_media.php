@@ -225,7 +225,10 @@ class topup_media extends external_api {
             'missing' => new external_multiple_structure(
                 new external_single_structure([
                     'key'  => new external_value(PARAM_ALPHANUMEXT, 'The image key'),
-                    'what' => new external_value(PARAM_TEXT, 'What it should illustrate'),
+                    'what' => new external_value(
+                        PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                        'What it should illustrate'
+                    ),
                 ]),
                 'Slots the map expects and the revision does not hold',
                 VALUE_DEFAULT,
@@ -250,7 +253,10 @@ class topup_media extends external_api {
             ),
             'made'   => new external_value(PARAM_INT, 'Pictures that reached the revision'),
             'wanted' => new external_value(PARAM_INT, 'Pictures this run was asked for'),
-            'note'   => new external_value(PARAM_TEXT, 'Why a run fell short, or empty'),
+            'note'   => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+                'Why a run fell short, or empty'
+            ),
         ]);
     }
 }

@@ -30,6 +30,7 @@ import Templates from 'core/templates';
 import {get_strings as getStrings} from 'core/str';
 import Notification from 'core/notification';
 import * as Scheme from 'mod_aibranchedscenario/scheme';
+import * as Cues from 'mod_aibranchedscenario/cues';
 
 const SELECTORS = {
     root: '[data-region="player"]',
@@ -157,6 +158,13 @@ class Player {
         // learner has not reached, so this is which one to ask for rather than a permission.
         this.tier = parseInt(root.dataset.tier, 10) || 1;
         this.audioEnabled = root.dataset.audio === '1';
+        // Whether this site lets the product make a sound at all. Separate from
+        // narration, which is about paying for a generated voice.
+        this.cuesEnabled = root.dataset.cues !== '0';
+        // Whether a learner may say they are not sure before they decide. Site-level: the
+        // thing it feeds is a picture of a cohort, and half a cohort's worth of the signal
+        // would be worse than none, because the gaps would read as confidence.
+        this.askConfidence = root.dataset.confidence !== '0';
         this.showMetrics = root.dataset.metrics !== '0';
         // Where a reading stops counting as good and where it becomes a problem. These were
         // two numbers written into this file, which meant a de-escalation exercise and a
@@ -501,12 +509,22 @@ class Player {
         });
         element.classList.add('aibs-is-chosen');
 
+        // WHETHER THEY SAID THEY WERE NOT SURE, read at the moment of the click and so
+        // before the outcome is known. Asked afterwards it would be a memory of how sure
+        // they were, edited by having just been told whether they were right.
+        //
+        // A beat has one way forward and nothing to be unsure about, and the tick is not
+        // rendered there, so this reads false and stays out of the way.
+        const unsureBox = nodeElement.querySelector('[data-region="unsure"]');
+        const unsure = Boolean(unsureBox && unsureBox.checked);
+
         try {
             const response = await this.call('submit_choice', {
                 attemptid: this.attemptId,
                 nodeid: nodeElement.dataset.nodeid,
                 choiceid: element.dataset.choiceid,
                 seq: this.nextSeq,
+                unsure: unsure,
             });
             this.nextSeq = response.seq + 1;
             this.step = response.seq;
@@ -564,6 +582,15 @@ class Player {
             // refused to act on - a control that looked live and did nothing at all.
             hasspeechaudio: Boolean(node.speechurl) && this.audioEnabled,
             speakerinitial: (node.speaker || '').trim().charAt(0).toUpperCase(),
+            // Spot It, when the options are things you can point at. Needs a picture to
+            // point AT, so a scenario that lost its illustration falls back to the lettered
+            // options rather than to an invisible grid of buttons over nothing.
+            hasspots: Boolean(node.imageurl)
+                && (node.choices || []).some((choice) => choice.hashotspot),
+            // A beat has one way forward and nothing to be unsure about, so the tick is not
+            // drawn there - an interface element that asks a question with no answer is
+            // worse than the missing data.
+            askconfidence: this.askConfidence && !node.iscontinue,
         });
         // The decision's own picture, held for the decision screen and for nothing else.
         //
@@ -742,6 +769,9 @@ class Player {
         this.animateRings();
         // A costly screen and a well-judged one look alike for the second it takes to
         // start reading. The cue says which it is before a word has been read.
+        // Somebody speaking at the learner is what pressure looks like in the data, and
+        // a good decision taken under it is worth marking more strongly than an easy one.
+        this.underPressure = Boolean(response.speaker);
         this.playCue(response.signal);
         // Consequence screens are narrated too. Scenarios generated before that was true
         // carry no clip for the branch, and passing the empty string moves the control to
@@ -939,6 +969,10 @@ class Player {
                     })),
                 })),
                 outcomeaudiourl: response.outcomeaudiourl || '',
+                // Absent entirely when nothing was earned: an empty trophy shelf says "you
+                // got none of them", which is not the note a scenario should end on.
+                awards: response.awards || [],
+                hasawards: Boolean(response.awards && response.awards.length),
             });
             this.hideRegion(SELECTORS.node);
             this.hideRegion(SELECTORS.consequence);
@@ -1367,6 +1401,9 @@ class Player {
      * @returns {void}
      */
     updateMeters(after, before) {
+        // Kept so a cue can tell a warning from an incident: the same poor decision
+        // early on, and in a room that has already gone wrong, are not the same event.
+        this.readings = Object.assign({}, this.readings || {}, after || {});
         const container = this.root.querySelector(SELECTORS.meters);
         if (!container) {
             return;
@@ -1760,43 +1797,20 @@ class Player {
      * @returns {void}
      */
     playFanfare() {
+        // The one cue reserved for the end of the scenario, and the reason the others are
+        // kept small: a triad that resolves upward only means "you have finished something"
+        // if nothing along the way has already sounded like it.
+        //
+        // Still gated on reduced motion, unlike the decision cues, because this one is half
+        // of a pair - it plays under the confetti, and somebody who asked for no movement
+        // should not get the soundtrack to an animation they are not being shown.
         const reduced = window.matchMedia
             && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (!this.audioEnabled || this.muted || reduced || this.fanfarePlayed) {
+        if (this.muted || !this.cuesEnabled || reduced || this.fanfarePlayed) {
             return;
         }
         this.fanfarePlayed = true;
-        const Ctor = window.AudioContext || window.webkitAudioContext;
-        if (!Ctor) {
-            return;
-        }
-        try {
-            const ctx = new Ctor();
-            // A major triad, arpeggiated. It resolves upward, which is what makes it read
-            // as an ending rather than as a notification.
-            [523.25, 659.25, 783.99].forEach((frequency, step) => {
-                const at = ctx.currentTime + (step * 0.11);
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(frequency, at);
-                // Shaped rather than switched: an abrupt start or stop on a sine is a click.
-                gain.gain.setValueAtTime(0.0001, at);
-                gain.gain.exponentialRampToValueAtTime(0.09, at + 0.02);
-                gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.34);
-                osc.connect(gain).connect(ctx.destination);
-                osc.start(at);
-                osc.stop(at + 0.36);
-            });
-            window.setTimeout(() => {
-                if (ctx.close) {
-                    ctx.close();
-                }
-            }, 900);
-        } catch (error) {
-            // A browser that will not open an audio context is not a reason to fail here.
-            this.fanfarePlayed = true;
-        }
+        Cues.play('complete', true);
     }
 
     dropConfetti(scope) {
@@ -1893,13 +1907,10 @@ class Player {
         const band = (name) => bars.filter(
             (bar) => bar.className.indexOf('aibs-tone-' + name) !== -1
         ).length;
-        if (band('bad')) {
-            this.playCue('negative');
-        } else if (band('warn')) {
-            this.playCue('neutral');
-        } else if (band('good')) {
-            this.playCue('positive');
-        }
+        // Deliberately silent. The decision's own cue has already played by the time the
+        // meters settle, and a second sound for the same event is what makes a product
+        // feel like a slot machine rather than a workplace.
+        band('');
     }
 
     /**
@@ -2424,91 +2435,25 @@ class Player {
     }
 
     playCue(signal) {
-        const reduced = window.matchMedia
-            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (!this.audioEnabled || this.muted || reduced) {
+        // THE SOUND LANGUAGE LIVES IN cues.js, and the mapping from what just happened to
+        // which cue plays lives there with it. This method is the player's side of it: who
+        // is allowed to hear a sound, and what kind of room this is right now.
+        //
+        // No longer gated on reduced motion. That preference is about movement, and
+        // somebody who asked for less of it did not ask for silence - once the animation is
+        // gone, a quiet cue may be the only feedback they get.
+        //
+        // No longer gated on the narration setting either. That setting decides whether the
+        // site pays for a generated voice; a synthesised cue costs nothing and is a
+        // different question. It follows the learner's own mute and the site's own switch.
+        if (this.muted || !this.cuesEnabled) {
             return;
         }
-        const Context = window.AudioContext || window.webkitAudioContext;
-        if (!Context) {
-            return;
-        }
-        try {
-            if (!this.cueContext) {
-                this.cueContext = new Context();
-            }
-            const ctx = this.cueContext;
-            if (ctx.state === 'suspended' && ctx.resume) {
-                ctx.resume();
-            }
-            // Two quiet sine notes a third apart said "something happened" and very little
-            // about what. A learner should know which of the two screens they are on before
-            // they have read a word, and the two cues should not be near-identical shapes at
-            // near-identical volume separated only by direction.
-            //
-            // Well judged: a major triad climbing C-E-G, each note held under the next so
-            // the chord builds rather than ticks, with a fifth underneath for body. It
-            // resolves upward and it arrives - that is what reads as having got it right.
-            //
-            // Costly: two notes falling a minor sixth onto a flattened tone, thicker and
-            // slightly detuned so it has an edge to it. Firm, not punishing: this is a
-            // learner being told a decision cost something, not a buzzer telling them off.
-            // Neutral used to be silent, on the reasoning that nothing much had happened.
-            // Something had: the learner made a decision and it neither helped nor cost -
-            // which is a result, and a screen that reports a result in silence reports it
-            // as nothing at all. It gets a voice of its own: two notes on the same pitch,
-            // going nowhere, which is exactly what a neutral outcome is.
-            if (signal === 'neutral') {
-                const at = ctx.currentTime;
-                [0, 0.13].forEach((offset) => {
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.value = 440;
-                    gain.gain.setValueAtTime(0.0001, at + offset);
-                    gain.gain.exponentialRampToValueAtTime(0.12, at + offset + 0.015);
-                    gain.gain.exponentialRampToValueAtTime(0.0001, at + offset + 0.22);
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start(at + offset);
-                    osc.stop(at + offset + 0.25);
-                });
-                return;
-            }
-            const positive = signal === 'positive';
-            const voices = positive
-                ? [
-                    {f: 523.25, at: 0, hold: 0.5, gain: 0.17, type: 'triangle'},
-                    {f: 659.25, at: 0.1, hold: 0.42, gain: 0.17, type: 'triangle'},
-                    {f: 783.99, at: 0.2, hold: 0.44, gain: 0.19, type: 'triangle'},
-                    {f: 261.63, at: 0, hold: 0.6, gain: 0.08, type: 'sine'},
-                ]
-                : [
-                    {f: 392.0, at: 0, hold: 0.3, gain: 0.17, type: 'triangle'},
-                    {f: 392.0 * 1.004, at: 0, hold: 0.3, gain: 0.09, type: 'triangle'},
-                    {f: 246.94, at: 0.14, hold: 0.46, gain: 0.19, type: 'triangle'},
-                    {f: 246.94 * 0.996, at: 0.14, hold: 0.46, gain: 0.1, type: 'sine'},
-                ];
-            voices.forEach((voice) => {
-                const at = ctx.currentTime + voice.at;
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = voice.type;
-                osc.frequency.value = voice.f;
-                // Shaped rather than switched: an abrupt start or stop is a click, and a
-                // click is the one sound nobody reads as meaning anything.
-                gain.gain.setValueAtTime(0.0001, at);
-                gain.gain.exponentialRampToValueAtTime(voice.gain, at + 0.015);
-                gain.gain.exponentialRampToValueAtTime(0.0001, at + voice.hold);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start(at);
-                osc.stop(at + voice.hold + 0.03);
-            });
-        } catch (e) {
-            // A browser that will not make a sound is not a reason to stop the scenario.
-            this.cueContext = null;
-        }
+        const tension = Number(this.readings && this.readings.tension);
+        Cues.play(
+            Cues.forDecision(signal, isNaN(tension) ? 0 : tension, Boolean(this.underPressure)),
+            true
+        );
     }
 
     /**

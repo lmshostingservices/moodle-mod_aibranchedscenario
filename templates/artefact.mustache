@@ -1,0 +1,86 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template mod_aibranchedscenario/artefact
+
+    A document off the wall of the workplace: a permit, a data sheet, a checklist, an email.
+
+    Structured text rather than a generated picture, deliberately. A photograph of a permit
+    is unreadable at phone width, invisible to a screen reader, untranslatable, and comes
+    back from an image model with invented words on it. This reflows, it is real text, it
+    costs nothing, and a wrong line can be corrected without regenerating anything.
+
+    The flagged marker is NOT drawn as a warning here. Pointing at the wrong line on the
+    decision screen would be answering the question the document exists to ask. It is
+    carried through so the debrief can name the line afterwards, which is the moment naming
+    it teaches anybody anything.
+
+    Context variables required for this template:
+    * kind string permit, sds, checklist, email, sign, record or document
+    * kindlabel string That kind in words
+    * title string The document heading
+    * subtitle string A reference line under it, or empty
+    * fields array [{label, value, flagged}]
+    * hasfields bool Whether there are any
+    * lines array [{text}]
+    * haslines bool Whether there are any
+    * footer string A signature line, or empty
+
+    Example context (json):
+    {
+        "kind": "permit",
+        "kindlabel": "Permit to work",
+        "title": "Hot work permit",
+        "subtitle": "HW-4471 - Bay 3",
+        "fields": [
+            {"label": "Valid until", "value": "14:00, 3 March", "flagged": true},
+            {"label": "Issued by", "value": "R. Mills, Maintenance", "flagged": false}
+        ],
+        "hasfields": true,
+        "lines": [],
+        "haslines": false,
+        "footer": "Return to the permit board on completion."
+    }
+}}
+<figure class="aibs-artefact aibs-artefact-{{kind}}">
+    <figcaption class="aibs-artefact-kind">{{kindlabel}}</figcaption>
+    <div class="aibs-artefact-sheet">
+        <div class="aibs-artefact-head">
+            <p class="aibs-artefact-title">{{title}}</p>
+            {{#subtitle}}<p class="aibs-artefact-sub">{{subtitle}}</p>{{/subtitle}}
+        </div>
+
+        {{#hasfields}}
+            <dl class="aibs-artefact-fields">
+                {{#fields}}
+                    <div class="aibs-artefact-row">
+                        <dt class="aibs-artefact-label">{{label}}</dt>
+                        <dd class="aibs-artefact-value">{{value}}</dd>
+                    </div>
+                {{/fields}}
+            </dl>
+        {{/hasfields}}
+
+        {{#haslines}}
+            <ul class="aibs-artefact-lines">
+                {{#lines}}<li class="aibs-artefact-line">{{text}}</li>{{/lines}}
+            </ul>
+        {{/haslines}}
+
+        {{#footer}}<p class="aibs-artefact-footer">{{footer}}</p>{{/footer}}
+    </div>
+</figure>

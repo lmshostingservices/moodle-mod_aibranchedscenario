@@ -206,6 +206,23 @@ class scenario_mapper {
             $out['stage'] = (int)$node['stage'];
         }
 
+        // THE DOCUMENT IN THE LEARNER'S HANDS, AND THE MARKS THE WORLD KEEPS.
+        //
+        // Passed through as the service sends them and normalised by the validator, which is
+        // the one place that decides what a usable artefact or mark is. Mapping them field
+        // by field here would put that judgement in two places, and the second one would
+        // drift.
+        //
+        // They are carried at all because a field the mapper does not name is a field the
+        // mapper DELETES. Both of these could have been emitted by the service, accepted by
+        // the validator and still never reached a learner, because generate() runs its
+        // result through here first - and nothing would have looked broken.
+        foreach (['artefact', 'marks'] as $carried) {
+            if (isset($node[$carried]) && is_array($node[$carried])) {
+                $out[$carried] = $node[$carried];
+            }
+        }
+
         if (isset($node['crisisVariant']) && is_array($node['crisisVariant'])) {
             $crisis = $node['crisisVariant'];
             $out['crisisvariant'] = [
@@ -237,8 +254,9 @@ class scenario_mapper {
                         : (isset($when['atmost']) ? (int)$when['atmost'] : null),
                 ],
                 'situation'         => (string)($variant['situation'] ?? ''),
-                'facilitatorspeech' => (string)($variant['facilitatorSpeech']
-                    ?? ($variant['facilitatorspeech'] ?? '')),
+                'facilitatorspeech' => (string)(
+                    $variant['facilitatorSpeech'] ?? ($variant['facilitatorspeech'] ?? '')
+                ),
                 'challenge'         => (string)($variant['challenge'] ?? ''),
             ];
         }
@@ -364,6 +382,11 @@ class scenario_mapper {
             // other field the service may camel-case, and simply absent on a service that
             // has not shipped it - which is every service today.
             'setflags'    => (array)($choice['setFlags'] ?? ($choice['setflags'] ?? [])),
+            // Where this option is in the picture, when it is something you can point at.
+            // Passed through rather than mapped, for the same reason the artefact is: the
+            // validator owns what counts as a usable hotspot, and a second opinion here
+            // would be a second thing to keep in step.
+            'hotspot'     => $choice['hotspot'] ?? null,
             'principleid' => (string)($choice['principleId'] ?? ''),
             'next'        => (string)($choice['nextNodeId'] ?? ''),
             'skills'      => [

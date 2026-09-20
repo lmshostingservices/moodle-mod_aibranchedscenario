@@ -361,75 +361,6 @@ class generator {
     }
 
     /**
-     * Queue the whole ladder: one job per rung, same source, complexity rising.
-     *
-     * ONE PRESS, THREE SCENARIOS, THREE PRICES.
-     *
-     * The three scenarios in an activity are written from the same source material and test
-     * the same principles; what changes between them is how much is signposted, which the
-     * rung decides. So there is nothing for a teacher to fill in between them, and asking
-     * them to press Generate three times and wait three times for a result they described
-     * once is work the product should be doing.
-     *
-     * Every check is made for ALL THREE BEFORE ANY OF THEM IS QUEUED. Queueing the
-     * foundation scenario and then discovering the balance only covers two would leave a
-     * teacher charged for a ladder they cannot finish, with no way to tell which rung is
-     * missing and why.
-     *
-     * @param stdClass $scenario Activity instance.
-     * @param int $userid Requesting user.
-     * @param int $cmid Course module id, for the task context.
-     * @return array Tier number to job id.
-     * @throws generation_exception
-     */
-    public function queue_ladder(stdClass $scenario, int $userid, int $cmid): array {
-        global $DB;
-
-        $rungs = array_keys(schema::tiers());
-
-        // The balance has to cover the whole ladder, not one rung of it.
-        $this->check_credits($userid, (int)(schema::tariff()[provider::OP_SCENARIO] ?? 1) * count($rungs));
-
-        // A rung already being written is the one thing that cannot be worked around: its
-        // result would land on top of whatever this run produces, and which of the two the
-        // teacher ends up with would depend on which finished last.
-        $inflight = $DB->get_fieldset_select(
-            'aibranchedscenario_jobs',
-            'tier',
-            'scenarioid = :sid AND jobtype = :type AND status IN (:queued, :running)',
-            ['sid' => $scenario->id, 'type' => provider::OP_SCENARIO,
-            'queued' => self::JOB_QUEUED,
-            'running' => self::JOB_RUNNING]
-        );
-        if ($inflight) {
-            throw new generation_exception('error:generationinflight');
-        }
-
-        $source = scenario_manager::get_source($scenario);
-        if (empty($source['sourcecontent']) && empty($source['brief']) && empty($source['centralproblem'])) {
-            throw new generation_exception('error:nosourcecontent');
-        }
-
-        $jobs = [];
-        foreach ($rungs as $tier) {
-            $jobid = $this->create_job($scenario->id, $userid, provider::OP_SCENARIO, [
-                'cmid'     => $cmid,
-                'language' => $scenario->scenariolang,
-                'tier'     => $tier,
-            ], $tier);
-
-            $task = new \mod_aibranchedscenario\task\generate_scenario();
-            $task->set_custom_data((object)['jobid' => $jobid, 'cmid' => $cmid]);
-            $task->set_userid($userid);
-            \core\task\manager::queue_adhoc_task($task, true);
-
-            $jobs[$tier] = $jobid;
-        }
-
-        return $jobs;
-    }
-
-    /**
      * Run a queued scenario generation job.
      *
      * @param stdClass $job Job record.
@@ -448,15 +379,12 @@ class generator {
 
         $source = scenario_manager::get_source($scenario);
         $source['sourcecontent'] = $this->clamp_source($source['sourcecontent'] ?? '');
-        // THE RUNG IS THE COMPLEXITY.
+        // THE COMPLEXITY IS THE TEACHER'S CHOICE.
         //
-        // The three scenarios in an activity are written from the same source material and
-        // test the same principles; what changes between them is how much is signposted.
-        // The rungs were named after the complexity levels the wizard already offered for
-        // exactly that reason, so this is a lookup rather than a second set of rules - and
-        // it means a teacher cannot accidentally generate an advanced rung at foundation
-        // complexity by leaving the wizard's own setting where it was.
-        $source['complexity'] = schema::tiers()[$tier];
+        // It was briefly taken from the rung, back when an activity held three scenarios
+        // and the rung decided how hard each one was. An activity is one scenario now and
+        // the teacher picks its level in the wizard, so the stored source carries it - and
+        // source_normaliser has already checked it against schema::complexities().
         $source['language'] = $scenario->scenariolang;
         $source['theme'] = $scenario->theme;
         $source['contractversion'] = schema::CONTRACT_VERSION;

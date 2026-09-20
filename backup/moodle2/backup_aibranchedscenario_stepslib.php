@@ -92,7 +92,7 @@ class backup_aibranchedscenario_activity_structure_step extends backup_activity_
 
         $event = new backup_nested_element('event', ['id'], [
             'seq', 'nodeid', 'choiceid', 'nextnodeid', 'signaltype',
-            'engagement', 'trust', 'tension', 'timecreated',
+            'engagement', 'trust', 'tension', 'unsure', 'timecreated',
         ]);
 
         // Build the tree.
