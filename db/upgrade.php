@@ -1156,5 +1156,21 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026092000, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026092001) {
+        // Version 3.0.0. No schema change: the same release as 2.9.0, renumbered.
+        //
+        // 2.9.0 was built and checked but never approved - every submission was stopped by
+        // the release pipeline, twice over the way one annotation was worded and once over
+        // a type name sitting in a docblock - so no site ever received it. The work in it
+        // is a major version by any reading: two new things a decision can be about, a
+        // report built for somebody who is not the teacher, a new stored fact about the
+        // learner, and a new site setting.
+        //
+        // The step is here rather than absent because a site that installed a 2.9.0 build
+        // by hand is recorded at 2026092000, and a version that does not move is a version
+        // Moodle will not upgrade past.
+        upgrade_mod_savepoint(true, 2026092001, 'aibranchedscenario');
+    }
+
     return true;
 }

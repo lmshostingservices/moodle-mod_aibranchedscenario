@@ -2,7 +2,17 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
-## [v2.9.0] - 2026-09-20
+## [v3.0.0] - 2026-09-20
+
+A major version, and the reason is what it asks a learner to do. Until now every decision
+in this product was a sentence with buttons under it. A decision can now be about a
+**document** you have to read, or about something you have to **notice** in a picture, and
+the world can **show** you what you did two stages ago rather than only telling you. On the
+other side of it, the report stopped being only for the teacher.
+
+Renumbered from the 2.9.0 build, which was finished and checked but never approved — every
+submission was stopped by the release pipeline over how one annotation was worded and a type
+name sitting in a docblock, so no site ever received it. Nothing else differs between them.
 
 ### The document in their hands
 
