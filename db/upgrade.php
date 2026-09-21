@@ -1182,5 +1182,10 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026092002, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026092100) {
+        // Version 3.0.2. No schema change: the opening slide loses its brief block.
+        upgrade_mod_savepoint(true, 2026092100, 'aibranchedscenario');
+    }
+
     return true;
 }

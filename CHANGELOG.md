@@ -2,6 +2,53 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v3.0.2] - 2026-09-21
+
+### Why the opening's text kept coming back small
+
+It was never being shrunk. The player grows a slide's type to fill spare room, up to 1.3x,
+and the opening slide had no spare room to grow into: under the hook sat a brief block -
+where, who, how many decisions, and the three readings as cards - that took **357px of a
+558px column** on a 1920x945 screen. So the hook stayed at base size and read as small, and
+every earlier fix that raised a font size failed for the same reason. The fix was to take
+something away.
+
+The brief block is gone. The reading cards repeated the scoreboard in the bar above, whose
+legend already says which way each reading should go; where/who/ahead told a learner nothing
+the scene should not show them itself, and its "5 decisions" sat beside "1 of 4" in the bar
+and contradicted it. The hook is now the lead text on the slide, and the freed room goes to
+the words that matter.
+
+### Every slide starts at the top
+
+The words on a slide begin level with the top of the picture beside them, on every screen:
+the situation, each principle, the way in, every decision, every consequence, each debrief
+page and the finish. They were centred in the height of their column, so on a short slide
+the first line sat anywhere from 20px to 155px below the picture and moved from slide to
+slide. Three rules did it - the column's vertical centring, its top padding beside a
+picture, and the statement screens' own centring - and all three are undone. The finish
+and the way in keep their horizontal centring.
+
+Measured, not eyeballed: a new sweep checks the first drawn line of every slide against the
+picture's top edge (or the column top on a phone or a slide with no picture), in desktop,
+laptop, real fullscreen and mobile, with and without pictures - 112 slides, 0 off by more
+than 4px. It is part of the standard check now.
+
+### The goal, spoken and shown
+
+The narrator now explains the three readings over the opening slide and says what the learner
+is aiming for, and the aim is printed under the hook for anyone not listening:
+
+> Your aim: finish with engagement and trust at 67 or above, and tension at 33 or below.
+
+The target is the teacher's own band, not a number of its own. The scoreboard turns a reading
+green at that band, and a spoken goal pitched anywhere else would contradict it - a learner on
+70 would see green and still be short of what they had just been told. Moving the band moves
+the goal. Both the screen and the narration come from one function, so they cannot drift.
+
+Existing scenarios keep their current opening clip until they are generated again; the new
+explanation is in every opening narrated from here on.
+
 ## [v3.0.1] - 2026-09-20
 
 ### A failure is not a refund

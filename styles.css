@@ -5944,122 +5944,6 @@ button.aibs-avatar:focus-visible {
     margin-top: 14px;
 }
 
-/* ------------------------------------------------- the opening brief
-
-   What a learner is walking into. The opening screen carried a chip, a title, the role and
-   the hook - four short things in a card sized to hold a scene, with most of it empty - and
-   everything below was already in the scenario and shown nowhere.
-
-   The readings were the real gap. They move on every decision, the whole scoreboard is built
-   on them, and until now the first time a learner found out what they measured was when one
-   of them dropped. Each one says which direction is the good one, in words, because tension
-   reads the other way up and a colour cannot say that. */
-.aibs-brief-block {
-    border-top: 1px solid var(--aibs-border-soft);
-    margin-top: 18px;
-    padding-top: 16px;
-}
-
-.aibs-brief-label {
-    color: var(--aibs-muted);
-    font-size: var(--aibs-text-meta);
-    font-weight: var(--aibs-weight-label);
-    letter-spacing: .06em;
-    margin: 0 0 10px;
-    text-transform: uppercase;
-}
-
-/* One row per reading: the mark, the name, where it starts, and which way is good. The same
-   row shape as the consequence's scoreboard, so a learner meets it here and recognises it
-   there rather than learning two layouts for one idea. */
-.aibs-brief-goals {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.aibs-brief-goal {
-    align-items: center;
-    background: var(--aibs-surface-alt);
-    border-radius: var(--aibs-radius-sm);
-    display: grid;
-    gap: 4px 10px;
-    grid-template-columns: auto auto 1fr;
-    padding: 8px 12px;
-}
-
-.aibs-brief-goal-mark {
-    align-items: center;
-    display: inline-flex;
-    grid-row: 1;
-}
-
-.aibs-brief-goal-mark .aibs-icon {
-    height: 20px;
-    width: 20px;
-}
-
-.aibs-brief-goal-name {
-    font-size: var(--aibs-text-small);
-    font-weight: var(--aibs-weight-label);
-}
-
-.aibs-brief-goal-value {
-    font-size: var(--aibs-text-small);
-    font-variant-numeric: tabular-nums;
-    font-weight: var(--aibs-weight-strong);
-    justify-self: end;
-}
-
-/* The direction, in words. "get this up" and "keep this down" are the whole scoreboard
-   explained, and they cost one line each. */
-.aibs-brief-goal-aim {
-    color: var(--aibs-muted);
-    font-size: var(--aibs-text-meta);
-    grid-column: 2 / -1;
-    grid-row: 2;
-}
-
-/* Where, who and what is ahead. A definition list because that is what it is: three short
-   labels each answered once. */
-.aibs-brief-facts {
-    display: grid;
-    gap: 4px 14px;
-    grid-template-columns: auto minmax(0, 1fr);
-    margin: 14px 0 0;
-}
-
-.aibs-brief-facts dt {
-    color: var(--aibs-muted);
-    font-size: var(--aibs-text-meta);
-    font-weight: var(--aibs-weight-label);
-    letter-spacing: .06em;
-    text-transform: uppercase;
-}
-
-.aibs-brief-facts dd {
-    font-size: var(--aibs-text-small);
-    margin: 0;
-}
-
-/* Names read as a list without needing commas typed into the template. */
-.aibs-brief-person + .aibs-brief-person::before {
-    color: var(--aibs-muted);
-    content: " · ";
-}
-
-.aibs-brief-person-role {
-    color: var(--aibs-muted);
-}
-
-.aibs-brief-person-role::before {
-    content: " ";
-}
-
-
 /* The printed record's header is paper-only. */
 .aibs-printhead {
     display: none;
@@ -6623,5 +6507,58 @@ button.aibs-avatar:focus-visible {
 
     .aibs-optionbar-track {
         grid-column: 2 / -1;
+    }
+}
+
+/* The aim of the scenario, one line under the hook. Body size, full colour and a little
+   weight: it is the thing the learner carries into every decision, so it is not set as a
+   caption. Kept to one sentence because the room it would otherwise take is what made the
+   opening's type look small. */
+.aibs-opening-goal {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-body);
+    font-weight: var(--aibs-weight-label);
+    line-height: var(--aibs-leading-snug);
+    margin: 14px 0 0;
+}
+
+/* ------------------------------------------------------------- every slide starts at the top
+
+   The words on a slide begin level with the top of the picture beside them, on every screen:
+   the situation, each principle, the way in, a decision, a consequence, every debrief page and
+   the finish. They used to be centred in the height of their column, so the first line of a
+   short slide sat anywhere from 20px to 150px below the picture's top edge and moved from one
+   slide to the next. Measured on every screen in four layouts by preview/topalign.mjs.
+
+   Three things did it, and all three are undone here rather than where they were written, so
+   the rule reads in one place:
+   - the column was a flex column with justify-content: center;
+   - beside a picture it also carried top padding, which put the first line a padding's depth
+     below the picture even with the centring gone;
+   - the statement screens (the way in, the finish) centred on purpose. They keep their
+     horizontal centring; they no longer float in the middle of the card. */
+.aibs-slide .aibs-node-body,
+.aibs-consequence .aibs-node-body,
+.aibs-brief .aibs-deckend .aibs-node-body,
+.aibs-debrief-hidden {
+    justify-content: flex-start;
+}
+
+.path-mod-aibranchedscenario .aibs-brief .aibs-deckend.aibs-noscene,
+.aibs-brief .aibs-deckend.aibs-noscene {
+    justify-content: flex-start;
+}
+
+@media (min-width: 900px) {
+    .path-mod-aibranchedscenario .aibs-slide .aibs-node-body,
+    .path-mod-aibranchedscenario .aibs-debrief .aibs-deckslide .aibs-node-body {
+        justify-content: flex-start;
+    }
+
+    /* Beside a picture the column's first line is level with the picture's top edge. The
+       side and bottom padding stay; only the top goes. */
+    .path-mod-aibranchedscenario .aibs-slide:not(.aibs-noscene) .aibs-node-body,
+    .aibs-player:fullscreen .aibs-slide:not(.aibs-noscene) .aibs-node-body {
+        padding-top: 0;
     }
 }

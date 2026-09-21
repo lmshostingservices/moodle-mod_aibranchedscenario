@@ -375,7 +375,15 @@ class media_manager {
         // which reads as the narration being broken rather than as one screen missing.
         if ($wantsaudio) {
             $counts['narrationswanted']++;
-            if ($this->generate_opening_narration($provider, $definition, $scenario->scenariolang, $voice)) {
+            if (
+                $this->generate_opening_narration(
+                    $provider,
+                    $definition,
+                    $scenario->scenariolang,
+                    $voice,
+                    (int)($scenario->bandgreen ?? 67)
+                )
+            ) {
                 $counts['narrations']++;
             }
         }
@@ -1263,27 +1271,81 @@ class media_manager {
      * @return bool True when audio was stored.
      */
     /**
+     * The aim of the scenario, in one sentence, from the teacher's own band.
+     *
+     * THE SPOKEN GOAL MUST AGREE WITH THE COLOURS.
+     *
+     * The scoreboard turns a reading green at the teacher's band - 67 by default - and tension
+     * reads the other way up, green at 100 minus that. A goal pitched anywhere else would
+     * contradict the screen: a learner on 70 would see green and still be short of the number
+     * they had just been told. So the target is the band, not a number of its own, and a
+     * teacher who moves the band moves the goal with it.
+     *
+     * Shown on the opening slide AND spoken by the narrator, from this one function, so the two
+     * cannot drift apart.
+     *
+     * @param int $green Where a reading becomes good, 1-99.
+     * @param string|null $lang Language to phrase it in, or null for the current one.
+     * @return string
+     */
+    public static function opening_goal(int $green, ?string $lang = null): string {
+        $green = max(1, min(99, $green));
+        return get_string_manager()->get_string(
+            'opening:goal',
+            'mod_aibranchedscenario',
+            (object)['high' => $green, 'low' => 100 - $green],
+            $lang
+        );
+    }
+
+    /**
+     * Everything the narrator says over the opening slide.
+     *
+     * The role, the hook, then what the three readings are and what the learner is aiming
+     * for. The explanation is spoken rather than printed: on screen it would be three more
+     * lines under the hook, which is the clutter the opening was cleared of, and the legend in
+     * the bar already carries it in text for anyone not listening. The goal is both spoken and
+     * shown, because it is the one thing a learner has to carry into every decision.
+     *
+     * @param array $definition The scenario.
+     * @param int $green The teacher's good band.
+     * @param string $language Scenario language, which the narrator speaks.
+     * @return string
+     */
+    public static function opening_script(array $definition, int $green, string $language): string {
+        $lang = self::label_lang($language);
+        $parts = [
+            (string)($definition['role'] ?? ''),
+            (string)($definition['hook'] ?? ''),
+            get_string_manager()->get_string('opening:readings', 'mod_aibranchedscenario', null, $lang),
+            self::opening_goal($green, $lang),
+        ];
+        return trim(implode("\n\n", array_filter(array_map('trim', $parts), static function ($part) {
+            return $part !== '';
+        })));
+    }
+
+    /**
      * Narrate the opening situation.
      *
-     * Reads the role the learner is taking and the situation they are walking into, in that
-     * order, because that is the order the screen presents them.
+     * Reads the role, the situation, what the three readings are and what the learner is
+     * aiming for. See opening_script().
      *
      * @param provider $provider The generation provider.
      * @param array $definition The scenario definition.
      * @param string $language Scenario language.
      * @param string $voice Narrator voice.
+     * @param int $green The teacher's good band, which sets the spoken goal.
      * @return bool Whether a clip was stored.
      */
     public function generate_opening_narration(
         provider $provider,
         array $definition,
         string $language,
-        string $voice
+        string $voice,
+        int $green = 67
     ): bool {
-        $parts = [(string)($definition['role'] ?? ''), (string)($definition['hook'] ?? '')];
-        $text = trim(implode("\n\n", array_filter($parts, static function ($part) {
-            return trim($part) !== '';
-        })));
+        $text = self::opening_script($definition, $green, $language);
         if ($text === '') {
             return false;
         }

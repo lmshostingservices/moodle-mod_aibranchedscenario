@@ -122,80 +122,6 @@ class player implements \renderable, \templatable {
     }
 
     /**
-     * What the learner is walking into, and what they are working towards.
-     *
-     * Assembled from what the definition already carries. Nothing here is generated or
-     * charged for - it is the scenario describing itself, which it could always have done.
-     *
-     * @param array|null $definition The published definition.
-     * @param array $metrics The opening readings, already banded.
-     * @return array Template context for the brief block.
-     */
-    protected function opening_brief($definition, array $metrics): array {
-        if (!is_array($definition)) {
-            return ['hasbrief' => false];
-        }
-
-        // Who is in it. Names and roles only: appearance and behaviour belong to the
-        // picture brief, not to a learner about to start.
-        $cast = [];
-        foreach (
-            array_merge(
-                !empty($definition['facilitator']['name']) ? [$definition['facilitator']] : [],
-                (array)($definition['characters'] ?? [])
-            ) as $person
-        ) {
-            $name = trim((string)($person['name'] ?? ''));
-            if ($name === '') {
-                continue;
-            }
-            $cast[] = [
-                'name' => $name,
-                'role' => trim((string)($person['role'] ?? '')),
-                'hasrole' => trim((string)($person['role'] ?? '')) !== '',
-            ];
-            if (count($cast) >= 5) {
-                break;
-            }
-        }
-
-        // What the readings are for. Tension reads the other way up - a low one is a good
-        // one - and that is the single most confusing thing about the scoreboard, so it is
-        // said in words rather than left to be inferred from a colour.
-        $goals = [];
-        foreach ($metrics as $metric) {
-            $goals[] = array_merge($metric, [
-                'aim' => get_string(
-                    $metric['key'] === 'tension' ? 'brief:aimdown' : 'brief:aimup',
-                    'mod_aibranchedscenario'
-                ),
-            ]);
-        }
-
-        // Longestpath, NOT decisioncount. The same confusion that was caught in
-        // attempt_manager::metric_scale() the day before, still sitting here on the screen
-        // a learner reads FIRST: decisioncount counts the decision NODES in the graph, and
-        // a branching scenario has more of those than anybody walks. A scenario whose
-        // stage two forks into two alternatives has six nodes and five decisions, so the
-        // opening brief promised six and the learner made five - and the closing card,
-        // which counts what they actually did, then disagreed with the opening by one.
-        $decisions = (int)($definition['stats']['longestpath'] ?? 0);
-        $setting = trim((string)($definition['setting'] ?? ''));
-
-        return [
-            'hasbrief'     => $cast || $goals || $decisions > 0 || $setting !== '',
-            'setting'      => $setting,
-            'hassetting'   => $setting !== '',
-            'cast'         => $cast,
-            'hascast'      => $cast !== [],
-            'goals'        => $goals,
-            'hasgoals'     => $goals !== [],
-            'decisions'    => $decisions,
-            'hasdecisions' => $decisions > 0,
-        ];
-    }
-
-    /**
      * The URL of the opening situation's narration, if it was made.
      *
      * @param stdClass $revision The published revision.
@@ -367,6 +293,10 @@ class player implements \renderable, \templatable {
             'requirelisten' => !empty($this->scenario->enableaudio)
                 && !empty($this->scenario->requirelisten),
             'bandgreen'    => (int)($this->scenario->bandgreen ?? 67),
+            // The same sentence the narrator speaks over this slide, in the page language.
+            'openinggoal'  => \mod_aibranchedscenario\local\media_manager::opening_goal(
+                (int)($this->scenario->bandgreen ?? 67)
+            ),
             'bandred'      => (int)($this->scenario->bandred ?? 34),
             'maxattempts'  => (int)$this->scenario->maxattempts,
             'attemptsused' => $attemptsused,
@@ -408,7 +338,6 @@ class player implements \renderable, \templatable {
             // The readings in particular were the gap. They move on every decision and the
             // whole scoreboard is built on them, and until now the first time a learner
             // learned what they meant was when one of them dropped.
-            'brief' => $this->opening_brief($definition, $metrics),
             // A PRINTED RECORD WITH NO NAME AND NO DATE ON IT IS NOT A RECORD.
             //
             // Printing gave the debrief deck and nothing else: no learner, no date, and -

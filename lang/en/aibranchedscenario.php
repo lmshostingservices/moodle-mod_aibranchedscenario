@@ -143,17 +143,11 @@ $string['pricecredits'] = '{$a->credits} credits ({$a->money})';
 $string['confirmgenerate:price'] = 'This scenario costs {$a->price}. That covers {$a->images} scene images and {$a->narrations} narration clips.';
 $string['listento'] = 'Hear what {$a} is thinking';
 $string['deckposition'] = '{$a->current} of {$a->total}';
-// The opening brief: what a learner is walking into. Everything here was already in the
-// scenario and shown nowhere - a learner started without being told what the three readings
-// in the bar measured, and found out when one of them dropped.
-$string['brief:working'] = 'What you are working on';
-$string['brief:aimup'] = 'get this up';
-$string['brief:aimdown'] = 'keep this down';
-$string['brief:where'] = 'Where';
-$string['brief:who'] = 'Who';
-$string['brief:ahead'] = 'Ahead';
-$string['brief:decisions'] = '{$a} decisions';
 $string['lesson:situation'] = 'The situation';
+// THE GOAL, spoken and shown. The target is the teacher's own band, so what the learner hears
+// agrees with the colour the scoreboard turns.
+$string['opening:readings'] = 'Three readings track how this is going. Engagement is how involved the people around you stay. Trust is whether they will still bring problems to you. Tension is how strained the room is.';
+$string['opening:goal'] = 'Your aim: finish with engagement and trust at {$a->high} or above, and tension at {$a->low} or below.';
 $string['lesson:number'] = 'Principle {$a}';
 $string['lesson:saythis'] = 'Sounds like this';
 $string['lesson:notthis'] = 'Not this';
