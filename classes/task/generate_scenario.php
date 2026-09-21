@@ -67,6 +67,9 @@ class generate_scenario extends adhoc_task {
         }
 
         $generator = new generator();
+        // One authoring run, one package: the generation and every picture and clip made
+        // for what it returns carry the same bundle id.
+        $generator->use_bundle(generator::bundle_id($job));
         try {
             $definition = $generator->run_scenario_job($job, $scenario);
         } catch (generation_exception $e) {
@@ -82,6 +85,13 @@ class generate_scenario extends adhoc_task {
             $context = context_module::instance($cmid);
             $media = new media_manager($context, (int)($job->tier ?? 1));
             $counts = $media->generate_for_definition($generator->get_provider(), $scenario, $definition);
+            $used = $media->models_used();
+            foreach ($used['models'] as $model => $count) {
+                mtrace('Images drawn by ' . $model . ': ' . $count . '.');
+            }
+            if ($used['fallbacks']) {
+                mtrace('Images drawn by a fallback model: ' . $used['fallbacks'] . '.');
+            }
         } catch (\moodle_exception $e) {
             mtrace('Course module context unavailable; media skipped.');
         }

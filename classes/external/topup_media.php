@@ -165,6 +165,8 @@ class topup_media extends external_api {
             'timemodified' => time(),
         ]);
 
+        // A top-up stays inside the run that authored this definition.
+        $generator->use_bundle(generator::bundle_for_scenario((int)$scenario->id, $tier));
         $counts = $media->generate_missing_images(
             $generator->get_provider(),
             $scenario,

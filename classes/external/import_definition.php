@@ -153,11 +153,12 @@ class import_definition extends external_api {
                 && get_config('mod_aibranchedscenario', 'allowaudio');
             $images = $wantsimages ? image_prompt::count_images($clean) : 0;
             $clips = $wantsaudio ? media_manager::count_narrations($clean) : 0;
-            // The published price of the media for one scenario. It was briefly the quota
-            // tariff multiplied by the real counts, which came to more than the whole daily
-            // budget for any scenario worth publishing - so the budget check refused every
-            // paste and the teacher got no pictures and no narration.
-            $cost = schema::media_price($images > 0, $clips > 0);
+            // THE SAME PRICE HOWEVER THE SCENARIO WAS MADE. Owner decision, 21 September:
+            // a pasted scenario with pictures or narration costs exactly what a generated one
+            // with the same media costs - 150 or 200 - not the media price alone. Written
+            // from the published table, never from the quota tariff times the real counts,
+            // which put every realistic scenario over the whole daily budget.
+            $cost = (int)schema::price_for($images > 0, $clips > 0)['total'];
 
             try {
                 // ONE MEDIA RUN AT A TIME, which the generate route has always enforced and

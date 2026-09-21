@@ -225,10 +225,14 @@ class image_prompt {
             ? 'The person in shot is ' . rtrim(trim($people), '.') . '. '
             : '';
 
-        $teacher = trim((string)($node['imageprompt'] ?? ''));
-        $teacherline = $teacher !== ''
-            ? 'Additional direction: '
-                . self::sentence(self::dequote(self::clip($teacher, 300))) . ' '
+        // The decision's visual brief describes the moment BEFORE the choice. Handed over as
+        // direction it would redraw that moment, which is the picture this frame exists to
+        // stop repeating; so it goes in as continuity - the same people and place - and the
+        // consequence decides what is happening.
+        $before = trim((string)($node['imageprompt'] ?? ''));
+        $teacherline = $before !== ''
+            ? 'For continuity only, the frame before this one showed: '
+                . self::sentence(self::dequote(self::clip($before, 300))) . ' '
             : '';
 
         $body = self::opener($style) . ' '
@@ -359,68 +363,70 @@ class image_prompt {
         $setting = trim((string)($definition['setting'] ?? ''));
         $setting = $setting !== '' ? \core_text::substr($setting, 0, 220) : 'a workplace';
 
-        $people = self::people_in_scene($definition, $node, $situation, $crisis);
+        // THE VISUAL BRIEF IS THE PICTURE.
+        //
+        // The service now writes one per decision: 60-120 words of what a camera would see,
+        // with the cast named, the problem visible in the room, and the right answer kept
+        // out of it. It used to be appended at the end as "additional direction", after the
+        // situation prose - so the model had already been handed "the team is struggling to
+        // communicate effectively", which no camera can photograph, and drew one person
+        // talking at a desk. When a brief exists it leads, and the abstract prose, the
+        // spoken line and the guessed prop are left out: the brief already says what is in
+        // the room, and three competing descriptions of one frame is how a model ends up
+        // ignoring all of them.
+        $visual = trim(preg_replace('/\s+/u', ' ', (string)($node['imageprompt'] ?? '')));
+        $visual = $visual !== '' ? self::sentence(self::dequote(self::clip($visual, 900))) : '';
+
+        $people = self::people_in_scene($definition, $node, $situation . ' ' . $visual, $crisis);
+        $incast = $people === '' ? 0 : count(array_filter(array_map('trim', explode(';', $people))));
         $cast = $people !== ''
             ? 'The people in shot are ' . rtrim(trim($people), '.') . '. '
             : '';
 
-        // The scenario's own words for what is happening, as prose rather than as a field.
-        $what = trim(preg_replace('/\s+/u', ' ', $situation));
+        // The crisis frame is the moment AFTER things went wrong; the brief describes the
+        // calm frame before it. There it is continuity - same people, same room - and the
+        // crisis text decides what is happening, as on a reaction frame.
+        $continuity = '';
+        if ($visual !== '' && $crisis) {
+            $continuity = 'For continuity only, the calm frame before this one showed: '
+                . self::sentence(self::clip($visual, 300)) . ' ';
+            $visual = '';
+        }
+
+        if ($visual !== '') {
+            $body = self::opener($style) . ' '
+                . 'The picture: ' . $visual . ' '
+                . 'The setting is ' . rtrim($setting, '.') . '. '
+                . $cast;
+            $tail = self::fixed_tail($definition, $style, '');
+            $prompt = self::fit($body, self::MAX_PROMPT - \core_text::strlen($tail) - 1);
+            return trim($prompt . ' ' . $tail);
+        }
+
+        // The scenario's own words for what is happening, as prose rather than as a field -
+        // WITHOUT the sentences addressed to the learner. "You need to address this issue to
+        // ensure project success" is the scenario talking to the reader; to an image model
+        // it is either nothing, or an invitation to put the reader in the frame.
+        $what = self::without_second_person(trim(preg_replace('/\s+/u', ' ', $situation)));
         $what = $what !== '' ? self::clip($what, 700) : '';
 
-        // THE LINE SOMEBODY IS SAYING, which the rewrite dropped.
+        // THE LINE SOMEBODY IS SAYING - only when there is somebody to say it to.
         //
-        // It is the single most photographable thing on a decision slide: it tells the
-        // model that one person has the floor and the others are reacting, which is the
-        // difference between a photograph of a conversation and a photograph of some
-        // people near a table. Losing it was the one real piece of content the rewrite
-        // lost, as opposed to the film-school jargon it was meant to lose.
+        // It tells the model one person has the floor and the others are reacting. With one
+        // person in shot there are no others, and the line turned the frame into a portrait
+        // of somebody talking to nobody, which is exactly the plain picture this replaced.
         $speech = $crisis && !empty($node['crisisvariant']['facilitatorspeech'])
             ? (string)$node['crisisvariant']['facilitatorspeech']
             : (string)($node['facilitatorspeech'] ?? '');
         $speech = trim(preg_replace('/\s+/u', ' ', $speech));
-        // Trimmed of ANY sentence-ending punctuation before the closing quote is added.
-        // Trimming only the full stop produced 'can we just fix it ourselves?."' - a
-        // question mark, a full stop and a quote in a row, which is the kind of small mess
-        // that makes a brief read as machine-assembled.
-        // No quotation marks, which is a decision this codebase already made and which I
-        // re-broke: a quote inside an image brief invites the model to letter it into the
-        // picture as a speech bubble or a caption. The words stay, the marks come off.
-        $saidline = $speech !== ''
+        // No quotation marks: a quote inside an image brief invites the model to letter it
+        // into the picture as a speech bubble or a caption. The words stay, the marks go.
+        $saidline = ($speech !== '' && $incast >= 2)
             ? 'One of them is saying, in substance: '
                 . self::sentence(self::dequote(self::clip($speech, 240)))
                 . ' Show them mid-sentence with the others listening and reacting. '
             : '';
 
-        // THE CAST SHEET, which the rewrite dropped with the rest of the anchor.
-        //
-        // It is what stops the lawyer called Mark in scene one being a different person in
-        // scene three: every frame carries the same description of every character, so the
-        // model is never left to invent one. Dropping it was the most expensive thing the
-        // rewrite did, because a set whose people change is a set a learner cannot follow -
-        // and it is not a fault a single picture ever shows, only the set.
-        $sheet = self::cast_sheet($definition);
-        $sheet = $sheet !== '' ? rtrim($sheet) . ' ' : '';
-
-        $teacher = trim((string)($node['imageprompt'] ?? ''));
-        // Labelled, so the teacher's own words are visibly the last word on content rather
-        // than running into the sentence before them.
-        $teacherline = $teacher !== ''
-            ? 'Additional direction: '
-                . self::sentence(self::dequote(self::clip($teacher, 300))) . ' '
-            : '';
-
-        // WHAT MUST SURVIVE A TRIM GOES AFTER IT, NOT BEFORE IT.
-        //
-        // The cast sheet, the treatment and the teacher's own direction were written into
-        // the body - which is the only part fit() is allowed to cut - and they were written
-        // at the END of it, so they were the first three things discarded. On any wordy
-        // node the set came back in mixed styles, the characters were free to change
-        // appearance, and the teacher's direction was silently ignored. Every one of those
-        // is documented three comments above as the thing that must not be lost.
-        //
-        // They are part of the fixed tail now. Only the narrative prose is trimmable, which
-        // is what the priority ladder was always supposed to mean.
         $body = self::opener($style) . ' '
             . rtrim(self::feel($node, $crisis, $definition), '.') . '. '
             . 'The setting is ' . rtrim($setting, '.') . '. '
@@ -431,11 +437,7 @@ class image_prompt {
                 ? rtrim(trim($object), '.') . '. ' : '')
             . '';
 
-        // Continuity, cast and treatment: fixed, and phrased so they do not assert more
-        // than is true. "The same people" used to be stated on every frame while each frame
-        // named a different subset of them, and an instruction the rest of the prompt
-        // contradicts teaches a model that the whole paragraph is soft.
-        $tail = self::fixed_tail($definition, $style, $teacherline);
+        $tail = self::fixed_tail($definition, $style, $continuity);
         $prompt = self::fit($body, self::MAX_PROMPT - \core_text::strlen($tail) - 1);
         return trim($prompt . ' ' . $tail);
     }
@@ -821,7 +823,9 @@ class image_prompt {
         $speech = $crisis && !empty($node['crisisvariant']['facilitatorspeech'])
             ? (string)$node['crisisvariant']['facilitatorspeech']
             : (string)($node['facilitatorspeech'] ?? '');
-        $haystack = \core_text::strtolower($situation . ' ' . $speech . ' ' . (string)($node['title'] ?? ''));
+        // The speaker is in the frame by definition, whether or not the words name them.
+        $haystack = \core_text::strtolower($situation . ' ' . $speech . ' ' . (string)($node['title'] ?? '')
+            . ' ' . (string)($node['speaker'] ?? ''));
 
         $candidates = [];
         $facilitator = $definition['facilitator'] ?? [];
@@ -862,8 +866,39 @@ class image_prompt {
             // is the part that decides whether the picture is any good - off the end of
             // the budget entirely.
             $described[] = $person['name'];
-            if (count($described) >= 3) {
+            // Four, not three: the service's visual brief names three or four people, and a
+            // cap of three dropped the fourth from the cast line while the brief still put
+            // them in the room.
+            if (count($described) >= 4) {
                 break;
+            }
+        }
+
+        // A SCENE ABOUT A GROUP NEEDS A GROUP.
+        //
+        // Only people named in the words were cast, so "the team is struggling to
+        // communicate" - which names nobody - put one person in the frame, and the continuity
+        // clause then forbade anyone else. A team problem is drawn with the team: three or
+        // four people from the cast sheet, the named ones first.
+        if (
+            preg_match('/\\b(team|teams|group|colleagues|staff|crew|everyone|department|'
+                . 'members|workers|workmates|shift)\\b/u', $haystack) && count($described) < 3
+        ) {
+            $everyone = array_merge(
+                !empty($definition['facilitator']['name']) ? [$definition['facilitator']] : [],
+                (array)($definition['characters'] ?? [])
+            );
+            foreach ($everyone as $person) {
+                $name = trim((string)($person['name'] ?? ''));
+                $key = \core_text::strtolower($name);
+                if ($name === '' || isset($seen[$key])) {
+                    continue;
+                }
+                $seen[$key] = true;
+                $described[] = $name;
+                if (count($described) >= 4) {
+                    break;
+                }
             }
         }
 
@@ -901,6 +936,21 @@ class image_prompt {
         return implode('; ', $described);
     }
 
+
+    /**
+     * The situation without the sentences addressed to the learner.
+     *
+     * @param string $text Situation prose.
+     * @return string
+     */
+    protected static function without_second_person(string $text): string {
+        $sentences = preg_split('/(?<=[.!?])\s+/u', $text) ?: [];
+        $kept = array_filter($sentences, static function ($sentence) {
+            return trim($sentence) !== ''
+                && !preg_match('/\\b(you|your|yours|yourself|you\'re|you\'ll|you\'ve)\\b/iu', $sentence);
+        });
+        return trim(implode(' ', $kept));
+    }
 
     /**
      * One physical object this scene is actually about.

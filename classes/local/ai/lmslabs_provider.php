@@ -190,6 +190,12 @@ class lmslabs_provider implements provider {
     /** @var array The most recent request and response, redacted, for diagnostics. */
     protected $lastexchange = [];
 
+    /** @var string The authoring run every request in this process belongs to, or empty. */
+    protected $bundleid = '';
+
+    /** Routes that may ever carry a bundle id. Populate and suggest are charged on their own. */
+    const BUNDLE_ROUTES = ['generate', 'image', 'speech'];
+
     /**
      * The most recent exchange with the service, safe to store and display.
      *
@@ -265,6 +271,34 @@ class lmslabs_provider implements provider {
     }
 
     /**
+     * Name the authoring run the following requests belong to.
+     *
+     * One run of one scenario - its generation and every picture and clip made for the
+     * definition it produced - is one package on the service's ledger. The id is what lets
+     * the service group them.
+     *
+     * @param string $bundleid A bundle id from generator::bundle_id(), or empty for none.
+     * @return void
+     */
+    public function set_bundle(string $bundleid): void {
+        $this->bundleid = preg_match('/^bundle_[0-9a-f]{40}$/', $bundleid) ? $bundleid : '';
+    }
+
+    /**
+     * Whether the service has said this route accepts a bundle id.
+     *
+     * @param string $route Route name: generate, image or speech.
+     * @return bool
+     */
+    public static function bundle_accepted(string $route): bool {
+        if (!in_array($route, self::BUNDLE_ROUTES, true)) {
+            return false;
+        }
+        $routes = json_decode((string)get_config('mod_aibranchedscenario', 'bundleroutes'), true);
+        return is_array($routes) && !empty($routes[$route]);
+    }
+
+    /**
      * Perform an authenticated POST and return the decoded envelope.
      *
      * @param string $path Route path below the host.
@@ -279,6 +313,13 @@ class lmslabs_provider implements provider {
         }
 
         $creds = $this->creds();
+        // The bundle id rides in the envelope beside the credentials, and only on a route
+        // the service has said accepts it. The route schema refuses unknown keys whole,
+        // before authentication, so sending it early would fail every request on every site.
+        $route = basename($path);
+        if ($this->bundleid !== '' && self::bundle_accepted($route)) {
+            $payload = ['bundleId' => $this->bundleid] + $payload;
+        }
         $body = json_encode(
             array_merge($this->envelope(), $payload),
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
@@ -1028,7 +1069,14 @@ class lmslabs_provider implements provider {
 
         $requestid = self::request_id(self::OP_IMAGE, json_encode($payload));
         $data = $this->call(self::ROUTE_PREFIX . '/image', $payload, $requestid);
-        return $this->decode_binary($data, ['image/png', 'image/jpeg', 'image/webp'], 'error:servicenoimage');
+        $image = $this->decode_binary($data, ['image/png', 'image/jpeg', 'image/webp'], 'error:servicenoimage');
+        // Which model drew it, and whether the service fell back to a second one. Optional:
+        // a service that does not send them yet still returns a usable image. Kept to a
+        // short identifier so nothing the service sends can reach a log as free text.
+        $model = (string)($data['model'] ?? '');
+        $image['model'] = preg_match('/^[A-Za-z0-9._:-]{1,60}$/', $model) ? $model : '';
+        $image['fallback'] = !empty($data['fallback']);
+        return $image;
     }
 
     /**
@@ -1173,6 +1221,14 @@ class lmslabs_provider implements provider {
             'generate' => is_array($caps) ? !empty($caps['generate']) : $limit > 0,
             'populate' => is_array($caps) ? !empty($caps['populate']) : false,
         ];
+        // The bundle id, advertised the same way: capabilities.bundleId names the routes that
+        // take it. Absent means none do, and the plugin sends nothing.
+        $bundle = $decoded['capabilities']['bundleId'] ?? null;
+        $bundleroutes = [];
+        foreach (self::BUNDLE_ROUTES as $bundleroute) {
+            $bundleroutes[$bundleroute] = is_array($bundle) && !empty($bundle[$bundleroute]);
+        }
+        set_config('bundleroutes', json_encode($bundleroutes), 'mod_aibranchedscenario');
         set_config('standardlimit', max(0, $limit), 'mod_aibranchedscenario');
         set_config('standardroutes', json_encode($routes), 'mod_aibranchedscenario');
         set_config('standardseen', time(), 'mod_aibranchedscenario');

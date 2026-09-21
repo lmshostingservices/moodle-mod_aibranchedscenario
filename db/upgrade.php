@@ -1192,5 +1192,20 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026092101, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026092102) {
+        // Version 3.0.4. No schema change: the service's visual brief leads the image prompt.
+        upgrade_mod_savepoint(true, 2026092102, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026092103) {
+        // Version 3.0.5. No schema change: requests can name the authoring run they belong to.
+        upgrade_mod_savepoint(true, 2026092103, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026092104) {
+        // Version 3.0.6. No schema change: a pasted scenario is priced like a generated one.
+        upgrade_mod_savepoint(true, 2026092104, 'aibranchedscenario');
+    }
+
     return true;
 }

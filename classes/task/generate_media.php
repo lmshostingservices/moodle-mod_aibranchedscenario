@@ -92,6 +92,8 @@ class generate_media extends \core\task\adhoc_task {
         ]);
 
         $generator = new generator();
+        // An imported scenario is its own authoring run, anchored on this media job.
+        $generator->use_bundle(generator::bundle_id($DB->get_record('aibranchedscenario_jobs', ['id' => $job])));
         $media = new media_manager($context, $tier);
         $counts = $media->generate_for_definition($generator->get_provider(), $scenario, $definition);
         $failures = $media->failures();
@@ -102,6 +104,15 @@ class generate_media extends \core\task\adhoc_task {
                 . $counts['narrations'] . ' of ' . $counts['narrationswanted'] . ' narrations.'
                 . ($failures ? ' Refused: ' . implode(', ', $failures) . '.' : '')
         );
+        $used = $media->models_used();
+        if ($used['models']) {
+            $parts = [];
+            foreach ($used['models'] as $model => $count) {
+                $parts[] = $model . ' x' . $count;
+            }
+            mtrace('Activity ' . $scenario->id . ' images drawn by: ' . implode(', ', $parts)
+                . ($used['fallbacks'] ? '; ' . $used['fallbacks'] . ' by a fallback model.' : '.'));
+        }
 
         // A run that made SOME of what was asked for used to be recorded as a success.
         //

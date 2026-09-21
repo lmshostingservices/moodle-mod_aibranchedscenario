@@ -2,6 +2,59 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v3.0.6] - 2026-09-21
+
+### One price, however the scenario was made
+
+A pasted scenario with pictures or narration now costs the same as a generated one with the
+same media: 150 credits with one of them, 200 with both. It was counted at the media price
+alone (50 or 100). Pasting itself still costs nothing, and a top-up of missing pictures is
+unchanged. The paste box says so.
+
+## [v3.0.5] - 2026-09-21
+
+### One scenario, one package
+
+A full scenario is priced at 200 credits, but the service could not tell which pictures and
+clips belonged to which generation, so it charged each request on its own. Every request now
+names the authoring run it belongs to - a `bundleId` beside the credentials - so the service
+can charge the run as one package.
+
+- A generation and every picture and clip made for it share one id.
+- Regenerating starts a new one. A top-up that fills in missing pictures stays inside the run
+  that authored them. An imported scenario is its own run.
+- The id is a prefix and a digest: no content, no learner data, no credential.
+- **Nothing is sent until the service asks for it.** It goes only on the routes the service
+  names under `capabilities.bundleId` in its status response, and never on populate or
+  suggest. Until then requests are exactly as before, so installing this cannot break
+  generation.
+
+## [v3.0.4] - 2026-09-21
+
+### Pictures that show the problem
+
+The scene images were plain because the prompt was. "Communication Breakdown" was briefed
+with one named person, a sentence addressed to the learner ("You need to address this
+issue…") and a spoken line with nobody to hear it - and came back as one woman talking at a
+desk. LMS Labs now write a visual brief for every decision and draw with GPT Image 2; this
+release makes the plugin use it properly.
+
+- **The visual brief is the picture.** When the service sends one, it leads the prompt and
+  the abstract situation prose, the spoken line and the guessed prop are left out. It used
+  to be appended last as "additional direction".
+- **A team problem is drawn with the team.** A scene about a team, group or staff puts three
+  or four people from the cast in shot, even when the words name nobody.
+- **Nothing addressed to the learner reaches the image model.** Sentences with "you" are
+  dropped from the scene description.
+- **A spoken line needs a listener.** It is briefed only when two or more people are in shot.
+- **Crisis and reaction frames stay their own moment.** They carry the decision's brief as
+  continuity - same people, same room - not as the picture, so they do not redraw the calm
+  scene.
+- **The log says which model drew each picture**, and how many came from a fallback, once
+  the service includes `model` and `fallback` in its image response.
+
+Existing scenarios keep their pictures until they are regenerated.
+
 ## [v3.0.3] - 2026-09-21
 
 ### The not-sure box says what it is for

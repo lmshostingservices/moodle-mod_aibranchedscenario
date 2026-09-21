@@ -63,6 +63,64 @@ class generator {
     }
 
     /**
+     * The bundle id for the authoring run a job started.
+     *
+     * Derived, not stored: a prefix and a digest of the site, the activity, the rung and the
+     * job that began the run. So it is stable for as long as that job exists, distinct for
+     * every new run, and carries no content, learner data or credential.
+     *
+     * @param stdClass $job The generation job, or the media job of an imported scenario.
+     * @return string
+     */
+    public static function bundle_id(stdClass $job): string {
+        return 'bundle_' . sha1('bundle|' . get_site_identifier() . '|' . (int)$job->scenarioid
+            . '|' . (int)($job->tier ?? 1) . '|' . (int)$job->id);
+    }
+
+    /**
+     * The bundle a top-up belongs to: the latest authoring run of this activity and rung.
+     *
+     * A top-up fills in what is missing from a definition that already exists, so nothing
+     * new was authored and it stays inside the run that authored it. An authoring run is a
+     * generation job, or the media job of an imported scenario; a top-up's own media job is
+     * neither, and is recognised by the request summary it writes.
+     *
+     * @param int $scenarioid Activity instance id.
+     * @param int $tier Rung.
+     * @return string The bundle id, or empty when no authoring run is on record.
+     */
+    public static function bundle_for_scenario(int $scenarioid, int $tier): string {
+        global $DB;
+        $jobs = $DB->get_records_select(
+            'aibranchedscenario_jobs',
+            'scenarioid = :scenarioid AND tier = :tier AND jobtype IN (:scenario, :media)',
+            ['scenarioid' => $scenarioid, 'tier' => $tier, 'scenario' => 'scenario', 'media' => 'media'],
+            'id DESC',
+            'id, scenarioid, tier, jobtype, requestjson'
+        );
+        foreach ($jobs as $job) {
+            $request = json_decode((string)$job->requestjson, true);
+            if ($job->jobtype === 'media' && is_array($request) && array_key_exists('topup', $request)) {
+                continue;
+            }
+            return self::bundle_id($job);
+        }
+        return '';
+    }
+
+    /**
+     * Name the authoring run every request this generator makes belongs to.
+     *
+     * @param string $bundleid Bundle id, or empty for none.
+     * @return void
+     */
+    public function use_bundle(string $bundleid): void {
+        if ($this->provider instanceof lmslabs_provider) {
+            $this->provider->set_bundle($bundleid);
+        }
+    }
+
+    /**
      * The failures that genuinely cost the teacher nothing.
      *
      * THE TEST FOR MEMBERSHIP IS WHAT THE TEACHER WAS TOLD.
@@ -191,18 +249,24 @@ class generator {
                 'errored'  => self::JOB_ERROR,
             ], $nochargeparams),
             '',
-            'id, resultjson'
+            'id, resultjson, requestjson'
         );
         foreach ($mediajobs as $mediajob) {
             $result = json_decode((string)$mediajob->resultjson, true);
             $made = is_array($result) ? (array)($result['media'] ?? []) : [];
-            // The PUBLISHED price of the media, not a per-item sum. Multiplying the quota
-            // tariff by the real number of pictures and clips put a single ordinary
-            // scenario over the whole daily budget on its own.
-            $spent += schema::media_price(
-                (int)($made['images'] ?? 0) > 0,
-                (int)($made['narrations'] ?? 0) > 0
-            );
+            $request = json_decode((string)$mediajob->requestjson, true);
+            $withimages = (int)($made['images'] ?? 0) > 0;
+            $withvoice = (int)($made['narrations'] ?? 0) > 0;
+            // The PUBLISHED price, not a per-item sum. A top-up fills in what a run already
+            // paid for, so it counts at the media price as before. A media job that is not a
+            // top-up is an imported scenario being illustrated, and an imported scenario costs
+            // what a generated one with the same media costs - unless it made nothing at all.
+            $istopup = is_array($request) && array_key_exists('topup', $request);
+            if ($istopup) {
+                $spent += schema::media_price($withimages, $withvoice);
+            } else if ($withimages || $withvoice) {
+                $spent += (int)schema::price_for($withimages, $withvoice)['total'];
+            }
         }
 
         $counts = $DB->get_records_sql(

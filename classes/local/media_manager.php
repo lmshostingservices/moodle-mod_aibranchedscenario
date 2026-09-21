@@ -293,6 +293,12 @@ class media_manager {
     /** @var string[] Why each asset that failed, failed. Reasons only, never content. */
     protected $failures = [];
 
+    /** @var int[] Pictures drawn per image model this run, keyed by the model's identifier. */
+    protected $models = [];
+
+    /** @var int Pictures the service drew with its fallback model this run. */
+    protected $fallbacks = 0;
+
     /** @var bool[] Which working areas have been cleared for this run, keyed by area. */
     protected $cleared = [];
 
@@ -322,6 +328,37 @@ class media_manager {
      */
     public function failures(): array {
         return $this->failures;
+    }
+
+    /**
+     * Record which image model drew a picture, and whether the service fell back.
+     *
+     * Written to the task log, which is where a site admin looks when a set of pictures
+     * comes back looking wrong. Before the service reported it there was no way to tell
+     * the main model's work from a fallback's.
+     *
+     * @param array $result What generate_image() returned.
+     * @return void
+     */
+    protected function note_model(array $result): void {
+        $model = (string)($result['model'] ?? '');
+        if ($model === '') {
+            return;
+        }
+        $this->models[$model] = ($this->models[$model] ?? 0) + 1;
+        if (!empty($result['fallback'])) {
+            $this->fallbacks++;
+            mtrace('Image drawn by fallback model ' . $model . '.');
+        }
+    }
+
+    /**
+     * The image models used in this run, with how many pictures each drew.
+     *
+     * @return array Keys: models (model => count), fallbacks (int).
+     */
+    public function models_used(): array {
+        return ['models' => $this->models, 'fallbacks' => $this->fallbacks];
     }
 
 
@@ -1034,6 +1071,7 @@ class media_manager {
                 $result['data'],
                 $result['mimetype']
             );
+            $this->note_model($result);
             return true;
         } catch (generation_exception $e) {
             $this->note_failure((string)$e->errorcode);
@@ -1076,6 +1114,7 @@ class media_manager {
         try {
             $result = $provider->generate_image($brief['prompt'], $brief['style'], $brief['scenetitle']);
             $this->store(self::AREA_SCENE, $index, $key, $result['data'], $result['mimetype']);
+            $this->note_model($result);
             return true;
         } catch (generation_exception $e) {
             $this->note_failure((string)$e->errorcode);
