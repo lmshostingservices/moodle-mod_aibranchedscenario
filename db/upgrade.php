@@ -1187,5 +1187,10 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026092100, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026092101) {
+        // Version 3.0.3. No schema change: the not-sure checkbox is relabelled.
+        upgrade_mod_savepoint(true, 2026092101, 'aibranchedscenario');
+    }
+
     return true;
 }

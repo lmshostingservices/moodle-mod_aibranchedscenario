@@ -2,6 +2,15 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v3.0.3] - 2026-09-21
+
+### The not-sure box says what it is for
+
+"I am not sure about this one" read like a question with no purpose. It is now **"Flag: I'm
+guessing on this one"**. It does not change the learner's score; it tells the teacher's report
+whether a wrong answer was a guess (a knowledge gap) or a confident mistake (a misconception).
+The report's own labels now use the same word.
+
 ## [v3.0.2] - 2026-09-21
 
 ### Why the opening's text kept coming back small

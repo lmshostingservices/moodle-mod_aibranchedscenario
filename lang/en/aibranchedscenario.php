@@ -299,7 +299,7 @@ $string['award:nothingleft'] = 'Nothing left behind';
 $string['award:nothingleftdetail'] = 'You finished with the room settled and people still willing to bring you things. A scenario can be finished with a good score and a wrecked room; this one was not.';
 $string['award:heading'] = 'What you did';
 // CONFIDENCE. One box, volunteered before the outcome is known.
-$string['notsure'] = 'I am not sure about this one';
+$string['notsure'] = 'Flag: I\'m guessing on this one';
 // WORKPLACE ARTEFACTS. What the document announces itself as, above the sheet.
 $string['artefact:permit'] = 'Permit to work';
 $string['artefact:sds'] = 'Safety data sheet';
@@ -360,9 +360,9 @@ $string['report:testing'] = 'Testing: {$a}';
 $string['report:everydecision'] = 'Every decision, option by option';
 $string['report:taken'] = '{$a} taken';
 $string['report:answeredby'] = 'Answered {$a} times';
-$string['report:unsurecount'] = '{$a} said they were not sure';
+$string['report:unsurecount'] = '{$a} flagged they were guessing';
 $string['stat:decisionsmade'] = 'Decisions made';
-$string['stat:unsurerate'] = 'Flagged "not sure"';
+$string['stat:unsurerate'] = 'Flagged "guessing"';
 $string['requirelisten'] = 'Hear each screen out before moving on';
 $string['requirelisten_help'] = 'When narration is on, the way forward normally dims while a screen is being read but can still be pressed. Turn this on to hold it closed until the reading finishes, so a learner cannot click past the teaching.
 
