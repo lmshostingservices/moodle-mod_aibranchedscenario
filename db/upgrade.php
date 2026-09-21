@@ -1212,5 +1212,10 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026092105, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026092106) {
+        // Version 3.0.8. No schema change: package charging is decided once per run.
+        upgrade_mod_savepoint(true, 2026092106, 'aibranchedscenario');
+    }
+
     return true;
 }

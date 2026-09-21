@@ -94,8 +94,7 @@ class generate_media extends \core\task\adhoc_task {
 
         $generator = new generator();
         // An imported scenario is its own authoring run, anchored on this media job.
-        $jobrecord = $DB->get_record('aibranchedscenario_jobs', ['id' => $job]);
-        $generator->use_bundle(generator::bundle_id($jobrecord), generator::package_for_job($jobrecord, $scenario));
+        $generator->start_bundle($DB->get_record('aibranchedscenario_jobs', ['id' => $job]), $scenario);
         $media = new media_manager($context, $tier);
         $counts = $media->generate_for_definition($generator->get_provider(), $scenario, $definition);
         $failures = $media->failures();

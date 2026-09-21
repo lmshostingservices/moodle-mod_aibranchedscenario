@@ -2,6 +2,21 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v3.0.8] - 2026-09-21
+
+### Package charging cannot charge a run twice
+
+Two rollout risks LMS Labs found before switching package charging on, both closed:
+
+- **Older plugins stay on per-request charging.** Package charging now switches on under
+  `capabilities.bundlePackage`. Versions 3.0.5 and 3.0.6 listen for `bundleId` and would send
+  a bundle id with no package; the service never advertises that name, so they never do.
+- **A run is bundled or not, decided once.** At the start of each run the plugin asks the
+  service, decides, and records the decision on the job. A top-up joins a bundle only if its
+  run was bundled, so a scenario made before package charging was switched on cannot be
+  charged the whole package again when a missing picture is filled in later. A run is
+  bundled only when all three routes are on, never half a run.
+
 ## [v3.0.7] - 2026-09-21
 
 ### Each run says what was ordered

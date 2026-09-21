@@ -166,10 +166,7 @@ class topup_media extends external_api {
         ]);
 
         // A top-up stays inside the run that authored this definition.
-        $authoring = generator::authoring_job((int)$scenario->id, $tier);
-        if ($authoring) {
-            $generator->use_bundle(generator::bundle_id($authoring), generator::package_for_job($authoring, $scenario));
-        }
+        $generator->continue_bundle($scenario, $tier);
         $counts = $media->generate_missing_images(
             $generator->get_provider(),
             $scenario,

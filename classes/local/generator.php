@@ -168,6 +168,64 @@ class generator {
     }
 
     /**
+     * Decide, once, at the start of an authoring run, whether it is charged as a bundle.
+     *
+     * Asked of the service before the first request and then frozen on the job, so a
+     * capability that changes half way through cannot split one run between the two ways
+     * of charging. The order is recorded with it.
+     *
+     * @param stdClass $job The generation job, or an imported scenario's media job.
+     * @param stdClass $scenario Activity instance.
+     * @return bool Whether this run is bundled.
+     */
+    public function start_bundle(stdClass $job, stdClass $scenario): bool {
+        global $DB;
+        if (!($this->provider instanceof lmslabs_provider)) {
+            return false;
+        }
+        $this->provider->ensure_capabilities();
+        $bundled = lmslabs_provider::bundle_mode();
+        $request = json_decode((string)($job->requestjson ?? ''), true);
+        $request = is_array($request) ? $request : [];
+        $request['bundled'] = $bundled;
+        if (!isset($request['package'])) {
+            $request['package'] = self::ordered_package($scenario);
+        }
+        $DB->set_field('aibranchedscenario_jobs', 'requestjson', json_encode($request), ['id' => $job->id]);
+        $job->requestjson = json_encode($request);
+        $this->use_bundle($bundled ? self::bundle_id($job) : '', $bundled ? (string)$request['package'] : '');
+        return $bundled;
+    }
+
+    /**
+     * Continue the run a top-up belongs to - only if that run was charged as a bundle.
+     *
+     * A run that began before package charging was switched on was charged per request.
+     * Sending its bundle id on a later top-up would make the service see a new bundle and
+     * charge the whole package on top of what was already paid. So a top-up joins a bundle
+     * only when the authoring run recorded that it was one.
+     *
+     * @param stdClass $scenario Activity instance.
+     * @param int $tier Rung.
+     * @return bool Whether the top-up is bundled.
+     */
+    public function continue_bundle(stdClass $scenario, int $tier): bool {
+        $authoring = self::authoring_job((int)$scenario->id, $tier);
+        if (!$authoring) {
+            return false;
+        }
+        $request = json_decode((string)$authoring->requestjson, true);
+        if (!is_array($request) || empty($request['bundled'])) {
+            return false;
+        }
+        if (!lmslabs_provider::bundle_mode()) {
+            return false;
+        }
+        $this->use_bundle(self::bundle_id($authoring), self::package_for_job($authoring, $scenario));
+        return true;
+    }
+
+    /**
      * Name the authoring run every request this generator makes belongs to.
      *
      * @param string $bundleid Bundle id, or empty for none.

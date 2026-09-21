@@ -293,6 +293,32 @@ class lmslabs_provider implements provider {
     }
 
     /**
+     * Whether package charging is on: every bundle route advertised, all at once.
+     *
+     * A run is either wholly bundled or wholly not. Half - a generation charged per request
+     * and its pictures then sent as a bundle - is how one run could be charged twice.
+     *
+     * @return bool
+     */
+    public static function bundle_mode(): bool {
+        foreach (self::BUNDLE_ROUTES as $route) {
+            if (!self::bundle_accepted($route)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Make sure what the service accepts has been asked recently, before a run decides.
+     *
+     * @return void
+     */
+    public function ensure_capabilities(): void {
+        $this->refresh_capabilities();
+    }
+
+    /**
      * Whether the service has said this route accepts a bundle id.
      *
      * @param string $route Route name: generate, image or speech.
@@ -1235,9 +1261,11 @@ class lmslabs_provider implements provider {
             'generate' => is_array($caps) ? !empty($caps['generate']) : $limit > 0,
             'populate' => is_array($caps) ? !empty($caps['populate']) : false,
         ];
-        // The bundle id, advertised the same way: capabilities.bundleId names the routes that
-        // take it. Absent means none do, and the plugin sends nothing.
-        $bundle = $decoded['capabilities']['bundleId'] ?? null;
+        // Package charging, advertised under capabilities.bundlePackage - NOT bundleId. Plugin
+        // 3.0.5 and 3.0.6 listen for bundleId and would send a bundle id with no package; a
+        // service that only ever advertises the new name leaves those versions on per-request
+        // charging forever, which is the safe direction. Absent means off.
+        $bundle = $decoded['capabilities']['bundlePackage'] ?? null;
         $bundleroutes = [];
         foreach (self::BUNDLE_ROUTES as $bundleroute) {
             $bundleroutes[$bundleroute] = is_array($bundle) && !empty($bundle[$bundleroute]);
