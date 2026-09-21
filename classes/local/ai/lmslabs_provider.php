@@ -193,6 +193,12 @@ class lmslabs_provider implements provider {
     /** @var string The authoring run every request in this process belongs to, or empty. */
     protected $bundleid = '';
 
+    /** @var string What that run ordered - one of PACKAGES - or empty. */
+    protected $package = '';
+
+    /** The orders a bundle can be. The service holds the price of each; the plugin never sends one. */
+    const PACKAGES = ['text', 'text_images', 'text_narration', 'text_images_narration'];
+
     /** Routes that may ever carry a bundle id. Populate and suggest are charged on their own. */
     const BUNDLE_ROUTES = ['generate', 'image', 'speech'];
 
@@ -278,10 +284,12 @@ class lmslabs_provider implements provider {
      * the service group them.
      *
      * @param string $bundleid A bundle id from generator::bundle_id(), or empty for none.
+     * @param string $package What the run ordered, one of PACKAGES. Never a price.
      * @return void
      */
-    public function set_bundle(string $bundleid): void {
+    public function set_bundle(string $bundleid, string $package = ''): void {
         $this->bundleid = preg_match('/^bundle_[0-9a-f]{40}$/', $bundleid) ? $bundleid : '';
+        $this->package = ($this->bundleid !== '' && in_array($package, self::PACKAGES, true)) ? $package : '';
     }
 
     /**
@@ -318,7 +326,13 @@ class lmslabs_provider implements provider {
         // before authentication, so sending it early would fail every request on every site.
         $route = basename($path);
         if ($this->bundleid !== '' && self::bundle_accepted($route)) {
-            $payload = ['bundleId' => $this->bundleid] + $payload;
+            // The order travels with the id on every request, so the FIRST request of a run -
+            // which for an imported scenario is a picture or a clip - already declares the
+            // whole order, including the media still to come. That is what lets the service
+            // debit once, up front, at the right one of the four prices.
+            $payload = ['bundleId' => $this->bundleid]
+                + ($this->package !== '' ? ['selectedPackage' => $this->package] : [])
+                + $payload;
         }
         $body = json_encode(
             array_merge($this->envelope(), $payload),

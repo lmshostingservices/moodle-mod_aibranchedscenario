@@ -69,7 +69,7 @@ class generate_scenario extends adhoc_task {
         $generator = new generator();
         // One authoring run, one package: the generation and every picture and clip made
         // for what it returns carry the same bundle id.
-        $generator->use_bundle(generator::bundle_id($job));
+        $generator->use_bundle(generator::bundle_id($job), generator::package_for_job($job, $scenario));
         try {
             $definition = $generator->run_scenario_job($job, $scenario);
         } catch (generation_exception $e) {

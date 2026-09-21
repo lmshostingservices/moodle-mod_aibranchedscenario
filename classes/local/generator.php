@@ -90,6 +90,18 @@ class generator {
      * @return string The bundle id, or empty when no authoring run is on record.
      */
     public static function bundle_for_scenario(int $scenarioid, int $tier): string {
+        $job = self::authoring_job($scenarioid, $tier);
+        return $job ? self::bundle_id($job) : '';
+    }
+
+    /**
+     * The job that began the latest authoring run of this activity and rung.
+     *
+     * @param int $scenarioid Activity instance id.
+     * @param int $tier Rung.
+     * @return stdClass|null The job, or null when no authoring run is on record.
+     */
+    public static function authoring_job(int $scenarioid, int $tier): ?stdClass {
         global $DB;
         $jobs = $DB->get_records_select(
             'aibranchedscenario_jobs',
@@ -103,20 +115,68 @@ class generator {
             if ($job->jobtype === 'media' && is_array($request) && array_key_exists('topup', $request)) {
                 continue;
             }
-            return self::bundle_id($job);
+            return $job;
         }
-        return '';
+        return null;
+    }
+
+    /**
+     * The package code for an order.
+     *
+     * @param bool $withimages Whether illustrations were ordered.
+     * @param bool $withvoice Whether narration was ordered.
+     * @return string text, text_images, text_narration or text_images_narration.
+     */
+    public static function package_code(bool $withimages, bool $withvoice): string {
+        return 'text' . ($withimages ? '_images' : '') . ($withvoice ? '_narration' : '');
+    }
+
+    /**
+     * What this activity orders right now: the teacher's switches, within what the site allows.
+     *
+     * The same test the media run itself applies, so the order declared is the order made.
+     *
+     * @param stdClass $scenario Activity instance.
+     * @return string Package code.
+     */
+    public static function ordered_package(stdClass $scenario): string {
+        return self::package_code(
+            !empty($scenario->enableimages) && (bool)get_config('mod_aibranchedscenario', 'allowimages'),
+            !empty($scenario->enableaudio) && (bool)get_config('mod_aibranchedscenario', 'allowaudio')
+        );
+    }
+
+    /**
+     * The package a run was ordered as, read from the job that began it.
+     *
+     * Recorded when the job is created, so a teacher switching narration off days later
+     * cannot change what an existing run declares - the service holds the order, and a top-up
+     * that declared a different one would be refused. A job from before 3.0.7 recorded no
+     * order; the activity's current switches stand in for it.
+     *
+     * @param stdClass $job The authoring job.
+     * @param stdClass|null $scenario Activity instance, for jobs that recorded no order.
+     * @return string Package code, or empty when neither is available.
+     */
+    public static function package_for_job(stdClass $job, ?stdClass $scenario = null): string {
+        $request = json_decode((string)($job->requestjson ?? ''), true);
+        $recorded = is_array($request) ? (string)($request['package'] ?? '') : '';
+        if (in_array($recorded, lmslabs_provider::PACKAGES, true)) {
+            return $recorded;
+        }
+        return $scenario ? self::ordered_package($scenario) : '';
     }
 
     /**
      * Name the authoring run every request this generator makes belongs to.
      *
      * @param string $bundleid Bundle id, or empty for none.
+     * @param string $package What the run ordered, or empty.
      * @return void
      */
-    public function use_bundle(string $bundleid): void {
+    public function use_bundle(string $bundleid, string $package = ''): void {
         if ($this->provider instanceof lmslabs_provider) {
-            $this->provider->set_bundle($bundleid);
+            $this->provider->set_bundle($bundleid, $package);
         }
     }
 
@@ -477,6 +537,9 @@ class generator {
             'cmid'     => $cmid,
             'language' => $scenario->scenariolang,
             'tier'     => $tier,
+            // What was ordered, fixed at the moment it was ordered. Declared to the service
+            // with the bundle id on every request of this run.
+            'package'  => self::ordered_package($scenario),
         ], $tier);
 
         $task = new \mod_aibranchedscenario\task\generate_scenario();

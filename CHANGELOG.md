@@ -2,6 +2,22 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v3.0.7] - 2026-09-21
+
+### Each run says what was ordered
+
+The bundle id told the service which requests belong together, but not which of the four
+prices applies. The first picture of an imported scenario looks the same whether
+illustrations alone (150) or illustrations and narration (200) were ordered. Every request
+in a run now carries `selectedPackage` beside `bundleId`: `text`, `text_images`,
+`text_narration` or `text_images_narration`. It is never a price.
+
+- The order is recorded on the job when the run starts, so it stays the same for every
+  request of that run, including a top-up days later, even if the teacher changes the
+  switches in the meantime.
+- It goes out only with a bundle id, behind the same capability gate. Nothing changes until
+  the service advertises `capabilities.bundleId`.
+
 ## [v3.0.6] - 2026-09-21
 
 ### One price, however the scenario was made
