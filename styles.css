@@ -6796,3 +6796,51 @@ button.aibs-avatar:focus-visible {
     font-size: var(--aibs-text-body);
     margin: 0 0 18px;
 }
+
+/* --------------------------------------------------- readable under somebody else's theme
+
+   A theme that paints every button and link on hover - which is what themes do - leaves any
+   control that does not paint its own the theme's colour on the plugin's background, or the
+   plugin's colour on the theme's. Reported as dark text on a dark card while the pointer
+   was on it: invisible to whoever built it, because a screenshot has no pointer.
+
+   Every interactive surface the plugin draws states its own background AND its own colour in
+   every state it can be in. A single class beats a theme's element selectors, so none of
+   this needs !important; it only needs to be said out loud. Measured by preview/hover.mjs,
+   which hovers and focuses each one under a theme built to fight it. */
+.aibs-choicecard,
+.aibs-choicecard:hover,
+.aibs-choicecard:focus,
+.aibs-choicecard:focus-visible,
+.aibs-choicecard:active {
+    background: var(--aibs-surface);
+    color: var(--aibs-text);
+}
+
+.aibs-choicecard[aria-pressed="true"],
+.aibs-choicecard[aria-pressed="true"]:hover,
+.aibs-choicecard[aria-pressed="true"]:focus,
+.aibs-choicecard[aria-pressed="true"]:active {
+    background: var(--aibs-accent-soft);
+    color: var(--aibs-text);
+}
+
+.aibs-reading-link,
+.aibs-reading-link:hover,
+.aibs-reading-link:focus,
+.aibs-reading-link:focus-visible,
+.aibs-reading-link:active {
+    background: transparent;
+    color: var(--aibs-accent);
+}
+
+/* A summary is a button as far as a theme is concerned, and it painted itself dark under the
+   pointer while the words stayed dark. */
+.aibs-disclosure-summary,
+.aibs-disclosure-summary:hover,
+.aibs-disclosure-summary:focus,
+.aibs-disclosure-summary:focus-visible,
+.aibs-disclosure-summary:active {
+    background: transparent;
+    color: var(--aibs-text);
+}

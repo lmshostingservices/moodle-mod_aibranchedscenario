@@ -2,6 +2,27 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v3.2.1] - 2026-09-28
+
+### Readable with the pointer on it
+
+Reported on a live site: hovering one of the two content cards turned it dark while its text
+stayed dark, so the card became unreadable for as long as the pointer was there. The cause
+was not in the card - it was in what the card did NOT say. A Moodle theme paints every
+button, link and summary on hover; anything that does not state its own colours takes the
+theme's background under the plugin's text.
+
+Three surfaces were exposed that way: the two content cards, the three links on the start
+screen, and every disclosure summary. Each now states its own background and its own colour
+at rest, on hover, on focus and while pressed. No `!important` was needed - a class beats a
+theme's element selectors; it only had to be said.
+
+A screenshot has no pointer, so this could not be caught by looking. A new sweep hovers and
+focuses every button, link, summary, option and card on every screen, computes the contrast
+between the text and the background it actually sits on, and does it twice: as the plugin
+ships, and under a theme written to fight it. 2,178 readings, all above the 4.5:1 the text
+sizes require.
+
 ## [v3.2.0] - 2026-09-28
 
 ### A start screen, and steps that ask one thing at a time

@@ -1238,5 +1238,10 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026092800, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026092801) {
+        // Version 3.2.1. No schema change: every control states its own hover colours.
+        upgrade_mod_savepoint(true, 2026092801, 'aibranchedscenario');
+    }
+
     return true;
 }
