@@ -1812,6 +1812,36 @@ class validator {
         };
         $longest = isset($nodes[$scenario['startnode']]) ? $depth($scenario['startnode'], []) : 0;
 
+        // AND THE SHORTEST, WHICH NOTHING EVER MEASURED.
+        //
+        // The shape rule is "exactly five decisions", and only the longest path was checked
+        // - so a branch that rejoined a stage early gave the learner who took it four
+        // decisions and a debrief with a slide missing, while the scenario passed. With
+        // branches now written by the service rather than by hand, a short route is the
+        // fault most likely to arrive, and the learner who takes it is the only person who
+        // would ever find out.
+        $shortestdepth = function (string $id, array $seen) use (&$shortestdepth, $nodes, $scenario) {
+            if (isset($seen[$id]) || !isset($nodes[$id]) || count($seen) > schema::MAX_NODES) {
+                return 0;
+            }
+            $seen[$id] = true;
+            $best = null;
+            foreach ($nodes[$id]['choices'] as $choice) {
+                $target = $choice['next'];
+                if ($target === schema::auto_target()) {
+                    $target = attempt_manager::next_stage_node($scenario['nodes'], $nodes[$id]);
+                }
+                if ($target === '' || !isset($nodes[$target])) {
+                    continue;
+                }
+                $reached = $shortestdepth($target, $seen);
+                $best = $best === null ? $reached : min($best, $reached);
+            }
+            return ($best ?? 0) + ($nodes[$id]['type'] === 'decision' ? 1 : 0);
+        };
+        $shortest = isset($nodes[$scenario['startnode']])
+            ? $shortestdepth($scenario['startnode'], []) : 0;
+
         $isoutcomenode = function ($n) {
             return $n['type'] === 'outcome';
         };
@@ -1821,6 +1851,7 @@ class validator {
             'nodecount'      => count($nodes),
             'decisioncount'  => $decisions,
             'longestpath'    => $longest,
+            'shortestpath'   => $shortest,
             'outcomecount'   => count($outcomenodes),
             'maxskillscore'  => $longest * count(schema::skills()) * schema::MAX_SKILL_DELTA,
         ];

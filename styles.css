@@ -4926,9 +4926,11 @@ button.aibs-avatar {
 .aibs-finish-mark {
     color: var(--aibs-positive);
     display: block;
-    height: 96px;
-    margin-bottom: 18px;
-    width: 96px;
+    /* Smaller than it was. At 96px it was the largest thing on the screen, competing with
+       the result it is supposed to introduce. */
+    height: 64px;
+    margin-bottom: 14px;
+    width: 64px;
 }
 
 /* The closing card took the positive green whatever had happened - a green ring and a green
@@ -4946,29 +4948,91 @@ button.aibs-avatar {
     color: var(--aibs-negative);
 }
 
-/* "Scenario complete" is now the label above the verdict rather than the verdict itself:
-   a learner can see the scenario is complete, so the heading says how it went instead. */
+/* THE CLOSING SCREEN IS ONE RESULT, NOT FOUR COMPETING ONES.
+   It carried a grey uppercase eyebrow, a coloured pill, three figures in bordered tiles,
+   dark uppercase labels and a grey sentence, each in its own treatment, so a learner's eye
+   had nowhere to land. The figure is the result and leads at display size in the band the
+   run earned; the label under it is the only uppercase on the screen; the verdict is the
+   one line of real text; the ending and the count read as one quiet line below. Three
+   colours in total - the band, the text, the muted - and no boxes. */
+.aibs-finish-score {
+    line-height: 1;
+    margin: 0;
+}
+
+.aibs-finish-score .aibs-endstat-score {
+    color: var(--aibs-accent);
+    font-size: clamp(3rem, 6vw, 4.6rem);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--aibs-weight-figure);
+    letter-spacing: -.02em;
+    line-height: 1;
+}
+
+/* The unit is not the number. At the figure's own size the per-cent sign took as much
+   room as a digit and the result read as a four-character code. */
+.aibs-finish-unit {
+    font-size: .42em;
+    font-weight: var(--aibs-weight-strong);
+    margin-inline-start: .08em;
+    vertical-align: .55em;
+}
+
 .aibs-finish-eyebrow {
     color: var(--aibs-muted);
     font-size: var(--aibs-text-micro);
     font-weight: var(--aibs-weight-strong);
     letter-spacing: .08em;
-    margin: 0 0 2px;
+    margin: 6px 0 12px;
     text-transform: uppercase;
+}
+
+/* The ending and how many decisions it took: context for the figure above, in one line and
+   one treatment, in sentence case. They were two bordered tiles standing level with the
+   result, which said all three were the same kind of thing. */
+.aibs-finish-meta {
+    align-items: baseline;
+    color: var(--aibs-muted);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: var(--aibs-text-small);
+    gap: 8px;
+    justify-content: center;
+    margin: 10px 0 0;
+}
+
+.aibs-finish-meta .aibs-endstat-outcome {
+    color: var(--aibs-muted);
+    font-size: inherit;
+    font-weight: var(--aibs-weight-label);
+}
+
+.aibs-finish-sep {
+    color: var(--aibs-border);
+}
+
+.aibs-finish-count {
+    font-variant-numeric: tabular-nums;
 }
 
 /* The result the learner is waiting for was accent blue on every run, beside a grey pill
    that named the ending in sentence case. The pill bands from the section's outcome class
    the same way the outcome page's does, and the figure bands from the score. */
-.aibs-deckend.aibs-tone-good .aibs-endstat-value.aibs-endstat-score {
+.aibs-deckend.aibs-tone-good .aibs-endstat-value.aibs-endstat-score,
+.aibs-deckend.aibs-tone-good .aibs-finish-score .aibs-endstat-score,
+.aibs-deckend.aibs-outcome-strong .aibs-finish-score .aibs-endstat-score {
     color: var(--aibs-positive);
 }
 
-.aibs-deckend.aibs-tone-warn .aibs-endstat-value.aibs-endstat-score {
+.aibs-deckend.aibs-tone-warn .aibs-endstat-value.aibs-endstat-score,
+.aibs-deckend.aibs-tone-warn .aibs-finish-score .aibs-endstat-score,
+.aibs-deckend.aibs-outcome-mixed .aibs-finish-score .aibs-endstat-score {
     color: var(--aibs-warn);
 }
 
-.aibs-deckend.aibs-tone-bad .aibs-endstat-value.aibs-endstat-score {
+.aibs-deckend.aibs-tone-bad .aibs-endstat-value.aibs-endstat-score,
+.aibs-deckend.aibs-tone-bad .aibs-finish-score .aibs-endstat-score,
+.aibs-deckend.aibs-outcome-highrisk .aibs-finish-score .aibs-endstat-score {
     color: var(--aibs-negative);
 }
 
@@ -5682,6 +5746,7 @@ button.aibs-avatar:focus-visible {
    width of the frame does not run it edge to edge. */
 .aibs-deckend-body > .aibs-prose {
     font-size: var(--aibs-text-body);
+    margin-top: 18px;
     margin-inline: auto;
     max-width: 56ch;
 }
@@ -6561,4 +6626,173 @@ button.aibs-avatar:focus-visible {
     .aibs-player:fullscreen .aibs-slide:not(.aibs-noscene) .aibs-node-body {
         padding-top: 0;
     }
+}
+
+/* ------------------------------------------------------------------- the authoring wizard
+
+   Three controls that had no visual job and therefore no visible meaning: the one field
+   generation cannot do without, which carried no marker; the third and fourth people, four
+   identical empty slots reading as four people to invent; and the opening readings, three
+   bare sliders with no heading, no explanation and no numbers. */
+.aibs-required {
+    background: var(--aibs-accent-soft);
+    border-radius: 999px;
+    color: var(--aibs-accent);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-strong);
+    letter-spacing: .04em;
+    margin-inline-start: 8px;
+    padding: 2px 8px;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+.aibs-characters-intro {
+    margin-bottom: 14px;
+}
+
+/* One row per reading: the name, the slider, and the number it is actually set to. */
+.aibs-readings {
+    display: grid;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.aibs-reading-slider {
+    align-items: center;
+    column-gap: 14px;
+    display: grid;
+    grid-template-columns: minmax(7em, auto) minmax(0, 1fr) 3.5em;
+}
+
+.aibs-reading-slider > .aibs-field-label {
+    margin: 0;
+}
+
+.aibs-reading-value {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-body);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--aibs-weight-figure);
+    text-align: end;
+}
+
+@media (max-width: 600px) {
+    .aibs-reading-slider {
+        grid-template-columns: minmax(0, 1fr) 3.5em;
+    }
+
+    .aibs-reading-slider > .aibs-field-label {
+        grid-column: 1 / -1;
+    }
+}
+
+/* The pitch, folded away: a first-time teacher opens it once, everyone else walks past it.
+   The price rides in the summary, because that is what somebody opening it is looking for. */
+.aibs-intro {
+    background: var(--aibs-surface-alt);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius-sm);
+    margin-bottom: 20px;
+    padding: 12px 16px;
+}
+
+.aibs-intro > .aibs-disclosure-summary {
+    align-items: baseline;
+    display: flex;
+    gap: 10px;
+}
+
+.aibs-intro-price {
+    margin-inline-start: auto;
+}
+
+.aibs-intro-price {
+    color: var(--aibs-accent);
+    font-weight: var(--aibs-weight-figure);
+}
+
+/* Beside the undo control, not inside a tooltip nobody on a phone can open. */
+.aibs-restorehint {
+    display: block;
+    flex-basis: 100%;
+}
+
+/* ------------------------------------------------------------------ the start screen
+
+   What a teacher needs before they begin is one number and a way in. The steps themselves
+   say how it works, so the page of explanation that used to stand here is gone. */
+.aibs-start .aibs-pricing {
+    margin-bottom: 20px;
+}
+
+.aibs-start-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.aibs-btn-lg {
+    font-size: var(--aibs-text-body);
+    padding: 12px 26px;
+}
+
+/* Two ways in, as two cards: one question answered by looking rather than four controls
+   read in order to find out which one is yours. */
+.aibs-choicecards {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    margin-bottom: 22px;
+}
+
+.aibs-choicecard {
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius-sm);
+    cursor: pointer;
+    display: grid;
+    gap: 6px;
+    padding: 16px 18px;
+    text-align: start;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.aibs-choicecard:hover {
+    box-shadow: var(--aibs-shadow-sm);
+    transform: translateY(-1px);
+}
+
+.aibs-choicecard[aria-pressed="true"] {
+    background: var(--aibs-accent-soft);
+    border-color: var(--aibs-accent);
+}
+
+.aibs-choicecard-title {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-body);
+    font-weight: var(--aibs-weight-strong);
+}
+
+.aibs-choicecard[aria-pressed="true"] .aibs-choicecard-title {
+    color: var(--aibs-accent);
+}
+
+.aibs-choicecard-body {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-small);
+    line-height: var(--aibs-leading-snug);
+}
+
+.aibs-routebody {
+    display: grid;
+    gap: 10px;
+    justify-items: start;
+}
+
+.aibs-start-lead {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-body);
+    margin: 0 0 18px;
 }

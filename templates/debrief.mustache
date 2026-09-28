@@ -248,25 +248,34 @@
                         {{/endbad}}
                     </svg>
                 </span>
-                <p class="aibs-finish-eyebrow">{{#str}} attemptfinished, mod_aibranchedscenario {{/str}}</p>
-                <h3 class="aibs-h3">{{endverdict}}</h3>
+                {{! ONE RESULT, ONE COLOUR, ONE HIERARCHY.
+                    This screen carried four different treatments in a column - a grey
+                    uppercase eyebrow, a coloured pill, three blue figures in bordered
+                    tiles, dark uppercase labels and a grey sentence - so nothing led and
+                    everything competed. Three boxed tiles also gave a word, a percentage
+                    and a count the same weight, when only one of them is the result.
 
-                <div class="aibs-endstats">
+                    The result leads: the figure, what it is, then the verdict in words.
+                    The ending and the number of decisions read underneath as one quiet
+                    line, because they are context for the result rather than results of
+                    their own. Colour is spent once, on the mark and the figure, and both
+                    take the band the run earned. }}
+                <p class="aibs-finish-score">
+                    <span class="aibs-endstat-score" data-region="endscore">{{score}}<span
+                        class="aibs-finish-unit">%</span></span>
+                </p>
+                <p class="aibs-finish-eyebrow">{{#str}} endstat:quality, mod_aibranchedscenario {{/str}}</p>
+                {{#endverdict}}<h3 class="aibs-h3">{{endverdict}}</h3>{{/endverdict}}
+
+                <p class="aibs-finish-meta">
                     {{#outcomelabel}}
-                        <div class="aibs-endstat">
-                            <span class="aibs-endstat-value aibs-endstat-outcome aibs-outcome-badge">{{outcomelabel}}</span>
-                            <span class="aibs-endstat-label">{{#str}} endstat:outcome, mod_aibranchedscenario {{/str}}</span>
-                        </div>
+                        <span class="aibs-sr-only">{{#str}} endstat:outcome, mod_aibranchedscenario {{/str}}: </span>
+                        <span class="aibs-endstat-outcome">{{outcomelabel}}</span>
+                        <span class="aibs-finish-sep" aria-hidden="true">&middot;</span>
                     {{/outcomelabel}}
-                    <div class="aibs-endstat">
-                        <span class="aibs-endstat-value aibs-endstat-score" data-region="endscore">{{score}}%</span>
-                        <span class="aibs-endstat-label">{{#str}} endstat:quality, mod_aibranchedscenario {{/str}}</span>
-                    </div>
-                    <div class="aibs-endstat">
-                        <span class="aibs-endstat-value">{{decisions}}</span>
-                        <span class="aibs-endstat-label">{{#str}} endstat:decisions, mod_aibranchedscenario {{/str}}</span>
-                    </div>
-                </div>
+                    <span class="aibs-sr-only">{{#str}} endstat:decisions, mod_aibranchedscenario {{/str}}: </span>
+                    <span class="aibs-finish-count">{{#str}} endstat:decisionscount, mod_aibranchedscenario, {{decisions}} {{/str}}</span>
+                </p>
 
                 {{! WHAT THEY DID, NAMED. Not points and not "answered five questions" -
                     an achievement that counts actions rewards persistence, which the

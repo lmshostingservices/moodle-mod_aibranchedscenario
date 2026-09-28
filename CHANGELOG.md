@@ -2,6 +2,123 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v3.2.0] - 2026-09-28
+
+### A start screen, and steps that ask one thing at a time
+
+Too much to click, and too much to read before anything could be clicked.
+
+- **The way in is a start screen.** What it costs, three links, and **Build scenario**. The
+  price table, six benefit cards and a six-item how-to are gone: the steps say how it works,
+  which is what steps are for. A teacher returning to a draft skips it.
+- **The first step asks one question, with two cards.** *I have the content* opens the paste
+  box; *Write it with ChatGPT, Gemini or Grok* opens the prompt to copy and the box to paste
+  the answer back. It used to be a box, a button, a disclosure and a second box, all at once,
+  and a teacher had to read all four to find out which was theirs.
+- **The place list follows the industry.** Pick Hospitality and the settings are kitchen,
+  front of house, caf&eacute;, bar, hotel reception, function room and training kitchen -
+  not a list of twelve that opens with "Mine site". 64 settings across 19 sectors, filtered
+  in the browser. "Other" still offers everything, and a saved choice is never hidden.
+- **Fewer controls.** The two "Suggest" buttons - which rewrote three answers a teacher had
+  just given - are gone. So are the three example buttons under the extra direction box. The
+  extra image direction and the opening readings are behind one "Fine tuning" disclosure.
+- **The steps are named for what they decide**: Your content &middot; Where it happens &middot;
+  The problem &middot; The people &middot; How it reads &middot; Build and publish. The title
+  and audience moved to "How it reads", where they belong.
+
+Measured: a new sweep runs the shipped filter against the real markup for six sectors -
+every sector gets its own places, never another sector's, always with "Other", never more
+than nine.
+
+## [v3.1.1] - 2026-09-26
+
+### The route nobody measured
+
+The shape rule is five decisions, and only the **longest** route was ever measured. A branch
+that rejoined a stage too late gave the learner who took it four decisions, a short scenario
+and a debrief with a slide missing - and nothing anywhere reported it. With the branches now
+written by the service rather than by hand, that is the fault most likely to arrive. Every
+route is measured now, and the review panel names a short one.
+
+### What the service says about what it sent
+
+LMS Labs now report how many decisions branch and whether they had to repair the graph to get
+there. Only the scenario itself was read out of the response, so both figures would have been
+discarded. They are recorded with the scenario and written to the generation log, which is
+what lets a service fault be told apart from a mapping one when the plugin's own count and
+the service's disagree.
+
+## [v3.1.0] - 2026-09-25
+
+### The authoring wizard, rebuilt around what a teacher is actually doing
+
+Seven steps, the first of which asked for nothing: a price table, six benefit cards, a
+six-item how-to and three links, standing between a teacher and the one box the plugin
+cannot work without. Then a step called "Source" that also held the title, the audience and
+the subject area, with the two buttons that overwrite those fields rendered above them.
+
+Six steps now, each doing one job: **What it teaches**, **The situation**, **The problem**,
+**The people**, **Look and feel**, **Build and publish**.
+
+- **The pitch is folded away.** What it costs and how it works is one disclosure at the top
+  of step one, with the price in its summary. Open it once; walk past it every time after.
+- **The source box is the first thing on the first step**, and it is marked Required - it is
+  the only input generation genuinely needs, and a teacher used to discover that by pressing
+  Generate, confirming the price and being refused.
+- **Title, audience and subject area moved** to "The situation", where they belong and where
+  nothing overwrites them behind the teacher's back.
+- **Five hints written for fields that had none**: title, audience, central problem, the
+  learner's role, and the extra image direction.
+- **Two people, not four.** Four identical empty slots read as four people to invent; two is
+  what the format carries. The third and fourth are behind "Add another person".
+- **The three opening sliders** had no heading, no explanation and no numbers. They are now
+  "Where the room starts", with what they do and a live readout on each.
+- **The wizard stopped contradicting itself**: it advertised "three to eight decision points"
+  and told teachers to choose how many, on a screen that says the number is five; it said
+  "six steps" above a rail numbered seven; the word counter called 210 words "about right"
+  under a hint asking for 500 to 800.
+- **Publishing now refreshes the page**, so "Preview as a learner" and the published revision
+  number appear when the dialog says the scenario is live.
+- Two hints that existed but were rendered nowhere - what pasting a scenario costs, and what
+  "Undo the last generation" undoes - are on the screen.
+
+## [v3.0.9] - 2026-09-25
+
+### The closing screen, redesigned
+
+"Scenario complete" ran four competing treatments down one column - a grey uppercase
+eyebrow, a coloured pill, three figures in bordered tiles, dark uppercase labels and a grey
+sentence - and gave a word, a percentage and a count equal weight in equal boxes. Nothing
+led.
+
+One result leads now. The score is the only thing at display size, in the band the run
+earned; under it, in the screen's one uppercase label, what that figure is; then the verdict
+in words. The ending and the number of decisions read as one quiet line beneath, in sentence
+case, because they are context for the result rather than results of their own. The three
+bordered tiles are gone, the mark is smaller than the figure it introduces, and colour is
+spent once. Screen readers still get the ending and the count as labelled values.
+
+### The bar across the middle of the slide, and the cut-off fullscreen
+
+One cause, two faults. The player parks its own bar below whatever the theme has pinned
+across the top of the page, and measures that furniture in the browser because no theme
+publishes its height. The measurement probed at 15% of the window - which on a site with a
+**course index drawer** is inside the drawer. A drawer is fixed and full height, so its
+bottom is the foot of the screen, and the measurement came back as half the viewport.
+
+- On the page, the bar parked 473px down a 945px window: across the middle of the slide.
+- In fullscreen the same offset pushed everything down, so the bottom of the slide was off
+  the screen.
+
+Three corrections: the walk now probes **across the player** rather than across the window;
+anything taller than half the screen is a drawer or a dialog, not a header, and is ignored;
+and in fullscreen the offset is zero, because there the player is the screen.
+
+Measured, not eyeballed: a new sweep runs the shipped `stickyOffset()` against pages built
+like the themes that broke it - site bar, course banner, index drawer, back-to-top button,
+and fullscreen. Six layouts, all correct; the previous code fails three of them. It is part
+of the standard check now.
+
 ## [v3.0.8] - 2026-09-21
 
 ### Package charging cannot charge a run twice

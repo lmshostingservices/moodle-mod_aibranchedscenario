@@ -75,7 +75,7 @@
         "nodecount": 0,
         "decisions": 5,
         "industries": [{"key": "training", "label": "Training and assessment", "selected": true}],
-        "settings": [{"key": "trainingroom", "label": "Training room", "selected": true}],
+        "settings": [{"key": "trainingroom", "label": "Training room", "selected": true, "industrykeys": "training", "hide": false}],
         "atmospheres": [{"key": "tension", "label": "Tension building", "selected": true}],
         "whyhard": [{"key": "timepressure", "label": "Time pressure", "selected": false}],
         "stakes": [{"key": "teamtrust", "label": "Team trust", "selected": false}],
@@ -101,21 +101,64 @@
             {{/cannotgenerate}}
         {{/aiavailable}}
 
+        {{! THE START SCREEN.
+            A teacher opening this used to meet a page of explanation before a single
+            question. What somebody needs before they begin is one number - what it costs -
+            and a way in. The steps themselves say how it works, which is what steps are for. }}
+        <section class="aibs-card aibs-start" data-region="start">
+            <h3 class="aibs-h3">{{#str}} start:heading, mod_aibranchedscenario {{/str}}</h3>
+            <p class="aibs-start-lead">{{#str}} start:lead, mod_aibranchedscenario {{/str}}</p>
+
+            <div class="aibs-pricing" data-region="pricing">
+                <div class="aibs-pricing-head">
+                    <h4 class="aibs-h4">{{#str}} pricing:heading, mod_aibranchedscenario {{/str}}</h4>
+                    <span class="aibs-pricing-now">{{pricing.amount}}</span>
+                </div>
+                <ul class="aibs-pricing-list">
+                    {{#pricing.rows}}
+                        <li class="aibs-pricing-row {{#current}}aibs-is-current{{/current}}">
+                            <span class="aibs-pricing-label">{{label}}</span>
+                            <span class="aibs-pricing-amount">{{amount}}</span>
+                        </li>
+                    {{/pricing.rows}}
+                </ul>
+                <p class="aibs-fineprint">{{#str}} start:costnote, mod_aibranchedscenario {{/str}}</p>
+            </div>
+
+            <ul class="aibs-reading">
+                {{#reading}}
+                    <li class="aibs-reading-item">
+                        <a class="aibs-reading-link" href="{{url}}" target="_blank" rel="noopener noreferrer">
+                            {{title}}
+                            <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                                <path d="M8 4H4.6v11.4H16V12M11.4 4H16v4.6M16 4l-6.4 6.4" fill="none"
+                                      stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                                      stroke-linejoin="round"/>
+                            </svg>
+                        </a>
+                        <span class="aibs-reading-body">{{body}}</span>
+                    </li>
+                {{/reading}}
+            </ul>
+
+            <div class="aibs-start-actions">
+                <button type="button" class="aibs-btn aibs-btn-primary aibs-btn-lg" data-action="begin">
+                    {{#str}} start:build, mod_aibranchedscenario {{/str}}</button>
+                {{#hasdraft}}
+                    <a class="aibs-btn aibs-btn-secondary" href="{{reviewurl}}">
+                        {{#str}} reviewdraft, mod_aibranchedscenario {{/str}}</a>
+                {{/hasdraft}}
+            </div>
+        </section>
+
+        <div class="aibs-wizard-body" data-region="wizardbody" hidden>
         <ol class="aibs-wizard-steps" data-region="steps">
-            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="1"
-                    aria-current="step">1. {{#str}} step:how, mod_aibranchedscenario {{/str}}</button></li>
-            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="2">2.
-                    {{#str}} step:source, mod_aibranchedscenario {{/str}}</button></li>
-            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="3">3.
-                    {{#str}} step:scene, mod_aibranchedscenario {{/str}}</button></li>
-            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="4">4.
-                    {{#str}} step:challenge, mod_aibranchedscenario {{/str}}</button></li>
-            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="5">5.
-                    {{#str}} step:people, mod_aibranchedscenario {{/str}}</button></li>
-            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="6">6.
-                    {{#str}} step:design, mod_aibranchedscenario {{/str}}</button></li>
-            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="7">7.
-                    {{#str}} step:build, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="1" aria-current="step">1. {{#str}} step:content, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="2">2. {{#str}} step:scene, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="3">3. {{#str}} step:challenge, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="4">4. {{#str}} step:people, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="5">5. {{#str}} step:design, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="6">6. {{#str}} step:build, mod_aibranchedscenario {{/str}}</button></li>
         </ol>
 
         <div class="aibs-error" data-region="error" role="alert" hidden></div>
@@ -143,136 +186,39 @@
         </div>
 
         <section class="aibs-card" data-region="step" data-step="1">
-            <h3 class="aibs-h3">{{#str}} step:how, mod_aibranchedscenario {{/str}}</h3>
-            <p class="aibs-step-lead">{{#str}} step:howlead, mod_aibranchedscenario {{/str}}</p>
-
-            <div class="aibs-pricing" data-region="pricing">
-                <div class="aibs-pricing-head">
-                    <h4 class="aibs-h4">{{#str}} pricing:heading, mod_aibranchedscenario {{/str}}</h4>
-                    <span class="aibs-pricing-now">{{pricing.amount}}</span>
-                </div>
-                <p class="aibs-pricing-lead">{{#str}} pricing:lead, mod_aibranchedscenario {{/str}}</p>
-                <ul class="aibs-pricing-list">
-                    {{#pricing.rows}}
-                        <li class="aibs-pricing-row {{#current}}aibs-is-current{{/current}}">
-                            <span class="aibs-pricing-label">{{label}}</span>
-                            <span class="aibs-pricing-amount">{{amount}}</span>
-                        </li>
-                    {{/pricing.rows}}
-                </ul>
-                <p class="aibs-fineprint">{{#str}} pricing:note, mod_aibranchedscenario {{/str}}</p>
+            <h3 class="aibs-h3">{{#str}} step:content, mod_aibranchedscenario {{/str}}</h3>
+            <p class="aibs-step-lead">{{#str}} step:contentlead, mod_aibranchedscenario {{/str}}</p>
+            {{! TWO WAYS IN, AS TWO CARDS.
+                A paste box, an autofill button, a disclosure holding a prompt to copy and a
+                second box to paste the answer back: four controls for one question, and a
+                teacher had to read all four to find out which was theirs. }}
+            <div class="aibs-choicecards" role="group" aria-labelledby="aibs-route-label">
+                <span class="aibs-sr-only" id="aibs-route-label">
+                    {{#str}} route:question, mod_aibranchedscenario {{/str}}</span>
+                <button type="button" class="aibs-choicecard" data-action="route" data-route="own"
+                        aria-pressed="true">
+                    <span class="aibs-choicecard-title">
+                        {{#str}} route:own, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-choicecard-body">
+                        {{#str}} route:ownbody, mod_aibranchedscenario {{/str}}</span>
+                </button>
+                <button type="button" class="aibs-choicecard" data-action="route" data-route="assistant"
+                        aria-pressed="false">
+                    <span class="aibs-choicecard-title">
+                        {{#str}} route:assistant, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-choicecard-body">
+                        {{#str}} route:assistantbody, mod_aibranchedscenario {{/str}}</span>
+                </button>
             </div>
 
-            <h4 class="aibs-h4 aibs-benefits-title">
-                {{#str}} benefits:heading, mod_aibranchedscenario {{/str}}</h4>
-            <p class="aibs-pricing-lead">{{#str}} benefits:lead, mod_aibranchedscenario {{/str}}</p>
-            <ul class="aibs-benefits">
-                <li class="aibs-benefit">
-                    <span class="aibs-benefit-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" focusable="false"><path d="M7 4v6a4 4 0 0 0 4 4h6M17 4l3 3-3 3M17 10l3 4-3 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </span>
-                    <span class="aibs-benefit-title">
-                        {{#str}} benefit:decide, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-benefit-body">
-                        {{#str}} benefit:decidebody, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-benefit-proof">
-                        {{#str}} benefit:decideproof, mod_aibranchedscenario {{/str}}</span>
-                </li>
-                <li class="aibs-benefit">
-                    <span class="aibs-benefit-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" focusable="false"><path d="M4 19h16M6 15l4-5 3.5 3L19 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </span>
-                    <span class="aibs-benefit-title">
-                        {{#str}} benefit:consequence, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-benefit-body">
-                        {{#str}} benefit:consequencebody, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-benefit-proof">
-                        {{#str}} benefit:consequenceproof, mod_aibranchedscenario {{/str}}</span>
-                </li>
-                <li class="aibs-benefit">
-                    <span class="aibs-benefit-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" focusable="false"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-                    </span>
-                    <span class="aibs-benefit-title">
-                        {{#str}} benefit:voices, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-benefit-body">
-                        {{#str}} benefit:voicesbody, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-benefit-proof">
-                        {{#str}} benefit:voicesproof, mod_aibranchedscenario {{/str}}</span>
-                </li>
-                <li class="aibs-benefit">
-                    <span class="aibs-benefit-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" focusable="false"><path d="M12 3 5 6v5.5c0 4.2 2.9 7.6 7 9.5 4.1-1.9 7-5.3 7-9.5V6Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
-                    </span>
-                    <span class="aibs-benefit-title">
-                        {{#str}} benefit:safe, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-benefit-body">
-                        {{#str}} benefit:safebody, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-benefit-proof">
-                        {{#str}} benefit:safeproof, mod_aibranchedscenario {{/str}}</span>
-                </li>
-                <li class="aibs-benefit">
-                    <span class="aibs-benefit-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" focusable="false"><path d="M9 4h6v3H9ZM7 5.5H5.5A1.5 1.5 0 0 0 4 7v12a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19V7a1.5 1.5 0 0 0-1.5-1.5H17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m8.6 13.4 2.2 2.2 4.6-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </span>
-                    <span class="aibs-benefit-title">
-                        {{#str}} benefit:evidence, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-benefit-body">
-                        {{#str}} benefit:evidencebody, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-benefit-proof">
-                        {{#str}} benefit:evidenceproof, mod_aibranchedscenario {{/str}}</span>
-                </li>
-                <li class="aibs-benefit">
-                    <span class="aibs-benefit-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.4V12l3.2 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </span>
-                    <span class="aibs-benefit-title">
-                        {{#str}} benefit:time, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-benefit-body">
-                        {{#str}} benefit:timebody, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-benefit-proof">
-                        {{#str}} benefit:timeproof, mod_aibranchedscenario {{/str}}</span>
-                </li>
-            </ul>
-
-            <h4 class="aibs-h4 aibs-benefits-title">
-                {{#str}} howto:heading, mod_aibranchedscenario {{/str}}</h4>
-            <p class="aibs-pricing-lead">{{#str}} howto:lead, mod_aibranchedscenario {{/str}}</p>
-            <ol class="aibs-howto">
-                {{#howto}}
-                    <li class="aibs-howto-step">
-                        <span class="aibs-howto-number" aria-hidden="true">{{number}}</span>
-                        <span class="aibs-howto-title">{{title}}</span>
-                        <span class="aibs-howto-body">{{body}}</span>
-                    </li>
-                {{/howto}}
-            </ol>
-
-            <ul class="aibs-reading">
-                {{#reading}}
-                    <li class="aibs-reading-item">
-                        <a class="aibs-reading-link" href="{{url}}" target="_blank" rel="noopener noreferrer">
-                            {{title}}
-                            <svg class="aibs-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-                                <path d="M8 4H4.6v11.4H16V12M11.4 4H16v4.6M16 4l-6.4 6.4" fill="none"
-                                      stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
-                                      stroke-linejoin="round"/>
-                            </svg>
-                        </a>
-                        <span class="aibs-reading-body">{{body}}</span>
-                    </li>
-                {{/reading}}
-            </ul>
-        </section>
-
-
-        <section class="aibs-card" data-region="step" data-step="2" hidden>
-            <h3 class="aibs-h3">{{#str}} step:source, mod_aibranchedscenario {{/str}}</h3>
-            <p class="aibs-step-lead">{{#str}} step:sourcelead, mod_aibranchedscenario {{/str}}</p>
-
+            <div class="aibs-route" data-route-panel="own">
             <div class="aibs-field">
                 <label class="aibs-field-label" for="aibs-sourcecontent">
-                    {{#str}} field:sourcecontent, mod_aibranchedscenario {{/str}}</label>
+                    {{#str}} field:sourcecontent, mod_aibranchedscenario {{/str}}
+                    {{! The one input generation genuinely needs. It carried no marker, so a
+                        teacher found out by pressing Generate, confirming the price, and
+                        being refused. }}
+                    <span class="aibs-required">{{#str}} field:required, mod_aibranchedscenario {{/str}}</span></label>
                 <span class="aibs-field-hint" id="aibs-sourcecontent-hint">
                     {{#str}} field:sourcecontenthint, mod_aibranchedscenario, {{maxsourcechars}} {{/str}}</span>
                 <textarea class="aibs-textarea" id="aibs-sourcecontent" data-field="sourcecontent" rows="10"
@@ -312,31 +258,7 @@
                     {{#str}} field:brief, mod_aibranchedscenario {{/str}}</label>
                 <span class="aibs-field-hint">{{#str}} field:briefhint, mod_aibranchedscenario {{/str}}</span>
                 <textarea class="aibs-textarea" id="aibs-brief" data-field="brief" rows="3">{{source.brief}}</textarea>
-                {{! Three worked examples rather than a description. Every teacher asked
-                    what belongs here answers with one of these three shapes, and none of
-                    them are obvious from the phrase "extra direction". Each is a button:
-                    reading an example and retyping it is a step nobody should have to
-                    take. }}
-                <details class="aibs-disclosure">
-                    <summary class="aibs-disclosure-summary">
-                        {{#str}} briefexample, mod_aibranchedscenario {{/str}}</summary>
-                    <div class="aibs-disclosure-body">
-                        <ul class="aibs-example-list">
-                            {{#briefexamples}}
-                                <li class="aibs-example">
-                                    <span class="aibs-example-label">{{label}}</span>
-                                    <q class="aibs-example-text">{{text}}</q>
-                                    <button type="button" class="aibs-btn aibs-btn-secondary"
-                                            data-action="usebrief" data-text="{{text}}">
-                                        {{#str}} useexample, mod_aibranchedscenario {{/str}}</button>
-                                </li>
-                            {{/briefexamples}}
-                        </ul>
-                    </div>
-                </details>
             </div>
-
-            <p class="aibs-field-label">{{#str}} whatnext, mod_aibranchedscenario {{/str}}</p>
 
             {{#aiavailable}}
                 <button type="button" class="aibs-btn aibs-btn-primary" data-action="populate">
@@ -345,10 +267,10 @@
                 <p class="aibs-field-hint">{{#str}} autofillhint, mod_aibranchedscenario {{/str}}</p>
             {{/aiavailable}}
 
-            <details class="aibs-disclosure">
-                <summary class="aibs-disclosure-summary">
-                    {{#str}} draftelsewhere, mod_aibranchedscenario {{/str}}</summary>
-                <div class="aibs-disclosure-body">
+            </div>
+
+            <div class="aibs-route" data-route-panel="assistant" hidden>
+                <div class="aibs-routebody">
                     <p class="aibs-field-hint">{{#str}} draftelsewherehint, mod_aibranchedscenario {{/str}}</p>
                     <button type="button" class="aibs-btn aibs-btn-secondary" data-action="copyprompt">
                         {{#str}} copyprompt, mod_aibranchedscenario {{/str}}</button>
@@ -356,26 +278,21 @@
                     <pre class="aibs-promptsource" data-region="promptsource" hidden>{{importprompt}}</pre>
                     <label class="aibs-field-label" for="aibs-import">
                         {{#str}} field:importjsonpaste, mod_aibranchedscenario {{/str}}</label>
+                    {{! The one thing a teacher pasting a scenario needs to know about money,
+                        and it was written, defined, and rendered nowhere. }}
+                    <span class="aibs-field-hint">
+                        {{#str}} field:importjsonhint, mod_aibranchedscenario {{/str}}</span>
                     <textarea class="aibs-textarea" id="aibs-import" data-region="import" rows="6"></textarea>
                     <button type="button" class="aibs-btn aibs-btn-secondary" data-action="import">
                         {{#str}} importdefinition, mod_aibranchedscenario {{/str}}</button>
                 </div>
-            </details>
-
-            <div class="aibs-field">
-                <label class="aibs-field-label" for="aibs-title">
-                    {{#str}} field:title, mod_aibranchedscenario {{/str}}</label>
-                <input type="text" class="aibs-input" id="aibs-title" data-field="title"
-                    value="{{source.title}}" maxlength="255">
             </div>
 
-            <div class="aibs-field">
-                <label class="aibs-field-label" for="aibs-audience">
-                    {{#str}} field:audience, mod_aibranchedscenario {{/str}}</label>
-                <input type="text" class="aibs-input" id="aibs-audience" data-field="audience"
-                    value="{{source.audience}}" maxlength="255">
-            </div>
+        </section>
 
+        <section class="aibs-card" data-region="step" data-step="2" hidden>
+            <h3 class="aibs-h3">{{#str}} step:scene, mod_aibranchedscenario {{/str}}</h3>
+            <p class="aibs-step-lead">{{#str}} step:scenelead, mod_aibranchedscenario {{/str}}</p>
             <div class="aibs-field">
                 <span class="aibs-field-label" id="aibs-industry-label">
                     {{#str}} field:industry, mod_aibranchedscenario {{/str}}</span>
@@ -393,19 +310,18 @@
                         data-otherfor="industry" value="{{source.industryother}}" maxlength="120">
                 </div>
             </div>
-        </section>
-
-        <section class="aibs-card" data-region="step" data-step="3" hidden>
-            <h3 class="aibs-h3">{{#str}} step:scene, mod_aibranchedscenario {{/str}}</h3>
-            <p class="aibs-step-lead">{{#str}} step:scenelead, mod_aibranchedscenario {{/str}}</p>
 
             <div class="aibs-field">
                 <span class="aibs-field-label" id="aibs-setting-label">
                     {{#str}} field:setting, mod_aibranchedscenario {{/str}}</span>
                 <div class="aibs-optiongrid" role="group" aria-labelledby="aibs-setting-label"
                      data-group="setting" data-multiple="0" data-default="{{defaults.setting}}">
+                    {{! Filtered by the industry above: a hospitality teacher is shown a
+                        kitchen, a bar and a function room rather than a list that opens
+                        with "Mine site". }}
                     {{#settings}}
                         <button type="button" class="aibs-option" data-action="option" data-value="{{key}}"
+                            data-industries="{{industrykeys}}"{{#hide}} hidden{{/hide}}
                             aria-pressed="{{#selected}}true{{/selected}}{{^selected}}false{{/selected}}">{{label}}</button>
                     {{/settings}}
                 </div>
@@ -435,26 +351,19 @@
                 <span class="aibs-field-hint">{{#str}} field:openingsituationhint, mod_aibranchedscenario {{/str}}</span>
                 <textarea class="aibs-textarea" id="aibs-openingsituation" data-field="openingsituation"
                     rows="5">{{source.openingsituation}}</textarea>
-                {{#aiavailable}}
-                    <button type="button" class="aibs-btn aibs-btn-ghost" data-action="suggest"
-                        data-suggest="setting,atmosphere,openingsituation">{{#str}} suggest, mod_aibranchedscenario {{/str}}</button>
-                {{/aiavailable}}
             </div>
         </section>
 
-        <section class="aibs-card" data-region="step" data-step="4" hidden>
+        <section class="aibs-card" data-region="step" data-step="3" hidden>
             <h3 class="aibs-h3">{{#str}} step:challenge, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:challengelead, mod_aibranchedscenario {{/str}}</p>
 
             <div class="aibs-field">
                 <label class="aibs-field-label" for="aibs-centralproblem">
                     {{#str}} field:centralproblem, mod_aibranchedscenario {{/str}}</label>
+                <span class="aibs-field-hint">{{#str}} field:centralproblemhint, mod_aibranchedscenario {{/str}}</span>
                 <textarea class="aibs-textarea" id="aibs-centralproblem" data-field="centralproblem"
                     rows="4">{{source.centralproblem}}</textarea>
-                {{#aiavailable}}
-                    <button type="button" class="aibs-btn aibs-btn-ghost" data-action="suggest"
-                        data-suggest="centralproblem,whyhard,stakes">{{#str}} suggest, mod_aibranchedscenario {{/str}}</button>
-                {{/aiavailable}}
             </div>
 
             <div class="aibs-field">
@@ -482,19 +391,27 @@
             </div>
         </section>
 
-        <section class="aibs-card" data-region="step" data-step="5" hidden>
+        <section class="aibs-card" data-region="step" data-step="4" hidden>
             <h3 class="aibs-h3">{{#str}} step:people, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:peoplelead, mod_aibranchedscenario {{/str}}</p>
 
             <div class="aibs-field">
                 <label class="aibs-field-label" for="aibs-participantrole">
                     {{#str}} field:participantrole, mod_aibranchedscenario {{/str}}</label>
+                <span class="aibs-field-hint">{{#str}} field:participantrolehint, mod_aibranchedscenario {{/str}}</span>
                 <input type="text" class="aibs-input" id="aibs-participantrole" data-field="participantrole"
                     value="{{source.participantrole}}" maxlength="255">
             </div>
 
+            <p class="aibs-field-hint aibs-characters-intro">
+                {{#str}} field:charactersintro, mod_aibranchedscenario {{/str}}</p>
+
+            {{! FOUR IDENTICAL EMPTY SLOTS READ AS FOUR PEOPLE TO INVENT.
+                Two is what the format can carry, and what the autofill aims at; the other
+                two are there for the scenario that genuinely has four, behind a button. }}
             {{#characters}}
-                <fieldset class="aibs-nodeedit" data-character="{{index}}">
+                <fieldset class="aibs-nodeedit{{#extra}} aibs-character-extra{{/extra}}"
+                          data-character="{{index}}"{{#extra}} hidden{{/extra}}>
                     <legend class="aibs-field-label">
                         {{#str}} field:character, mod_aibranchedscenario, {{position}} {{/str}}</legend>
                     <div class="aibs-field">
@@ -550,11 +467,32 @@
                     </div>
                 </fieldset>
             {{/characters}}
+
+            <button type="button" class="aibs-btn aibs-btn-secondary" data-action="addcharacter"
+                    data-region="addcharacter">
+                {{#str}} addcharacter, mod_aibranchedscenario {{/str}}</button>
         </section>
 
-        <section class="aibs-card" data-region="step" data-step="6" hidden>
+        <section class="aibs-card" data-region="step" data-step="5" hidden>
             <h3 class="aibs-h3">{{#str}} step:design, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:designlead, mod_aibranchedscenario {{/str}}</p>
+
+            <div class="aibs-field">
+                <label class="aibs-field-label" for="aibs-title">
+                    {{#str}} field:title, mod_aibranchedscenario {{/str}}</label>
+                <span class="aibs-field-hint">{{#str}} field:titlehint, mod_aibranchedscenario {{/str}}</span>
+                <input type="text" class="aibs-input" id="aibs-title" data-field="title"
+                    value="{{source.title}}" maxlength="255">
+            </div>
+
+            <div class="aibs-field">
+                <label class="aibs-field-label" for="aibs-audience">
+                    {{#str}} field:audience, mod_aibranchedscenario {{/str}}</label>
+                <span class="aibs-field-hint">{{#str}} field:audiencehint, mod_aibranchedscenario {{/str}}</span>
+                <input type="text" class="aibs-input" id="aibs-audience" data-field="audience"
+                    value="{{source.audience}}" maxlength="255">
+            </div>
+
 
             {{! The decision count used to be chosen here, anywhere from three to eight.
                 It is fixed now, and the screen says so rather than leaving a teacher to
@@ -604,23 +542,46 @@
                 </div>
             </div>
 
-            <div class="aibs-field">
-                <label class="aibs-field-label" for="aibs-imageprompt">
-                    {{#str}} field:imageprompt, mod_aibranchedscenario {{/str}}</label>
-                <input type="text" class="aibs-input" id="aibs-imageprompt" data-field="imageprompt"
-                    value="{{source.imageprompt}}" maxlength="600">
-            </div>
-
-            {{#openingmetrics}}
+            {{! Two controls that matter to somebody tuning a scenario and to nobody
+                building their first one. Behind one disclosure rather than in the way. }}
+            <details class="aibs-disclosure">
+                <summary class="aibs-disclosure-summary">
+                    {{#str}} advanced, mod_aibranchedscenario {{/str}}</summary>
+                <div class="aibs-disclosure-body">
                 <div class="aibs-field">
-                    <label class="aibs-field-label" for="aibs-metric-{{key}}">{{label}}</label>
-                    <input type="range" class="aibs-input" id="aibs-metric-{{key}}" min="0" max="100" step="5"
-                        data-metric-field="{{key}}" value="{{value}}">
+                    <label class="aibs-field-label" for="aibs-imageprompt">
+                        {{#str}} field:imageprompt, mod_aibranchedscenario {{/str}}</label>
+                    <span class="aibs-field-hint">{{#str}} field:imageprompthint, mod_aibranchedscenario {{/str}}</span>
+                    <input type="text" class="aibs-input" id="aibs-imageprompt" data-field="imageprompt"
+                        value="{{source.imageprompt}}" maxlength="600">
                 </div>
-            {{/openingmetrics}}
+
+                {{! THREE BARE SLIDERS WITH NO HEADING AND NO NUMBERS.
+                    They set where the room starts, which is neither look nor feel until somebody
+                    says so, and a slider with no readout is a control you cannot set deliberately. }}
+                <div class="aibs-field">
+                    <span class="aibs-field-label" id="aibs-readings-label">
+                        {{#str}} field:openingreadings, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-field-hint">
+                        {{#str}} field:openingreadingshint, mod_aibranchedscenario {{/str}}</span>
+                    <div class="aibs-readings" role="group" aria-labelledby="aibs-readings-label">
+                        {{#openingmetrics}}
+                            <div class="aibs-reading-slider">
+                                <label class="aibs-field-label" for="aibs-metric-{{key}}">{{label}}</label>
+                                <input type="range" class="aibs-input" id="aibs-metric-{{key}}" min="0" max="100"
+                                    step="5" data-metric-field="{{key}}" value="{{value}}"
+                                    aria-describedby="aibs-metricvalue-{{key}}">
+                                <output class="aibs-reading-value" id="aibs-metricvalue-{{key}}"
+                                        data-metric-readout="{{key}}" for="aibs-metric-{{key}}">{{value}}</output>
+                            </div>
+                        {{/openingmetrics}}
+                    </div>
+                </div>
+                </div>
+            </details>
         </section>
 
-        <section class="aibs-card" data-region="step" data-step="7" hidden>
+        <section class="aibs-card" data-region="step" data-step="6" hidden>
             <h3 class="aibs-h3">{{#str}} step:build, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:buildlead, mod_aibranchedscenario {{/str}}</p>
             <p class="aibs-field-hint">{{#str}} generateexplain, mod_aibranchedscenario {{/str}}</p>
@@ -641,6 +602,10 @@
                         <button type="button" class="aibs-btn aibs-btn-ghost" data-action="restoredraft"
                             title="{{#str}} restoredrafthint, mod_aibranchedscenario {{/str}}">
                             {{#str}} restoredraft, mod_aibranchedscenario {{/str}}</button>
+                        {{! A tooltip is invisible on a touch screen, and this is the one
+                            control on the page whose name does not say what it undoes. }}
+                        <span class="aibs-field-hint aibs-restorehint">
+                            {{#str}} restoredrafthint, mod_aibranchedscenario {{/str}}</span>
                     {{/hasprevious}}
                     {{#canpublish}}
                     <button type="button" class="aibs-btn aibs-btn-secondary" data-action="publish">
@@ -772,6 +737,7 @@
                 <button type="button" class="aibs-btn aibs-btn-primary" data-action="next">
                     {{#str}} next, mod_aibranchedscenario {{/str}}</button>
             </div>
+        </div>
         </div>
     </div>
 </div>

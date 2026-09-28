@@ -934,6 +934,29 @@ class quality_review {
         //
         // Two branch points is what the content standard asks for, and the message names
         // the flat decisions so the teacher has somewhere to start rather than a verdict.
+        // A BRANCH THAT REJOINS A STAGE EARLY IS WORSE THAN NO BRANCH.
+        //
+        // The shape rule is "exactly five decisions", and the validator only ever measured
+        // the LONGEST route - so a detour that came back one stage too far along gave the
+        // learner who took it four decisions, a short scenario and a debrief with a slide
+        // missing, while everything reported green. Now that the branches are written by
+        // the service rather than by hand, this is the fault most likely to arrive.
+        $shortest = (int)($definition['stats']['shortestpath'] ?? 0);
+        if ($shortest > 0 && $shortest < schema::DECISIONS) {
+            array_unshift(
+                $out,
+                [
+                    'nodeid'  => 'scenario',
+                    'node'    => trim((string)($definition['title'] ?? '')),
+                    'message' => get_string(
+                        'quality:shortroute',
+                        'mod_aibranchedscenario',
+                        (object)['found' => $shortest, 'expected' => schema::DECISIONS]
+                    ),
+                ]
+            );
+        }
+
         if ($decisions > 1 && $branching < self::MIN_BRANCHING_DECISIONS) {
             array_unshift(
                 $out,

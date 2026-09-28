@@ -476,6 +476,16 @@ class lmslabs_provider implements provider {
             'creditsremaining' => isset($decoded['creditsRemaining']) && $decoded['creditsRemaining'] !== null
                 ? (int)$decoded['creditsRemaining'] : 0,
             'unlimited'        => !empty($decoded['isUnlimited']),
+            // WHAT THE SERVICE SAYS ABOUT WHAT IT WROTE.
+            //
+            // The response's data block is the scenario; this sits beside it and says how
+            // many of the decisions branch and whether the service had to repair the graph
+            // to get there. Only the scenario was ever read, so this would have been
+            // discarded. Two integers and a flag: no prose, nothing that can carry content.
+            'branchingdecisions' => isset($decoded['quality']['branchingDecisions'])
+                ? max(0, (int)$decoded['quality']['branchingDecisions']) : null,
+            'branchingrepaired'  => isset($decoded['quality']['repaired'])
+                ? !empty($decoded['quality']['repaired']) : null,
         ];
 
         if (!isset($decoded['data']) || !is_array($decoded['data'])) {

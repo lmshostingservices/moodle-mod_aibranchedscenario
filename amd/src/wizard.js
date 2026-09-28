@@ -14,7 +14,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Drives the five step authoring wizard, generation polling and node text editing.
+ * Drives the six step authoring wizard, generation polling and node text editing.
  *
  * @module     mod_aibranchedscenario/wizard
  * @copyright  2026 LMS Hosting Services
@@ -188,6 +188,17 @@ class Wizard {
         this.root.querySelectorAll('[data-group]').forEach((group) => this.syncOther(group));
         const wanted = parseInt(new URL(window.location.href).searchParams.get('step'), 10);
         this.showStep(wanted >= 1 && wanted <= this.stepCount ? wanted : 1);
+        this.watchReadings();
+        this.filterSettings();
+        // The start screen is for starting. A teacher coming back to a draft, or arriving
+        // on a numbered step from a link, is already past it.
+        const box = this.root.querySelector('[data-field="sourcecontent"]');
+        const started = (box && box.value.trim() !== '')
+            || this.root.querySelector('[data-region="nodes"]') !== null
+            || (wanted >= 1 && wanted <= this.stepCount);
+        if (started) {
+            this.begin();
+        }
         return true;
     }
 
@@ -211,6 +222,9 @@ class Wizard {
                 break;
             case 'option':
                 this.toggleOption(element);
+                if (element.closest('[data-group="industry"]')) {
+                    this.filterSettings();
+                }
                 break;
             case 'save':
                 this.save(true);
@@ -245,9 +259,135 @@ class Wizard {
             case 'savenode':
                 this.saveNode(element);
                 break;
+            case 'addcharacter':
+                this.addCharacter(element);
+                break;
+            case 'begin':
+                this.begin();
+                break;
+            case 'route':
+                this.chooseRoute(element.dataset.route);
+                break;
             default:
                 break;
         }
+    }
+
+    /**
+     * Leave the start screen and show the steps.
+     *
+     * @returns {void}
+     */
+    begin() {
+        const start = this.root.querySelector('[data-region="start"]');
+        const body = this.root.querySelector('[data-region="wizardbody"]');
+        if (start) {
+            start.hidden = true;
+        }
+        if (body) {
+            body.hidden = false;
+        }
+        this.showStep(1);
+    }
+
+    /**
+     * Show one of the two ways of providing content, and hide the other.
+     *
+     * @param {String} route own or assistant.
+     * @returns {void}
+     */
+    chooseRoute(route) {
+        this.root.querySelectorAll('[data-action="route"]').forEach((card) => {
+            card.setAttribute('aria-pressed', card.dataset.route === route ? 'true' : 'false');
+        });
+        this.root.querySelectorAll('[data-route-panel]').forEach((panel) => {
+            panel.hidden = panel.dataset.routePanel !== route;
+        });
+    }
+
+    /**
+     * Show only the places the chosen industry actually works in.
+     *
+     * One list of twelve settings was offered to everybody, so a hospitality scenario chose
+     * between a mine site and a hospital ward. Each setting carries the industries it
+     * belongs to; this hides the ones that do not. A setting already chosen is never
+     * hidden, so a saved draft cannot lose its own answer.
+     *
+     * @returns {void}
+     */
+    filterSettings() {
+        const industry = this.root.querySelector('[data-group="industry"] [aria-pressed="true"]');
+        const key = industry ? industry.dataset.value : '';
+        const grid = this.root.querySelector('[data-group="setting"]');
+        if (!grid) {
+            return;
+        }
+        let visible = 0;
+        grid.querySelectorAll('[data-industries]').forEach((option) => {
+            const list = (option.dataset.industries || '').split(' ').filter(Boolean);
+            const keep = !key || key === 'other' || option.dataset.value === 'other'
+                || option.getAttribute('aria-pressed') === 'true' || list.indexOf(key) >= 0;
+            option.hidden = !keep;
+            if (keep) {
+                visible++;
+            }
+        });
+        // Nothing matched, which would leave an empty row where a question used to be.
+        if (!visible) {
+            grid.querySelectorAll('[data-industries]').forEach((option) => {
+                option.hidden = false;
+            });
+        }
+    }
+
+    /**
+     * Reveal the next empty person, and take the button away when there are no more.
+     *
+     * Four identical empty fieldsets read as four people a teacher was expected to invent,
+     * when two is what the format can carry. The rest are here for the scenario that
+     * genuinely has four.
+     *
+     * @param {HTMLElement} button The button pressed.
+     * @returns {void}
+     */
+    addCharacter(button) {
+        const hidden = [...this.root.querySelectorAll('.aibs-character-extra[hidden]')];
+        if (!hidden.length) {
+            return;
+        }
+        const next = hidden[0];
+        next.hidden = false;
+        const first = next.querySelector('input');
+        if (first) {
+            first.focus();
+        }
+        if (hidden.length === 1 && button) {
+            button.hidden = true;
+        }
+    }
+
+    /**
+     * Keep each opening reading's number beside its slider.
+     *
+     * A slider with no readout cannot be set deliberately: a teacher could see roughly
+     * where the handle was and never what the scenario would open on.
+     *
+     * @returns {void}
+     */
+    watchReadings() {
+        this.root.querySelectorAll('[data-metric-field]').forEach((slider) => {
+            const readout = this.root.querySelector(
+                '[data-metric-readout="' + slider.dataset.metricField + '"]'
+            );
+            if (!readout) {
+                return;
+            }
+            const show = () => {
+                readout.textContent = slider.value;
+            };
+            slider.addEventListener('input', show);
+            show();
+        });
     }
 
     /**
@@ -429,7 +569,9 @@ class Wizard {
         }
         let key = 'sourcecount:good';
         let tone = 'aibs-tone-good';
-        if (words < 200) {
+        // The hint above the box asks for 500 to 800 words. A counter that called 210 words
+        // "about right" contradicted it on the same screen.
+        if (words < 350) {
             key = 'sourcecount:thin';
             tone = 'aibs-tone-warn';
         } else if (words > 1200) {
@@ -1279,6 +1421,14 @@ class Wizard {
             modal.getRoot().on(ModalEvents.save, () => modal.hide());
             modal.getRoot().on(ModalEvents.hidden, () => {
                 modal.destroy();
+                // Declared first, or the wizard's own reload trips the "leave the page?"
+                // guard it sets for a teacher closing the tab mid-generation.
+                this.leaving = true;
+                // Reloaded, because the page is still showing the state before the publish:
+                // "Preview as a learner" and the published revision number are rendered by
+                // the server, so without this the teacher is told it is live by a dialog and
+                // shown a page that says otherwise.
+                window.location.reload();
                 resolve(true);
             });
             modal.show();

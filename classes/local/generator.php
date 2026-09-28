@@ -673,6 +673,17 @@ class generator {
         $meta['sourcechars'] = strlen((string)$source['sourcecontent']);
         $meta['nodecount'] = (int)($definition['stats']['nodecount'] ?? 0);
         $meta['decisioncount'] = (int)($definition['stats']['decisioncount'] ?? 0);
+        // The service's own count of how many decisions branch, and whether it had to
+        // repair the graph to get there, recorded beside the scenario it describes. The
+        // plugin counts branching itself for the review panel; this is what the SERVICE
+        // believed it sent, which is the only way to tell a service fault from a mapping
+        // one when the two disagree.
+        $meta['branchingdecisions'] = $meta['branchingdecisions'] ?? null;
+        $meta['branchingrepaired'] = $meta['branchingrepaired'] ?? null;
+        if ($meta['branchingdecisions'] !== null) {
+            mtrace('Service reports ' . (int)$meta['branchingdecisions'] . ' branching decisions'
+                . (!empty($meta['branchingrepaired']) ? ', after repair.' : '.'));
+        }
 
         $meta['tier'] = $tier;
         scenario_manager::save_definition($scenario, $definition, $meta, true, $tier);

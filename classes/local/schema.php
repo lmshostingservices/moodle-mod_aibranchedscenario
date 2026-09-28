@@ -237,9 +237,64 @@ class schema {
      */
     public static function settings_list(): array {
         return [
-            'trainingroom', 'hospitalward', 'constructionsite', 'minesite', 'customercounter',
-            'office', 'kitchen', 'vehiclefield', 'videocall', 'warehouse', 'classroom', 'other',
+            'trainingroom', 'classroom', 'workshopfloor', 'assessmentroom', 'office',
+            'videocall', 'hospitalward', 'clinicroom', 'emergencydept', 'nursesstation',
+            'homevisit', 'residentroom', 'dayroom', 'familymeeting', 'minesite', 'prestartroom',
+            'controlroom', 'maintenanceworkshop', 'vehiclefield', 'constructionsite',
+            'siteoffice', 'toolboxtalk', 'scaffoldarea', 'kitchen', 'frontofhouse', 'cafe',
+            'bar', 'hotelreception', 'functionroom', 'trainingschool', 'shopfloor',
+            'customercounter', 'stockroom', 'checkout', 'staffroom', 'playground',
+            'parentmeeting', 'clienthome', 'dropincentre', 'casemeeting', 'outreachvan',
+            'incidentscene', 'ambulance', 'station', 'triage', 'branchcounter', 'advisoroffice',
+            'callcentre', 'boardroom', 'meetingroom', 'interviewroom', 'factoryfloor',
+            'packingline', 'warehouse', 'servicecounter', 'fieldvisit', 'servicedesk',
+            'serverroom', 'clientsite', 'auditroom', 'sitevisit', 'securityoperations',
+            'showroom', 'other',
         ];
+    }
+
+    /**
+     * The places this industry actually works in.
+     *
+     * One list of twelve settings was offered to every teacher, so a hospitality scenario
+     * was asked to choose between a mine site and a hospital ward, and the kitchen it
+     * needed was one option among eleven that did not apply. The wizard now shows the
+     * places that belong to the sector the teacher picked, which is both a shorter list
+     * and a better one: "front of house", "function room" and "training kitchen" are
+     * hospitality settings that a general list has no room for.
+     *
+     * An industry with no list of its own, and "other", get everything.
+     *
+     * @param string $industry An industry key.
+     * @return string[] Setting keys, always ending in 'other'.
+     */
+    public static function settings_for_industry(string $industry): array {
+        $map = [
+            'training' => ['trainingroom', 'classroom', 'workshopfloor', 'assessmentroom', 'office', 'videocall'],
+            'healthcare' => ['hospitalward', 'clinicroom', 'emergencydept', 'nursesstation', 'homevisit', 'videocall'],
+            'agedcare' => ['residentroom', 'dayroom', 'nursesstation', 'familymeeting', 'homevisit'],
+            'mining' => ['minesite', 'prestartroom', 'controlroom', 'maintenanceworkshop', 'vehiclefield'],
+            'construction' => ['constructionsite', 'siteoffice', 'toolboxtalk', 'scaffoldarea', 'vehiclefield'],
+            'hospitality' => ['kitchen', 'frontofhouse', 'cafe', 'bar', 'hotelreception', 'functionroom', 'trainingschool'],
+            'retail' => ['shopfloor', 'customercounter', 'stockroom', 'checkout', 'office'],
+            'education' => ['classroom', 'staffroom', 'playground', 'parentmeeting', 'videocall'],
+            'communityservices' => ['clienthome', 'dropincentre', 'casemeeting', 'outreachvan', 'office'],
+            'emergencyservices' => ['incidentscene', 'ambulance', 'station', 'controlroom', 'triage'],
+            'financialservices' => ['branchcounter', 'advisoroffice', 'callcentre', 'boardroom', 'videocall'],
+            'humanresources' => ['office', 'meetingroom', 'interviewroom', 'staffroom', 'videocall'],
+            'manufacturing' => ['factoryfloor', 'packingline', 'warehouse', 'controlroom', 'maintenanceworkshop'],
+            'government' => ['office', 'servicecounter', 'meetingroom', 'fieldvisit', 'callcentre'],
+            'ittechnology' => ['office', 'servicedesk', 'serverroom', 'clientsite', 'videocall'],
+            'compliance' => ['office', 'auditroom', 'meetingroom', 'sitevisit', 'videocall'],
+            'cybersecurity' => ['securityoperations', 'servicedesk', 'office', 'boardroom', 'videocall'],
+            'sales' => ['clientsite', 'showroom', 'callcentre', 'boardroom', 'videocall'],
+            'leadership' => ['boardroom', 'meetingroom', 'office', 'staffroom', 'videocall'],
+        ];
+        $out = $map[$industry] ?? array_values(array_filter(self::settings_list(), static function ($key) {
+            return $key !== 'other';
+        }));
+        $out[] = 'other';
+        return array_values(array_unique($out));
     }
 
     /**

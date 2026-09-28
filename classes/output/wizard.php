@@ -80,6 +80,40 @@ class wizard implements \renderable, \templatable {
     }
 
     /**
+     * The setting pickers, each tagged with the industries it belongs to.
+     *
+     * @param string $selected The chosen setting.
+     * @return array Template context.
+     */
+    protected function settings_options(string $selected, string $industry = ''): array {
+        $belongs = [];
+        foreach (schema::industries() as $sector) {
+            foreach (schema::settings_for_industry($sector) as $setting) {
+                $belongs[$setting][] = $sector;
+            }
+        }
+        // Filtered here as well as in the browser, so the first paint is already the short
+        // list. Rendering all sixty-four and hiding sixty of them a moment later is a page
+        // that visibly changes its mind while the teacher is reading it.
+        $allowed = ($industry === '' || $industry === 'other')
+            ? schema::settings_list() : schema::settings_for_industry($industry);
+        $out = [];
+        foreach (schema::settings_list() as $setting) {
+            $out[] = [
+                'key'        => $setting,
+                'label'      => get_string('setting:' . $setting, 'mod_aibranchedscenario'),
+                'selected'   => $setting === $selected,
+                'hide'       => !in_array($setting, $allowed, true) && $setting !== $selected,
+                // NOT 'industries': inside the settings loop that name resolves to the
+                // template's own industry list one context up, and the picker renders an
+                // array into an attribute.
+                'industrykeys' => implode(' ', $belongs[$setting] ?? []),
+            ];
+        }
+        return $out;
+    }
+
+    /**
      * Where a choice may lead, as a list a teacher can choose from.
      *
      * A choice's target was shown as a raw node identifier and could not be changed at
@@ -172,6 +206,10 @@ class wizard implements \renderable, \templatable {
                 'ismale'     => ($source['characters'][$i]['gender'] ?? '') === 'male',
                 'isfemale'   => ($source['characters'][$i]['gender'] ?? '') === 'female',
                 'isnonbinary' => ($source['characters'][$i]['gender'] ?? '') === 'non-binary',
+                // FOUR EMPTY SLOTS READ AS FOUR PEOPLE TO INVENT, and two is what the
+                // format can carry. The third and fourth are hidden until they hold
+                // somebody, or until the teacher asks for them.
+                'extra'      => $i >= 2 && trim((string)($source['characters'][$i]['name'] ?? '')) === '',
             ];
         }
 
@@ -239,7 +277,11 @@ class wizard implements \renderable, \templatable {
                 ];
             }, ['audience', 'focus', 'situation']),
             'industries'   => $this->options(schema::industries(), 'industry', $source['industry']),
-            'settings'     => $this->options(schema::settings_list(), 'setting', $source['setting']),
+            // Each setting carries the industries it belongs to, so the wizard can show a
+            // hospitality teacher a kitchen, a bar and a function room instead of a list
+            // that opens with "Mine site". Filtered in the browser rather than on a reload,
+            // because choosing an industry should not cost a page load.
+            'settings'     => $this->settings_options($source['setting'], (string)$source['industry']),
             'atmospheres'  => $this->options(schema::atmospheres(), 'atmosphere', $source['atmosphere']),
             'whyhard'      => $this->options(schema::whyhard(), 'whyhard', $source['whyhard']),
             'stakes'       => $this->options(schema::stakes(), 'stakes', $source['stakes']),
@@ -315,7 +357,11 @@ class wizard implements \renderable, \templatable {
      */
     protected static function how_to_use(): array {
         $steps = [];
-        foreach (['paste', 'shape', 'generate', 'review', 'publish', 'play'] as $index => $key) {
+        // Five, and they are the five steps the wizard itself has: "six steps" sat above a
+        // rail numbered differently, and its last two both happened on one screen. Looking
+        // at it as a student is folded into publishing, which is where a teacher is standing
+        // when they need to hear it.
+        foreach (['paste', 'shape', 'generate', 'review', 'publish'] as $index => $key) {
             $steps[] = [
                 'number' => $index + 1,
                 'title'  => get_string('howto:' . $key, 'mod_aibranchedscenario'),

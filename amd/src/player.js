@@ -1338,11 +1338,29 @@ class Player {
         // underneath the banner.
         // Probing just below whatever has been claimed cannot miss the next band, however
         // tall or short either one is. The walk ends when a probe claims nothing new.
+        // In fullscreen there is no page furniture at all - the player IS the screen. The
+        // walk below probes the fullscreen backdrop and, on a site with a pinned side
+        // drawer, came back with half the screen; the bar was then pushed that far down
+        // inside the fullscreen view and the bottom of the slide went off the screen.
+        if (this.isFullscreen()) {
+            return 0;
+        }
+
+        // Probed across the PLAYER, not across the window. A course index or block drawer
+        // is fixed, full height, and pinned down the left edge, so a probe at 15% of the
+        // window landed inside it: its rect starts at the top, so it extended the band, and
+        // its bottom is the foot of the screen, so the band became the ceiling - half the
+        // viewport. The plugin's own bar then sat in the middle of the slide. Furniture
+        // that matters is furniture the slide is underneath.
+        const box = this.root.getBoundingClientRect();
+        const left = box.width > 40 ? box.left : 0;
+        const right = box.width > 40 ? box.right : width;
+        const span = right - left;
         let band = 0;
         for (let guard = 0; guard < 12; guard++) {
             const y = Math.min(Math.round(band) + 2, Math.round(ceiling));
             const before = band;
-            [width * 0.5, width * 0.15, width * 0.85].forEach((x) => {
+            [left + span * 0.5, left + span * 0.1, right - span * 0.1].forEach((x) => {
                 let found;
                 try {
                     found = document.elementsFromPoint(Math.round(x), Math.max(1, y)) || [];
@@ -1361,6 +1379,12 @@ class Player {
                         return;
                     }
                     const rect = element.getBoundingClientRect();
+                    // A header is a band across the top. A pinned thing taller than this is
+                    // a drawer, a dialog or a whole-page overlay, and standing clear of it
+                    // would mean standing clear of the screen.
+                    if (rect.height > ceiling) {
+                        return;
+                    }
                     // Only furniture that reaches what is already claimed can extend it,
                     // so a pinned button halfway down the page is not mistaken for a
                     // header.

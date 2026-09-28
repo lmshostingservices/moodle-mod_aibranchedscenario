@@ -1217,5 +1217,26 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026092106, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026092500) {
+        // Version 3.0.9. No schema change: the player's bar stands clear of the right things.
+        upgrade_mod_savepoint(true, 2026092500, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026092501) {
+        // Version 3.1.0. No schema change: the authoring wizard is six steps, not seven.
+        upgrade_mod_savepoint(true, 2026092501, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026092600) {
+        // Version 3.1.1. No schema change: every route is measured, not only the longest.
+        upgrade_mod_savepoint(true, 2026092600, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026092800) {
+        // Version 3.2.0. No schema change: a start screen, two routes in, and the place list
+        // follows the industry. Setting keys added; existing choices keep working.
+        upgrade_mod_savepoint(true, 2026092800, 'aibranchedscenario');
+    }
+
     return true;
 }
