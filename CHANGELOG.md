@@ -2,6 +2,39 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v3.3.0] - 2026-09-30
+
+### Nothing is published half-illustrated and half-silent
+
+A scenario's text arrives minutes before its pictures and narration - on both routes in.
+Generation queues the media; a pasted scenario queues it too. On the author's screen the
+scenario looks finished either way, so it was possible to publish one and hand learners grey
+frames and silent scenes with nothing on the page to say more was coming.
+
+Publishing is now refused until every picture and clip the scenario calls for exists. The
+refusal counts them ("3 of 14 pictures and 0 of 40 clips are ready") rather than saying "not
+yet". The button is disabled with the same count beside it, so nobody presses it to find out,
+and the page re-checks by itself every twenty seconds while it waits - never while there are
+unsaved edits, and it stops after ten minutes rather than reloading a page nobody is at.
+
+The count comes from the files that exist, not from what a finished job once reported: a
+pasted scenario's media is made by a task that writes no counts anywhere the page can see.
+
+### Pasting a scenario looked like it did nothing
+
+"Save and apply" saved the scenario and sent the teacher to the review step - and leaving the
+start screen then dragged the wizard back to step one, so they were returned to an empty
+paste box looking at a scenario that had in fact been saved. The start screen now opens the
+step it was asked for.
+
+Two other things on that route:
+
+- **What an assistant actually returns is accepted.** ChatGPT and friends answer with "Here
+  you go:", a fenced code block and a paragraph afterwards. The fences come off and the
+  scenario is taken out of the middle.
+- **Something that is not a scenario at all is named as such** before anything is sent, so a
+  teacher who pasted the wrong half of a chat is told which half to paste.
+
 ## [v3.2.1] - 2026-09-28
 
 ### Readable with the pointer on it

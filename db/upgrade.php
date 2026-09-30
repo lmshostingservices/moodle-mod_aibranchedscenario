@@ -1243,5 +1243,10 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026092801, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026093000) {
+        // Version 3.3.0. No schema change: nothing publishes until its media is finished.
+        upgrade_mod_savepoint(true, 2026093000, 'aibranchedscenario');
+    }
+
     return true;
 }

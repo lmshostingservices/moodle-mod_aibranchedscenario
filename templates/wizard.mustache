@@ -63,6 +63,8 @@
         "viewurl": "https://example.com/mod/aibranchedscenario/view.php?id=42",
         "aiavailable": true,
         "canpublish": true,
+        "mediapending": false,
+        "mediastatus": "",
         "cannotgenerate": false,
         "published": false,
         "revision": 0,
@@ -608,7 +610,10 @@
                             {{#str}} restoredrafthint, mod_aibranchedscenario {{/str}}</span>
                     {{/hasprevious}}
                     {{#canpublish}}
-                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="publish">
+                    {{! Refused server-side while the pictures and narration are still being
+                        made; the button says so rather than failing when it is pressed. }}
+                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="publish"
+                            {{#mediapending}}disabled{{/mediapending}}>
                         {{#str}} publishscenario, mod_aibranchedscenario {{/str}}
                     </button>
                     {{/canpublish}}
@@ -618,6 +623,10 @@
                         {{#str}} previewscenario, mod_aibranchedscenario {{/str}}</a>
                 {{/published}}
             </div>
+
+            {{#mediapending}}
+                <p class="aibs-mediapending" data-region="mediapending" role="status">{{mediastatus}}</p>
+            {{/mediapending}}
 
 
 

@@ -61,9 +61,29 @@ class publish_scenario extends external_api {
         $resolved = helper::resolve($params['cmid'], 'mod/aibranchedscenario:publish');
         $tier = helper::tier($params['tier']);
 
-        $revision = scenario_manager::publish($resolved['scenario'], (int)$USER->id, $tier);
-
+        // NOTHING IS PUBLISHED HALF-ILLUSTRATED AND HALF-SILENT.
+        //
+        // The text of a scenario arrives minutes before its pictures and narration, on both
+        // routes in: generation queues the media, and a pasted scenario queues it too. On the
+        // author's screen the scenario looks finished either way, so it was possible to
+        // publish one and hand learners grey frames and silent scenes - with nothing on the
+        // page to say more was coming. Refused here, where it can be said plainly, rather
+        // than discovered by a learner.
         $media = new media_manager($resolved['context'], $tier);
+        $definition = scenario_manager::get_working_definition($resolved['scenario'], $tier);
+        if (is_array($definition) && $definition) {
+            $status = $media->working_media_status($resolved['scenario'], $definition);
+            if (empty($status['complete'])) {
+                throw new \moodle_exception('error:mediapending', 'mod_aibranchedscenario', '', (object)[
+                    'images'           => (int)$status['images'],
+                    'imageswanted'     => (int)$status['imageswanted'],
+                    'narrations'       => (int)$status['narrations'],
+                    'narrationswanted' => (int)$status['narrationswanted'],
+                ]);
+            }
+        }
+
+        $revision = scenario_manager::publish($resolved['scenario'], (int)$USER->id, $tier);
         $media->publish_media((int)$revision->revision);
 
         return [

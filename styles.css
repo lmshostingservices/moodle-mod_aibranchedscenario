@@ -6844,3 +6844,11 @@ button.aibs-avatar:focus-visible {
     background: transparent;
     color: var(--aibs-text);
 }
+
+/* Why the Publish button is not available yet. A disabled control with no reason beside it
+   is a bug as far as the person pressing it is concerned. */
+.aibs-mediapending {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-small);
+    margin: 12px 0 0;
+}

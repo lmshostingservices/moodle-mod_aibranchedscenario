@@ -65,6 +65,28 @@ const SELECTORS = {
  * @param {String} json The JSON document.
  * @return {String} The document, base64 encoded and line wrapped.
  */
+/**
+ * The JSON out of whatever the teacher pasted.
+ *
+ * An assistant answers with "Here you go:", a fenced code block, and a paragraph of
+ * explanation after it. The box asks for the prompt's output, so the prompt's output is what
+ * it has to take: the fences come off and the outermost object is what is sent.
+ *
+ * @param {String} text What was pasted.
+ * @returns {String} The JSON, or the text unchanged when none can be found.
+ */
+const definitionFrom = (text) => {
+    let out = (text || '').trim();
+    // ```json ... ``` , ``` ... ``` , or a stray fence on one side only.
+    out = out.replace(/^`{3,}[a-zA-Z]*\s*/, '').replace(/`{3,}\s*$/, '').trim();
+    const first = out.indexOf('{');
+    const last = out.lastIndexOf('}');
+    if (first > -1 && last > first) {
+        out = out.slice(first, last + 1);
+    }
+    return out;
+};
+
 const encodeDefinition = (json) => {
     const bytes = new TextEncoder().encode(json);
     let binary = '';
@@ -110,6 +132,7 @@ class Wizard {
             'work:checking', 'work:saving', 'work:media', 'work:reading', 'work:filling',
             'work:writing', 'work:done', 'worknote',
             'sourcecount:thin', 'sourcecount:good', 'sourcecount:long', 'usedexample',
+            'error:importnotjson',
         ];
         const values = await getStrings(keys.map((key) => ({key, component: 'mod_aibranchedscenario'})));
         keys.forEach((key, index) => {
@@ -190,6 +213,7 @@ class Wizard {
         this.showStep(wanted >= 1 && wanted <= this.stepCount ? wanted : 1);
         this.watchReadings();
         this.filterSettings();
+        this.watchMedia();
         // The start screen is for starting. A teacher coming back to a draft, or arriving
         // on a numbered step from a link, is already past it.
         const box = this.root.querySelector('[data-field="sourcecontent"]');
@@ -197,7 +221,7 @@ class Wizard {
             || this.root.querySelector('[data-region="nodes"]') !== null
             || (wanted >= 1 && wanted <= this.stepCount);
         if (started) {
-            this.begin();
+            this.begin(this.step);
         }
         return true;
     }
@@ -274,11 +298,43 @@ class Wizard {
     }
 
     /**
+     * While the pictures and narration are still being made, keep looking.
+     *
+     * They are made by a background task minutes after the text arrives, on both routes in,
+     * and publishing is refused until they are all there. Without this the teacher is left
+     * on a page with a disabled button and no way to find out when it opens except pressing
+     * F5. Only while the form is clean, so a reload can never take an unsaved edit with it,
+     * and it gives up after ten minutes rather than reloading a page nobody is watching.
+     *
+     * @returns {void}
+     */
+    watchMedia() {
+        const note = this.root.querySelector('[data-region="mediapending"]');
+        if (!note) {
+            return;
+        }
+        let left = 30;
+        const tick = () => {
+            left--;
+            if (left < 0) {
+                return;
+            }
+            if (this.dirty || this.busy) {
+                window.setTimeout(tick, 20000);
+                return;
+            }
+            this.leaving = true;
+            window.location.reload();
+        };
+        window.setTimeout(tick, 20000);
+    }
+
+    /**
      * Leave the start screen and show the steps.
      *
      * @returns {void}
      */
-    begin() {
+    begin(step) {
         const start = this.root.querySelector('[data-region="start"]');
         const body = this.root.querySelector('[data-region="wizardbody"]');
         if (start) {
@@ -287,7 +343,11 @@ class Wizard {
         if (body) {
             body.hidden = false;
         }
-        this.showStep(1);
+        // The step it was asked for, not always the first one. Leaving the start screen
+        // used to reset the wizard to step one - so a teacher who pasted a scenario in was
+        // sent to the review step by the import, and then immediately dragged back to the
+        // paste box by this. The import had worked; the page said it had not.
+        this.showStep(step || this.step || 1);
     }
 
     /**
@@ -1518,6 +1578,14 @@ class Wizard {
             return false;
         }
         this.clearError();
+        const pasted = definitionFrom(field.value);
+        // Said here rather than by the service, because "the request was invalid" for a
+        // teacher who pasted a chat reply by mistake is a dead end. The service still
+        // validates everything; this only catches what is plainly not a scenario at all.
+        if (pasted === '' || pasted.charAt(0) !== '{') {
+            this.showError({message: this.strings['error:importnotjson']});
+            return true;
+        }
         this.setBusy(true, this.strings['work:checking']);
         this.workSteps([
             {text: this.strings['work:checking'], state: 'doing'},
@@ -1526,7 +1594,7 @@ class Wizard {
         ]);
         try {
             const response = await this.call('import_definition', {
-                definition: encodeDefinition(field.value),
+                definition: encodeDefinition(pasted),
                 tier: this.tier
             });
             if (response.imported) {

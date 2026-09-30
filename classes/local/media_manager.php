@@ -1646,6 +1646,41 @@ class media_manager {
     }
 
     /**
+     * What is still missing before a scenario can be shown to anybody.
+     *
+     * A scenario whose pictures and narration are still being made looks finished on the
+     * author's screen - the text is all there - and broken to a learner: grey frames, silent
+     * scenes, and no way to tell whether more is coming. The media is made by a background
+     * task minutes after the text arrives, on BOTH routes into the plugin: generation queues
+     * it, and a pasted scenario queues it too.
+     *
+     * So publishing asks this first. Counts, never file names: this is shown to a teacher.
+     *
+     * @param \stdClass $scenario Activity instance, for what it has switched on.
+     * @param array $definition The working definition.
+     * @return array Keys: images, imageswanted, narrations, narrationswanted, complete.
+     */
+    public function working_media_status(\stdClass $scenario, array $definition): array {
+        $wantsimages = !empty($scenario->enableimages)
+            && (bool)get_config('mod_aibranchedscenario', 'allowimages');
+        $wantsaudio = !empty($scenario->enableaudio)
+            && (bool)get_config('mod_aibranchedscenario', 'allowaudio');
+
+        $imageswanted = $wantsimages ? count(self::expected_image_map($definition)) : 0;
+        $narrationswanted = $wantsaudio ? self::count_narrations($definition) : 0;
+        $images = $imageswanted ? count($this->urls_for_working(self::AREA_SCENE)) : 0;
+        $narrations = $narrationswanted ? count($this->urls_for_working(self::AREA_NARRATION)) : 0;
+
+        return [
+            'images'           => $images,
+            'imageswanted'     => $imageswanted,
+            'narrations'       => $narrations,
+            'narrationswanted' => $narrationswanted,
+            'complete'         => $images >= $imageswanted && $narrations >= $narrationswanted,
+        ];
+    }
+
+    /**
      * How many narration clips a definition will ask for.
      *
      * The paste route needed this to know what a run will cost BEFORE it starts, which is

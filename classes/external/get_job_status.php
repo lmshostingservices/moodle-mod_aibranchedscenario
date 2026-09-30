@@ -22,6 +22,7 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use mod_aibranchedscenario\local\generator;
+use mod_aibranchedscenario\local\media_manager;
 use mod_aibranchedscenario\local\scenario_manager;
 
 /**
@@ -97,9 +98,22 @@ class get_job_status extends external_api {
             }
         }
 
+        // WHAT IS STILL BEING MADE, counted from the files that exist rather than from what a
+        // finished job once reported - the media for a pasted scenario is made by a task that
+        // writes no counts anywhere the wizard can see. Publishing is refused until these
+        // agree, so the page has to be able to ask.
+        $pending = ['images' => 0, 'imageswanted' => 0, 'narrations' => 0, 'narrationswanted' => 0];
+        if (is_array($definition) && $definition) {
+            $pending = (new media_manager($resolved['context'], 1))
+                ->working_media_status($resolved['scenario'], $definition);
+        }
+
         return [
             'jobid'         => (int)$job->id,
             'status'        => $job->status,
+            'mediaready'    => !empty($pending['complete']),
+            'mediamade'     => (int)$pending['images'] + (int)$pending['narrations'],
+            'mediawanted'   => (int)$pending['imageswanted'] + (int)$pending['narrationswanted'],
             'errormessage'  => $job->status === generator::JOB_ERROR
                 ? helper::safe_error_message((string)$job->errormsg) : '',
             'mediamessage'  => $media,
@@ -126,6 +140,24 @@ class get_job_status extends external_api {
                 'Warning when fewer images were produced than the scenario called for',
                 VALUE_DEFAULT,
                 ''
+            ),
+            'mediaready'    => new external_value(
+                PARAM_BOOL,
+                'Whether every picture and clip this scenario calls for now exists',
+                VALUE_DEFAULT,
+                true
+            ),
+            'mediamade'     => new external_value(
+                PARAM_INT,
+                'Pictures and clips made so far',
+                VALUE_DEFAULT,
+                0
+            ),
+            'mediawanted'   => new external_value(
+                PARAM_INT,
+                'Pictures and clips this scenario calls for',
+                VALUE_DEFAULT,
+                0
             ),
             'nodecount'     => new external_value(PARAM_INT, 'Nodes in the working copy'),
             'decisioncount' => new external_value(PARAM_INT, 'Decision points in the working copy'),

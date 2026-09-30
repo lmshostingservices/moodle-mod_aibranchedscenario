@@ -213,6 +213,24 @@ class wizard implements \renderable, \templatable {
             ];
         }
 
+        // WHAT IS STILL BEING MADE. A scenario's text arrives minutes before its pictures
+        // and narration on both routes in, and until they are there it cannot be published.
+        $mediapending = false;
+        $mediastatus = '';
+        if (is_array($definition) && $definition) {
+            $status = (new \mod_aibranchedscenario\local\media_manager($this->context, $this->tier))
+                ->working_media_status($this->scenario, $definition);
+            $mediapending = empty($status['complete']);
+            if ($mediapending) {
+                $mediastatus = get_string('mediapending', 'mod_aibranchedscenario', (object)[
+                    'images'           => (int)$status['images'],
+                    'imageswanted'     => (int)$status['imageswanted'],
+                    'narrations'       => (int)$status['narrations'],
+                    'narrationswanted' => (int)$status['narrationswanted'],
+                ]);
+            }
+        }
+
         $credentials = credentials::resolve();
         $configuredmax = get_config('mod_aibranchedscenario', 'maxsourcechars');
         $maxsourcechars = (int)($configuredmax ?: schema::MAX_SOURCE_CHARS);
@@ -255,6 +273,10 @@ class wizard implements \renderable, \templatable {
                 && (int)$tierrow->revision > 0,
             'revision'     => (int)$tierrow->revision,
             'hasdraft'     => is_array($definition),
+            // Publishing is refused while the pictures and narration are still being made,
+            // on both routes in. The button says so rather than failing when pressed.
+            'mediapending' => $mediapending,
+            'mediastatus'  => $mediastatus,
             'hasprevious'  => !empty($tierrow->previousjson),
             'tier'         => $this->tier,
             'source'       => $source,
