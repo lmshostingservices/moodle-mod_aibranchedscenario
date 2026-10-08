@@ -2,6 +2,53 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v3.4.0] - 2026-10-08
+
+### The text was printed on the icons
+
+On the results screens each reading sat in a card with its name, its dial and an arrow saying
+which way it had moved - and the name and the arrow shared one grid cell. The name stretched
+the full width of that cell and the arrow was drawn on top of it. A short English word hid
+the collision; a longer name, a translation or a narrower card did not, and the arrow sat in
+the middle of the word.
+
+Three things, three columns. The arrow has a column of its own, so the name has somewhere to
+stop.
+
+The deck arrows had the same fault for a different reason: they ride on the slide's left and
+right edges, which works while the card is wide enough to have margins nothing is written in.
+On a narrow screen there are no such margins, so they were printed on the sentence. Below the
+narrow breakpoint they become a row under the deck, where they also get the 44px target a
+thumb needs.
+
+Both are now measured rather than looked at. A new sweep hides all but one page, measures
+every drawn icon against every line of text at five widths, and reports any text box covering
+more than a quarter of an icon - clipping each rectangle to every scrolling ancestor, so text
+that has been scrolled out of sight is not counted as covering anything. Eighty screens, no
+overlaps.
+
+### The last page is a result, not a list of lines
+
+People judge a thing by the last thing they see, and the last thing this one showed was a
+column of centred lines: a figure, an uppercase label, a heading, a meta line, a list and a
+sentence. Each one true, none of them composed - and how the room ended up, which is what the
+whole scenario was about, was not on it at all.
+
+It is one object now. A dial drawn from the score itself leads, in the colour band the run
+earned, with the figure inside it. Beside it: the verdict in words, how the story ended in the
+scenario's own words - which the closing page never showed - and the three readings reported
+once as labelled bars against the scale they moved on. What the learner earned reads as a row
+of named cards underneath, one row wide, and then the controls.
+
+The band badge above the result is gone: it said what the dial says, in a second shape, and
+the two together pushed the Try again button off the bottom of a frame that cannot scroll. So
+did the sentence explaining the arrows, which now stays for screen readers only - both
+controls it described are on the screen and both are labelled.
+
+That frame is the hard part, and it is now measured: a sweep renders the page with the longest
+plausible verdict, the longest ending and all four awards at nine window sizes, from a 900x700
+desktop up, and fails if anything overflows or the controls fall below the frame.
+
 ## [v3.3.0] - 2026-09-30
 
 ### Nothing is published half-illustrated and half-silent

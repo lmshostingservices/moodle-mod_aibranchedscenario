@@ -1,0 +1,6 @@
+# Nothing generated is ignored: Moodle serves amd/build directly, so the built AMD
+# bundles are part of the plugin and must travel with it.
+*.bak
+*.orig
+*.rej
+.DS_Store

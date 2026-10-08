@@ -3588,7 +3588,13 @@ button.aibs-avatar {
     border-radius: var(--aibs-radius-sm);
     column-gap: clamp(10px, 1.4vw, 16px);
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    /* THREE COLUMNS, BECAUSE THERE ARE THREE THINGS.
+       The name and the change shared one cell - the name stretched across the whole column
+       and the change was pushed to its far end, printed ON TOP of it. With a short English
+       word nothing visibly collided; with a longer name, a translation, or a narrower card,
+       the arrow sat in the middle of the word. The change has a column of its own now, so
+       the name has somewhere to stop. */
+    grid-template-columns: auto minmax(0, 1fr) auto;
     padding: clamp(10px, 1.4vw, 14px) clamp(12px, 1.6vw, 18px);
     row-gap: 2px;
     text-align: start;
@@ -3612,9 +3618,11 @@ button.aibs-avatar {
 }
 
 .aibs-ring .aibs-ring-change {
-    grid-column: 2;
-    grid-row: 1;
+    align-self: center;
+    grid-column: 3;
+    grid-row: 1 / span 2;
     justify-self: end;
+    white-space: nowrap;
 }
 
 .aibs-ring .aibs-ring-standing {
@@ -3644,6 +3652,10 @@ button.aibs-avatar {
    narrow card, where it ends up further from the figure it describes than from the next
    card along. */
 @media (max-width: 600px) {
+    .aibs-ring {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
     .aibs-ring .aibs-ring-change {
         grid-column: 2;
         grid-row: 2;
@@ -5414,7 +5426,7 @@ button.aibs-avatar {
 }
 
 .aibs-deckend .aibs-debrief-actions {
-    margin-top: 18px;
+    margin-top: 12px;
 }
 
 /* Printing is the one time the whole debrief should be on one page. */
@@ -5692,6 +5704,18 @@ button.aibs-avatar:focus-visible {
     overflow: hidden;
     position: relative;
     text-align: center;
+}
+
+/* The closing card has three visible things on it and a fixed frame to hold them in: the
+   result, what the learner earned, and the controls. The shared slide gap is written for
+   pages of prose; this one is tighter, so a two-line verdict and all four awards still
+   leave the Try again button inside the frame. Specific enough to beat the shared rule,
+   which is the only reason the selector is this long. */
+.path-mod-aibranchedscenario .aibs-debrief .aibs-deckslide.aibs-deckend .aibs-node-body {
+    /* Top-aligned like every other slide - it was centred for a while, and preview/topalign.mjs
+       was right to call that back: a page that starts half way down is the fault this product
+       has been asked to stop making, and the closing page is not an exception to it. */
+    row-gap: clamp(6px, .6vh, 10px);
 }
 
 /* Three tiles, one row, and the three figures on one line as each other.
@@ -6743,7 +6767,7 @@ button.aibs-avatar:focus-visible {
 .aibs-choicecards {
     display: grid;
     gap: 14px;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(228px, 1fr));
     margin-bottom: 22px;
 }
 
@@ -6851,4 +6875,318 @@ button.aibs-avatar:focus-visible {
     color: var(--aibs-muted);
     font-size: var(--aibs-text-small);
     margin: 12px 0 0;
+}
+
+/* ------------------------------------------------- the deck arrows stop sitting on the words
+
+   The arrows ride on the slide's left and right edges, half way down, which works while the
+   card is wide enough to have margins nothing is written in. On a narrow screen there are no
+   such margins: the card is the width of the screen, so the arrows were printed on top of
+   the sentence at that height - reported as text overlapping the icons.
+
+   At the narrow breakpoint they stop overlaying and become a row under the deck, where they
+   also get the 44px target a thumb needs. Measured by preview/overlap.mjs, which checks every
+   icon on every screen against every line of text at five widths. */
+@media (max-width: 899px) {
+    .path-mod-aibranchedscenario .aibs-deck-nav,
+    .aibs-deck-nav {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        margin-top: 12px;
+    }
+
+    .path-mod-aibranchedscenario .aibs-deck-nav .aibs-iconbtn,
+    .aibs-deck-nav .aibs-iconbtn {
+        inset-inline-end: auto;
+        inset-inline-start: auto;
+        position: static;
+        top: auto;
+        transform: none;
+    }
+
+    .path-mod-aibranchedscenario .aibs-deck-nav .aibs-iconbtn:hover,
+    .path-mod-aibranchedscenario .aibs-deck-nav .aibs-iconbtn:focus-visible,
+    .aibs-deck-nav .aibs-iconbtn:hover,
+    .aibs-deck-nav .aibs-iconbtn:focus-visible {
+        transform: translateY(-1px);
+    }
+}
+
+/* ------------------------------------------------------------------ the closing result
+
+   The last thing anybody sees, and it was a column of centred lines: a figure, a label, a
+   heading, a meta line, a list, a sentence. Each true, none of them composed, and the thing
+   the whole scenario was about - how the room ended up - was not on it at all.
+
+   One object instead. The dial is the result and leads; beside it the verdict in words, how
+   the story ended, and the three readings the learner spent the scenario moving. */
+.aibs-result {
+    align-items: center;
+    display: grid;
+    gap: clamp(18px, 3vw, 40px);
+    grid-template-columns: auto minmax(0, 1fr);
+    text-align: start;
+    width: 100%;
+}
+
+.aibs-result-figure {
+    display: grid;
+    gap: 8px;
+    justify-items: center;
+}
+
+/* One number, drawn twice: a conic sweep to the score, and the score written inside it.
+   No script - right in print, and right before the JS has run. */
+.aibs-resultdial {
+    align-items: center;
+    aspect-ratio: 1;
+    background: conic-gradient(var(--aibs-accent) calc(var(--aibs-dial, 0) * 1%),
+        var(--aibs-border-soft) 0);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    width: clamp(116px, min(15vw, 20vh), 152px);
+}
+
+.aibs-deckend.aibs-tone-good .aibs-resultdial,
+.aibs-deckend.aibs-outcome-strong .aibs-resultdial {
+    background: conic-gradient(var(--aibs-positive) calc(var(--aibs-dial, 0) * 1%),
+        var(--aibs-border-soft) 0);
+}
+
+.aibs-deckend.aibs-tone-warn .aibs-resultdial,
+.aibs-deckend.aibs-outcome-mixed .aibs-resultdial {
+    background: conic-gradient(var(--aibs-warn) calc(var(--aibs-dial, 0) * 1%),
+        var(--aibs-border-soft) 0);
+}
+
+.aibs-deckend.aibs-tone-bad .aibs-resultdial,
+.aibs-deckend.aibs-outcome-highrisk .aibs-resultdial {
+    background: conic-gradient(var(--aibs-negative) calc(var(--aibs-dial, 0) * 1%),
+        var(--aibs-border-soft) 0);
+}
+
+/* The disc punched out of the middle, which is what turns a pie into a dial. */
+.aibs-resultdial-face {
+    align-items: center;
+    background: var(--aibs-surface);
+    border-radius: 50%;
+    display: grid;
+    gap: 2px;
+    height: 78%;
+    justify-items: center;
+    width: 78%;
+}
+
+.aibs-resultdial-label {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-strong);
+    letter-spacing: .08em;
+    margin: 0;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.aibs-result .aibs-finish-meta {
+    justify-content: center;
+    margin: 0;
+}
+
+.aibs-result-main {
+    display: grid;
+    gap: 8px;
+    /* Stretch, not start: a track of 1fr inside a column that shrinks to its content is a
+       track of nothing, which is a bar nobody can see. */
+    justify-items: stretch;
+}
+
+/* The closing card centres everything on it, which is right for a statement and wrong for a
+   result: a verdict, an ending and three labelled readings read down one left edge. */
+.aibs-result,
+.aibs-result * {
+    text-align: start;
+}
+
+.aibs-result .aibs-resultdial-face,
+.aibs-result .aibs-resultdial-label,
+.aibs-result .aibs-finish-meta,
+.aibs-result .aibs-result-reading-value {
+    text-align: center;
+}
+
+.aibs-result .aibs-result-reading-value {
+    text-align: end;
+}
+
+.aibs-result-verdict {
+    margin: 0;
+    text-wrap: balance;
+}
+
+/* How the story ended, in the scenario's own words. The closing page never said: the ending
+   was shown two pages earlier and then replaced by a percentage. */
+.aibs-result-ending {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-body);
+    margin: 0;
+}
+
+.aibs-result-readings {
+    display: grid;
+    gap: 7px;
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    width: 100%;
+}
+
+/* Name, bar, number - three columns, so no label can ever run under a figure. */
+.aibs-result-reading {
+    align-items: center;
+    column-gap: 12px;
+    display: grid;
+    grid-template-columns: minmax(6em, auto) minmax(0, 1fr) 2.5em;
+}
+
+.aibs-result-reading-label {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-label);
+}
+
+.aibs-result-bar {
+    background: var(--aibs-border-soft);
+    border-radius: 999px;
+    display: block;
+    height: 8px;
+    overflow: hidden;
+}
+
+.aibs-result-bar-fill {
+    background: var(--aibs-positive);
+    border-radius: 999px;
+    display: block;
+    height: 100%;
+}
+
+/* Tension reads the other way: a full bar is a bad end, so it is not drawn in the colour of
+   a good one. */
+.aibs-result-reading-inverse .aibs-result-bar-fill {
+    background: var(--aibs-warn);
+}
+
+.aibs-result-reading-value {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-body);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--aibs-weight-figure);
+    text-align: end;
+}
+
+/* One column below the wide breakpoint, the dial first: the result is still the first thing
+   read, and the verdict beside a dial needs a card wider than this to read as one object. */
+@media (max-width: 899px) {
+    .aibs-result {
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: center;
+    }
+
+    .aibs-result-main {
+        text-align: center;
+        width: 100%;
+    }
+
+    .aibs-result-readings {
+        text-align: start;
+    }
+}
+
+/* What they did, as a row of named behaviours rather than a list that runs off the card.
+   Two to a row where there is room, one on a phone, and never more than the frame holds. */
+.aibs-deckend .aibs-awards {
+    margin-top: 8px;
+    width: 100%;
+}
+
+.aibs-deckend .aibs-awards-heading {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-strong);
+    letter-spacing: .08em;
+    margin: 0 0 4px;
+    text-align: start;
+    text-transform: uppercase;
+}
+
+.aibs-deckend .aibs-awards-list {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* One row, always, on a card wide enough for one. Four tiles with a 228px floor wrapped to
+   two rows between 900 and 1300px, and the second row pushed the Try again button out of a
+   frame that cannot scroll. Equal tracks instead: the tiles narrow and the sentence inside
+   them takes another line, which costs 16px rather than 74. */
+@media (min-width: 900px) {
+    .aibs-deckend .aibs-awards-list {
+        grid-auto-columns: minmax(0, 1fr);
+        grid-auto-flow: column;
+        grid-template-columns: none;
+    }
+}
+
+/* A short desktop window - 900x700 is a real one - leaves the frame about 470px to hold a
+   result, four awards and the controls. The achievement is its title; the sentence under it
+   restates what the title already says. So on a short window the awards read as a row of
+   named chips and the sentence stays in the accessibility tree rather than on the screen,
+   which is the difference between seeing the Try again button and not. */
+@media (min-width: 900px) and (max-height: 720px) {
+    .aibs-deckend .aibs-award-detail {
+        border: 0;
+        clip: rect(0 0 0 0);
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        padding: 0;
+        position: absolute;
+        white-space: nowrap;
+        width: 1px;
+    }
+
+    .aibs-deckend .aibs-award {
+        padding: 6px 10px;
+    }
+}
+
+.aibs-deckend .aibs-award {
+    align-items: center;
+    background: var(--aibs-surface-alt);
+    border-radius: var(--aibs-radius-sm);
+    column-gap: 10px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 8px 12px;
+    text-align: start;
+}
+
+.aibs-deckend .aibs-award-text {
+    display: grid;
+    gap: 1px;
+    text-align: start;
+}
+
+.aibs-deckend .aibs-award-title {
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-label);
+}
+
+.aibs-deckend .aibs-award-detail {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
 }

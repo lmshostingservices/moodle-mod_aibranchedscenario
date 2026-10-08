@@ -216,38 +216,10 @@
                 so the result was on page two of nine and nothing was on page nine. }}
             <div class="aibs-node-body aibs-deckend-body">
                 <span class="aibs-finish-burst" data-region="confetti" aria-hidden="true"></span>
-                {{! One mark per band, and the shape says which: a tick when it went well, a
-                    caution when it was mixed, a cross when it cost. A green exclamation mark
-                    was neither - it read as a warning drawn in the colour of a success, which
-                    tells a learner two contradictory things at once. }}
-                <span class="aibs-finish-mark" aria-hidden="true">
-                    <svg viewBox="0 0 96 96" focusable="false">
-                        <circle class="aibs-finish-ring" cx="48" cy="48" r="42" fill="none"
-                                stroke="currentColor" stroke-width="3"/>
-                        {{#endgood}}
-                            <path class="aibs-finish-tick" pathLength="56" d="M30 49.5 42.5 62 66.5 36" fill="none"
-                                  stroke="currentColor" stroke-width="5" stroke-linecap="round"
-                                  stroke-linejoin="round"/>
-                        {{/endgood}}
-                        {{#endwarn}}
-                            {{! Sized to sit inside the ring rather than through it: the
-                                first triangle was 42 units wide in a circle of radius 42,
-                                so its corners crossed the stroke and the mark read as two
-                                shapes colliding rather than as one caution sign. }}
-                            <path class="aibs-finish-tick" pathLength="56" d="M48 33 65 62H31Z" fill="none"
-                                  stroke="currentColor" stroke-width="4.5"
-                                  stroke-linejoin="round"/>
-                            <path d="M48 44v7" fill="none" stroke="currentColor"
-                                  stroke-width="4.5" stroke-linecap="round"/>
-                            <circle class="aibs-finish-dot" cx="48" cy="57" r="2.4"
-                                    fill="currentColor"/>
-                        {{/endwarn}}
-                        {{#endbad}}
-                            <path class="aibs-finish-tick" pathLength="56" d="M34 34 62 62M62 34 34 62" fill="none"
-                                  stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
-                        {{/endbad}}
-                    </svg>
-                </span>
+                {{! THE MARK IS THE DIAL NOW. A badge above the result and a coloured
+                    dial under it said the same thing twice, in two shapes, and together
+                    they pushed the Try again button off the bottom of the frame. The dial
+                    carries the band the run earned, so the badge goes. }}
                 {{! ONE RESULT, ONE COLOUR, ONE HIERARCHY.
                     This screen carried four different treatments in a column - a grey
                     uppercase eyebrow, a coloured pill, three blue figures in bordered
@@ -260,22 +232,83 @@
                     line, because they are context for the result rather than results of
                     their own. Colour is spent once, on the mark and the figure, and both
                     take the band the run earned. }}
-                <p class="aibs-finish-score">
-                    <span class="aibs-endstat-score" data-region="endscore">{{score}}<span
-                        class="aibs-finish-unit">%</span></span>
-                </p>
-                <p class="aibs-finish-eyebrow">{{#str}} endstat:quality, mod_aibranchedscenario {{/str}}</p>
-                {{#endverdict}}<h3 class="aibs-h3">{{endverdict}}</h3>{{/endverdict}}
+                {{! THE LAST THING ANYBODY SEES.
+                    It was a column of centred lines - a figure, a label, a heading, a meta
+                    line, a list, a sentence - each true and none of them composed. A result
+                    is one object: the score, what it means, what happened in the story, and
+                    where the room ended up.
 
-                <p class="aibs-finish-meta">
-                    {{#outcomelabel}}
-                        <span class="aibs-sr-only">{{#str}} endstat:outcome, mod_aibranchedscenario {{/str}}: </span>
-                        <span class="aibs-endstat-outcome">{{outcomelabel}}</span>
-                        <span class="aibs-finish-sep" aria-hidden="true">&middot;</span>
-                    {{/outcomelabel}}
-                    <span class="aibs-sr-only">{{#str}} endstat:decisions, mod_aibranchedscenario {{/str}}: </span>
-                    <span class="aibs-finish-count">{{#str}} endstat:decisionscount, mod_aibranchedscenario, {{decisions}} {{/str}}</span>
-                </p>
+                    Two columns on a real screen. The dial is the result and leads; beside it
+                    the verdict, the ending in the scenario's own words, and the three
+                    readings the learner moved. One column on a phone, dial first. }}
+                <div class="aibs-result">
+                    <div class="aibs-result-figure">
+                        {{! The dial is drawn from one number: a conic sweep to the score, a
+                            disc punched out of the middle, and the figure inside it. No
+                            script, so it is right in print and right before the JS runs. }}
+                        <div class="aibs-resultdial" style="--aibs-dial: {{score}}"
+                             role="img" aria-label="{{score}}%">
+                            <span class="aibs-resultdial-face">
+                                <span class="aibs-endstat-score" data-region="endscore">{{score}}<span
+                                    class="aibs-finish-unit">%</span></span>
+                            </span>
+                        </div>
+                        <p class="aibs-resultdial-label">
+                            {{#str}} endstat:quality, mod_aibranchedscenario {{/str}}</p>
+                        <p class="aibs-finish-meta">
+                            {{#outcomelabel}}
+                                <span class="aibs-sr-only">{{#str}} endstat:outcome, mod_aibranchedscenario {{/str}}: </span>
+                                <span class="aibs-endstat-outcome">{{outcomelabel}}</span>
+                                <span class="aibs-finish-sep" aria-hidden="true">&middot;</span>
+                            {{/outcomelabel}}
+                            <span class="aibs-sr-only">{{#str}} endstat:decisions, mod_aibranchedscenario {{/str}}: </span>
+                            <span class="aibs-finish-count">{{#str}} endstat:decisionscount, mod_aibranchedscenario, {{decisions}} {{/str}}</span>
+                        </p>
+                    </div>
+
+                    <div class="aibs-result-main">
+                        {{#endverdict}}<h3 class="aibs-h3 aibs-result-verdict">{{endverdict}}</h3>{{/endverdict}}
+                        {{! HOW THE STORY ENDED, which the closing page never said. The
+                            scenario wrote an ending; it was shown two pages earlier and
+                            then replaced by a percentage. }}
+                        {{#outcometitle}}
+                            <p class="aibs-result-ending">{{outcometitle}}</p>
+                        {{/outcometitle}}
+
+                        {{! WHERE THE ROOM ENDED UP. The three readings the learner spent the
+                            whole scenario moving, reported once at the end against where
+                            they started. }}
+                        {{#metrics}}
+                        <ul class="aibs-result-readings">
+                            <li class="aibs-result-reading">
+                                <span class="aibs-result-reading-label">
+                                    {{#str}} metric:engagement, mod_aibranchedscenario {{/str}}</span>
+                                <span class="aibs-result-bar" aria-hidden="true">
+                                    <span class="aibs-result-bar-fill"
+                                          style="width: {{metrics.engagement}}%"></span>
+                                </span>
+                                <span class="aibs-result-reading-value">{{metrics.engagement}}</span>
+                            </li>
+                            <li class="aibs-result-reading">
+                                <span class="aibs-result-reading-label">
+                                    {{#str}} metric:trust, mod_aibranchedscenario {{/str}}</span>
+                                <span class="aibs-result-bar" aria-hidden="true">
+                                    <span class="aibs-result-bar-fill" style="width: {{metrics.trust}}%"></span>
+                                </span>
+                                <span class="aibs-result-reading-value">{{metrics.trust}}</span>
+                            </li>
+                            <li class="aibs-result-reading aibs-result-reading-inverse">
+                                <span class="aibs-result-reading-label">
+                                    {{#str}} metric:tension, mod_aibranchedscenario {{/str}}</span>
+                                <span class="aibs-result-bar" aria-hidden="true">
+                                    <span class="aibs-result-bar-fill" style="width: {{metrics.tension}}%"></span>
+                                </span>
+                                <span class="aibs-result-reading-value">{{metrics.tension}}</span>
+                            </li>
+                        </ul>
+                        {{/metrics}}
+                    </div>
+                </div>
 
                 {{! WHAT THEY DID, NAMED. Not points and not "answered five questions" -
                     an achievement that counts actions rewards persistence, which the
@@ -306,7 +339,11 @@
                 </div>
                 {{/hasawards}}
 
-                <p class="aibs-prose">{{#str}} debriefendlead, mod_aibranchedscenario {{/str}}</p>
+                {{! The arrows and the Try again button are both on this screen and both
+                    labelled, so a sentence explaining them was a line of instructions on the
+                    one page that should carry a result - and it cost the height the button
+                    needed. Kept for anyone who cannot see where the controls are. }}
+                <p class="aibs-sr-only">{{#str}} debriefendlead, mod_aibranchedscenario {{/str}}</p>
                 {{> mod_aibranchedscenario/debriefactions }}
             </div>
         </section>

@@ -1248,5 +1248,11 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026093000, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026100800) {
+        // Version 3.4.0. No schema change: the closing page is one composed result, and no
+        // reading's name is printed on its own change arrow.
+        upgrade_mod_savepoint(true, 2026100800, 'aibranchedscenario');
+    }
+
     return true;
 }
