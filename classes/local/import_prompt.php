@@ -43,7 +43,7 @@ class import_prompt {
      * @param int $decisions Ignored. The length is fixed.
      * @return string
      */
-    public static function text(int $decisions = schema::DECISIONS): string {
+    public static function text(int $decisions = schema::DECISIONS, array $values = []): string {
         unset($decisions);
         $decisions = schema::DECISIONS;
         $metrics = implode(', ', schema::metrics());
@@ -51,10 +51,25 @@ class import_prompt {
         $tones = implode(', ', schema::tones());
         $complexities = implode(', ', schema::complexities());
 
+        // THE PROMPT USED TO BE CONTEXT-BLIND, AND THAT WAS THE DIFFERENCE BETWEEN THE
+        // TWO ROUTES IN. A generated scenario is written with the teacher's industry,
+        // setting, audience, role, problem, people and tone, because the generate request
+        // carries them. The copied prompt carried none of it: it described the document
+        // format and attached the source content, so an assistant had to guess the
+        // workplace - and guessed a meeting room. The same answers now lead the prompt.
+        $brief = self::brief_lines($values);
+
         $lines = [
             'You are writing a branching workplace scenario for a Moodle activity. Read the '
-                . 'source content at the end of this message and build the scenario from it.',
+                . 'brief and the source content in this message and build the scenario from '
+                . 'them. Where the brief and the source content disagree about the setting '
+                . 'or the people, the brief wins: it is what the teacher chose.',
             '',
+        ];
+        if ($brief !== []) {
+            $lines = array_merge($lines, ['THE BRIEF', ''], $brief, ['']);
+        }
+        $lines = array_merge($lines, [
             'Answer with one JSON document and nothing else. No commentary before or after, '
                 . 'no code fence, no trailing commas.',
             '',
@@ -185,9 +200,139 @@ class import_prompt {
             // generate request cannot state different ones. This is the long form of
             // the same list, which is the text this prompt has always carried.
             ...content_standard::long_lines(),
-        ];
+        ]);
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * The teacher's answers, as a brief the assistant reads before the format rules.
+     *
+     * Written as plain sentences rather than a JSON echo: the assistant is being asked to
+     * write prose set in this workplace, and a list of key-value pairs is read as metadata
+     * to copy rather than as a room to put people in. Values the teacher never supplied are
+     * left out entirely - a brief that says "Audience: " teaches the assistant that blanks
+     * are acceptable, and it starts leaving its own.
+     *
+     * @param array $values Wizard values, as {@see source_normaliser::normalise()} returns them.
+     * @return string[] Lines, empty when the teacher has answered nothing yet.
+     */
+    protected static function brief_lines(array $values): array {
+        if ($values === []) {
+            return [];
+        }
+        $lines = [];
+        $say = function (string $label, string $value) use (&$lines): void {
+            $value = trim($value);
+            if ($value !== '') {
+                $lines[] = '- ' . $label . ': ' . $value;
+            }
+        };
+        // Choosing "other" is a way of saying the list did not have it, not an answer.
+        // Where the
+        // teacher typed what they meant, that is what the assistant is told.
+        $pick = function (string $key, array $list) use ($values): string {
+            $value = trim((string)($values[$key] ?? ''));
+            $other = trim((string)($values[$key . 'other'] ?? ''));
+            if ($value === 'other') {
+                return $other;
+            }
+            return $value === '' ? '' : (string)($list[$value] ?? $value);
+        };
+
+        $say('Industry', $pick('industry', self::labels('industry', schema::industries())));
+        $say('Where it happens', $pick('setting', self::labels('setting', schema::settings_list())));
+        $say('Who the learners are', (string)($values['audience'] ?? ''));
+        $say('Who the learner plays', (string)($values['participantrole'] ?? ''));
+        $say('The problem at the centre of it', (string)($values['centralproblem'] ?? ''));
+        $say('What makes it hard', implode('; ', self::readable(
+            (array)($values['whyhard'] ?? []),
+            'whyhard'
+        )));
+        $say('What it costs to get wrong', implode('; ', self::readable(
+            (array)($values['stakes'] ?? []),
+            'stakes'
+        )));
+        $say('How it opens', (string)($values['openingsituation'] ?? ''));
+        $say('Tone', implode('', self::readable(
+            array_filter([(string)($values['tone'] ?? '')]),
+            'tone'
+        )));
+        $say('How demanding it should be', implode('', self::readable(
+            array_filter([(string)($values['complexity'] ?? '')]),
+            'complexity'
+        )));
+        $say('Working title', (string)($values['title'] ?? ''));
+
+        // THE CAST IS THE PART AN ASSISTANT CANNOT GUESS AND THE PART THAT MATTERS MOST.
+        // A scenario written without it invents three people called Alex, and the pictures
+        // then draw a different Alex in every frame. Gender is named because it chooses the
+        // voice the spoken line is read in and keeps one face recognisable between scenes.
+        $cast = [];
+        foreach ((array)($values['characters'] ?? []) as $character) {
+            if (!is_array($character) || trim((string)($character['name'] ?? '')) === '') {
+                continue;
+            }
+            $who = trim((string)$character['name']);
+            $detail = array_filter([
+                trim((string)($character['role'] ?? '')),
+                trim((string)($character['trait'] ?? '')),
+                trim((string)($character['gender'] ?? '')),
+            ], static fn($part) => $part !== '');
+            $cast[] = $detail === [] ? $who : $who . ' (' . implode(', ', $detail) . ')';
+        }
+        if ($cast !== []) {
+            $lines[] = '- The people in it, to be used by these names and no others: '
+                . implode('; ', $cast);
+        }
+
+        if ($lines === []) {
+            return [];
+        }
+        return array_merge(
+            ['Everything below was chosen by the teacher. Use it. Do not relocate the '
+                . 'scenario to a meeting room, do not rename the people, and do not write '
+                . 'around an answer because the source content does not mention it.', ''],
+            $lines
+        );
+    }
+
+    /**
+     * Human-readable labels for a list of option keys.
+     *
+     * @param array $keys The chosen keys.
+     * @param string $family The lang string prefix the options are named under.
+     * @return string[]
+     */
+    protected static function readable(array $keys, string $family): array {
+        $out = [];
+        foreach ($keys as $key) {
+            $key = (string)$key;
+            if ($key === '') {
+                continue;
+            }
+            $id = $family . ':' . $key;
+            $out[] = get_string_manager()->string_exists($id, 'mod_aibranchedscenario')
+                ? get_string($id, 'mod_aibranchedscenario') : $key;
+        }
+        return $out;
+    }
+
+    /**
+     * Option key to label, for one family of options.
+     *
+     * @param string $family The lang string prefix.
+     * @param array $keys The option keys.
+     * @return array Key to label.
+     */
+    protected static function labels(string $family, array $keys): array {
+        $out = [];
+        foreach ($keys as $key) {
+            $id = $family . ':' . $key;
+            $out[$key] = get_string_manager()->string_exists($id, 'mod_aibranchedscenario')
+                ? get_string($id, 'mod_aibranchedscenario') : $key;
+        }
+        return $out;
     }
 
     /**

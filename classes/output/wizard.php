@@ -334,9 +334,13 @@ class wizard implements \renderable, \templatable {
                 'setting'    => source_normaliser::blank()['setting'],
                 'atmosphere' => source_normaliser::blank()['atmosphere'],
             ],
+            'choices'        => self::choices_summary($source),
             'maxsourcechars' => $maxsourcechars,
             'generationeta'  => get_string('generationeta', 'mod_aibranchedscenario'),
-            'importprompt'   => \mod_aibranchedscenario\local\import_prompt::text(),
+            // Built from the SAVED answers, so the prompt a teacher copies describes
+            // the workplace, the people and the problem they have already chosen
+            // rather than leaving an assistant to guess at all three.
+            'importprompt'   => \mod_aibranchedscenario\local\import_prompt::text(schema::DECISIONS, $source),
             'pricing'        => self::pricing_card($this->scenario),
             'howto'          => self::how_to_use(),
             'reading'        => self::further_reading(),
@@ -366,6 +370,76 @@ class wizard implements \renderable, \templatable {
             ];
         }
         return $out;
+    }
+
+    /**
+     * What the teacher has already chosen, printed above the content box.
+     *
+     * The content step used to come first, so an assistant was handed the format rules and
+     * a block of policy text and had to guess the workplace - and guessed a meeting room.
+     * The context steps come first now, and this prints their answers where the prompt is
+     * copied, so what the assistant is about to be told is visible rather than implied.
+     *
+     * An unanswered row is left out rather than shown blank: a list of empty values reads
+     * as a broken page, and the one thing this block exists to do is show that the context
+     * is there.
+     *
+     * @param array $source Normalised wizard values.
+     * @return array Template context: rows of label and value.
+     */
+    protected static function choices_summary(array $source): array {
+        $label = function (string $family, string $key) {
+            $id = $family . ':' . $key;
+            return get_string_manager()->string_exists($id, 'mod_aibranchedscenario')
+                ? get_string($id, 'mod_aibranchedscenario') : $key;
+        };
+        $pick = function (string $key, string $family) use ($source, $label) {
+            $value = trim((string)($source[$key] ?? ''));
+            if ($value === 'other') {
+                return trim((string)($source[$key . 'other'] ?? ''));
+            }
+            return $value === '' ? '' : $label($family, $value);
+        };
+        $list = function (string $key, string $family) use ($source, $label) {
+            $out = [];
+            foreach ((array)($source[$key] ?? []) as $one) {
+                if (trim((string)$one) !== '') {
+                    $out[] = $label($family, (string)$one);
+                }
+            }
+            return implode(', ', $out);
+        };
+        $cast = [];
+        foreach ((array)($source['characters'] ?? []) as $character) {
+            $name = trim((string)($character['name'] ?? ''));
+            if ($name !== '') {
+                $cast[] = $name;
+            }
+        }
+
+        $rows = [
+            ['field:industry', $pick('industry', 'industry')],
+            ['field:setting', $pick('setting', 'setting')],
+            ['field:audience', trim((string)($source['audience'] ?? ''))],
+            ['field:participantrole', trim((string)($source['participantrole'] ?? ''))],
+            ['field:centralproblem', trim((string)($source['centralproblem'] ?? ''))],
+            ['field:whyhard', $list('whyhard', 'whyhard')],
+            ['field:stakes', $list('stakes', 'stakes')],
+            ['field:characters', implode(', ', $cast)],
+            ['field:tone', $pick('tone', 'tone')],
+        ];
+        $out = [];
+        foreach ($rows as [$stringid, $value]) {
+            if ($value === '') {
+                continue;
+            }
+            $out[] = [
+                'label' => get_string_manager()->string_exists($stringid, 'mod_aibranchedscenario')
+                    ? get_string($stringid, 'mod_aibranchedscenario') : $stringid,
+                'value' => $value,
+            ];
+        }
+        return ['rows' => $out, 'any' => $out !== []];
     }
 
     /**

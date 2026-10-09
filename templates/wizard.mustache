@@ -155,11 +155,11 @@
 
         <div class="aibs-wizard-body" data-region="wizardbody" hidden>
         <ol class="aibs-wizard-steps" data-region="steps">
-            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="1" aria-current="step">1. {{#str}} step:content, mod_aibranchedscenario {{/str}}</button></li>
-            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="2">2. {{#str}} step:scene, mod_aibranchedscenario {{/str}}</button></li>
-            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="3">3. {{#str}} step:challenge, mod_aibranchedscenario {{/str}}</button></li>
-            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="4">4. {{#str}} step:people, mod_aibranchedscenario {{/str}}</button></li>
-            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="5">5. {{#str}} step:design, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="1" aria-current="step">1. {{#str}} step:scene, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="2">2. {{#str}} step:challenge, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="3">3. {{#str}} step:people, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="4">4. {{#str}} step:design, mod_aibranchedscenario {{/str}}</button></li>
+            <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="5">5. {{#str}} step:content, mod_aibranchedscenario {{/str}}</button></li>
             <li><button type="button" class="aibs-wizard-step" data-action="gotostep" data-step="6">6. {{#str}} step:build, mod_aibranchedscenario {{/str}}</button></li>
         </ol>
 
@@ -188,111 +188,6 @@
         </div>
 
         <section class="aibs-card" data-region="step" data-step="1">
-            <h3 class="aibs-h3">{{#str}} step:content, mod_aibranchedscenario {{/str}}</h3>
-            <p class="aibs-step-lead">{{#str}} step:contentlead, mod_aibranchedscenario {{/str}}</p>
-            {{! TWO WAYS IN, AS TWO CARDS.
-                A paste box, an autofill button, a disclosure holding a prompt to copy and a
-                second box to paste the answer back: four controls for one question, and a
-                teacher had to read all four to find out which was theirs. }}
-            <div class="aibs-choicecards" role="group" aria-labelledby="aibs-route-label">
-                <span class="aibs-sr-only" id="aibs-route-label">
-                    {{#str}} route:question, mod_aibranchedscenario {{/str}}</span>
-                <button type="button" class="aibs-choicecard" data-action="route" data-route="own"
-                        aria-pressed="true">
-                    <span class="aibs-choicecard-title">
-                        {{#str}} route:own, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-choicecard-body">
-                        {{#str}} route:ownbody, mod_aibranchedscenario {{/str}}</span>
-                </button>
-                <button type="button" class="aibs-choicecard" data-action="route" data-route="assistant"
-                        aria-pressed="false">
-                    <span class="aibs-choicecard-title">
-                        {{#str}} route:assistant, mod_aibranchedscenario {{/str}}</span>
-                    <span class="aibs-choicecard-body">
-                        {{#str}} route:assistantbody, mod_aibranchedscenario {{/str}}</span>
-                </button>
-            </div>
-
-            <div class="aibs-route" data-route-panel="own">
-            <div class="aibs-field">
-                <label class="aibs-field-label" for="aibs-sourcecontent">
-                    {{#str}} field:sourcecontent, mod_aibranchedscenario {{/str}}
-                    {{! The one input generation genuinely needs. It carried no marker, so a
-                        teacher found out by pressing Generate, confirming the price, and
-                        being refused. }}
-                    <span class="aibs-required">{{#str}} field:required, mod_aibranchedscenario {{/str}}</span></label>
-                <span class="aibs-field-hint" id="aibs-sourcecontent-hint">
-                    {{#str}} field:sourcecontenthint, mod_aibranchedscenario, {{maxsourcechars}} {{/str}}</span>
-                <textarea class="aibs-textarea" id="aibs-sourcecontent" data-field="sourcecontent" rows="10"
-                    aria-describedby="aibs-sourcecontent-hint" maxlength="{{maxsourcechars}}">{{source.sourcecontent}}</textarea>
-                {{! The count says whether what is in the box is the right AMOUNT, while
-                    there is still time to do something about it. A teacher who pastes a
-                    heading and two bullets otherwise finds out by reading a generic
-                    scenario they have already paid for. Polite until it is worth saying
-                    something - see sourceCount() in wizard.js. }}
-                <p class="aibs-sourcecount" data-region="sourcecount" role="status"
-                   aria-live="polite"></p>
-            </div>
-
-            {{! WHAT GOES IN THE BOX.
-
-                Teachers ask what "source content" means, and the honest answer is specific
-                enough that showing beats describing. Closed by default: somebody who
-                already knows what to paste should not have to scroll past six hundred
-                words to reach the box. }}
-            <details class="aibs-disclosure">
-                <summary class="aibs-disclosure-summary">
-                    {{#str}} sourceexample, mod_aibranchedscenario {{/str}}</summary>
-                <div class="aibs-disclosure-body">
-                    <h4 class="aibs-h4">{{#str}} sourceexamplewhat, mod_aibranchedscenario {{/str}}</h4>
-                    <div class="aibs-prose aibs-prose-small">
-                        {{#str}} sourceexamplebody, mod_aibranchedscenario {{/str}}</div>
-                    <p class="aibs-field-hint">
-                        {{#str}} sourceexamplelead, mod_aibranchedscenario {{/str}}</p>
-                    <pre class="aibs-promptsource" data-region="sourceexample">{{#str}} sourceexampletext, mod_aibranchedscenario {{/str}}</pre>
-                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="useexample">
-                        {{#str}} useexample, mod_aibranchedscenario {{/str}}</button>
-                </div>
-            </details>
-
-            <div class="aibs-field">
-                <label class="aibs-field-label" for="aibs-brief">
-                    {{#str}} field:brief, mod_aibranchedscenario {{/str}}</label>
-                <span class="aibs-field-hint">{{#str}} field:briefhint, mod_aibranchedscenario {{/str}}</span>
-                <textarea class="aibs-textarea" id="aibs-brief" data-field="brief" rows="3">{{source.brief}}</textarea>
-            </div>
-
-            {{#aiavailable}}
-                <button type="button" class="aibs-btn aibs-btn-primary" data-action="populate">
-                    {{#str}} autofill, mod_aibranchedscenario {{/str}}
-                </button>
-                <p class="aibs-field-hint">{{#str}} autofillhint, mod_aibranchedscenario {{/str}}</p>
-            {{/aiavailable}}
-
-            </div>
-
-            <div class="aibs-route" data-route-panel="assistant" hidden>
-                <div class="aibs-routebody">
-                    <p class="aibs-field-hint">{{#str}} draftelsewherehint, mod_aibranchedscenario {{/str}}</p>
-                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="copyprompt">
-                        {{#str}} copyprompt, mod_aibranchedscenario {{/str}}</button>
-                    <p class="aibs-field-hint">{{#str}} copyprompthint, mod_aibranchedscenario {{/str}}</p>
-                    <pre class="aibs-promptsource" data-region="promptsource" hidden>{{importprompt}}</pre>
-                    <label class="aibs-field-label" for="aibs-import">
-                        {{#str}} field:importjsonpaste, mod_aibranchedscenario {{/str}}</label>
-                    {{! The one thing a teacher pasting a scenario needs to know about money,
-                        and it was written, defined, and rendered nowhere. }}
-                    <span class="aibs-field-hint">
-                        {{#str}} field:importjsonhint, mod_aibranchedscenario {{/str}}</span>
-                    <textarea class="aibs-textarea" id="aibs-import" data-region="import" rows="6"></textarea>
-                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="import">
-                        {{#str}} importdefinition, mod_aibranchedscenario {{/str}}</button>
-                </div>
-            </div>
-
-        </section>
-
-        <section class="aibs-card" data-region="step" data-step="2" hidden>
             <h3 class="aibs-h3">{{#str}} step:scene, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:scenelead, mod_aibranchedscenario {{/str}}</p>
             <div class="aibs-field">
@@ -356,7 +251,7 @@
             </div>
         </section>
 
-        <section class="aibs-card" data-region="step" data-step="3" hidden>
+        <section class="aibs-card" data-region="step" data-step="2" hidden>
             <h3 class="aibs-h3">{{#str}} step:challenge, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:challengelead, mod_aibranchedscenario {{/str}}</p>
 
@@ -393,7 +288,7 @@
             </div>
         </section>
 
-        <section class="aibs-card" data-region="step" data-step="4" hidden>
+        <section class="aibs-card" data-region="step" data-step="3" hidden>
             <h3 class="aibs-h3">{{#str}} step:people, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:peoplelead, mod_aibranchedscenario {{/str}}</p>
 
@@ -475,7 +370,7 @@
                 {{#str}} addcharacter, mod_aibranchedscenario {{/str}}</button>
         </section>
 
-        <section class="aibs-card" data-region="step" data-step="5" hidden>
+        <section class="aibs-card" data-region="step" data-step="4" hidden>
             <h3 class="aibs-h3">{{#str}} step:design, mod_aibranchedscenario {{/str}}</h3>
             <p class="aibs-step-lead">{{#str}} step:designlead, mod_aibranchedscenario {{/str}}</p>
 
@@ -581,6 +476,135 @@
                 </div>
                 </div>
             </details>
+        </section>
+
+        <section class="aibs-card" data-region="step" data-step="5" hidden>
+            <h3 class="aibs-h3">{{#str}} step:content, mod_aibranchedscenario {{/str}}</h3>
+            <p class="aibs-step-lead">{{#str}} step:contentlead, mod_aibranchedscenario {{/str}}</p>
+            {{! WHAT THE ASSISTANT IS ABOUT TO BE TOLD, WHERE IT IS ABOUT TO BE TOLD IT.
+                This step used to come first, so the prompt a teacher copied carried the
+                format rules and their source content and nothing else - no industry, no
+                setting, no cast - while a generated scenario got all three. The context
+                steps run before this one now, and their answers are printed here, beside
+                the button that sends them. }}
+            <div class="aibs-choices" data-region="choices">
+                <h4 class="aibs-h4">{{#str}} choices:heading, mod_aibranchedscenario {{/str}}</h4>
+                {{#choices.any}}
+                    <p class="aibs-field-hint">{{#str}} choices:lead, mod_aibranchedscenario {{/str}}</p>
+                    <dl class="aibs-choices-list">
+                        {{#choices.rows}}
+                            <div class="aibs-choices-row">
+                                <dt class="aibs-choices-label">{{label}}</dt>
+                                <dd class="aibs-choices-value">{{value}}</dd>
+                            </div>
+                        {{/choices.rows}}
+                    </dl>
+                {{/choices.any}}
+                {{^choices.any}}
+                    <p class="aibs-field-hint aibs-choices-empty">
+                        {{#str}} choices:none, mod_aibranchedscenario {{/str}}</p>
+                {{/choices.any}}
+            </div>
+            {{! TWO WAYS IN, AS TWO CARDS.
+                A paste box, an autofill button, a disclosure holding a prompt to copy and a
+                second box to paste the answer back: four controls for one question, and a
+                teacher had to read all four to find out which was theirs. }}
+            <div class="aibs-choicecards" role="group" aria-labelledby="aibs-route-label">
+                <span class="aibs-sr-only" id="aibs-route-label">
+                    {{#str}} route:question, mod_aibranchedscenario {{/str}}</span>
+                <button type="button" class="aibs-choicecard" data-action="route" data-route="own"
+                        aria-pressed="true">
+                    <span class="aibs-choicecard-title">
+                        {{#str}} route:own, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-choicecard-body">
+                        {{#str}} route:ownbody, mod_aibranchedscenario {{/str}}</span>
+                </button>
+                <button type="button" class="aibs-choicecard" data-action="route" data-route="assistant"
+                        aria-pressed="false">
+                    <span class="aibs-choicecard-title">
+                        {{#str}} route:assistant, mod_aibranchedscenario {{/str}}</span>
+                    <span class="aibs-choicecard-body">
+                        {{#str}} route:assistantbody, mod_aibranchedscenario {{/str}}</span>
+                </button>
+            </div>
+
+            <div class="aibs-route" data-route-panel="own">
+            <div class="aibs-field">
+                <label class="aibs-field-label" for="aibs-sourcecontent">
+                    {{#str}} field:sourcecontent, mod_aibranchedscenario {{/str}}
+                    {{! The one input generation genuinely needs. It carried no marker, so a
+                        teacher found out by pressing Generate, confirming the price, and
+                        being refused. }}
+                    <span class="aibs-required">{{#str}} field:required, mod_aibranchedscenario {{/str}}</span></label>
+                <span class="aibs-field-hint" id="aibs-sourcecontent-hint">
+                    {{#str}} field:sourcecontenthint, mod_aibranchedscenario, {{maxsourcechars}} {{/str}}</span>
+                <textarea class="aibs-textarea" id="aibs-sourcecontent" data-field="sourcecontent" rows="10"
+                    aria-describedby="aibs-sourcecontent-hint" maxlength="{{maxsourcechars}}">{{source.sourcecontent}}</textarea>
+                {{! The count says whether what is in the box is the right AMOUNT, while
+                    there is still time to do something about it. A teacher who pastes a
+                    heading and two bullets otherwise finds out by reading a generic
+                    scenario they have already paid for. Polite until it is worth saying
+                    something - see sourceCount() in wizard.js. }}
+                <p class="aibs-sourcecount" data-region="sourcecount" role="status"
+                   aria-live="polite"></p>
+            </div>
+
+            {{! WHAT GOES IN THE BOX.
+
+                Teachers ask what "source content" means, and the honest answer is specific
+                enough that showing beats describing. Closed by default: somebody who
+                already knows what to paste should not have to scroll past six hundred
+                words to reach the box. }}
+            <details class="aibs-disclosure">
+                <summary class="aibs-disclosure-summary">
+                    {{#str}} sourceexample, mod_aibranchedscenario {{/str}}</summary>
+                <div class="aibs-disclosure-body">
+                    <h4 class="aibs-h4">{{#str}} sourceexamplewhat, mod_aibranchedscenario {{/str}}</h4>
+                    <div class="aibs-prose aibs-prose-small">
+                        {{#str}} sourceexamplebody, mod_aibranchedscenario {{/str}}</div>
+                    <p class="aibs-field-hint">
+                        {{#str}} sourceexamplelead, mod_aibranchedscenario {{/str}}</p>
+                    <pre class="aibs-promptsource" data-region="sourceexample">{{#str}} sourceexampletext, mod_aibranchedscenario {{/str}}</pre>
+                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="useexample">
+                        {{#str}} useexample, mod_aibranchedscenario {{/str}}</button>
+                </div>
+            </details>
+
+            <div class="aibs-field">
+                <label class="aibs-field-label" for="aibs-brief">
+                    {{#str}} field:brief, mod_aibranchedscenario {{/str}}</label>
+                <span class="aibs-field-hint">{{#str}} field:briefhint, mod_aibranchedscenario {{/str}}</span>
+                <textarea class="aibs-textarea" id="aibs-brief" data-field="brief" rows="3">{{source.brief}}</textarea>
+            </div>
+
+            {{#aiavailable}}
+                <button type="button" class="aibs-btn aibs-btn-primary" data-action="populate">
+                    {{#str}} autofill, mod_aibranchedscenario {{/str}}
+                </button>
+                <p class="aibs-field-hint">{{#str}} autofillhint, mod_aibranchedscenario {{/str}}</p>
+            {{/aiavailable}}
+
+            </div>
+
+            <div class="aibs-route" data-route-panel="assistant" hidden>
+                <div class="aibs-routebody">
+                    <p class="aibs-field-hint">{{#str}} draftelsewherehint, mod_aibranchedscenario {{/str}}</p>
+                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="copyprompt">
+                        {{#str}} copyprompt, mod_aibranchedscenario {{/str}}</button>
+                    <p class="aibs-field-hint">{{#str}} copyprompthint, mod_aibranchedscenario {{/str}}</p>
+                    <pre class="aibs-promptsource" data-region="promptsource" hidden>{{importprompt}}</pre>
+                    <label class="aibs-field-label" for="aibs-import">
+                        {{#str}} field:importjsonpaste, mod_aibranchedscenario {{/str}}</label>
+                    {{! The one thing a teacher pasting a scenario needs to know about money,
+                        and it was written, defined, and rendered nowhere. }}
+                    <span class="aibs-field-hint">
+                        {{#str}} field:importjsonhint, mod_aibranchedscenario {{/str}}</span>
+                    <textarea class="aibs-textarea" id="aibs-import" data-region="import" rows="6"></textarea>
+                    <button type="button" class="aibs-btn aibs-btn-secondary" data-action="import">
+                        {{#str}} importdefinition, mod_aibranchedscenario {{/str}}</button>
+                </div>
+            </div>
+
         </section>
 
         <section class="aibs-card" data-region="step" data-step="6" hidden>

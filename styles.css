@@ -7190,3 +7190,58 @@ button.aibs-avatar:focus-visible {
     color: var(--aibs-muted);
     font-size: var(--aibs-text-micro);
 }
+
+/* --------------------------------------------------- what the scenario will be built from
+
+   Printed at the top of the content step, beside the button that copies the prompt. The
+   content step used to be step one, so the prompt carried the format rules and the pasted
+   text and nothing else: no industry, no setting, no cast. An assistant handed that has to
+   invent a workplace, and invents a meeting room. The context steps run first now, and
+   their answers are shown here so what is about to be sent is visible. */
+.aibs-choices {
+    background: var(--aibs-surface-alt);
+    border-radius: var(--aibs-radius-sm);
+    margin: 0 0 18px;
+    padding: 14px 16px;
+}
+
+.aibs-choices .aibs-h4 {
+    margin: 0 0 4px;
+}
+
+.aibs-choices-list {
+    display: grid;
+    gap: 6px 18px;
+    margin: 10px 0 0;
+}
+
+/* Label above value on a phone, label beside value where there is room - and the label
+   column is sized to the longest label so no value starts in a different place. */
+.aibs-choices-row {
+    display: grid;
+    gap: 2px 14px;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.aibs-choices-label {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-label);
+    margin: 0;
+}
+
+.aibs-choices-value {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-small);
+    margin: 0;
+}
+
+.aibs-choices-empty {
+    margin: 0;
+}
+
+@media (min-width: 900px) {
+    .aibs-choices-row {
+        grid-template-columns: minmax(9em, 12em) minmax(0, 1fr);
+    }
+}

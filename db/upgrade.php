@@ -1254,5 +1254,17 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026100800, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026100900) {
+        // Version 4.0.0. The teacher chooses which families of text the narration reads,
+        // the way the sister activity does. Empty means all of them, which is what every
+        // existing scenario has been doing, so nothing already made changes behaviour.
+        $table = new xmldb_table('aibranchedscenario');
+        $field = new xmldb_field('voiceparts', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'enableaudio');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_mod_savepoint(true, 2026100900, 'aibranchedscenario');
+    }
+
     return true;
 }

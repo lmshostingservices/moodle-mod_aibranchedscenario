@@ -384,6 +384,11 @@ class media_manager {
     public function generate_for_definition(provider $provider, \stdClass $scenario, array $definition): array {
         $wantsimages = !empty($scenario->enableimages) && get_config('mod_aibranchedscenario', 'allowimages');
         $wantsaudio = !empty($scenario->enableaudio) && get_config('mod_aibranchedscenario', 'allowaudio');
+        // Which families the teacher asked to hear. Gated per family rather than by one
+        // switch: a scenario narrated whole is forty clips, and a teacher who wants the
+        // story read and the closing notes left silent had no way to say so.
+        $voiceparts = self::voice_parts($scenario);
+        $reads = static fn(string $part): bool => in_array($part, $voiceparts, true);
         $blank = ['images' => 0, 'imageswanted' => 0, 'narrations' => 0, 'narrationswanted' => 0];
         if (!$wantsimages && !$wantsaudio) {
             return $blank;
@@ -410,7 +415,7 @@ class media_manager {
         // deck slide had no audio attribute to play one from even if it had. A learner who
         // turned narration on was met with silence, then heard every screen after it -
         // which reads as the narration being broken rather than as one screen missing.
-        if ($wantsaudio) {
+        if ($wantsaudio && $reads('scene')) {
             $counts['narrationswanted']++;
             if (
                 $this->generate_opening_narration(
@@ -425,7 +430,7 @@ class media_manager {
             }
         }
 
-        if ($wantsaudio) {
+        if ($wantsaudio && $reads('principles')) {
             foreach ((array)($definition['principles'] ?? []) as $position => $principle) {
                 $counts['narrationswanted']++;
                 $narrated = $this->generate_principle_narration(
@@ -503,7 +508,7 @@ class media_manager {
                 // narration was skipped for outcome nodes, so a learner listening the whole
                 // way through arrived at the result of every decision they had made and
                 // heard nothing. It is the screen the scenario exists to deliver.
-                if ($wantsaudio) {
+                if ($wantsaudio && $reads('scene')) {
                     $counts['narrationswanted']++;
                     if ($this->generate_narration($provider, $node, $scenario->scenariolang, $voice, $index)) {
                         $counts['narrations']++;
@@ -512,11 +517,13 @@ class media_manager {
                 $index++;
                 continue;
             }
-            if ($wantsaudio) {
+            if ($wantsaudio && $reads('scene')) {
                 $counts['narrationswanted']++;
                 if ($this->generate_narration($provider, $node, $scenario->scenariolang, $voice, $index)) {
                     $counts['narrations']++;
                 }
+            }
+            if ($wantsaudio) {
                 // A line is only worth its own clip when it is said by somebody with a
                 // voice of their own. An unattributed line would be read by the narrator
                 // anyway, so it stays inside the narrator's clip and costs nothing extra.
@@ -538,17 +545,19 @@ class media_manager {
                 $nodechoices = (array)($node['choices'] ?? []);
                 $branches = count($nodechoices) > 1 ? $nodechoices : [];
                 foreach ($branches as $choice) {
-                    $counts['narrationswanted']++;
-                    if (
-                        $this->generate_choice_narration(
-                            $provider,
-                            $choice,
-                            $scenario->scenariolang,
-                            $voice,
-                            $index
-                        )
-                    ) {
-                        $counts['narrations']++;
+                    if ($reads('consequence')) {
+                        $counts['narrationswanted']++;
+                        if (
+                            $this->generate_choice_narration(
+                                $provider,
+                                $choice,
+                                $scenario->scenariolang,
+                                $voice,
+                                $index
+                            )
+                        ) {
+                            $counts['narrations']++;
+                        }
                     }
                     // The same choice read a second time, as the debrief records it.
                     //
@@ -557,18 +566,20 @@ class media_manager {
                     // A learner listening to their own record therefore heard five outcomes
                     // with no decisions attached to them, while the heading and the choice
                     // they actually took sat on screen unread. The card is read whole.
-                    $counts['narrationswanted']++;
-                    if (
-                        $this->generate_record_narration(
-                            $provider,
-                            $node,
-                            $choice,
-                            $scenario->scenariolang,
-                            $voice,
-                            $index
-                        )
-                    ) {
-                        $counts['narrations']++;
+                    if ($reads('record')) {
+                        $counts['narrationswanted']++;
+                        if (
+                            $this->generate_record_narration(
+                                $provider,
+                                $node,
+                                $choice,
+                                $scenario->scenariolang,
+                                $voice,
+                                $index
+                            )
+                        ) {
+                            $counts['narrations']++;
+                        }
                     }
                 }
             }
@@ -585,7 +596,7 @@ class media_manager {
         // each decision - the paragraph saying where that option leads and why - so the
         // clip for an option is keyed to the option itself and the slide can read them in
         // the order it shows them.
-        if ($wantsaudio) {
+        if ($wantsaudio && $reads('debrief')) {
             $slot = 0;
             foreach ((array)($definition['nodes'] ?? []) as $node) {
                 if (($node['type'] ?? '') !== 'decision') {
@@ -1667,7 +1678,8 @@ class media_manager {
             && (bool)get_config('mod_aibranchedscenario', 'allowaudio');
 
         $imageswanted = $wantsimages ? count(self::expected_image_map($definition)) : 0;
-        $narrationswanted = $wantsaudio ? self::count_narrations($definition) : 0;
+        $narrationswanted = $wantsaudio
+            ? self::count_narrations($definition, self::voice_parts($scenario)) : 0;
         $images = $imageswanted ? count($this->urls_for_working(self::AREA_SCENE)) : 0;
         $narrations = $narrationswanted ? count($this->urls_for_working(self::AREA_NARRATION)) : 0;
 
@@ -1692,16 +1704,68 @@ class media_manager {
      * @param array $definition The validated scenario definition.
      * @return int
      */
-    public static function count_narrations(array $definition): int {
+    /**
+     * The families of text the narration can read.
+     *
+     * Named families rather than a single switch, because a scenario's clips are not one
+     * thing: the scenes are the story, the principles are the lesson taught before it, the
+     * consequences are what a choice cost, the record is the choices read back at the end,
+     * and the debrief is the note on each option. A teacher wanting the story narrated and
+     * the closing advice read silently had no way to say so, and got forty clips or none.
+     *
+     * @var string[]
+     */
+    public const VOICE_PARTS = ['scene', 'principles', 'consequence', 'record', 'debrief'];
+
+    /**
+     * What this activity's narration reads.
+     *
+     * Empty means all of them. That is deliberate: every scenario made before the setting
+     * existed has an empty column, and those scenarios were narrated whole, so an empty
+     * value has to keep meaning what it has always meant.
+     *
+     * @param \stdClass|null $scenario The activity record.
+     * @return string[] A subset of {@see self::VOICE_PARTS}, in that order.
+     */
+    public static function voice_parts(?\stdClass $scenario = null): array {
+        $stored = trim((string)($scenario->voiceparts ?? ''));
+        if ($stored === '') {
+            return self::VOICE_PARTS;
+        }
+        $chosen = array_values(array_intersect(self::VOICE_PARTS, explode(',', $stored)));
+        // Every part switched off is the same as narration switched off, and the activity
+        // setting for that is "enableaudio". A stored value nothing matches is treated as
+        // a value nobody meant rather than as silence nobody asked for.
+        return $chosen === [] ? self::VOICE_PARTS : $chosen;
+    }
+
+    /**
+     * How many narration clips a definition will ask for.
+     *
+     * The paste route needed this to know what a run will cost BEFORE it starts, which is
+     * what a quota check is. It mirrors the loop in generate_for_definition() exactly, and
+     * mirroring is a thing that drifts - so the harness runs a real generation and asserts
+     * this number equals the narrationswanted that run reports. If the two ever disagree,
+     * the build fails rather than the billing.
+     *
+     * @param array $definition The validated scenario definition.
+     * @param string[]|null $parts Which families are read; null means all of them.
+     * @return int
+     */
+    public static function count_narrations(array $definition, ?array $parts = null): int {
+        $parts = $parts ?? self::VOICE_PARTS;
+        $reads = static fn(string $part): bool => in_array($part, $parts, true);
+
         // The opening situation, then one for each principle taught before the scenario.
-        $count = 1 + count((array)($definition['principles'] ?? []));
+        $count = $reads('scene') ? 1 : 0;
+        $count += $reads('principles') ? count((array)($definition['principles'] ?? [])) : 0;
 
         foreach ((array)($definition['nodes'] ?? []) as $node) {
-            $count++;
+            $count += $reads('scene') ? 1 : 0;
             if (($node['type'] ?? '') === 'outcome') {
                 continue;
             }
-            if (self::has_own_voice($node)) {
+            if ($reads('scene') && self::has_own_voice($node)) {
                 $count++;
             }
             // A single-choice beat's consequence is filler and never gets a clip. Every
@@ -1709,14 +1773,15 @@ class media_manager {
             // again on the decision record.
             $choices = (array)($node['choices'] ?? []);
             if (count($choices) > 1) {
-                $count += count($choices) * 2;
+                $count += $reads('consequence') ? count($choices) : 0;
+                $count += $reads('record') ? count($choices) : 0;
             }
         }
 
         // The debrief reads one clip per option: the outcome note saying where that option
         // leads. It used to be four lists of closing advice read an item at a time plus a
         // clip for each whole page, which was more recorded advice than recorded story.
-        foreach ((array)($definition['nodes'] ?? []) as $node) {
+        foreach ($reads('debrief') ? (array)($definition['nodes'] ?? []) : [] as $node) {
             if (($node['type'] ?? '') !== 'decision') {
                 continue;
             }

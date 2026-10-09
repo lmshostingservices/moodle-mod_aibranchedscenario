@@ -2,6 +2,58 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v4.0.0] - 2026-10-09
+
+### The context comes before the content
+
+The authoring steps ran in the wrong order, and it was not only confusing - it made the two
+routes in produce different quality of scenario.
+
+A generated scenario is written with the teacher's industry, setting, audience, role, tone,
+complexity and central problem, because the generate request carries all of them. The prompt
+a teacher copied for ChatGPT, Gemini or Grok carried none of it: the document format and the
+pasted source content, nothing else. So an assistant had to invent a workplace, and invented
+a meeting room with three people called Alex.
+
+That happened because the content step was step one. The prompt was offered before the
+plugin had been told anything, so there was nothing to put in it.
+
+The steps now run: **where it happens · the problem · the people · how it reads · your
+content · build and publish.** By the time the prompt is copied, the answers exist - and the
+prompt leads with them, as a brief the assistant reads before the format rules: the industry,
+the setting, who the learners are, who the learner plays, the problem, what makes it hard,
+what it costs, the tone, and the cast by name with the instruction to use those names and no
+others. Where the brief and the source content disagree about the setting or the people, the
+brief wins, because the brief is what the teacher chose.
+
+Those same answers are now printed at the top of the content step, beside the button that
+sends them, so what the assistant is about to be told is visible rather than implied. A
+teacher who has answered nothing is told so plainly, and gets the prompt exactly as it was.
+An unanswered field is left out rather than sent as a blank to copy, and choosing "other"
+sends what the teacher typed rather than the word "other".
+
+### The voiceover reads what you choose
+
+Narration was one switch: around forty clips, or none. A scenario is not one thing to listen
+to, and a teacher who wanted the story read aloud with the closing notes left on the page had
+no way to say so.
+
+Five families now, each its own tick in the activity settings: the scenes, the principles
+taught before it starts, what happened after each choice, the decision record read back at
+the end, and the debrief note on each option. Only the families ticked are made - so fewer
+clips, a shorter wait before publishing, and less for a learner to sit through.
+
+**It does not change the price.** A scenario is one price whatever it is made of, and the
+help text says so rather than letting anybody infer a tariff that does not exist. An activity
+that has never been told reads everything, which is what every scenario made before this
+setting existed has been doing, so nothing already published changes behaviour.
+
+### Upgrading
+
+One new column, `voiceparts`, empty for every existing activity and read as "all of them".
+No scenario is regenerated, re-narrated or re-charged by this upgrade. Links carrying
+`?step=n` land on a different step than they used to, because the steps have been reordered.
+
 ## [v3.4.0] - 2026-10-08
 
 ### The text was printed on the icons

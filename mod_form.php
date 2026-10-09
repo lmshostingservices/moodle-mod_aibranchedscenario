@@ -93,6 +93,38 @@ class mod_aibranchedscenario_mod_form extends moodleform_mod {
         $mform->setDefault('enableaudio', self::default_for('enableaudio', 1));
         $mform->addHelpButton('enableaudio', 'enableaudio', 'mod_aibranchedscenario');
 
+        // WHICH FAMILIES OF TEXT GET READ, the way the sister activity does it. Narration
+        // used to be one switch: forty clips or none. A scenario is not one thing to listen
+        // to - the scenes are the story, the principles are the lesson before it, the
+        // consequences are what a choice cost, the record is the choices read back, and the
+        // debrief is the note on each option. A teacher wanting the story read aloud and
+        // the closing notes left on the page had no way to say so.
+        //
+        // This changes what is MADE and what is HEARD. It does not change what it costs:
+        // a scenario is one price whatever it is made of, and saying otherwise here would
+        // be inventing a tariff the service does not charge.
+        $voiceparts = [];
+        foreach (\mod_aibranchedscenario\local\media_manager::VOICE_PARTS as $part) {
+            $voiceparts[] = $mform->createElement(
+                'checkbox',
+                $part,
+                '',
+                get_string('voicepart:' . $part, 'mod_aibranchedscenario')
+            );
+        }
+        $mform->addGroup(
+            $voiceparts,
+            'voicepartsgroup',
+            get_string('voiceparts', 'mod_aibranchedscenario'),
+            '<br>',
+            false
+        );
+        $mform->addHelpButton('voicepartsgroup', 'voiceparts', 'mod_aibranchedscenario');
+        $mform->hideIf('voicepartsgroup', 'enableaudio', 'eq', 0);
+        foreach (\mod_aibranchedscenario\local\media_manager::VOICE_PARTS as $part) {
+            $mform->setDefault('voiceparts[' . $part . ']', 1);
+        }
+
         $mform->addElement(
             'selectyesno',
             'requirelisten',
@@ -262,6 +294,18 @@ class mod_aibranchedscenario_mod_form extends moodleform_mod {
         if (empty($defaultvalues['completionfinish'])) {
             $defaultvalues['completionminscore'] = 0;
         }
+
+        // Stored as a comma list, edited as checkboxes. An empty column means every family,
+        // because that is what every scenario made before this setting existed was doing,
+        // and a form that showed them all unticked would be reporting silence that was
+        // never chosen.
+        $chosen = \mod_aibranchedscenario\local\media_manager::voice_parts(
+            (object)['voiceparts' => $defaultvalues['voiceparts'] ?? '']
+        );
+        foreach (\mod_aibranchedscenario\local\media_manager::VOICE_PARTS as $part) {
+            $defaultvalues['voiceparts[' . $part . ']'] = in_array($part, $chosen, true) ? 1 : 0;
+        }
+        unset($defaultvalues['voiceparts']);
     }
 
     /**
@@ -272,6 +316,18 @@ class mod_aibranchedscenario_mod_form extends moodleform_mod {
      */
     public function data_postprocessing($data) {
         parent::data_postprocessing($data);
+
+        // Back to the comma list the column holds. Every family ticked is stored as every
+        // family rather than as an empty string, so the stored value says what was chosen
+        // instead of relying on the default meaning the same thing.
+        $ticked = (array)($data->voiceparts ?? []);
+        $keep = [];
+        foreach (\mod_aibranchedscenario\local\media_manager::VOICE_PARTS as $part) {
+            if (!empty($ticked[$part])) {
+                $keep[] = $part;
+            }
+        }
+        $data->voiceparts = implode(',', $keep);
 
         if (!empty($data->completionunlocked)) {
             $autocompletion = !empty($data->completion) && $data->completion == COMPLETION_TRACKING_AUTOMATIC;
