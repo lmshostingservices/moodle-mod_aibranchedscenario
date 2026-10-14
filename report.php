@@ -120,10 +120,15 @@ if ($viewid) {
     echo html_writer::start_div('aibs-wizard ' . schema::theme_class((string)$moduleinstance->theme));
     echo html_writer::start_div('aibs-shell');
     echo $OUTPUT->heading(format_string($moduleinstance->name));
-    echo html_writer::link(
-        $baseurl,
-        get_string('report:backtolist', 'mod_aibranchedscenario'),
-        ['class' => 'aibs-btn aibs-btn-secondary']
+    // In its own row, with space above it. A bare link directly under the heading sat 8px
+    // below it and read as part of the title rather than as a control.
+    echo html_writer::div(
+        html_writer::link(
+            $baseurl,
+            get_string('report:backtolist', 'mod_aibranchedscenario'),
+            ['class' => 'aibs-btn aibs-btn-secondary']
+        ),
+        'aibs-backrow'
     );
 
     if (!$revision) {

@@ -809,6 +809,26 @@ class helper {
             VALUE_DEFAULT,
             []
         ),
+        // WHAT IT IS ABOUT, which the wizard collects and this structure did not declare.
+        //
+        // An external structure and the payload that fills it are one description in two
+        // places, and a key missing from this half is dropped on the way in without a
+        // word. So the teacher ticked a situation, pressed Save, and the two things they
+        // had chosen went nowhere: not into the stored source, not into the prompt they
+        // then copied, and not back onto the form when they returned to it. The picker
+        // was the headline of the release it shipped in and it persisted nothing.
+        'topics'           => new external_multiple_structure(
+            new external_value(PARAM_ALPHANUMEXT, 'Situation key'),
+            'What the scenario is about, at most two',
+            VALUE_DEFAULT,
+            []
+        ),
+        'topicown'         => new external_value(
+            PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
+            'A situation the teacher wrote themselves',
+            VALUE_DEFAULT,
+            ''
+        ),
         'participantrole'  => new external_value(
             PARAM_RAW, // pipeline-ignore: PARAM_RAW — prose, escaped at render, never cleaned.
             'The role the learner plays',
@@ -935,6 +955,10 @@ class helper {
             'centralproblem'   => (string)($source['centralproblem'] ?? ''),
             'whyhard'          => array_values((array)($source['whyhard'] ?? [])),
             'stakes'           => array_values((array)($source['stakes'] ?? [])),
+            // The other half of the pair declared above. Autofill reads this back into the
+            // wizard, so a topic missing here is a tick the assistant's own answer erases.
+            'topics'           => array_values((array)($source['topics'] ?? [])),
+            'topicown'         => (string)($source['topicown'] ?? ''),
             'participantrole'  => (string)($source['participantrole'] ?? ''),
             'characters'       => array_values((array)($source['characters'] ?? [])),
             'principles'       => array_values((array)($source['principles'] ?? [])),

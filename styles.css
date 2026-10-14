@@ -626,7 +626,7 @@
     align-items: center;
     display: flex;
     flex: none;
-    gap: 7px;
+    gap: 6px;
     min-width: 0;
 }
 
@@ -692,7 +692,7 @@
     gap: 4px;
     letter-spacing: .03em;
     margin: 0;
-    padding: 5px 12px;
+    padding: 4px 12px;
     text-transform: uppercase;
     white-space: nowrap;
 }
@@ -1114,7 +1114,7 @@
 
 .aibs-legend-item {
     border-top: 2px solid var(--aibs-accent-border);
-    padding-top: 11px;
+    padding-top: 10px;
 }
 
 .aibs-legend-name {
@@ -2263,7 +2263,7 @@
     display: grid;
     gap: 0 12px;
     grid-template-columns: 24px minmax(0, 1fr);
-    padding: 13px 16px;
+    padding: 12px 16px;
     transition: box-shadow .2s var(--aibs-ease), transform .2s var(--aibs-ease);
 }
 
@@ -2382,8 +2382,13 @@
 
 /* A row: the letter on the left, the option and its paragraph beside it. Aligned to the
    first line rather than centred - these rows are a heading over a paragraph, so a centred
-   disc on a five-line row floats in the middle of the prose. */
-.aibs-option {
+   disc on a five-line row floats in the middle of the prose.
+
+   SCOPED TO THE OPTION LIST. Unscoped, this also caught every picker chip in the authoring
+   wizard, which is a different component that happens to share the class: the chips were
+   laid out as a two-column grid with a 24px gutter meant for a letter disc they do not
+   have, so their labels wrapped inside two thirds of their own width. */
+.aibs-option-list .aibs-option {
     align-items: start;
     background: var(--aibs-surface-alt);
     border: 1px solid var(--aibs-border-soft);
@@ -2395,7 +2400,7 @@
     transition: box-shadow .2s var(--aibs-ease), transform .2s var(--aibs-ease);
 }
 
-.aibs-option:hover {
+.aibs-option-list .aibs-option:hover {
     box-shadow: var(--aibs-shadow-lg);
     transform: translateY(-2px);
 }
@@ -2403,7 +2408,7 @@
 /* The one they took. A heavier border and the accent on the letter, nothing else: the row
    is already carrying a paragraph, and a filled background behind it would make the option
    they chose the hardest of the three to read. */
-.aibs-option.aibs-is-chosen {
+.aibs-option-list .aibs-option.aibs-is-chosen {
     border-color: var(--aibs-accent);
     box-shadow: inset 0 0 0 1px var(--aibs-accent);
 }
@@ -2423,7 +2428,7 @@
     width: 24px;
 }
 
-.aibs-option.aibs-is-chosen .aibs-option-letter {
+.aibs-option-list .aibs-option.aibs-is-chosen .aibs-option-letter {
     background: var(--aibs-accent);
     border-color: var(--aibs-accent);
     color: var(--aibs-on-accent);
@@ -2535,7 +2540,7 @@
     display: flex;
     inset: 0;
     justify-content: center;
-    padding: 24px;
+    padding: 22px;
     position: fixed;
     z-index: 1100;
 }
@@ -2548,7 +2553,7 @@
     background: var(--aibs-surface);
     border: 1px solid var(--aibs-border);
     border-radius: var(--aibs-radius);
-    box-shadow: 0 24px 64px rgba(15, 23, 42, .28);
+    box-shadow: var(--aibs-shadow-lg);
     max-width: 34rem;
     padding: 28px 30px;
     text-align: center;
@@ -2889,31 +2894,50 @@ body.aibs-work-locked {
     outline: none;
 }
 
+/* THE PICKERS.
+   One row of chips, all the same height whatever their labels do: grid stretches its items
+   to the tallest in the row, so a two-line label lifts its neighbours rather than leaving
+   them short beside it. Wide enough that the common labels do not wrap at all. */
 .aibs-optiongrid {
     display: grid;
-    gap: 8px;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
 }
 
-.aibs-option {
+.aibs-optiongrid .aibs-option {
+    align-items: center;
     background: var(--aibs-surface);
     border: 1px solid var(--aibs-border);
     border-radius: var(--aibs-radius-sm);
+    box-shadow: var(--aibs-shadow-sm);
     color: var(--aibs-text);
     cursor: pointer;
+    display: flex;
     font: inherit;
     font-size: var(--aibs-text-sub);
-    min-height: 44px;
-    padding: 12px 14px;
+    line-height: 1.35;
+    min-height: 52px;
+    padding: 12px 16px;
     text-align: start;
-    transition: background-color .2s var(--aibs-ease), border-color .2s var(--aibs-ease),
-        transform .2s var(--aibs-ease);
+    transition: background-color .18s var(--aibs-ease), border-color .18s var(--aibs-ease),
+        box-shadow .18s var(--aibs-ease), transform .18s var(--aibs-ease);
 }
 
-.path-mod-aibranchedscenario .aibs-option:hover,
-.aibs-option:hover {
+/* The chosen one carries the accent on its border and a soft fill, not a colour swap: a
+   chip that changes colour entirely reads as disabled to about as many people as it reads
+   as selected. */
+.aibs-optiongrid .aibs-option[aria-pressed="true"] {
+    background: var(--aibs-accent-soft);
+    border-color: var(--aibs-accent);
+    box-shadow: 0 0 0 1px var(--aibs-accent) inset, var(--aibs-shadow-sm);
+    font-weight: var(--aibs-weight-strong);
+}
+
+.path-mod-aibranchedscenario .aibs-optiongrid .aibs-option:hover,
+.aibs-optiongrid .aibs-option:hover {
     background: var(--aibs-accent-soft) !important;
     border-color: var(--aibs-accent-border);
+    box-shadow: var(--aibs-shadow);
     color: var(--aibs-text) !important;
     transform: translateY(-1px);
 }
@@ -3187,15 +3211,30 @@ body.aibs-work-locked {
     background: var(--aibs-surface);
     border: 1px solid var(--aibs-border);
     border-radius: var(--aibs-radius-sm);
-    margin-top: 22px;
+    box-shadow: var(--aibs-shadow-sm);
+    margin: 12px 0;
+    transition: border-color .18s var(--aibs-ease), box-shadow .18s var(--aibs-ease);
+}
+
+.aibs-disclosure:hover {
+    border-color: var(--aibs-accent-border);
+    box-shadow: var(--aibs-shadow);
+}
+
+.aibs-disclosure[open] {
+    border-color: var(--aibs-accent-border);
 }
 
 .aibs-disclosure-summary {
+    align-items: center;
     color: var(--aibs-text);
     cursor: pointer;
+    display: flex;
     font-weight: var(--aibs-weight-label);
+    gap: 10px;
     list-style: none;
-    padding: 14px 16px;
+    min-height: 52px;
+    padding: 12px 16px;
 }
 
 .aibs-disclosure-summary::-webkit-details-marker {
@@ -4030,7 +4069,12 @@ button.aibs-avatar {
     padding: 0;
 }
 
+/* align-content: start, or the two rows share the card's spare height between them - and
+   because the three cards hold paragraphs of different lengths, each shares a different
+   amount and the three bodies begin at three different heights. The title row keeps its
+   own height and the body starts right under it, in every card. */
 .aibs-reading-item {
+    align-content: start;
     border: 1px solid var(--aibs-border);
     border-radius: var(--aibs-radius-sm);
     display: grid;
@@ -4038,12 +4082,23 @@ button.aibs-avatar {
     padding: 14px 16px;
 }
 
+/* THE TITLE AND ITS ICON ARE ONE LINE OF TEXT, not two flex items.
+   As an inline-flex row with a gap, the icon was an item that could wrap: the three cards
+   on the landing screen came out 42px, 62px and 52px tall, and their paragraphs began
+   20px apart. Inline text with an inline icon wraps the way a sentence does - the icon
+   follows the last word - and a fixed two-line box keeps the three bodies level whether a
+   title needs one line or two. */
 .aibs-reading-link {
-    align-items: center;
-    min-height: 44px;
-    display: inline-flex;
+    display: block;
     font-weight: var(--aibs-weight-label);
-    gap: 6px;
+    line-height: 1.3;
+    min-height: calc(2 * 1.3em);
+}
+
+.aibs-reading-link .aibs-icon {
+    display: inline-block;
+    margin-inline-start: 6px;
+    vertical-align: -.12em;
 }
 
 .aibs-reading-body {
@@ -6750,11 +6805,16 @@ button.aibs-avatar:focus-visible {
     margin-bottom: 20px;
 }
 
+/* The button had no space above it at all: this rule set no top margin and the grid of
+   links above it ends with `margin: 22px 0 0`, so the primary action on the landing screen
+   sat flush against the cards. A missing margin is missing from both sides, which is why
+   reading either rule on its own shows nothing wrong. */
 .aibs-start-actions {
     align-items: center;
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
+    margin-top: 22px;
 }
 
 .aibs-btn-lg {
@@ -6771,7 +6831,10 @@ button.aibs-avatar:focus-visible {
     margin-bottom: 22px;
 }
 
+/* Same reason as the reading cards: without align-content the two route cards shared
+   their spare height differently and their two descriptions began 20px apart. */
 .aibs-choicecard {
+    align-content: start;
     background: var(--aibs-surface);
     border: 1px solid var(--aibs-border);
     border-radius: var(--aibs-radius-sm);
@@ -7276,9 +7339,10 @@ button.aibs-avatar:focus-visible {
    of trouble they are - which is also the honest grouping, because a branched scenario is
    chosen by the situation it puts somebody in rather than by the skill it practises. */
 .aibs-topicgroups {
+    align-items: start;
     display: grid;
-    gap: 18px;
-    margin-top: 10px;
+    gap: 12px;
+    margin-top: 12px;
 }
 
 .aibs-topicgroup-name {
@@ -7322,7 +7386,7 @@ button.aibs-avatar:focus-visible {
 @media (min-width: 900px) {
     .aibs-topicgroups {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 20px 28px;
+        gap: 12px 16px;
     }
 }
 
@@ -7331,11 +7395,290 @@ button.aibs-avatar:focus-visible {
     color: var(--aibs-text);
     font-size: var(--aibs-text-small);
     font-weight: var(--aibs-weight-label);
-    margin: 0 0 10px;
+    margin: 18px 0 10px;
 }
 
 .aibs-pricing-rates {
     color: var(--aibs-text);
     font-size: var(--aibs-text-small);
     margin: 0 0 8px;
+}
+
+/* THE THREE THINGS ARE NUMBERED, because the step says there are three of them. */
+.aibs-ordinal {
+    align-items: center;
+    background: var(--aibs-accent);
+    border-radius: 50%;
+    color: var(--aibs-on-accent);
+    display: inline-flex;
+    flex: none;
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-strong);
+    height: 22px;
+    justify-content: center;
+    line-height: 1;
+    margin-right: 8px;
+    width: 22px;
+}
+
+/* The six groups of situations, shut. Open one and it stays open; a group holding a tick
+   says so, so a choice is never hidden inside a closed group. */
+/* A GROUP THAT OPENS HAS TO LOOK LIKE ONE.
+   These shipped as bare uppercase labels: the marker suppressed by display:flex, no
+   chevron, no frame and no fill. Six grey headings with apparently nothing underneath
+   them, which is how it reached a screenshot. A card, a chevron that turns, and a row
+   tall enough to hit. */
+.aibs-topicgroup {
+    background: var(--aibs-surface);
+    border: 1px solid var(--aibs-border);
+    border-radius: var(--aibs-radius-sm);
+    box-shadow: var(--aibs-shadow-sm);
+    transition: border-color .18s var(--aibs-ease), box-shadow .18s var(--aibs-ease);
+}
+
+.aibs-topicgroup:hover {
+    border-color: var(--aibs-accent-border);
+    box-shadow: var(--aibs-shadow);
+}
+
+.aibs-topicgroup[open] {
+    border-color: var(--aibs-accent-border);
+}
+
+.aibs-topicgroup > summary.aibs-topicgroup-name {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 10px;
+    list-style: none;
+    min-height: 52px;
+    padding: 12px 16px;
+}
+
+.aibs-topicgroup > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* The chevron, drawn rather than fetched, turning a quarter when the group opens. */
+.aibs-topicgroup > summary.aibs-topicgroup-name::after {
+    border-bottom: 2px solid currentColor;
+    border-right: 2px solid currentColor;
+    content: "";
+    height: 7px;
+    margin-left: auto;
+    opacity: .55;
+    transform: rotate(45deg) translateY(-2px);
+    transition: transform .2s var(--aibs-ease);
+    width: 7px;
+}
+
+.aibs-topicgroup[open] > summary.aibs-topicgroup-name::after {
+    transform: rotate(225deg) translateY(2px);
+}
+
+/* A group holding a choice says so, because the choice itself is out of sight when shut. */
+.aibs-topicgroup-count:not(:empty) {
+    background: var(--aibs-accent);
+    border-radius: 999px;
+    color: var(--aibs-on-accent);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-strong);
+    letter-spacing: 0;
+    line-height: 1;
+    margin-left: auto;
+    min-width: 20px;
+    padding: 4px 8px;
+    text-align: center;
+}
+
+.aibs-topiclist {
+    border-top: 1px solid var(--aibs-border-soft);
+    margin: 0 16px;
+    padding: 12px 0;
+}
+
+/* A situation is a row to click, not a line of text with a box beside it. */
+.aibs-topic {
+    border-radius: var(--aibs-radius-sm);
+    margin: 0 -8px;
+    padding: 8px;
+    transition: background-color .15s var(--aibs-ease);
+}
+
+.aibs-topic:hover {
+    background: var(--aibs-surface-alt);
+}
+
+/* Marked by the class the group counter already maintains, not by :has(): the harness
+   forbids :has() in this stylesheet, and it is right to - the plugin supports browsers
+   that do not have it, and a selection that silently stops showing is worse than one
+   drawn a duller way. */
+.aibs-topic-chosen {
+    background: var(--aibs-accent-soft);
+}
+
+/* HOW FAR THROUGH IT IS. Three lines that do not move for several minutes cannot tell a
+   slow run from a stuck one, so the dialog carries a bar, a percentage and a measured
+   time remaining. */
+.aibs-workbar {
+    background: var(--aibs-accent-soft, rgba(0, 0, 0, .1));
+    border-radius: 999px;
+    height: 8px;
+    margin: 14px 0 6px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.aibs-workbar-fill {
+    background: var(--aibs-accent, currentColor);
+    height: 100%;
+    transition: width .4s ease;
+    width: 0;
+}
+
+.aibs-workpercent {
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-strong);
+    margin: 0 0 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aibs-workbar-fill {
+        transition: none;
+    }
+}
+
+/* THE BUILD TRACKER.
+   Three runs of work, each with its own tick, count and bar, because the scenario text,
+   the pictures and the narration finish at very different rates and one number cannot say
+   which is holding things up. This replaced a single sentence at the foot of the step that
+   a teacher had to find and re-read while the page reloaded itself underneath them. */
+.aibs-worktracks {
+    display: grid;
+    gap: 14px;
+    list-style: none;
+    margin: 18px 0 6px;
+    padding: 0;
+    text-align: start;
+}
+
+.aibs-worktrack {
+    align-items: center;
+    display: grid;
+    gap: 2px 10px;
+    grid-template-areas:
+        "mark name count"
+        "mark bar  bar";
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+}
+
+.aibs-worktrack-mark {
+    align-self: start;
+    border: 2px solid var(--aibs-border);
+    border-radius: 50%;
+    grid-area: mark;
+    height: 16px;
+    margin-top: 2px;
+    position: relative;
+    width: 16px;
+}
+
+/* The one in hand pulses; the finished ones carry a tick. Nothing else moves, so the eye
+   goes to the row that is actually working. */
+.aibs-worktrack-doing .aibs-worktrack-mark {
+    animation: aibs-workpulse 1.6s ease-in-out infinite;
+    border-color: var(--aibs-accent);
+}
+
+.aibs-worktrack-done .aibs-worktrack-mark {
+    animation: none;
+    background: var(--aibs-accent);
+    border-color: var(--aibs-accent);
+}
+
+.aibs-worktrack-done .aibs-worktrack-mark::after {
+    border-bottom: 2px solid var(--aibs-on-accent);
+    border-left: 2px solid var(--aibs-on-accent);
+    content: "";
+    height: 4px;
+    left: 2px;
+    position: absolute;
+    top: 3px;
+    transform: rotate(-45deg);
+    width: 7px;
+}
+
+@keyframes aibs-workpulse {
+    0%, 100% { box-shadow: 0 0 0 0 var(--aibs-accent-soft); }
+    50% { box-shadow: 0 0 0 5px var(--aibs-accent-soft); }
+}
+
+.aibs-worktrack-name {
+    font-size: var(--aibs-text-small);
+    grid-area: name;
+}
+
+.aibs-worktrack-count {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
+    font-variant-numeric: tabular-nums;
+    grid-area: count;
+    white-space: nowrap;
+}
+
+.aibs-worktrack-done .aibs-worktrack-count {
+    color: var(--aibs-accent);
+}
+
+.aibs-worktrack-bar {
+    background: var(--aibs-surface-alt);
+    border-radius: 999px;
+    display: block;
+    grid-area: bar;
+    height: 4px;
+    overflow: hidden;
+}
+
+.aibs-worktrack-fill {
+    background: var(--aibs-accent);
+    display: block;
+    height: 100%;
+    transition: width .5s var(--aibs-ease);
+    width: 0;
+}
+
+.aibs-workclose {
+    margin-top: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aibs-worktrack-doing .aibs-worktrack-mark { animation: none; }
+    .aibs-worktrack-fill { transition: none; }
+}
+
+/* The spinner is hidden once the bar appears, and hidden means gone rather than an empty
+   box holding its place at the top of the dialog. */
+.aibs-work-spinner[hidden] {
+    display: none;
+}
+
+/* THE SCENE HEADING TAKES FOCUS, AND SHOWED THE BROWSER'S OWN RING FOR IT.
+   Moving to a new scene focuses its heading so a screen reader announces where it has
+   arrived - correct, and the reason the element carries tabindex="-1". But a focused
+   heading also draws Chrome's default `outline: auto`, which appeared as a black box
+   around the title, overflowing its text. The focus is kept; only the ring written for
+   keyboard navigation goes, and nothing can tab to a tabindex="-1" element anyway. */
+.aibs-player [tabindex="-1"]:focus {
+    outline: none;
+}
+
+/* A keyboard user who tabs to a real control still gets a visible ring. */
+.aibs-player [tabindex="-1"]:focus-visible {
+    outline: 2px solid var(--aibs-accent);
+    outline-offset: 2px;
+}
+
+/* The row holding "back to all attempts" on a single learner's read-back. */
+.aibs-backrow {
+    margin: 18px 0;
 }

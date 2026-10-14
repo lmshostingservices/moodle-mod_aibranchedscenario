@@ -857,6 +857,24 @@ class generator {
      */
     public static function get_job(int $jobid, int $scenarioid): ?stdClass {
         global $DB;
+        // A JOB ID OF ZERO MEANS "WHICHEVER ONE THIS SCENARIO IS RUNNING".
+        //
+        // The pictures and the narration go on being made after the scenario text is
+        // finished, and a teacher who reloads the page in that window arrives holding no
+        // job id at all - so the page had no way to ask how the build was going, and fell
+        // back on reloading itself every twenty seconds to re-read a sentence. This lets
+        // it ask directly, from a cold page load.
+        if ($jobid === 0) {
+            $job = $DB->get_records(
+                'aibranchedscenario_jobs',
+                ['scenarioid' => $scenarioid],
+                'id DESC',
+                '*',
+                0,
+                1
+            );
+            return $job ? reset($job) : null;
+        }
         $job = $DB->get_record('aibranchedscenario_jobs', ['id' => $jobid], '*', IGNORE_MISSING);
         if (!$job || (int)$job->scenarioid !== $scenarioid) {
             return null;

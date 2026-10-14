@@ -2,6 +2,300 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v5.4.1] - 2026-10-14
+
+The styling audit now reaches the attempts report, the draft review and one learner's
+read-back, as well as the landing screen, the three wizard steps and the player. Eight
+screens, on Moodle 5.2.
+
+### What it found
+
+- **On a single learner's read-back, "Back to all attempts" sat 8px under the heading** -
+  a bare link emitted straight after `$OUTPUT->heading()`, which reads as part of the title
+  rather than as a control. It has its own row now.
+
+### The more useful change
+
+**A screen that fails to load no longer reports clean.** `collect()` returned null when it
+could not find a screen's root, and every check skipped nulls - so a screen the audit could
+not reach produced no findings and counted as passing. That is precisely how three wizard
+steps came to be described as the whole plugin, and it would have hidden every screen added
+since. An unreachable screen is a finding now, named as one.
+
+It immediately earned its place: the learner's closing deck was being audited by a selector
+that fell back to the player when the deck was absent, so it had been reporting the player
+twice and the debrief never. The fallback is gone.
+
+### Still not covered, and said plainly
+
+**The learner's closing deck** (`.aibs-debrief`) is not audited. It appears only inside the
+player after a scenario is played to the end, and driving the deck through its animations in
+a browser did not work reliably enough to trust. The teacher's read-back of the same attempt
+IS covered, and the audit now says out loud that the deck was not reached rather than
+reporting it clean.
+
+## [v5.4.0] - 2026-10-14
+
+The styling audit in v5.3.0 measured three wizard steps and was described as covering the
+plugin. It had never loaded the screen a teacher lands on, and never loaded the player at
+all. Jamie sent a screenshot of the landing screen with the primary button jammed into the
+cards above it - a fault that had been there the whole time, on the first screen anyone sees.
+
+### What the landing screen actually had wrong
+
+- **No space above the primary button.** `.aibs-start-actions` set no top margin and the
+  grid of links above it ends with `margin: 22px 0 0`. A missing margin is missing from both
+  sides, which is why reading either rule on its own shows nothing.
+- **It said "Six steps."** The wizard has had three since v5.1.0.
+- **The three link cards started their body text at three different heights.** Each card is
+  its own grid, and without `align-content: start` the two rows share the card's spare height
+  between them - so a card with a shorter paragraph pushed its text further down. The two
+  route cards on step two had the same fault, 20px apart.
+- **The external-link icon was a flex item that could wrap**, so the three titles came out
+  42px, 62px and 52px tall. It is inline now, and follows the last word the way a sentence
+  does.
+
+### And the player, which nothing had ever checked
+
+- **A black box around every scene title.** Moving to a new scene focuses its heading so a
+  screen reader announces where it has arrived - correct, and the reason the element carries
+  `tabindex="-1"`. But a focused heading also draws Chrome's default `outline: auto`, which
+  rendered as a black rectangle over the scenario, overflowing its own text. The focus is
+  kept; only the ring goes, and nothing can tab to a `tabindex="-1"` element anyway.
+
+### Two nesting faults, and a check that could not see them
+
+Moving the progress dialog out of the wizard body (so a teacher landing mid-build can see it
+at all) lost its closing `</div>`, which put **the entire wizard body inside the progress
+dialog**. Hiding the dialog then hid the whole wizard. A second, surplus `</div>` from an
+earlier edit balanced the count exactly - so the tag-counting check passed while the page was
+structurally wrong.
+
+There is a real nesting check now: it walks the tags and names the first one that closes the
+wrong element. Counting opens against closes cannot see a tag that merely changed parents.
+
+### Two checks I had written wrong
+
+Both reported faults that were not faults, which is how checks get switched off:
+
+- **Cards "using three different shadows"** are an elevation scale - page card, nested card,
+  flat. Flattening it to satisfy a number I invented would have made the design worse. The
+  check now asserts that every elevation comes from the palette, and ignores the `0 0 0 4px`
+  rings that draw focus states.
+- The spacing check had the same fault in v5.3.0 and was fixed there.
+
+### The audit now covers
+
+The landing screen, all three wizard steps and the player, on Moodle 5.2 and 5.3 - with new
+checks for crowding (anything sitting less than 10px below the block above it), cards in a
+row starting their text at different heights, and the browser's own focus ring appearing on
+anything.
+
+## [v5.3.1] - 2026-10-14
+
+Everything here was found by reviewing v5.3.0 rather than by using it. The build dialog that
+release introduced was written and checked against the path where everything works.
+
+### The dialog could trap the page it was only watching
+
+- **It locked the page.** Watching a build that was already running used `setBusy()`, which
+  disables the buttons, blocks scrolling and arms the unsaved-changes guard - so a teacher
+  who opened the page during a build got "Leave site?" for navigating away from work that, as
+  the dialog itself says, carries on without them. The dialog is shown directly now, unlocked.
+- **A single unreadable answer ended the watch.** The import route queues its task and writes
+  no job row until cron starts it, so "no job yet" is the *normal* first answer - and the
+  dialog closed on it, on the very route it was written for. Five consecutive misses now, not
+  one, and one bad reading no longer ends a twenty-minute watch.
+- **The only way out appeared after the first good reading.** So a first reading that could
+  not be made left a scrim over the whole page with no control on it at all. The close button
+  comes up with the dialog now and is never taken away again.
+- **A failed build was invisible and permanent.** The dialog ignored the job's status, and a
+  failed media job leaves the media incomplete for ever - so the page would raise this dialog
+  on every load, poll for twenty minutes, and never say what went wrong. It reports the error
+  and closes.
+- **Painting the dialog could leave it stuck open.** The call that draws it sat outside the
+  try, so a rejected string lookup left the scrim up with no way past it.
+
+### And could take unsaved work with it
+
+- **The completion reload cleared the dirty flag first**, which is the unsaved-changes guard
+  disarming itself. A teacher who hid the dialog and kept editing for ten minutes lost those
+  edits the moment the build finished. It now refuses to reload while the form is dirty and
+  says the page will catch up once they save.
+- **Two loops could fight.** Hiding the dialog re-enabled Generate while the media watcher
+  was still running; both painted the same dialog on different scales and either could reload
+  the page from under the other. The watcher stands down when a generation starts.
+
+### Smaller, same review
+
+- The stage list was hardcoded `hidden` in v5.2.0, so every caller filled an element the
+  stylesheet forced to `display: none`. Visible again when it has something in it.
+- The three build tracks showed with empty counts and bars at nought during publishing,
+  autofill and import - none of which makes pictures. Hidden until there is something of
+  that kind to make.
+- `work:publishing` was used but never loaded, so publishing kept the previous operation's
+  title and rendered the literal `undefined`.
+- The wizard's chip styling leaked onto the debrief's answer rows, which share the class and
+  are a different component. Both halves are scoped now.
+
+### A near miss worth recording
+
+A regex written to delete one orphaned comment matched lazily across 120 lines and removed
+the constructor, `init()` and the action router. The file still parsed, the bundle still
+built, and `phpcs` had nothing to say - the page was simply inert. It was caught by reading
+the file, not by any check.
+
+So there is a check now: the harness names the pieces `wizard.js` must define, asserts the
+module's entry point still exists, and verifies that every module-level constant the file
+reads is also declared in it - which is a second fault from the same hour, where a restore
+brought back code using `MEDIA_POLL_MISSES` without the line declaring it, and the page threw
+mid-poll where nobody was looking.
+
+Harness: 106 checks on each of six Moodles. Browser: 49 on 5.2, 46 on 5.3, 10 on the build
+dialog, 0 styling findings.
+
+## [v5.3.0] - 2026-10-14
+
+### The page stopped reloading itself under your hands
+
+Pressing **Generate the scenario** confirmed the credits, then wrote the scenario - and then
+the pictures and the narration went on being made for several more minutes. The only sign of
+that was one sentence at the foot of the step, and the way it got new numbers was
+`watchMedia()` **reloading the entire page every twenty seconds, up to thirty times.** Ten
+minutes of a page jumping, losing the scroll position and anything typed, to update a line a
+teacher had to go and find.
+
+It asks the service instead, and shows **a dialog that tracks the build**:
+
+- **Three runs of work, each with its own tick, count and bar** - writing the scenario,
+  drawing the pictures, recording the narration. They finish at very different rates and one
+  combined number could not say which was holding things up.
+- An overall bar and percentage, and **a time remaining measured from this run's own rate**
+  rather than guessed from a fixed number.
+- The row in hand pulses and the finished ones carry a tick, so the eye goes to the one that
+  is actually working.
+- It can be dismissed - the build carries on without it - but only once the scenario text
+  exists, because a teacher who closes it mid-write is left wondering whether it worked.
+- **One reload, at the end**, to open the controls that unlock when the media is complete.
+
+A kind with nothing to make is hidden rather than shown at nought: a scenario with no
+narration used to be able to show "0 of 0" and a bar that never moved, which reads as stuck.
+
+### A full styling audit, and what it found
+
+Two new audits: one reads the stylesheet, one measures the rendered page in a browser. Both
+run on every build. What they turned up:
+
+- **Two different components answered to `.aibs-option`.** The player's answer rows set
+  `display: grid` with a 24px column for a letter disc; the wizard's picker chips, which have
+  no disc, never reset it - so every chip laid its label out in two thirds of its own width.
+  "Front of house" came back three lines tall beside neighbours one line tall, and chips in a
+  row measured 49px, 73px and 96px. The player's rule is scoped to the player now.
+- **The six groups of situations did not look like anything you could open.** The marker was
+  suppressed by `display: flex`, with no chevron, no frame and no fill: six grey uppercase
+  labels with apparently nothing underneath. They are cards now, with a chevron that turns, a
+  count badge when a group holds a choice, and a 52px row.
+- **An open group stretched its closed neighbour** into a tall empty card, because a grid row
+  is as tall as its tallest item.
+- **Two disclosure patterns on one page** - a `+` on the left for the review sections, a
+  chevron on the right for the groups. One pattern now.
+- **Five spacing values one or two pixels off their neighbours**, and the dialog's shadow
+  written as a literal where a token existed.
+
+The spacing check is worth a note. Its first version carried a scale out of my own head and
+reported **143 violations** - which were the plugin's own scale, used consistently. A check
+that disagrees with the design system is noise, and noise is what gets checks switched off.
+It infers the scale from the stylesheet now and reports only genuine drift: five findings,
+not a hundred and forty-three.
+
+### Checks
+
+- **The build dialog, driven through a whole run** with the service stubbed: the dialog opens
+  by itself, three tracks count up separately, both bars move, the page does not reload while
+  it builds, and it can be dismissed.
+- **The styling audits**, static and measured, in `check.sh`.
+- The browser suite is 48 assertions now, and runs on 5.2 and 5.3.
+
+### Supported versions
+
+Moodle 4.4 to 5.3. **5.3 is installed and running now** rather than checked statically:
+93 harness checks and 46 browser checks pass on it, on PostgreSQL 17.
+
+## [v5.1.0] - 2026-10-14
+
+### The flow is three steps
+
+v5.0.0 said the flow had changed. It had not. A better first step was added to the six-step
+form and the paste was taught to fill the fields behind it, but **nothing was taken away** -
+so steps two, three and four still asked the teacher for the central problem, why it was
+hard, what was at stake, the role the learner plays, the full cast, the title and the tone.
+Every one of those is something the assistant invents. Nothing forced a teacher through
+them, but a six-step progress bar and five steps of fields after the one that matters still
+tell them their job is to describe the scenario.
+
+It is three steps now.
+
+**One - what it is about.** The industry, the place, and up to two of 47 situations. That is
+the whole ask.
+
+**Two - getting it written.** Either paste the material the scenario should teach and let
+the site write it, or copy the prompt, run it in an assistant, and paste the answer back.
+The three answers are printed here, beside the button that sends them.
+
+**Three - check and build.** Everything the assistant invented, editable: the title and the
+opening situation in the open, the cast, the problem, and the tone and look behind three
+disclosures, then the credit quote and the button. The same fields as before, doing the
+opposite job - a teacher arriving here has a scenario in hand and is disagreeing with parts
+of it rather than filling in blanks.
+
+### Two faults that made v5.0.0's headline feature do nothing
+
+**The save endpoint never accepted the topics.** `topics` and `topicown` were collected by
+the form, normalised, and printed into the prompt - and absent from `source_structure()`,
+the external description of what a save may carry. A key missing from that half is dropped
+on the way in without a word. So a teacher ticked two situations, pressed Save, and the two
+things they had chosen went nowhere: not into the stored scenario, not into the prompt they
+then copied, and not back onto the form when they returned. **The picker persisted nothing,
+on every Moodle, whatever the browser.**
+
+**The built JavaScript was two weeks older than its source.** `amd/src/wizard.js` was
+written on 13 October; `amd/build/wizard.min.js` - the file a production Moodle actually
+serves - was built on 30 September. So even the in-page behaviour was the previous release's:
+no topic checkbox handler, no two-topic limit, no back-fill. The bundle is rebuilt, and the
+other five were left exactly as they were, since their sources had not moved.
+
+Both faults were invisible to 66 harness checks, 45 unit tests, a full-page server-side
+render and an external pipeline, because **not one of them loaded the page in a browser.**
+
+### Three new checks, for the three ways this got through
+
+- **The wizard, in a real browser.** 36 assertions against the page a teacher loads, with
+  the built bundle: three steps; step one asking for the three things and for none of the
+  nine fields the assistant invents; those nine present on the review step; the third tick
+  refused and the teacher told why; and the ticks surviving a save and a reload, which is
+  the assertion that would have caught the dropped topics.
+- **The save endpoint and the payload must describe the same fields**, and every field the
+  normaliser stores must be one the endpoint can accept. A one-sided field is now a failure
+  rather than a silence.
+- **Mustache nesting.** A `{{#section}}` closed by the wrong `{{/name}}` is not a syntax
+  error any linter sees; Moodle renders the page and throws at the browser. Checked for all
+  11 templates.
+
+Also: the built bundles are compared against their sources on every run, and the harness
+now fails if any is older.
+
+### Supported versions
+
+Moodle 4.4 to 5.3, unchanged. Verified by running on 4.4, 4.5, 5.0, 5.1 and 5.2 - 93 harness
+checks each, 45 unit tests each, 0 coding-standard errors, and the browser suite on 5.2.
+5.3 remains verified statically only, for the reasons given in v5.0.0.
+
+### Upgrading
+
+No schema change. A scenario saved by v5.0.0 has no topics stored, because that release
+could not store them; those fields are empty and the teacher ticks what they meant. Nothing
+published is regenerated, re-narrated or re-charged.
+
 ## [v5.0.0] - 2026-10-13
 
 ### You pick three things; the assistant writes the rest

@@ -41,7 +41,7 @@ class get_job_status extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid'  => new external_value(PARAM_INT, 'Course module id'),
-            'jobid' => new external_value(PARAM_INT, 'Job identifier'),
+            'jobid' => new external_value(PARAM_INT, 'Job identifier, or 0 for this scenario\'s latest'),
         ]);
     }
 
@@ -114,6 +114,13 @@ class get_job_status extends external_api {
             'mediaready'    => !empty($pending['complete']),
             'mediamade'     => (int)$pending['images'] + (int)$pending['narrations'],
             'mediawanted'   => (int)$pending['imageswanted'] + (int)$pending['narrationswanted'],
+            // Split, as well as summed. The pictures and the clips are two runs of work
+            // that finish at different rates, and one combined number cannot say which of
+            // them is holding the scenario up.
+            'images'        => (int)$pending['images'],
+            'imageswanted'  => (int)$pending['imageswanted'],
+            'narrations'    => (int)$pending['narrations'],
+            'narrationswanted' => (int)$pending['narrationswanted'],
             'errormessage'  => $job->status === generator::JOB_ERROR
                 ? helper::safe_error_message((string)$job->errormsg) : '',
             'mediamessage'  => $media,
@@ -159,6 +166,10 @@ class get_job_status extends external_api {
                 VALUE_DEFAULT,
                 0
             ),
+            'images'        => new external_value(PARAM_INT, 'Pictures made so far', VALUE_OPTIONAL, 0),
+            'imageswanted'  => new external_value(PARAM_INT, 'Pictures wanted', VALUE_OPTIONAL, 0),
+            'narrations'    => new external_value(PARAM_INT, 'Clips recorded so far', VALUE_OPTIONAL, 0),
+            'narrationswanted' => new external_value(PARAM_INT, 'Clips wanted', VALUE_OPTIONAL, 0),
             'nodecount'     => new external_value(PARAM_INT, 'Nodes in the working copy'),
             'decisioncount' => new external_value(PARAM_INT, 'Decision points in the working copy'),
         ]);

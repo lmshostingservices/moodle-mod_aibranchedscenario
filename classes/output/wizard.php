@@ -476,9 +476,19 @@ class wizard implements \renderable, \templatable {
             }
         }
 
+        // What it is about is one of the three things the teacher is now asked for, and the
+        // one the assistant most needs, so it is named here beside the other two rather
+        // than left for the prompt to carry silently.
+        $topics = $list('topics', 'topic');
+        $own = $said('topicown');
+        if ($own !== '') {
+            $topics = $topics === '' ? $own : $topics . ', ' . $own;
+        }
+
         $rows = [
             ['field:industry', $pick('industry', 'industry')],
             ['field:setting', $pick('setting', 'setting')],
+            ['field:topic', $topics],
             ['field:audience', $said('audience')],
             ['field:participantrole', $said('participantrole')],
             ['field:centralproblem', $said('centralproblem')],

@@ -1274,5 +1274,49 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026101300, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026101400) {
+        // Version 5.1.0. No schema change. The wizard is three steps: what it is about,
+        // getting it written, checking and building. Scenarios saved by 5.0.0 kept no
+        // topics - the save endpoint dropped them - so those fields are simply empty on
+        // them and the teacher ticks what they meant.
+        upgrade_mod_savepoint(true, 2026101400, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026101401) {
+        // Version 5.2.0. No schema change. The 47 situations are in six groups that open
+        // on demand, the scenes are an accordion above the publish button, and the
+        // generation dialog carries a bar, a percentage and a measured time remaining.
+        upgrade_mod_savepoint(true, 2026101401, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026101402) {
+        // Version 5.3.0. No schema change. The page no longer reloads itself every twenty
+        // seconds while the pictures and narration are made; it asks the service and shows
+        // a dialog that tracks the three runs of work separately.
+        upgrade_mod_savepoint(true, 2026101402, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026101403) {
+        // Version 5.3.1. No schema change. Fixes found by reviewing 5.3.0: the build
+        // dialog no longer locks the page it was only watching, survives a reading it
+        // cannot make, reports a failed build, keeps a way out on screen at all times,
+        // and never reloads over unsaved edits.
+        upgrade_mod_savepoint(true, 2026101403, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026101404) {
+        // Version 5.4.0. No schema change. Styling faults on the screens the audit had
+        // never visited - the landing screen and the player - and the audit widened to
+        // cover them.
+        upgrade_mod_savepoint(true, 2026101404, 'aibranchedscenario');
+    }
+
+    if ($oldversion < 2026101405) {
+        // Version 5.4.1. No schema change. The styling audit reaches the attempts report,
+        // the draft review and a learner's read-back, and says so when a screen cannot be
+        // loaded rather than reporting it clean.
+        upgrade_mod_savepoint(true, 2026101405, 'aibranchedscenario');
+    }
+
     return true;
 }

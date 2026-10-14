@@ -32,6 +32,17 @@ import ModalEvents from 'core/modal_events';
 const POLL_INTERVAL = 4000;
 const POLL_LIMIT = 150;
 
+// The pictures and the narration keep being made after the scenario text is finished, and
+// a long scenario can be forty clips. Ten seconds between readings, for up to twenty
+// minutes - slow enough not to hammer the service, often enough that the bars move.
+const MEDIA_POLL_INTERVAL = 10000;
+const MEDIA_POLL_LIMIT = 120;
+
+// Consecutive unreadable answers before the dialog gives up. One is routine - the import
+// route writes its job row only when cron starts the task, so "no job yet" is the normal
+// first answer - and a single miss must not end a twenty-minute watch.
+const MEDIA_POLL_MISSES = 5;
+
 
 const SELECTORS = {
     root: '[data-region="wizard"]',
@@ -42,6 +53,14 @@ const SELECTORS = {
     loadingText: '[data-region="loadingtext"]',
     loadingEta: '[data-region="loadingeta"]',
     workSteps: '[data-region="worksteps"]',
+    workBar: '[data-region="workbar"]',
+    workBarFill: '[data-region="workbarfill"]',
+    workPercent: '[data-region="workpercent"]',
+    workEta: '[data-region="loadingeta"]',
+    workTracks: '[data-region="worktracks"]',
+    workClose: '[data-region="workclose"]',
+    workNote: '.aibs-worknote',
+    topicGroup: '[data-region="topicgroup"]',
     workDialog: '[data-region="workdialog"]',
     sourceCount: '[data-region="sourcecount"]',
     sourceField: '[data-field="sourcecontent"]',
@@ -130,7 +149,10 @@ class Wizard {
             'published', 'error:generic', 'nosuggestion', 'unsavedchanges',
             'fillingfields', 'promptcopied', 'restore:nothing', 'mediaqueued',
             'work:checking', 'work:saving', 'work:media', 'work:reading', 'work:filling',
-            'work:writing', 'work:done', 'worknote',
+            'work:writing', 'work:done', 'worknote', 'work:buildingtitle', 'work:leavenote',
+            // Used by publish() and never loaded, so the dialog kept the previous
+            // operation's title and the step row rendered the literal "undefined".
+            'work:publishing', 'work:readysave',
             'sourcecount:thin', 'sourcecount:good', 'sourcecount:long', 'usedexample',
             'error:importnotjson', 'error:topiclimit',
         ];
@@ -210,8 +232,12 @@ class Wizard {
 
         this.root.querySelectorAll('[data-group]').forEach((group) => this.syncOther(group));
         this.root.querySelectorAll('[data-topic]').forEach((box) => {
-            box.addEventListener('change', () => this.limitTopics(box));
+            box.addEventListener('change', () => {
+                this.limitTopics(box);
+                this.topicCounts();
+            });
         });
+        this.topicCounts();
         const wanted = parseInt(new URL(window.location.href).searchParams.get('step'), 10);
         this.showStep(wanted >= 1 && wanted <= this.stepCount ? wanted : 1);
         this.watchReadings();
@@ -238,6 +264,11 @@ class Wizard {
      */
     handle(action, element) {
         switch (action) {
+            case 'hidework':
+                // The build carries on; only the dialog goes away. Not setBusy(false),
+                // which would also re-enable Generate while this loop is still running.
+                this.hideWorkDialog();
+                break;
             case 'gotostep':
                 this.showStep(parseInt(element.dataset.step, 10));
                 break;
@@ -311,25 +342,249 @@ class Wizard {
      *
      * @returns {void}
      */
-    watchMedia() {
-        const note = this.root.querySelector('[data-region="mediapending"]');
-        if (!note) {
+    /**
+     * Paint one run of work: its tick, its count and its bar.
+     *
+     * @param {String} key scenes, images or narrations.
+     * @param {Number} made Finished.
+     * @param {Number} wanted Total, or 0 when nothing of this kind is being made.
+     * @returns {void}
+     */
+    workTrack(key, made, wanted) {
+        const row = this.root.querySelector(`[data-track="${key}"]`);
+        if (!row) {
             return;
         }
-        let left = 30;
-        const tick = () => {
-            left--;
-            if (left < 0) {
+        // A kind with nothing to make is not a kind at zero percent - a scenario with no
+        // narration showed "0 of 0" and a bar that never moved, which reads as stuck.
+        if (!(wanted > 0)) {
+            row.hidden = true;
+            return;
+        }
+        row.hidden = false;
+        const share = Math.max(0, Math.min(100, Math.round((made / wanted) * 100)));
+        const count = row.querySelector(`[data-region="count-${key}"]`);
+        const fill = row.querySelector(`[data-region="fill-${key}"]`);
+        if (count) {
+            count.textContent = `${made} / ${wanted}`;
+        }
+        if (fill) {
+            fill.style.width = share + '%';
+        }
+        row.classList.toggle('aibs-worktrack-done', made >= wanted);
+        row.classList.toggle('aibs-worktrack-doing', made < wanted && made >= 0);
+    }
+
+    /**
+     * Drive the whole dialog from one status reading.
+     *
+     * @param {Object} status A get_job_status result.
+     * @returns {Promise<Boolean>} True once everything is finished.
+     */
+    async showBuild(status) {
+        const scenes = parseInt(status.nodecount, 10) || 0;
+        const images = parseInt(status.images, 10) || 0;
+        const imageswanted = parseInt(status.imageswanted, 10) || 0;
+        const clips = parseInt(status.narrations, 10) || 0;
+        const clipswanted = parseInt(status.narrationswanted, 10) || 0;
+
+        // The scenario text has no count of its own until it exists, so it is shown as one
+        // piece of work that is either in hand or finished.
+        this.workTrack('scenes', scenes > 0 ? 1 : 0, 1);
+        this.workTrack('images', images, imageswanted);
+        this.workTrack('narrations', clips, clipswanted);
+
+        const made = (scenes > 0 ? 1 : 0) + images + clips;
+        const wanted = 1 + imageswanted + clipswanted;
+        await this.workProgress(made, wanted);
+
+        const close = this.root.querySelector(SELECTORS.workClose);
+        if (close && scenes > 0) {
+            // Only ever reveals it. Hiding it here once meant a dialog raised by the
+            // watcher could lose its only control the moment a reading came back thin.
+            close.hidden = false;
+        }
+        return scenes > 0 && images >= imageswanted && clips >= clipswanted;
+    }
+
+    /**
+     * Watch the pictures and the narration until they are finished.
+     *
+     * THE PAGE USED TO RELOAD ITSELF EVERY TWENTY SECONDS, up to thirty times, so that a
+     * sentence at the foot of the step would be re-rendered with new numbers. Ten minutes
+     * of a page jumping under a teacher's hands, losing their scroll position and anything
+     * they had typed, to update one line they had to go and find. It asks the service
+     * instead, and paints the answer into the dialog.
+     *
+     * @returns {Promise<void>}
+     */
+    async watchMedia() {
+        if (!this.root.querySelector('[data-region="mediapending"]')) {
+            return;
+        }
+        // WATCHING IS NOT WORKING.
+        //
+        // setBusy() locks the page, arms the unsaved-changes guard and disables the
+        // buttons - all correct for an operation this teacher just started, and all wrong
+        // for a build that was already running when they opened the page. They would get
+        // "Leave site?" for navigating away from a build that, as the dialog itself says,
+        // carries on without them. The dialog is shown directly instead, unlocked.
+        this.showWorkDialog(this.strings['work:buildingtitle'], this.strings['work:leavenote']);
+
+        let misses = 0;
+        for (let attempt = 0; attempt < MEDIA_POLL_LIMIT; attempt++) {
+            // A generation the teacher starts from this page owns the dialog; two loops
+            // painting it on two different scales, each able to reload the page from under
+            // the other, is worse than not watching at all.
+            if (this.busy) {
+                this.hideWorkDialog();
                 return;
             }
-            if (this.dirty || this.busy) {
-                window.setTimeout(tick, 20000);
+            let status;
+            try {
+                status = await this.call('get_job_status', {jobid: 0});
+                misses = 0;
+            } catch (error) {
+                // A reading that fails is not a build that failed. The import route in
+                // particular queues an adhoc task and writes no job row until cron picks
+                // it up, so "no job yet" is the normal first answer here, not an error.
+                misses++;
+                if (misses >= MEDIA_POLL_MISSES) {
+                    this.hideWorkDialog();
+                    return;
+                }
+                await this.wait(MEDIA_POLL_INTERVAL);
+                continue;
+            }
+
+            // A job that has failed leaves the media incomplete for ever, so without this
+            // the page would show this dialog on every load, poll for twenty minutes and
+            // never say what went wrong.
+            if (status.status === 'error') {
+                this.hideWorkDialog();
+                this.showError({message: status.errormessage || this.strings['error:generic']});
                 return;
             }
-            this.leaving = true;
-            window.location.reload();
-        };
-        window.setTimeout(tick, 20000);
+
+            let finished = false;
+            try {
+                finished = await this.showBuild(status);
+            } catch (error) {
+                // Painting the dialog must never be able to leave it up and the page
+                // under it unusable.
+                this.hideWorkDialog();
+                return;
+            }
+            if (finished) {
+                this.hideWorkDialog();
+                if (status.mediamessage) {
+                    Toast.show(status.mediamessage, 'info');
+                }
+                // The reload picks up the controls that open when the media is complete.
+                // It is refused while the form is dirty: the teacher may have been editing
+                // for the last ten minutes with this dialog hidden, and a reload that
+                // clears the flag first is the unsaved-changes guard disarming itself.
+                if (this.dirty) {
+                    Toast.show(this.strings['work:readysave'], 'info');
+                    return;
+                }
+                this.leaving = true;
+                window.location.reload();
+                return;
+            }
+            await this.wait(MEDIA_POLL_INTERVAL);
+        }
+        this.hideWorkDialog();
+    }
+
+    /**
+     * Sleep.
+     *
+     * @param {Number} ms Milliseconds.
+     * @returns {Promise} Resolves after the wait.
+     */
+    wait(ms) {
+        return new Promise((resolve) => {
+            window.setTimeout(resolve, ms);
+        });
+    }
+
+    /**
+     * Show the work dialog WITHOUT locking the page behind it.
+     *
+     * @param {String} title What is being made.
+     * @param {String} note The line under it.
+     * @returns {void}
+     */
+    showWorkDialog(title, note) {
+        const loading = this.root.querySelector(SELECTORS.loading);
+        if (loading) {
+            loading.hidden = false;
+        }
+        // THE WAY OUT COMES UP WITH THE DIALOG, not after the first good reading.
+        //
+        // The close button was revealed by showBuild(), so a first reading that could not
+        // be read - the normal case on the import route, where the job row is not written
+        // until cron starts the task - left a scrim over the whole page with no control on
+        // it at all. The teacher did not start this build; they must always be able to put
+        // it away.
+        const close = this.root.querySelector(SELECTORS.workClose);
+        if (close) {
+            close.hidden = false;
+        }
+        const text = this.root.querySelector(SELECTORS.loadingText);
+        if (text && title) {
+            text.textContent = title;
+        }
+        const noteel = this.root.querySelector(SELECTORS.workNote);
+        if (noteel && note) {
+            noteel.textContent = note;
+        }
+    }
+
+    /**
+     * Put the work dialog away and leave the tracks ready for the next thing.
+     *
+     * @returns {void}
+     */
+    hideWorkDialog() {
+        const loading = this.root.querySelector(SELECTORS.loading);
+        if (loading) {
+            loading.hidden = true;
+        }
+        document.body.classList.remove('aibs-work-locked');
+        this.resetWorkTracks();
+    }
+
+    /**
+     * Hide every track and bar, so the next operation does not open onto this one's.
+     *
+     * Publishing, autofill and importing all raise the same dialog and none of them makes
+     * pictures, so without this they opened showing "Writing the scenario / Drawing the
+     * pictures / Recording the narration" with empty counts and bars at nought - which is
+     * exactly the stuck-looking state the tracks were added to replace.
+     *
+     * @returns {void}
+     */
+    resetWorkTracks() {
+        this.root.querySelectorAll('[data-track]').forEach((row) => {
+            row.hidden = true;
+            row.classList.remove('aibs-worktrack-done', 'aibs-worktrack-doing');
+        });
+        const bar = this.root.querySelector(SELECTORS.workBar);
+        const pct = this.root.querySelector(SELECTORS.workPercent);
+        const eta = this.root.querySelector(SELECTORS.workEta);
+        [bar, pct, eta].forEach((one) => {
+            if (one) {
+                one.hidden = true;
+            }
+        });
+        const spinner = this.root.querySelector('.aibs-work-spinner');
+        if (spinner) {
+            spinner.hidden = false;
+        }
+        this.workStarted = 0;
+        this.workStartedAt = 0;
     }
 
     /**
@@ -822,6 +1077,7 @@ class Wizard {
             }
         } else {
             this.workSteps([]);
+            this.resetWorkTracks();
         }
     }
 
@@ -838,6 +1094,12 @@ class Wizard {
      */
     workSteps(steps) {
         const list = this.root.querySelector(SELECTORS.workSteps);
+        if (list) {
+            // Hidden only when there is nothing in it. Hardcoding hidden in the template
+            // made this whole list dead for sighted users - every caller still filled it,
+            // and the stylesheet's [hidden] rule meant nobody ever saw a word.
+            list.hidden = !(steps && steps.length);
+        }
         if (!list) {
             return;
         }
@@ -1292,6 +1554,8 @@ class Wizard {
             return false;
         }
 
+        this.workStarted = 0;
+        this.workStartedAt = 0;
         this.setBusy(true, this.strings.generationqueued, true);
         this.workSteps([
             {text: this.strings.generationqueued, state: 'doing'},
@@ -1408,6 +1672,150 @@ class Wizard {
     }
 
     /**
+     * Say on each closed group how many of its situations are ticked.
+     *
+     * The six groups are shut when the step opens - 47 situations at once made the step
+     * that promises three things two and a bit screens tall. A choice inside a shut group
+     * would then be invisible, so the group says it has one, and a group that was opened
+     * to make that choice is left open.
+     *
+     * @returns {void}
+     */
+    topicCounts() {
+        this.root.querySelectorAll(SELECTORS.topicGroup).forEach((group) => {
+            const chosen = group.querySelectorAll('[data-topic]:checked').length;
+            const readout = group.querySelector('[data-region="groupcount"]');
+            if (readout) {
+                readout.textContent = chosen > 0 ? String(chosen) : '';
+            }
+            group.classList.toggle('aibs-topicgroup-has', chosen > 0);
+            group.querySelectorAll('[data-topic]').forEach((box) => {
+                const row = box.closest('.aibs-topic');
+                if (row) {
+                    row.classList.toggle('aibs-topic-chosen', box.checked);
+                }
+            });
+            if (chosen > 0) {
+                group.open = true;
+            }
+        });
+    }
+
+    /**
+     * Move the bar, the percentage and the time remaining.
+     *
+     * @param {Number} made Pieces finished.
+     * @param {Number} wanted Pieces to make.
+     * @returns {void}
+     */
+    async workProgress(made, wanted) {
+        const bar = this.root.querySelector(SELECTORS.workBar);
+        const fill = this.root.querySelector(SELECTORS.workBarFill);
+        const pct = this.root.querySelector(SELECTORS.workPercent);
+        const eta = this.root.querySelector(SELECTORS.workEta);
+        if (!bar || !fill) {
+            return;
+        }
+        if (!(wanted > 0)) {
+            bar.hidden = true;
+            if (pct) {
+                pct.hidden = true;
+            }
+            return;
+        }
+        const share = Math.max(0, Math.min(100, Math.round((made / wanted) * 100)));
+        bar.hidden = false;
+        const spinner = this.root.querySelector('.aibs-work-spinner');
+        if (spinner) {
+            spinner.hidden = true;
+        }
+        bar.setAttribute('aria-valuenow', String(share));
+        fill.style.width = share + '%';
+        if (pct) {
+            pct.hidden = false;
+            pct.textContent = await getString('work:percent', 'mod_aibranchedscenario',
+                {percent: share, made: made, wanted: wanted});
+        }
+
+        // HOW LONG IS LEFT, measured rather than guessed. A run on a busy service and a run
+        // on a quiet one are minutes apart, so the rate comes from this run: nothing is
+        // claimed until two pieces have actually arrived and there is a rate to divide by.
+        if (!this.workStarted) {
+            this.workStarted = Date.now();
+            this.workStartedAt = made;
+        }
+        const done = made - this.workStartedAt;
+        const elapsed = (Date.now() - this.workStarted) / 1000;
+        if (eta) {
+            if (done >= 2 && elapsed > 5 && made < wanted) {
+                const perPiece = elapsed / done;
+                const left = Math.round((perPiece * (wanted - made)) / 60);
+                eta.hidden = false;
+                // "Nearly there" is a claim about how much is left, not how fast the last
+                // few arrived. A burst of quick pieces early on rounded the estimate to
+                // under a minute and put "Nearly there" over a bar sitting at 40%.
+                const minutes = Math.max(1, left);
+                if (left <= 1 && share >= 75) {
+                    eta.textContent = await getString('work:underaminute',
+                        'mod_aibranchedscenario');
+                } else {
+                    // "About 1 minutes left" is the kind of thing nobody fixes and
+                    // everybody notices.
+                    eta.textContent = minutes === 1
+                        ? await getString('work:minuteleft', 'mod_aibranchedscenario')
+                        : await getString('work:minutesleft', 'mod_aibranchedscenario', minutes);
+                }
+            } else if (made >= wanted) {
+                eta.hidden = true;
+            }
+        }
+    }
+
+    /**
+     * What is actually being made, counted, for the progress dialog.
+     *
+     * The dialog said "writing" and then "media" and stopped there, so a teacher watching a
+     * forty-clip scenario had three lines that never changed for several minutes and no way
+     * to tell a slow run from a stuck one. get_job_status already returns the scene count
+     * and the made-of-wanted media counts - nothing new had to be asked for, the page just
+     * was not reading them.
+     *
+     * @param {Object} status A get_job_status result.
+     * @param {String} phase queued, writing or media.
+     * @returns {Promise<Array>} Steps for workSteps().
+     */
+    async progressSteps(status, phase) {
+        const scenes = parseInt(status.nodecount, 10) || 0;
+        const made = parseInt(status.mediamade, 10) || 0;
+        const wanted = parseInt(status.mediawanted, 10) || 0;
+
+        const written = scenes > 0
+            ? await getString('work:scenesdone', 'mod_aibranchedscenario', scenes)
+            : this.strings['work:writing'];
+
+        let media = this.strings['work:media'];
+        if (wanted > 0) {
+            media = made >= wanted
+                ? await getString('work:mediadone', 'mod_aibranchedscenario', wanted)
+                : await getString('work:mediaof', 'mod_aibranchedscenario', {made: made, wanted: wanted});
+        }
+
+        await this.workProgress(made, wanted);
+
+        return [
+            {text: this.strings.generationqueued, state: 'done'},
+            {
+                text: written,
+                state: phase === 'writing' ? 'doing' : 'done',
+            },
+            {
+                text: media,
+                state: phase === 'media' ? 'doing' : (phase === 'writing' ? 'todo' : 'done'),
+            },
+        ];
+    }
+
+    /**
      * Poll a generation job until it finishes.
      *
      * @param {Number} jobid The job identifier.
@@ -1428,11 +1836,10 @@ class Wizard {
             }
             if (status.status === 'running') {
                 this.setBusy(true, this.strings.generationrunning, true);
-                this.workSteps([
-                    {text: this.strings.generationqueued, state: 'done'},
-                    {text: this.strings['work:writing'], state: 'doing'},
-                    {text: this.strings['work:media'], state: 'todo'},
-                ]);
+                // Which phase it is in is told by whether there are scenes yet: the service
+                // writes the scenario first and only then has anything to illustrate.
+                const phase = (parseInt(status.nodecount, 10) || 0) > 0 ? 'media' : 'writing';
+                this.workSteps(await this.progressSteps(status, phase));
             }
             if (status.status === 'ready') {
                 // A run where some or all of the images failed used to look identical
@@ -1445,11 +1852,7 @@ class Wizard {
                     );
                 }
                 this.setBusy(true, this.strings.generationready);
-                this.workSteps([
-                    {text: this.strings.generationqueued, state: 'done'},
-                    {text: this.strings['work:writing'], state: 'done'},
-                    {text: this.strings['work:media'], state: 'doing'},
-                ]);
+                this.workSteps(await this.progressSteps(status, 'done'));
                 this.dirty = false;
                 this.leaving = true;
                 window.location.reload();
