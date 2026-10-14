@@ -26,6 +26,7 @@ use mod_aibranchedscenario\local\ai\image_prompt;
 use mod_aibranchedscenario\local\generator;
 use mod_aibranchedscenario\local\media_manager;
 use mod_aibranchedscenario\local\scenario_manager;
+use mod_aibranchedscenario\local\source_normaliser;
 use mod_aibranchedscenario\local\schema;
 use mod_aibranchedscenario\local\validation_exception;
 use mod_aibranchedscenario\local\validator;
@@ -118,6 +119,19 @@ class import_definition extends external_api {
             ];
         }
 
+        // THE AI'S CHOICES BECOME THE TEACHER'S EDITABLE ANSWERS.
+        //
+        // A pasted scenario arrived complete - its own setting, its own cast, its own title,
+        // its own role and tone - and none of it reached the wizard. The teacher was left
+        // looking at empty fields beside a finished scenario, with the AI's answers readable
+        // only inside the definition, and the next generate request was sent with the blanks
+        // rather than with what was actually built. The point of the paste route is that the
+        // assistant fills these in, so what it filled in is what is stored.
+        //
+        // Nothing the teacher typed is overwritten: a field they answered themselves wins,
+        // because they answered it on purpose.
+        self::backfill_source($resolved['scenario'], $clean);
+
         scenario_manager::save_definition($resolved['scenario'], $clean, [
             'provider'        => 'manual',
             'timegenerated'   => time(),
@@ -152,13 +166,16 @@ class import_definition extends external_api {
             $wantsaudio = !empty($resolved['scenario']->enableaudio)
                 && get_config('mod_aibranchedscenario', 'allowaudio');
             $images = $wantsimages ? image_prompt::count_images($clean) : 0;
-            $clips = $wantsaudio ? media_manager::count_narrations($clean) : 0;
-            // THE SAME PRICE HOWEVER THE SCENARIO WAS MADE. Owner decision, 21 September:
-            // a pasted scenario with pictures or narration costs exactly what a generated one
-            // with the same media costs - 150 or 200 - not the media price alone. Written
-            // from the published table, never from the quota tariff times the real counts,
-            // which put every realistic scenario over the whole daily budget.
-            $cost = (int)schema::price_for($images > 0, $clips > 0)['total'];
+            $clips = $wantsaudio ? media_manager::count_narrations(
+                $clean,
+                media_manager::voice_parts($resolved['scenario'])
+            ) : 0;
+            // THE SAME PRICE HOWEVER THE SCENARIO WAS MADE, which is still the rule - it is
+            // just that the price is now counted rather than published. A pasted scenario
+            // and a generated one with the same pictures and clips cost the same, because
+            // both are the same number of pieces. The words are not charged on this route:
+            // the teacher wrote them somewhere else, and LMS Labs made nothing.
+            $cost = (int)schema::price_for_units(0, $images, $clips)['total'];
 
             try {
                 // ONE MEDIA RUN AT A TIME, which the generate route has always enforced and
@@ -260,5 +277,101 @@ class import_definition extends external_api {
         $images = !empty($scenario->enableimages) && get_config('mod_aibranchedscenario', 'allowimages');
         $audio = !empty($scenario->enableaudio) && get_config('mod_aibranchedscenario', 'allowaudio');
         return $images || $audio;
+    }
+
+    /**
+     * Copy what the assistant decided into the wizard's own fields.
+     *
+     * @param \stdClass $scenario The activity instance.
+     * @param array $definition The validated definition just stored.
+     * @return void
+     */
+    protected static function backfill_source(\stdClass $scenario, array $definition): void {
+        $source = scenario_manager::get_source($scenario);
+        $source = is_array($source) ? $source : [];
+        $source = source_normaliser::normalise($source);
+        $blank = source_normaliser::blank();
+
+        // A value counts as unanswered when it is empty or still the shipped default: a
+        // picker nobody touched is silence, not a choice, and silence is what this fills.
+        $empty = static function (string $key) use ($source, $blank): bool {
+            $value = $source[$key] ?? '';
+            if (is_array($value)) {
+                return $value === [];
+            }
+            $value = trim((string)$value);
+            return $value === '' || (array_key_exists($key, $blank) && $value === (string)$blank[$key]);
+        };
+
+        $take = static function (string $key, $value) use (&$source, $empty): void {
+            $value = is_string($value) ? trim($value) : $value;
+            if ($value !== '' && $value !== null && $empty($key)) {
+                $source[$key] = $value;
+            }
+        };
+
+        $take('title', (string)($definition['title'] ?? ''));
+        $take('participantrole', (string)($definition['role'] ?? ''));
+        $take('tone', (string)($definition['tone'] ?? ''));
+        $take('complexity', (string)($definition['complexity'] ?? ''));
+
+        // The setting arrives as prose - "the cold room at the back of the kitchen" - and the
+        // wizard's field is a key from a list. Where the prose names one of the places the
+        // plugin knows, it is stored as that key so the picker shows it; where it does not,
+        // it is stored under "other" with the words the assistant used, which is exactly
+        // what the free-text box is for.
+        $place = trim((string)($definition['setting'] ?? ''));
+        if ($place !== '' && $empty('setting')) {
+            $matched = '';
+            foreach (schema::settings_list() as $candidate) {
+                $label = get_string_manager()->string_exists('setting:' . $candidate, 'mod_aibranchedscenario')
+                    ? get_string('setting:' . $candidate, 'mod_aibranchedscenario') : '';
+                if ($label !== '' && stripos($place, $label) !== false) {
+                    $matched = $candidate;
+                    break;
+                }
+            }
+            if ($matched !== '') {
+                $source['setting'] = $matched;
+            } else {
+                $source['setting'] = 'other';
+                $source['settingother'] = \core_text::substr($place, 0, 120);
+            }
+        }
+
+        // THE CAST, which is the part a teacher most wants to correct and the part that was
+        // most completely hidden. The facilitator is one of the people, so it goes in the
+        // list with the rest rather than being dropped for having its own key.
+        if (($source['characters'] ?? []) === []) {
+            $cast = [];
+            $facilitator = (array)($definition['facilitator'] ?? []);
+            foreach (array_merge([$facilitator], (array)($definition['characters'] ?? [])) as $person) {
+                if (!is_array($person) || trim((string)($person['name'] ?? '')) === '') {
+                    continue;
+                }
+                $cast[] = [
+                    'name'       => (string)$person['name'],
+                    'role'       => (string)($person['role'] ?? ''),
+                    'trait'      => (string)($person['trait'] ?? ''),
+                    'appearance' => (string)($person['appearance'] ?? ''),
+                    'gender'     => (string)($person['gender'] ?? ''),
+                ];
+            }
+            if ($cast !== []) {
+                $source['characters'] = array_slice($cast, 0, 4);
+            }
+        }
+
+        // How it opens, taken from the scenario's own first screen rather than invented.
+        if ($empty('openingsituation')) {
+            foreach ((array)($definition['nodes'] ?? []) as $node) {
+                if ((string)($node['id'] ?? '') === (string)($definition['startnode'] ?? '')) {
+                    $source['openingsituation'] = (string)($node['situation'] ?? '');
+                    break;
+                }
+            }
+        }
+
+        scenario_manager::save_source($scenario, $source);
     }
 }

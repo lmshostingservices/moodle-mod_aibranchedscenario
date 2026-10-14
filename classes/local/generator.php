@@ -375,16 +375,16 @@ class generator {
             $request = json_decode((string)$mediajob->requestjson, true);
             $withimages = (int)($made['images'] ?? 0) > 0;
             $withvoice = (int)($made['narrations'] ?? 0) > 0;
-            // The PUBLISHED price, not a per-item sum. A top-up fills in what a run already
-            // paid for, so it counts at the media price as before. A media job that is not a
-            // top-up is an imported scenario being illustrated, and an imported scenario costs
-            // what a generated one with the same media costs - unless it made nothing at all.
-            $istopup = is_array($request) && array_key_exists('topup', $request);
-            if ($istopup) {
-                $spent += schema::media_price($withimages, $withvoice);
-            } else if ($withimages || $withvoice) {
-                $spent += (int)schema::price_for($withimages, $withvoice)['total'];
-            }
+            // COUNTED, NOT QUOTED. A scenario is charged by the piece now, so what a run
+            // spent is the pieces it actually made - not a published figure a run of any
+            // size was billed at. A job that made nothing is worth nothing, which is also
+            // what the service charges for it.
+            $spent += (int)schema::price_for_units(
+                0,
+                (int)($made['images'] ?? 0),
+                (int)($made['narrations'] ?? 0)
+            )['total'];
+            unset($withimages, $withvoice, $request);
         }
 
         $counts = $DB->get_records_sql(

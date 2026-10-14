@@ -268,6 +268,74 @@ class schema {
      * @param string $industry An industry key.
      * @return string[] Setting keys, always ending in 'other'.
      */
+    /**
+     * What the scenario is about, grouped by the kind of trouble it is.
+     *
+     * NOT a list of skills, which is what the sister activity asks for and is right for it:
+     * its scenes are independent, so "which skill does this scene practise" is the only
+     * question that needs answering. A branched scenario is a different animal - one
+     * decision changes the situation the next one is made in - so what a teacher is really
+     * choosing is A SITUATION THAT UNFOLDS.
+     *
+     * The test every entry here had to pass: a reasonable person could go more than one way,
+     * AND an early call narrows what is still available later. "Active listening" fails it -
+     * every path arrives at the same place, so there is nothing to branch into. "A complaint
+     * that escalates while you are handling it" passes it.
+     *
+     * @return array Group key to list of topic keys, in the order they are shown.
+     */
+    public static function topic_groups(): array {
+        return [
+            // The purest branching shape: what you do first decides what you are dealing
+            // with second.
+            'wentwrong' => [
+                'nearmiss', 'ownmistake', 'workaround', 'escalate', 'equipmentfailure',
+                'harmedsomeone', 'emergency', 'biggerthantold',
+            ],
+            // The other person reacts to what you chose, so decision two is made in the room
+            // decision one created.
+            'conversations' => [
+                'feedbackrefused', 'unfaircriticism', 'disagreesenior', 'teamconflict',
+                'sayingno', 'badnews', 'turnsaggressive', 'explainnotyours',
+            ],
+            // Every option costs something and the cost arrives later.
+            'pressure' => [
+                'twourgent', 'cutcorner', 'shortstaffed', 'outsidecompetence', 'whattodrop',
+                'badhandover', 'othersunfinished',
+            ],
+            // The first decision is whether to act at all, and both answers lead somewhere.
+            'speakup' => [
+                'unsafesenior', 'coveringup', 'signoffunchecked', 'bullying',
+                'conflictinterest', 'confidentialshared', 'giftstrings', 'recordsdontmatch',
+            ],
+            // People respond to how they were handled, and that becomes the next problem.
+            'leading' => [
+                'delegating', 'performancedropped', 'peersnowreports', 'holddecision',
+                'notcoping', 'allocatework', 'newstarterfailing', 'defendteam',
+            ],
+            // The person in front of you changes with what you do.
+            'care' => [
+                'refusingcare', 'disclosure', 'conditionchanges', 'complaintescalates',
+                'dignityvssafety', 'familydemanding', 'shouldnotbedoing', 'cannotreach',
+            ],
+        ];
+    }
+
+    /**
+     * Every topic key, flat.
+     *
+     * @return string[]
+     */
+    public static function topics(): array {
+        return array_merge(...array_values(self::topic_groups()));
+    }
+
+    /**
+     * The places that belong to one industry.
+     *
+     * @param string $industry An industry key.
+     * @return string[] Setting keys, always ending with "other".
+     */
     public static function settings_for_industry(string $industry): array {
         $map = [
             'training' => ['trainingroom', 'classroom', 'workshopfloor', 'assessmentroom', 'office', 'videocall'],
@@ -519,17 +587,76 @@ class schema {
      *
      * @return array Keys: base, images, voice, rate, currency.
      */
+    /**
+     * The shape of a scenario of the usual size, for quoting before one exists.
+     *
+     * Five decisions, a handful of same-stage branches and three or four endings; a picture
+     * for each scene; and narration of every family. Used only where a number has to be
+     * named in advance - the charge itself is always counted from what was actually made.
+     */
+    public const TYPICAL_NODES = 10;
+
+    /** @var int Pictures a scenario of the usual size asks for. */
+    public const TYPICAL_IMAGES = 14;
+
+    /** @var int Narration clips a scenario of the usual size asks for. */
+    public const TYPICAL_CLIPS = 40;
+
+    /**
+     * What LMS Labs charges, per piece.
+     *
+     * @return array Keys: node, image, clip, rate, currency.
+     */
     public static function pricing(): array {
         return [
-            'base'     => 100,
-            'images'   => 50,
-            'voice'    => 50,
-            // Credits to one unit of the currency. Ten to the dollar puts a scenario with
-            // pictures and narration at 200 credits, which is $20.
+            // PER UNIT, THE WAY THE SISTER ACTIVITY PRICES. A flat 200 for "a scenario" was
+            // one number for a thing whose size varies by a factor of three: a scenario with
+            // two awards, ten nodes and no narration cost exactly what a fully illustrated,
+            // fully narrated one did. What LMS Labs actually makes is nodes, pictures and
+            // clips, so that is what is counted.
+            //
+            // Fixed here rather than a site setting, for the same reason the tariff above is:
+            // this is what LMS Labs charges, and a site that installs the plugin does not get
+            // to tell itself it is billed less. If the published price changes it changes
+            // here and ships as a release.
+            'node'     => 2,
+            'image'    => 2,
+            'clip'     => 2,
+            // Credits to one unit of the currency.
             'rate'     => 10.0,
             'currency' => 'USD',
         ];
     }
+
+    /**
+     * What one run costs, counted rather than quoted.
+     *
+     * @param int $nodes How many scenes the scenario has.
+     * @param int $images How many pictures will be made.
+     * @param int $clips How many narration clips will be made.
+     * @return array Keys: nodes, images, clips, nodecost, imagecost, clipcost, total, money,
+     *     rate, currency.
+     */
+    public static function price_for_units(int $nodes, int $images, int $clips): array {
+        $pricing = self::pricing();
+        $nodecost = max(0, $nodes) * (int)$pricing['node'];
+        $imagecost = max(0, $images) * (int)$pricing['image'];
+        $clipcost = max(0, $clips) * (int)$pricing['clip'];
+        $total = $nodecost + $imagecost + $clipcost;
+        return [
+            'nodes'     => max(0, $nodes),
+            'images'    => max(0, $images),
+            'clips'     => max(0, $clips),
+            'nodecost'  => $nodecost,
+            'imagecost' => $imagecost,
+            'clipcost'  => $clipcost,
+            'total'     => $total,
+            'money'     => round($total / $pricing['rate'], 2),
+            'rate'      => $pricing['rate'],
+            'currency'  => $pricing['currency'],
+        ];
+    }
+
 
     /**
      * The price of one scenario with the options a teacher has chosen.
@@ -539,18 +666,24 @@ class schema {
      * @return array Keys: base, images, voice, total, money, rate, currency.
      */
     public static function price_for(bool $withimages, bool $withvoice): array {
-        $pricing = self::pricing();
-        $images = $withimages ? $pricing['images'] : 0;
-        $voice = $withvoice ? $pricing['voice'] : 0;
-        $total = $pricing['base'] + $images + $voice;
+        // AN ESTIMATE, for the callers that have to name a number before the scenario that
+        // sets it exists. The real charge is counted from what was made: see
+        // price_for_units(). These are the counts a five-decision scenario of the usual
+        // shape produces, and the quote says it is a guide rather than a bill.
+        $units = self::price_for_units(
+            self::TYPICAL_NODES,
+            $withimages ? self::TYPICAL_IMAGES : 0,
+            $withvoice ? self::TYPICAL_CLIPS : 0
+        );
         return [
-            'base'     => $pricing['base'],
-            'images'   => $images,
-            'voice'    => $voice,
-            'total'    => $total,
-            'money'    => round($total / $pricing['rate'], 2),
-            'rate'     => $pricing['rate'],
-            'currency' => $pricing['currency'],
+            'base'     => $units['nodecost'],
+            'images'   => $units['imagecost'],
+            'voice'    => $units['clipcost'],
+            'total'    => $units['total'],
+            'money'    => $units['money'],
+            'rate'     => $units['rate'],
+            'currency' => $units['currency'],
+            'estimate' => true,
         ];
     }
 
@@ -572,9 +705,11 @@ class schema {
      * @return int Credits.
      */
     public static function media_price(bool $withimages, bool $withvoice): int {
-        $pricing = self::pricing();
-        return ($withimages ? (int)$pricing['images'] : 0)
-            + ($withvoice ? (int)$pricing['voice'] : 0);
+        return self::price_for_units(
+            0,
+            $withimages ? self::TYPICAL_IMAGES : 0,
+            $withvoice ? self::TYPICAL_CLIPS : 0
+        )['total'];
     }
 
     /**

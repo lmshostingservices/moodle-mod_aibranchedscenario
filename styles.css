@@ -7245,3 +7245,97 @@ button.aibs-avatar:focus-visible {
         grid-template-columns: minmax(9em, 12em) minmax(0, 1fr);
     }
 }
+
+/* ------------------------------------------------------- copy, paste, bring it back
+
+   Three numbered actions. This was four paragraphs of explanation stacked on each other -
+   a hint above the button, a longer one below it, a third above the paste box - and a
+   teacher had to read all of it to learn that the job is three steps. */
+.aibs-steplist {
+    display: grid;
+    gap: 10px;
+    margin: 0 0 16px;
+    padding-inline-start: 1.4em;
+}
+
+.aibs-steplist-item {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-small);
+    line-height: 1.5;
+}
+
+/* The button sits on the line it belongs to rather than under a paragraph about it. */
+.aibs-steplist-item .aibs-btn {
+    margin-inline-start: 8px;
+    vertical-align: baseline;
+}
+
+/* --------------------------------------------------------------- what it is about
+
+   Forty-seven situations is too many to read as one list, so they are grouped by the kind
+   of trouble they are - which is also the honest grouping, because a branched scenario is
+   chosen by the situation it puts somebody in rather than by the skill it practises. */
+.aibs-topicgroups {
+    display: grid;
+    gap: 18px;
+    margin-top: 10px;
+}
+
+.aibs-topicgroup-name {
+    color: var(--aibs-muted);
+    font-size: var(--aibs-text-micro);
+    font-weight: var(--aibs-weight-strong);
+    letter-spacing: .08em;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+}
+
+.aibs-topiclist {
+    display: grid;
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* The tick and the words line up on their first line, so a situation that wraps to two
+   lines does not sit with its box floating beside the middle of it. */
+.aibs-topic {
+    align-items: start;
+    column-gap: 10px;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    margin: 0;
+}
+
+.aibs-topic input {
+    margin: 2px 0 0;
+}
+
+.aibs-topic-text {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-small);
+    line-height: 1.45;
+}
+
+@media (min-width: 900px) {
+    .aibs-topicgroups {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px 28px;
+    }
+}
+
+/* The number the next button will spend, beside that button. */
+.aibs-quote {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-small);
+    font-weight: var(--aibs-weight-label);
+    margin: 0 0 10px;
+}
+
+.aibs-pricing-rates {
+    color: var(--aibs-text);
+    font-size: var(--aibs-text-small);
+    margin: 0 0 8px;
+}

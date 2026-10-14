@@ -18,6 +18,7 @@ namespace mod_aibranchedscenario\output;
 
 use context_module;
 use mod_aibranchedscenario\local\ai\credentials;
+use mod_aibranchedscenario\local\media_manager;
 use mod_aibranchedscenario\local\scenario_manager;
 use mod_aibranchedscenario\local\schema;
 use mod_aibranchedscenario\local\source_normaliser;
@@ -334,6 +335,7 @@ class wizard implements \renderable, \templatable {
                 'setting'    => source_normaliser::blank()['setting'],
                 'atmosphere' => source_normaliser::blank()['atmosphere'],
             ],
+            'topicgroups'    => self::topic_options($source['topics'] ?? []),
             'choices'        => self::choices_summary($source),
             'maxsourcechars' => $maxsourcechars,
             'generationeta'  => get_string('generationeta', 'mod_aibranchedscenario'),
@@ -342,6 +344,7 @@ class wizard implements \renderable, \templatable {
             // rather than leaving an assistant to guess at all three.
             'importprompt'   => \mod_aibranchedscenario\local\import_prompt::text(schema::DECISIONS, $source),
             'pricing'        => self::pricing_card($this->scenario),
+            'quote'          => self::quote($this->scenario, is_array($definition) ? $definition : null),
             'howto'          => self::how_to_use(),
             'reading'        => self::further_reading(),
         ];
@@ -387,20 +390,72 @@ class wizard implements \renderable, \templatable {
      * @param array $source Normalised wizard values.
      * @return array Template context: rows of label and value.
      */
+    /**
+     * The situations a teacher can pick from, grouped.
+     *
+     * @param array $chosen Topic keys already ticked.
+     * @return array Template context.
+     */
+    protected static function topic_options(array $chosen): array {
+        $out = [];
+        foreach (schema::topic_groups() as $group => $topics) {
+            $items = [];
+            foreach ($topics as $topic) {
+                $items[] = [
+                    'key'     => $topic,
+                    'label'   => get_string('topic:' . $topic, 'mod_aibranchedscenario'),
+                    'checked' => in_array($topic, $chosen, true),
+                ];
+            }
+            $out[] = [
+                'key'    => $group,
+                'label'  => get_string('topicgroup:' . $group, 'mod_aibranchedscenario'),
+                'topics' => $items,
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * What the teacher has already chosen, printed above the content box.
+     *
+     * @param array $source Normalised wizard values.
+     * @return array Template context: rows of label and value, and whether there are any.
+     */
     protected static function choices_summary(array $source): array {
-        $label = function (string $family, string $key) {
+        // A PICKER RENDERED WITH A DEFAULT ALREADY SELECTED IS NOT AN ANSWER.
+        //
+        // This printed "Training and assessment", "Training room" and "Neutral" under a
+        // heading saying they were the teacher's answers, to a teacher who had answered
+        // nothing. lmslabs_provider::current_values() already guards against exactly this
+        // before sending values to the service - a default sent as a current value told the
+        // service the teacher had chosen a training room whatever the content was about -
+        // and the summary was written without the same guard. An untouched default is
+        // silence, and silence is left out rather than dressed up as a choice.
+        $blank = source_normaliser::blank();
+        $answered = static function (string $key) use ($source, $blank): bool {
+            $value = trim((string)($source[$key] ?? ''));
+            if ($value === '') {
+                return false;
+            }
+            return !array_key_exists($key, $blank) || $value !== (string)$blank[$key];
+        };
+        $label = static function (string $family, string $key): string {
             $id = $family . ':' . $key;
             return get_string_manager()->string_exists($id, 'mod_aibranchedscenario')
                 ? get_string($id, 'mod_aibranchedscenario') : $key;
         };
-        $pick = function (string $key, string $family) use ($source, $label) {
+        $pick = static function (string $key, string $family) use ($source, $label, $answered): string {
+            if (!$answered($key)) {
+                return '';
+            }
             $value = trim((string)($source[$key] ?? ''));
             if ($value === 'other') {
                 return trim((string)($source[$key . 'other'] ?? ''));
             }
-            return $value === '' ? '' : $label($family, $value);
+            return $label($family, $value);
         };
-        $list = function (string $key, string $family) use ($source, $label) {
+        $list = static function (string $key, string $family) use ($source, $label): string {
             $out = [];
             foreach ((array)($source[$key] ?? []) as $one) {
                 if (trim((string)$one) !== '') {
@@ -409,6 +464,10 @@ class wizard implements \renderable, \templatable {
             }
             return implode(', ', $out);
         };
+        $said = static function (string $key) use ($source): string {
+            return trim((string)($source[$key] ?? ''));
+        };
+
         $cast = [];
         foreach ((array)($source['characters'] ?? []) as $character) {
             $name = trim((string)($character['name'] ?? ''));
@@ -420,9 +479,9 @@ class wizard implements \renderable, \templatable {
         $rows = [
             ['field:industry', $pick('industry', 'industry')],
             ['field:setting', $pick('setting', 'setting')],
-            ['field:audience', trim((string)($source['audience'] ?? ''))],
-            ['field:participantrole', trim((string)($source['participantrole'] ?? ''))],
-            ['field:centralproblem', trim((string)($source['centralproblem'] ?? ''))],
+            ['field:audience', $said('audience')],
+            ['field:participantrole', $said('participantrole')],
+            ['field:centralproblem', $said('centralproblem')],
             ['field:whyhard', $list('whyhard', 'whyhard')],
             ['field:stakes', $list('stakes', 'stakes')],
             ['field:characters', implode(', ', $cast)],
@@ -478,25 +537,65 @@ class wizard implements \renderable, \templatable {
      * @return array Template context.
      */
     protected static function pricing_card(\stdClass $scenario): array {
-        $withimages = !empty($scenario->enableimages) && get_config('mod_aibranchedscenario', 'allowimages');
-        $withvoice = !empty($scenario->enableaudio) && get_config('mod_aibranchedscenario', 'allowaudio');
-        $rows = [];
-        foreach ([[false, false], [true, false], [false, true], [true, true]] as $combination) {
-            [$images, $voice] = $combination;
-            $price = schema::price_for($images, $voice);
-            $key = 'price:' . ($images ? 'images' : 'noimages') . ($voice ? 'voice' : 'novoice');
-            $rows[] = [
-                'label'   => get_string($key, 'mod_aibranchedscenario'),
-                'amount'  => schema::price_text($price['total'], $price['currency'], $price['rate']),
-                'current' => $images === $withimages && $voice === $withvoice,
+        // NO MORE TABLE OF FOUR PRICES. The four-row card existed because a scenario was one
+        // flat price with two switches on it; it is charged by the piece now, so the only
+        // honest thing to show before a scenario exists is the rate and an estimate, and the
+        // real number belongs on the button that spends it.
+        $pricing = schema::pricing();
+        $withimages = !empty($scenario->enableimages)
+            && get_config('mod_aibranchedscenario', 'allowimages');
+        $withvoice = !empty($scenario->enableaudio)
+            && get_config('mod_aibranchedscenario', 'allowaudio');
+        $estimate = schema::price_for($withimages, $withvoice);
+        return [
+            'rates'    => (object)[
+                'node'  => (int)$pricing['node'],
+                'image' => (int)$pricing['image'],
+                'clip'  => (int)$pricing['clip'],
+            ],
+            'amount'   => get_string('quote:estimate', 'mod_aibranchedscenario', $estimate['total']),
+            'credits'  => $estimate['total'],
+            'currency' => $estimate['currency'],
+        ];
+    }
+
+    /**
+     * What a run will cost, counted from the scenario in hand.
+     *
+     * Shown beside the button that spends it, which is where the sister activity puts it and
+     * where a teacher is actually looking when the money moves.
+     *
+     * @param \stdClass $scenario The activity instance.
+     * @param array|null $definition The working definition, when there is one.
+     * @return array Template context: line, total, and whether there is anything to charge.
+     */
+    protected static function quote(\stdClass $scenario, ?array $definition): array {
+        $withimages = !empty($scenario->enableimages)
+            && get_config('mod_aibranchedscenario', 'allowimages');
+        $withvoice = !empty($scenario->enableaudio)
+            && get_config('mod_aibranchedscenario', 'allowaudio');
+        if (!is_array($definition) || empty($definition['nodes'])) {
+            $estimate = schema::price_for($withimages, $withvoice);
+            return [
+                'line'  => get_string('quote:estimate', 'mod_aibranchedscenario', $estimate['total']),
+                'total' => $estimate['total'],
+                'any'   => true,
             ];
         }
-        $current = schema::price_for($withimages, $withvoice);
+        $nodes = count((array)$definition['nodes']);
+        $images = $withimages ? count(media_manager::expected_image_map($definition)) : 0;
+        $clips = $withvoice
+            ? media_manager::count_narrations($definition, media_manager::voice_parts($scenario)) : 0;
+        $units = schema::price_for_units($nodes, $images, $clips);
         return [
-            'rows'     => $rows,
-            'amount'   => schema::price_text($current['total'], $current['currency'], $current['rate']),
-            'credits'  => $current['total'],
-            'currency' => $current['currency'],
+            'line'  => get_string('quote:line', 'mod_aibranchedscenario', (object)[
+                'total'  => $units['total'],
+                'nodes'  => $units['nodes'],
+                'images' => $units['images'],
+                'clips'  => $units['clips'],
+            ]),
+            'total' => $units['total'],
+            'any'   => $units['total'] > 0,
         ];
     }
 }

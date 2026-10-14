@@ -240,6 +240,24 @@ class import_prompt {
             return $value === '' ? '' : (string)($list[$value] ?? $value);
         };
 
+        // WHAT IT IS ABOUT leads the brief, because it is the one thing the teacher chose
+        // that the source content cannot supply: a policy document says what the rule is,
+        // never which moment of applying it is worth five decisions.
+        $about = [];
+        foreach ((array)($values['topics'] ?? []) as $topic) {
+            $id = 'topic:' . (string)$topic;
+            $about[] = get_string_manager()->string_exists($id, 'mod_aibranchedscenario')
+                ? get_string($id, 'mod_aibranchedscenario') : (string)$topic;
+        }
+        $own = trim((string)($values['topicown'] ?? ''));
+        if ($own !== '') {
+            $about[] = $own;
+        }
+        if ($about !== []) {
+            $lines[] = '- What it is about, and the scenario must be about this: '
+                . implode('; ', $about);
+        }
+
         $say('Industry', $pick('industry', self::labels('industry', schema::industries())));
         $say('Where it happens', $pick('setting', self::labels('setting', schema::settings_list())));
         $say('Who the learners are', (string)($values['audience'] ?? ''));

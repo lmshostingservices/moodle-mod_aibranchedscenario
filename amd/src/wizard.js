@@ -132,7 +132,7 @@ class Wizard {
             'work:checking', 'work:saving', 'work:media', 'work:reading', 'work:filling',
             'work:writing', 'work:done', 'worknote',
             'sourcecount:thin', 'sourcecount:good', 'sourcecount:long', 'usedexample',
-            'error:importnotjson',
+            'error:importnotjson', 'error:topiclimit',
         ];
         const values = await getStrings(keys.map((key) => ({key, component: 'mod_aibranchedscenario'})));
         keys.forEach((key, index) => {
@@ -209,6 +209,9 @@ class Wizard {
         }, true);
 
         this.root.querySelectorAll('[data-group]').forEach((group) => this.syncOther(group));
+        this.root.querySelectorAll('[data-topic]').forEach((box) => {
+            box.addEventListener('change', () => this.limitTopics(box));
+        });
         const wanted = parseInt(new URL(window.location.href).searchParams.get('step'), 10);
         this.showStep(wanted >= 1 && wanted <= this.stepCount ? wanted : 1);
         this.watchReadings();
@@ -722,8 +725,37 @@ class Wizard {
             source.openingmetrics[element.dataset.metricField] = parseInt(element.value, 10);
         });
 
+        // WHAT IT IS ABOUT. Checkboxes rather than the pressed-button groups above, because
+        // these are a long grouped list rather than a short row of alternatives, and a
+        // checkbox says "more than one is allowed" without having to be told.
+        source.topics = [];
+        this.root.querySelectorAll('[data-topic]').forEach((box) => {
+            if (box.checked) {
+                source.topics.push(box.dataset.topic);
+            }
+        });
+
         source.principles = [];
         return source;
+    }
+
+    /**
+     * Two situations is the most that still makes one story.
+     *
+     * Five decisions cannot serve four subjects: a scenario carrying four of them is four
+     * scenarios sharing a spine, and every one of them gets a decision and a half. The
+     * third tick is refused at the box rather than silently dropped on save, so the teacher
+     * finds out while they are still looking at the list.
+     *
+     * @param {HTMLElement} box The checkbox just changed.
+     */
+    limitTopics(box) {
+        const chosen = [...this.root.querySelectorAll('[data-topic]')].filter((one) => one.checked);
+        if (chosen.length <= 2) {
+            return;
+        }
+        box.checked = false;
+        this.showError({message: this.strings['error:topiclimit']});
     }
 
     /**

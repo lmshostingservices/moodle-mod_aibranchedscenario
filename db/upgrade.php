@@ -1266,5 +1266,13 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026100900, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026101300) {
+        // Version 5.0.0. No schema change. The wizard asks what the scenario is about from
+        // a list of situations; the prompt carries that and the rest of the context; a
+        // pasted scenario writes its own answers back into the fields; and a scenario is
+        // charged by the piece rather than at one flat price.
+        upgrade_mod_savepoint(true, 2026101300, 'aibranchedscenario');
+    }
+
     return true;
 }

@@ -45,6 +45,8 @@ class source_normaliser {
             'atmosphere'       => 'tension',
             'openingsituation' => '',
             'centralproblem'   => '',
+            'topics'           => [],
+            'topicown'         => '',
             'whyhard'          => [],
             'stakes'           => [],
             'participantrole'  => '',
@@ -101,6 +103,15 @@ class source_normaliser {
         $out['imagestyle'] = schema::in_list($raw['imagestyle'] ?? '', schema::imagestyles())
             ? $raw['imagestyle'] : $out['imagestyle'];
 
+        // WHAT THE SCENARIO IS ABOUT. Two together is the most that still makes one
+        // story: a scenario carrying four situations is four scenarios sharing a
+        // spine, and the five decisions cannot serve all of them.
+        $out['topics'] = array_slice(
+            self::filtered_list($raw['topics'] ?? [], schema::topics()),
+            0,
+            2
+        );
+        $out['topicown'] = self::line($raw['topicown'] ?? '', 160);
         $out['whyhard'] = self::filtered_list($raw['whyhard'] ?? [], schema::whyhard());
         $out['stakes'] = self::filtered_list($raw['stakes'] ?? [], schema::stakes());
 

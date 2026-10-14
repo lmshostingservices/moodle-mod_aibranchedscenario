@@ -2,6 +2,81 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v5.0.0] - 2026-10-13
+
+### You pick three things; the assistant writes the rest
+
+The wizard used to ask a teacher to describe the scenario - the problem, what makes it hard,
+what is at stake, the people, the tone - and then offered them a prompt to copy. That is
+backwards for a product whose whole claim is that the AI writes it. The assistant can invent
+all of that, and anything the teacher wants different they can type into the chat.
+
+So the first step is now three things: **the industry, the place, and what it is about.**
+
+"What it is about" is a list of **47 situations in six groups** - when something goes wrong,
+conversations that escalate, pressure and competing priorities, speaking up, leading and
+supervising, and people in your care - plus a box to write your own. Two is the most one
+scenario can carry, and the third tick is refused at the box rather than dropped on save.
+
+The list is **not** a list of skills, and it is deliberately not the sister activity's. Its
+scenes are independent, so "which skill does this scene practise" is the right question
+there. A branched scenario is a different shape: one decision changes the situation the next
+one is made in. The test every entry had to pass is that a reasonable person could go more
+than one way **and** an early call narrows what is still available later. "Active listening"
+fails it - every path arrives at the same place. "A complaint that escalates while you are
+handling it" passes it.
+
+### A pasted scenario fills in its own answers
+
+`import_definition` stored the scenario and never touched the wizard. So a teacher pasted a
+finished scenario - its own setting, its own cast, its own title, role and tone - and was
+left looking at empty fields beside it, with the assistant's answers readable only inside
+the definition, and the next request sent with the blanks.
+
+The paste now writes those answers back into the fields, where they can be edited. The cast
+comes across with the facilitator counted as one of the people. A setting written as prose
+is matched to the place it names, and stored as free text where it names none. Nothing the
+teacher answered themselves is overwritten.
+
+### Charged by the piece
+
+A scenario was one flat price with two switches on it, so a ten-node scenario with no
+narration cost exactly what a fully illustrated, fully narrated one did.
+
+It is counted now: **2 credits a scene, 2 a picture, 2 a narration clip.** A scenario of the
+usual size - ten scenes, fourteen pictures, forty clips - is 128 credits. A scenario with no
+media is 20. A run that made nothing is nothing, which is also what the service charges for
+it. The four-row price table is gone; the rate is stated once and the real number sits beside
+the button that spends it.
+
+Three sentences that misstated this are corrected. The route card said "Free - no credits
+until you generate", the hint under it said the route was useful "when this site has no LMS
+Labs credits", and the paste box said pasting costs nothing. The words are free on that
+route; the pictures and narration are made and charged either way, and the page now says so.
+
+### The page stopped inventing answers
+
+The summary above the content box printed "Training and assessment", "Training room" and
+"Neutral" under a heading saying they were the teacher's answers, to a teacher who had
+answered nothing. Those are shipped defaults. An untouched default is silence now, and the
+box is absent entirely rather than filled with things nobody chose.
+
+The four stacked paragraphs on that step are three numbered actions, with the button on the
+first and the prompt behind a disclosure.
+
+### Supported versions
+
+**Moodle 4.4 to 5.3.** Verified by running on 4.4, 4.5, 5.0, 5.1 and 5.2. Moodle 5.3 is
+verified statically only - it requires PostgreSQL 17, MariaDB 11.4 or MySQL 8.4, and the
+download hosts for all three are refused by this build environment's egress policy, so it
+could not be installed. What was checked there: coding standards, and that every core class
+and function this plugin calls still exists in the 5.3 tree.
+
+### Upgrading
+
+No schema change. Nothing already published is regenerated, re-narrated or re-charged.
+Existing scenarios keep their answers; the new topic field is simply empty on them.
+
 ## [v4.0.0] - 2026-10-09
 
 ### The context comes before the content
