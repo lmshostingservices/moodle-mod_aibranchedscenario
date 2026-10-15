@@ -2,6 +2,66 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v5.5.1] - 2026-10-15
+
+### The prompt asked for a document it never sent
+
+ChatGPT refused to start, saying the source content was empty and asking for it to be pasted
+after a `----- SOURCE CONTENT -----` heading. **Nothing in this plugin ever wrote that
+heading.** The assistant invented it, because the prompt's opening line told it to "read the
+brief and the source content in this message" - and this prompt has never carried any source
+content. The copied-prompt route is precisely the one where the teacher gives three answers
+and the assistant invents the material.
+
+So a reasonable assistant looked for the document, could not find it, worked out where it
+should have been, and refused to begin until the teacher supplied something they had never
+been asked for.
+
+The opening line now describes what is actually in the message:
+
+> This message carries a brief and nothing else - there is no attached document, and none is
+> needed. Invent the specifics yourself from the brief: the industry, the place and the
+> situation it names are the subject. Do not ask for source material and do not wait for it.
+
+And where a teacher **has** pasted their own material, it now travels with the prompt under
+its own heading, up to 12,000 characters - which it never did before, on either route. That
+is the version of the line that keeps "where they disagree, the brief wins", because that is
+a rule about reconciling two sources and there are now two.
+
+### Two answers nobody gave
+
+The same brief sent **"Tone: Neutral"** and **"How demanding it should be: Intermediate"**
+under a heading reading *"Everything below was chosen by the teacher"* - to a teacher who had
+chosen an industry, a place and a situation. Both are schema defaults on pickers rendered
+pre-selected. The summary card on the review step has guarded against exactly this since
+v5.0.0; the prompt did not, and it was constraining the writing with two answers nobody gave.
+
+An untouched default is left out now. A tone the teacher did choose still travels.
+
+### What a teacher copies now
+
+```
+You are writing a branching workplace scenario for a Moodle activity. This message carries
+a brief and nothing else - there is no attached document, and none is needed. [...]
+
+THE BRIEF
+
+- What it is about, and the scenario must be about this: A complaint that escalates while
+  you are handling it
+- Industry: Hospitality
+- Where it happens: Café
+```
+
+Three answers, and nothing the teacher did not choose.
+
+### Checks
+
+Nine new harness checks on the prompt itself: that it says there is no document when there
+is none, that it tells the assistant not to wait for one, that it never refers to source
+content it is not carrying, that pasted material does travel and is named as the teacher's
+own, and that untouched tone and complexity stay out while chosen ones go in. 113 harness
+checks on each of six Moodles.
+
 ## [v5.5.0] - 2026-10-14
 
 A scenario stopped at **28 of 30 pictures** with nothing making the other two, and publishing

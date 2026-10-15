@@ -1325,5 +1325,12 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026101406, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026101500) {
+        // Version 5.5.1. No schema change. The copied prompt no longer refers to source
+        // content it does not carry, carries the teacher's own material where there is
+        // some, and stops sending untouched tone and complexity defaults as choices.
+        upgrade_mod_savepoint(true, 2026101500, 'aibranchedscenario');
+    }
+
     return true;
 }

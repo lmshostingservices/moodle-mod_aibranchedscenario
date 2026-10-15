@@ -34,6 +34,14 @@ namespace mod_aibranchedscenario\local;
  */
 class import_prompt {
     /**
+     * The most of a teacher's own material that travels in a copied prompt.
+     *
+     * Long enough for a policy extract or a procedure; short enough that the prompt stays
+     * something a person can paste into a chat window.
+     */
+    protected const MAX_SOURCE = 12000;
+
+    /**
      * The prompt text.
      *
      * The decision count used to be a parameter, because a teacher used to pick it. They
@@ -41,6 +49,7 @@ class import_prompt {
      * argument is kept so old callers do not break, and ignored.
      *
      * @param int $decisions Ignored. The length is fixed.
+     * @param array $values The teacher's saved answers.
      * @return string
      */
     public static function text(int $decisions = schema::DECISIONS, array $values = []): string {
@@ -59,15 +68,42 @@ class import_prompt {
         // workplace - and guessed a meeting room. The same answers now lead the prompt.
         $brief = self::brief_lines($values);
 
+        // THE PROMPT ASKED FOR A DOCUMENT IT NEVER SENT.
+        //
+        // The opening line told the assistant to read "the source content in this message",
+        // and this prompt has never carried any: the copied-prompt route is the one where
+        // the teacher gives three answers and the assistant invents the material. So a
+        // reasonable assistant looked for the document, could not find it, invented a
+        // heading for where it should have been, and refused to start until the teacher
+        // pasted something they had never been asked for.
+        //
+        // What the message actually contains is the brief. Where a teacher HAS pasted their
+        // own material it is included below and named; where they have not, the prompt says
+        // so plainly rather than implying a missing attachment.
+        $source = trim((string)($values['sourcecontent'] ?? ''));
         $lines = [
-            'You are writing a branching workplace scenario for a Moodle activity. Read the '
-                . 'brief and the source content in this message and build the scenario from '
-                . 'them. Where the brief and the source content disagree about the setting '
-                . 'or the people, the brief wins: it is what the teacher chose.',
+            $source !== ''
+                ? 'You are writing a branching workplace scenario for a Moodle activity. '
+                    . 'This message carries a brief and the teacher\'s own source material. '
+                    . 'Build the scenario from both. Where they disagree about the setting '
+                    . 'or the people, the brief wins: it is what the teacher chose.'
+                : 'You are writing a branching workplace scenario for a Moodle activity. '
+                    . 'This message carries a brief and nothing else - there is no attached '
+                    . 'document, and none is needed. Invent the specifics yourself from the '
+                    . 'brief: the industry, the place and the situation it names are the '
+                    . 'subject. Do not ask for source material and do not wait for it.',
             '',
         ];
         if ($brief !== []) {
             $lines = array_merge($lines, ['THE BRIEF', ''], $brief, ['']);
+        }
+        if ($source !== '') {
+            $lines = array_merge($lines, [
+                'THE TEACHER\'S SOURCE MATERIAL',
+                '',
+                \core_text::substr($source, 0, self::MAX_SOURCE),
+                '',
+            ]);
         }
         $lines = array_merge($lines, [
             'Answer with one JSON document and nothing else. No commentary before or after, '
@@ -272,12 +308,28 @@ class import_prompt {
             'stakes'
         )));
         $say('How it opens', (string)($values['openingsituation'] ?? ''));
+        // A PICKER NOBODY TOUCHED IS NOT AN ANSWER.
+        //
+        // Tone and complexity are rendered with a schema default already selected, so a
+        // teacher who chose an industry, a place and a situation and nothing else had
+        // "Tone: Neutral" and "How demanding: Intermediate" sent to the assistant under a
+        // heading saying everything below was chosen by the teacher. The summary card on
+        // the review step already guards against exactly this; the prompt did not, and it
+        // was constraining the writing with two answers nobody gave.
+        $blank = source_normaliser::blank();
+        $chosen = static function (string $key) use ($values, $blank): string {
+            $value = trim((string)($values[$key] ?? ''));
+            if ($value === '' || $value === (string)($blank[$key] ?? '')) {
+                return '';
+            }
+            return $value;
+        };
         $say('Tone', implode('', self::readable(
-            array_filter([(string)($values['tone'] ?? '')]),
+            array_filter([$chosen('tone')]),
             'tone'
         )));
         $say('How demanding it should be', implode('', self::readable(
-            array_filter([(string)($values['complexity'] ?? '')]),
+            array_filter([$chosen('complexity')]),
             'complexity'
         )));
         $say('Working title', (string)($values['title'] ?? ''));
@@ -310,7 +362,7 @@ class import_prompt {
         return array_merge(
             ['Everything below was chosen by the teacher. Use it. Do not relocate the '
                 . 'scenario to a meeting room, do not rename the people, and do not write '
-                . 'around an answer because the source content does not mention it.', ''],
+                . 'around an answer because you have no document that mentions it.', ''],
             $lines
         );
     }
