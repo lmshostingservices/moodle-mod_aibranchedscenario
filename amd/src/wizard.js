@@ -152,7 +152,7 @@ class Wizard {
             'work:writing', 'work:done', 'worknote', 'work:buildingtitle', 'work:leavenote',
             // Used by publish() and never loaded, so the dialog kept the previous
             // operation's title and the step row rendered the literal "undefined".
-            'work:publishing', 'work:readysave',
+            'work:publishing', 'work:readysave', 'work:topup',
             'sourcecount:thin', 'sourcecount:good', 'sourcecount:long', 'usedexample',
             'error:importnotjson', 'error:topiclimit',
         ];
@@ -264,6 +264,9 @@ class Wizard {
      */
     handle(action, element) {
         switch (action) {
+            case 'topup':
+                this.topUp();
+                break;
             case 'hidework':
                 // The build carries on; only the dialog goes away. Not setBusy(false),
                 // which would also re-enable Generate while this loop is still running.
@@ -463,6 +466,20 @@ class Wizard {
             if (status.status === 'error') {
                 this.hideWorkDialog();
                 this.showError({message: status.errormessage || this.strings['error:generic']});
+                this.offerTopup(status);
+                return;
+            }
+
+            // NOTHING IS MAKING THE REST.
+            //
+            // The counts alone cannot tell work in progress from work that stopped short,
+            // so the page promised the remainder "within a few minutes" for ever while
+            // publishing stayed blocked behind two pictures nobody was drawing. When the
+            // service says the media is short and no job is running, say so once and offer
+            // the one thing that finishes it.
+            if (status.stalled) {
+                this.hideWorkDialog();
+                this.offerTopup(status);
                 return;
             }
 
@@ -495,6 +512,56 @@ class Wizard {
             await this.wait(MEDIA_POLL_INTERVAL);
         }
         this.hideWorkDialog();
+    }
+
+
+    /**
+     * Say what is missing, and offer to make it.
+     *
+     * @param {Object} status A get_job_status result.
+     * @returns {void}
+     */
+    offerTopup(status) {
+        const made = (parseInt(status.mediamade, 10) || 0);
+        const wanted = (parseInt(status.mediawanted, 10) || 0);
+        const short = Math.max(0, wanted - made);
+        const note = this.root.querySelector('[data-region="mediapending"]');
+        if (note) {
+            note.classList.add('aibs-mediastalled');
+        }
+        const button = this.root.querySelector('[data-action="topup"]');
+        if (button) {
+            button.hidden = short === 0;
+            button.dataset.short = String(short);
+        }
+        if (short > 0) {
+            getString('media:stalled', 'mod_aibranchedscenario', short).then((text) => {
+                if (note) {
+                    note.textContent = text;
+                }
+                return text;
+            }).catch(() => null);
+        }
+    }
+
+    /**
+     * Ask the service for the pieces that are still missing.
+     *
+     * @returns {Promise<Boolean>}
+     */
+    async topUp() {
+        this.setBusy(true, this.strings['work:topup'], true);
+        try {
+            await this.call('topup_media', {keys: [], tier: this.tier});
+            // The work is queued, not done: hand the page back to the watcher that knows
+            // how to show it being made.
+            this.setBusy(false);
+            await this.watchMedia();
+        } catch (error) {
+            this.setBusy(false);
+            this.showError(error);
+        }
+        return true;
     }
 
     /**

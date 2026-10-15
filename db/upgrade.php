@@ -1318,5 +1318,12 @@ function xmldb_aibranchedscenario_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026101405, 'aibranchedscenario');
     }
 
+    if ($oldversion < 2026101406) {
+        // Version 5.5.0. No schema change. A picture or clip the service refuses is asked
+        // for again instead of abandoned, the media task raises its own time limit, and a
+        // run that still stops short says so and offers to finish it.
+        upgrade_mod_savepoint(true, 2026101406, 'aibranchedscenario');
+    }
+
     return true;
 }

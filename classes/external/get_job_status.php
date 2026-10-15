@@ -117,6 +117,18 @@ class get_job_status extends external_api {
             // Split, as well as summed. The pictures and the clips are two runs of work
             // that finish at different rates, and one combined number cannot say which of
             // them is holding the scenario up.
+            // WHETHER ANYTHING IS STILL COMING.
+            //
+            // The page could only ever say "still being made", because the counts alone
+            // cannot tell work in progress from work that has stopped short. A run that
+            // ended with two pictures refused left a teacher watching a page that promised
+            // the rest "within a few minutes" for ever, with publishing blocked behind
+            // media nothing was making any more. Stalled means: the media is incomplete
+            // AND no job is running, so the only thing that will finish it is asking again.
+            'stalled'       => !$job || $job->status !== generator::JOB_RUNNING
+                ? (int)$pending['images'] + (int)$pending['narrations']
+                    < (int)$pending['imageswanted'] + (int)$pending['narrationswanted']
+                : false,
             'images'        => (int)$pending['images'],
             'imageswanted'  => (int)$pending['imageswanted'],
             'narrations'    => (int)$pending['narrations'],
@@ -165,6 +177,12 @@ class get_job_status extends external_api {
                 'Pictures and clips this scenario calls for',
                 VALUE_DEFAULT,
                 0
+            ),
+            'stalled'       => new external_value(
+                PARAM_BOOL,
+                'Media is short and nothing is running: only asking again will finish it',
+                VALUE_OPTIONAL,
+                false
             ),
             'images'        => new external_value(PARAM_INT, 'Pictures made so far', VALUE_OPTIONAL, 0),
             'imageswanted'  => new external_value(PARAM_INT, 'Pictures wanted', VALUE_OPTIONAL, 0),

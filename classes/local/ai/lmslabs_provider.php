@@ -140,6 +140,49 @@ class lmslabs_provider implements provider {
     }
 
     /**
+     * How many times one piece of work is asked for before giving up.
+     */
+    protected const RETRY_ATTEMPTS = 4;
+
+    /**
+     * First backoff, in seconds. Doubles each attempt.
+     */
+    protected const RETRY_BASE_WAIT = 2;
+
+    /**
+     * The longest this will ever wait between attempts, in seconds.
+     */
+    protected const RETRY_MAX_WAIT = 30;
+
+    /**
+     * Seconds the service asked us to wait, read from its last answer.
+     *
+     * @var int
+     */
+    protected int $retryafter = 0;
+
+    /**
+     * Read Retry-After from a 429, whether the service sends it as a header or in the body.
+     *
+     * @param mixed $response Raw response.
+     * @param mixed $decoded Decoded body, where it was JSON.
+     * @return int Seconds, or 0 when the service named none.
+     */
+    protected static function retry_after_seconds($response, $decoded): int {
+        if (is_array($decoded)) {
+            foreach (['retryAfter', 'retry_after', 'retryAfterSeconds'] as $key) {
+                if (isset($decoded[$key]) && is_numeric($decoded[$key])) {
+                    return max(0, (int)$decoded[$key]);
+                }
+            }
+        }
+        if (is_string($response) && preg_match('/retry-after:\s*(\d+)/i', $response, $m)) {
+            return max(0, (int)$m[1]);
+        }
+        return 0;
+    }
+
+    /**
      * Request timeout in seconds.
      *
      * @return int
@@ -341,7 +384,64 @@ class lmslabs_provider implements provider {
      * @return array Decoded response.
      * @throws generation_exception
      */
+    /**
+     * One request, retried while the service says "not now".
+     *
+     * A scenario of the usual size is ninety-odd requests, fired one after another as fast
+     * as they will go. The service rate-limits some of them, and until now a 429 or a
+     * timeout ended that piece for good: the run finished 28 pictures of 30, the two that
+     * were refused were never asked for again, and because publishing is gated on the
+     * media being complete the teacher was blocked for ever on a page that said the work
+     * was "usually finished within a few minutes".
+     *
+     * Only the transient answers are retried - rate limits, timeouts and the service's own
+     * 5xx. A refusal that will not change on a second asking (no credentials, no credit, a
+     * tariff mismatch, a malformed request) is raised immediately, because repeating it
+     * wastes the teacher's time and the service's.
+     *
+     * The request id is deliberately NOT regenerated between attempts: the service matches
+     * a repeated handle against the body it already saw, so a retry after a timeout cannot
+     * produce - or charge for - a second picture.
+     *
+     * @param string $path Route.
+     * @param array $payload Request body.
+     * @param string $requestid Stable handle for this piece of work.
+     * @return array Decoded response.
+     */
     protected function call(string $path, array $payload, string $requestid): array {
+        $transient = ['error:serviceratelimited', 'error:servicetimeout', 'error:serviceunavailable'];
+        $attempts = max(1, (int)get_config('mod_aibranchedscenario', 'mediaretries') ?: self::RETRY_ATTEMPTS);
+
+        for ($attempt = 1;; $attempt++) {
+            try {
+                return $this->attempt($path, $payload, $requestid);
+            } catch (generation_exception $e) {
+                if ($attempt >= $attempts || !in_array($e->errorcode, $transient, true)) {
+                    throw $e;
+                }
+                // Backing off rather than hammering: the service said it was busy, and
+                // asking again immediately is what made it busy. Doubling, with a cap, and
+                // honouring Retry-After when the service names one.
+                $wait = $this->retryafter > 0
+                    ? min($this->retryafter, self::RETRY_MAX_WAIT)
+                    : min(self::RETRY_BASE_WAIT * (2 ** ($attempt - 1)), self::RETRY_MAX_WAIT);
+                $this->retryafter = 0;
+                mtrace('LMS Labs ' . basename($path) . ': ' . $e->errorcode
+                    . ', retrying in ' . $wait . 's (attempt ' . $attempt . ' of ' . $attempts . ')');
+                sleep($wait);
+            }
+        }
+    }
+
+    /**
+     * One attempt at one request.
+     *
+     * @param string $path Route.
+     * @param array $payload Request body.
+     * @param string $requestid Stable handle.
+     * @return array Decoded response.
+     */
+    protected function attempt(string $path, array $payload, string $requestid): array {
         if (!$this->is_configured()) {
             throw new generation_exception('error:nocredentials');
         }
@@ -417,7 +517,14 @@ class lmslabs_provider implements provider {
             throw new generation_exception('error:insufficientcredits');
         }
         if ($status === 429) {
+            // The service often names how long to wait. Guessing when it has told us is
+            // how a backoff ends up either too eager or far too slow.
+            $this->retryafter = self::retry_after_seconds($response, $decoded);
             throw new generation_exception('error:serviceratelimited');
+        }
+        // The service's own failures are worth asking again about; the request was fine.
+        if ($status >= 500 && $status <= 599) {
+            throw new generation_exception('error:serviceunavailable');
         }
         $code = is_array($decoded) ? (string)($decoded['error'] ?? '') : '';
 

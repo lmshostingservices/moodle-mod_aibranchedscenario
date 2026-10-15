@@ -884,6 +884,12 @@
 
             {{#mediapending}}
                 <p class="aibs-mediapending" data-region="mediapending" role="status">{{mediastatus}}</p>
+                {{! Shown only once the page knows nothing is making the rest - a run that
+                    stopped short used to leave publishing blocked with no control on the
+                    page that could ever unblock it. }}
+                <button type="button" class="aibs-btn aibs-btn-secondary" data-action="topup"
+                        data-region="topup" hidden>
+                    {{#str}} media:topup, mod_aibranchedscenario {{/str}}</button>
             {{/mediapending}}
 
 

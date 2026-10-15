@@ -39,8 +39,32 @@ class generate_media extends \core\task\adhoc_task {
      *
      * @return void
      */
+    /**
+     * Seconds this task is allowed, start to finish.
+     *
+     * Ninety requests at the default request timeout each is the worst case; this is
+     * generous rather than tight, because the cost of being wrong is a half-made scenario
+     * nobody can publish.
+     */
+    protected const TIME_LIMIT = 3600;
+
+    /**
+     * Make every picture and clip the working copy asks for.
+     *
+     * @return void
+     */
     public function execute() {
         global $DB;
+
+        // NINETY-ODD REQUESTS, ONE AFTER ANOTHER, UNDER WHATEVER LIMIT CRON WAS GIVEN.
+        //
+        // A scenario of the usual size asks the service for thirty pictures and sixty-odd
+        // clips, serially. Nothing here raised PHP's execution limit, so a run that took
+        // longer than the limit was killed partway with no record of why - which looks
+        // from the page exactly like a service that has gone quiet, and leaves publishing
+        // blocked on media that is never coming.
+        \core_php_time_limit::raise(self::TIME_LIMIT);
+        \raise_memory_limit(MEMORY_EXTRA);
 
         $data = $this->get_custom_data();
         $cmid = (int)($data->cmid ?? 0);

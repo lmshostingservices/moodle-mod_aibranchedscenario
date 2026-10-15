@@ -2,6 +2,55 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v5.5.0] - 2026-10-14
+
+A scenario stopped at **28 of 30 pictures** with nothing making the other two, and publishing
+stayed blocked behind a page that promised the rest "usually within a few minutes" - for ever.
+
+### Why it stalls
+
+A scenario of the usual size is about **ninety requests to LMS Labs, fired one after another
+as fast as they will go.** The service rate-limits some of them. `call()` already recognised
+a 429 and a timeout as transient - and **nothing retried them.** A piece refused once was
+abandoned permanently, and because publishing is gated on the media being complete, two
+refused pictures blocked the teacher for good.
+
+Three things were missing, all of them inside this plugin:
+
+- **No retry.** A transient refusal ended that piece. It is asked for again now - four times
+  by default, backing off 2s, 4s, 8s, capped at 30 - and the service's own `Retry-After` is
+  honoured where it sends one. Only transient answers are retried: rate limits, timeouts and
+  the service's 5xx. No credentials, no credit and a tariff mismatch are raised immediately,
+  because asking again wastes everyone's time.
+  The request id is deliberately unchanged between attempts, so a retry after a timeout
+  cannot produce - or charge for - a second picture. The service was already built for this.
+- **No time limit.** The media task never raised PHP's execution limit, so a long run could
+  be killed partway with no record of why. From the page that is indistinguishable from a
+  service that has gone quiet. It raises its own limit now.
+- **No terminal state.** The counts alone cannot tell work in progress from work that has
+  stopped short, so the page could only ever say "still being made". `get_job_status` now
+  reports **stalled** - the media is short and no job is running - and the page stops
+  polling, says how many are missing, and offers the one thing that finishes them.
+
+### What a teacher sees now
+
+A run that stops short closes the progress dialog and says: *"The service stopped 2 short,
+and nothing is making the rest. Publishing stays closed until they are done - ask for them
+again below."* The button beside it calls `topup_media`, which already existed and had no way
+to be reached from the page.
+
+### On "much quicker"
+
+Retrying makes a troubled run slightly **slower** and far more likely to finish, which is
+what stable means here. Real speed needs the ninety requests to run several at a time rather
+than one after another - and that would raise the request rate, which is what is tripping the
+limit in the first place. **That one needs LMS Labs' rate limits before it is safe to build**,
+so it is not in this release. Worth asking them: how many concurrent requests per site, and
+what their per-minute ceiling is.
+
+New setting: **Retries per picture or clip** (default 4; 1 restores the old never-ask-twice
+behaviour).
+
 ## [v5.4.1] - 2026-10-14
 
 The styling audit now reaches the attempts report, the draft review and one learner's

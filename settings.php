@@ -100,6 +100,14 @@ if ($ADMIN->fulltree) {
         PARAM_URL
     ));
 
+    $settings->add(new admin_setting_configtext(
+        'mod_aibranchedscenario/mediaretries',
+        $label('mediaretries'),
+        '',
+        4,
+        PARAM_INT
+    ));
+
     $settings->add(new admin_setting_configduration(
         'mod_aibranchedscenario/requesttimeout',
         $label('requesttimeout'),
