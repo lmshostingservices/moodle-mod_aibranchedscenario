@@ -2,6 +2,11 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v5.5.2] - 2026-11-02
+
+### Fixed
+- Defer the LMS Labs connection and credit-balance request until this plugin's settings page is opened, avoiding network waits on unrelated administration pages.
+
 ## [v5.5.1] - 2026-10-15
 
 ### The prompt asked for a document it never sent

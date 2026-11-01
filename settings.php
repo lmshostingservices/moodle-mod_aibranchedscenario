@@ -56,10 +56,18 @@ if ($ADMIN->fulltree) {
         get_string('settings:connectiondesc', 'mod_aibranchedscenario')
     ));
 
+    // Moodle loads plugin settings while building the wider administration tree.
+    // The status renderer calls the LMS Labs API, so only fetch it on this plugin's
+    // own settings page.
+    $connectionstatus = '';
+    if (optional_param('section', '', PARAM_ALPHAEXT) === 'modsettingaibranchedscenario') {
+        $connectionstatus = \mod_aibranchedscenario\local\ai\status_report::render();
+    }
+
     $settings->add(new admin_setting_description(
         'mod_aibranchedscenario/connectionstatus',
         $label('status'),
-        \mod_aibranchedscenario\local\ai\status_report::render()
+        $connectionstatus
     ));
 
     $settings->add(new admin_setting_configcheckbox(
