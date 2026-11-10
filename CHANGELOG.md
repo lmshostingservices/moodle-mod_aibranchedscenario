@@ -2,6 +2,14 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v5.5.5] - 2026-11-10
+
+### Added
+- AI Course Builder adapter, using the existing scenario queue, text-only tariff and draft storage. (The adapter work from 5.5.3 and 5.5.4, which was never released, is included.)
+
+### Fixed
+- A scenario built by AI Course Builder is now published. The job waits until the pictures and narration are ready, then publishes the scenario and its media. Before this, the job was marked complete but learners opened an empty scenario.
+
 ## [v5.5.2] - 2026-11-02
 
 ### Fixed
