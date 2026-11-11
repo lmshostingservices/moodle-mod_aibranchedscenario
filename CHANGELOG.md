@@ -2,6 +2,11 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v5.5.6] - 2026-11-11
+
+### Fixed
+- When the scenario service is busy or unavailable, AI Course Builder now tries again automatically, and the reason is shown if it still fails.
+
 ## [v5.5.5] - 2026-11-10
 
 ### Added

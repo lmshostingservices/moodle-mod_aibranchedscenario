@@ -1,17 +1,49 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 namespace mod_aibranchedscenario\aicoursebuilder;
 
 defined('MOODLE_INTERNAL') || die();
 
 /**
  * Uses Branched Scenario's own tariff, job queue, generator, and draft storage.
+ *
+ * @package    mod_aibranchedscenario
+ * @copyright  2026 LMS-Labs
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class native_adapter {
+    /**
+     * Credits one activity will use.
+     *
+     * @param array $brief
+     * @return int
+     */
     public static function estimate(array $brief): int {
         $price = \mod_aibranchedscenario\local\schema::price_for(false, false);
         return (int)($price['total'] ?? 0);
     }
 
+    /**
+     * Start generating one activity.
+     *
+     * @param int $cmid
+     * @param array $brief
+     * @return string
+     */
     public static function generate(int $cmid, array $brief): string {
         global $DB;
         $cm = get_coursemodule_from_id('aibranchedscenario', $cmid, 0, false, MUST_EXIST);
@@ -58,6 +90,13 @@ class native_adapter {
         );
     }
 
+    /**
+     * Where a generation job is up to.
+     *
+     * @param int $cmid
+     * @param string $jobid
+     * @return array
+     */
     public static function status(int $cmid, string $jobid): array {
         global $DB;
         if (!ctype_digit($jobid)) {
@@ -90,11 +129,22 @@ class native_adapter {
             return ['status' => 'complete', 'result' => ['jobId' => (int)$job->id, 'definition' => $definition]];
         }
         if ($job->status === \mod_aibranchedscenario\local\generator::JOB_ERROR) {
-            return ['status' => 'failed', 'retryable' => false, 'error' => 'Branched Scenario generation failed in the native plugin job.'];
+            // A busy or unavailable service charges nothing, so AI Course Builder may try again.
+            $reason = clean_param((string)($job->errormsg ?? ''), PARAM_TEXT);
+            $transient = (bool)preg_match('/serviceunavailable|unavailable|timeout|timed out|rate|overloaded|busy/i', $reason);
+            return ['status' => 'failed', 'retryable' => $transient,
+                'error' => 'Branched Scenario generation failed' . ($reason !== '' ? ' (' . $reason . ')' : '') . '.'];
         }
         return ['status' => 'running'];
     }
 
+    /**
+     * Save a finished generation into the activity.
+     *
+     * @param int $cmid
+     * @param array $result
+     * @return bool
+     */
     public static function save_result(int $cmid, array $result): bool {
         global $DB;
         if (empty($result['jobId']) || empty($result['definition'])) {
