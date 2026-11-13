@@ -595,6 +595,19 @@ class lmslabs_provider implements provider {
                 ? !empty($decoded['quality']['repaired']) : null,
         ];
 
+        // Client Portal (when installed) bills the client for what the service says it charged.
+        if ($this->lastmeta['creditsused'] > 0 && method_exists('\\local_clientportal\\api', 'record_lmslabs_call')) {
+            global $USER;
+            \local_clientportal\api::record_lmslabs_call(
+                (int)$USER->id,
+                (int)\context_system::instance()->id,
+                'mod_aibranchedscenario',
+                $decoded,
+                0,
+                'Branched scenario'
+            );
+        }
+
         if (!isset($decoded['data']) || !is_array($decoded['data'])) {
             throw new generation_exception('error:serviceunreadable');
         }
