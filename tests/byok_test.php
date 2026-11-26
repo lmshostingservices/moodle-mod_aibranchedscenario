@@ -38,6 +38,9 @@ require_once($CFG->dirroot . '/mod/aibranchedscenario/tests/fixtures/byok_prose.
  * @package    mod_aibranchedscenario
  * @copyright  2026 LMS Hosting Services
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers     \mod_aibranchedscenario\local\ai\byok
+ * @covers     \mod_aibranchedscenario\local\ai\scenario_engine
+ * @covers     \mod_aibranchedscenario\local\ai\lmslabs_provider
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(byok::class)]
 #[\PHPUnit\Framework\Attributes\CoversClass(scenario_engine::class)]
