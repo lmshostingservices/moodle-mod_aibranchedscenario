@@ -179,7 +179,10 @@ class draft_review implements \renderable, \templatable {
                 $this->scenario,
                 $this->tier
             ) !== null,
-            'principles'  => array_values($definition['principles']),
+            // Numbered, as the debrief draws them: the lesson row has a column for the number.
+            'principles'  => array_map(function($principle, $index) {
+                return ['number' => $index + 1] + (array) $principle;
+            }, array_values($definition['principles']), array_keys(array_values($definition['principles']))),
             'hasprinciples' => !empty($definition['principles']),
             'editurl'     => (new \moodle_url(
                 '/mod/aibranchedscenario/edit.php',

@@ -17,6 +17,7 @@
 namespace mod_aibranchedscenario\output;
 
 use context_module;
+use mod_aibranchedscenario\local\ai\byok;
 use mod_aibranchedscenario\local\ai\credentials;
 use mod_aibranchedscenario\local\media_manager;
 use mod_aibranchedscenario\local\scenario_manager;
@@ -259,12 +260,14 @@ class wizard implements \renderable, \templatable {
             // control that refuses the person it was offered to is worse than no control:
             // it reads as the product being broken rather than as a permission they do
             // not have.
-            'aiavailable'  => $credentials['source'] !== credentials::SOURCE_NONE
+            // With Bring your own AI the words are written on the site's own AI, so the controls
+            // are offered without LMS Labs credentials too.
+            'aiavailable'  => ($credentials['source'] !== credentials::SOURCE_NONE || byok::uses('text'))
                 && has_capability('mod/aibranchedscenario:generate', $this->context),
             'canpublish'   => has_capability('mod/aibranchedscenario:publish', $this->context),
             // Said out loud rather than left as an absence, because a teacher who cannot
             // find the Generate button needs to know it is a permission and not a fault.
-            'cannotgenerate' => $credentials['source'] !== credentials::SOURCE_NONE
+            'cannotgenerate' => ($credentials['source'] !== credentials::SOURCE_NONE || byok::uses('text'))
                 && !has_capability('mod/aibranchedscenario:generate', $this->context),
             // Per RUNG, not per activity. Read from the instance, the wizard for the
             // unwritten advanced scenario announced itself as published at revision 3,
@@ -558,12 +561,13 @@ class wizard implements \renderable, \templatable {
             && get_config('mod_aibranchedscenario', 'allowaudio');
         $estimate = schema::price_for($withimages, $withvoice);
         return [
+            'ownai'    => \mod_aibranchedscenario\local\ai\byok::any(),
             'rates'    => (object)[
                 'node'  => (int)$pricing['node'],
                 'image' => (int)$pricing['image'],
                 'clip'  => (int)$pricing['clip'],
             ],
-            'amount'   => get_string('quote:estimate', 'mod_aibranchedscenario', $estimate['total']),
+            'amount'   => self::estimate_line($estimate['total']),
             'credits'  => $estimate['total'],
             'currency' => $estimate['currency'],
         ];
@@ -587,7 +591,7 @@ class wizard implements \renderable, \templatable {
         if (!is_array($definition) || empty($definition['nodes'])) {
             $estimate = schema::price_for($withimages, $withvoice);
             return [
-                'line'  => get_string('quote:estimate', 'mod_aibranchedscenario', $estimate['total']),
+                'line'  => self::estimate_line($estimate['total']),
                 'total' => $estimate['total'],
                 'any'   => true,
             ];
@@ -597,6 +601,9 @@ class wizard implements \renderable, \templatable {
         $clips = $withvoice
             ? media_manager::count_narrations($definition, media_manager::voice_parts($scenario)) : 0;
         $units = schema::price_for_units($nodes, $images, $clips);
+        if ($units['total'] === 0 && \mod_aibranchedscenario\local\ai\byok::any()) {
+            return ['line' => get_string('quote:ownai', 'mod_aibranchedscenario'), 'total' => 0, 'any' => true, 'ownai' => true];
+        }
         return [
             'line'  => get_string('quote:line', 'mod_aibranchedscenario', (object)[
                 'total'  => $units['total'],
@@ -607,5 +614,18 @@ class wizard implements \renderable, \templatable {
             'total' => $units['total'],
             'any'   => $units['total'] > 0,
         ];
+    }
+
+    /**
+     * The estimate shown before a scenario exists.
+     *
+     * @param int $total Credits.
+     * @return string
+     */
+    protected static function estimate_line(int $total): string {
+        if ($total === 0 && \mod_aibranchedscenario\local\ai\byok::any()) {
+            return get_string('quote:ownai', 'mod_aibranchedscenario');
+        }
+        return get_string('quote:estimate', 'mod_aibranchedscenario', $total);
     }
 }

@@ -639,9 +639,10 @@ class schema {
      */
     public static function price_for_units(int $nodes, int $images, int $clips): array {
         $pricing = self::pricing();
-        $nodecost = max(0, $nodes) * (int)$pricing['node'];
-        $imagecost = max(0, $images) * (int)$pricing['image'];
-        $clipcost = max(0, $clips) * (int)$pricing['clip'];
+        // Work done on the site's own AI (Bring your own AI) uses no LMS Labs credits, so it is not charged.
+        $nodecost = ai\byok::uses('text') ? 0 : max(0, $nodes) * (int)$pricing['node'];
+        $imagecost = ai\byok::uses('image') ? 0 : max(0, $images) * (int)$pricing['image'];
+        $clipcost = ai\byok::uses('voice') ? 0 : max(0, $clips) * (int)$pricing['clip'];
         $total = $nodecost + $imagecost + $clipcost;
         return [
             'nodes'     => max(0, $nodes),

@@ -3879,6 +3879,41 @@ button.aibs-avatar {
     justify-content: space-between;
 }
 
+/* Bring your own AI: the work runs on the site's own AI, so no LMS Labs credits are used. */
+.aibs-ownai-badge {
+    align-items: center;
+    background: #e7f1fa;
+    border: 1px solid rgba(15, 108, 191, 0.28);
+    border-radius: 999px;
+    color: #0a4f8c;
+    display: inline-flex;
+    font-size: 14px;
+    font-weight: 500;
+    gap: 6px;
+    line-height: 20px;
+    padding: 2px 10px;
+}
+
+.aibs-ownai-badge .fa {
+    font-size: 12px;
+}
+
+.aibs-pricing-ownai {
+    color: #1d2125;
+    font-size: 16px;
+    margin: 0 0 8px;
+}
+
+[data-bs-theme="dark"] .aibs-ownai-badge {
+    background: rgba(63, 137, 204, 0.16);
+    border-color: rgba(63, 137, 204, 0.35);
+    color: #9fc4e5;
+}
+
+[data-bs-theme="dark"] .aibs-pricing-ownai {
+    color: #e8eaed;
+}
+
 .aibs-pricing-now {
     color: var(--aibs-accent);
     font-size: var(--aibs-text-head);

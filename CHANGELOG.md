@@ -2,6 +2,15 @@
 
 All notable changes to AI Branched Scenario are recorded here.
 
+## [v5.6.0] - 2026-11-26
+
+### Added
+- Bring your own AI. With a Bring your own AI licence in AI Grader Central Config 1.1.0 or later, an administrator can run this plugin on the site's own AI provider instead of LMS Labs credits, separately for text, pictures and narration. The scenario, the wizard autofill and field suggestions are written on the site's own text AI using the same prompts, branching plan and quality checks as the LMS Labs service; pictures and narration go to the site's own image and voice providers. Calls go straight from the Moodle site to the provider and use no LMS Labs credits. Anything left on LMS Labs credits works and is charged as before.
+- The wizard shows a "Your own AI" badge and prices own-AI work at no credits; a failure on the site's own AI says which step failed and charges nothing.
+
+### Fixed
+- The draft review page drew each "What this scenario asks you to apply" line one word per line; it now shows as a numbered row, as in the debrief.
+
 ## [v5.5.7] - 2026-11-13
 
 ### Added

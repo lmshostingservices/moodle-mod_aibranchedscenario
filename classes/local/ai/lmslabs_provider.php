@@ -198,7 +198,7 @@ class lmslabs_provider implements provider {
      * @return bool
      */
     public function is_configured(): bool {
-        return credentials::are_configured();
+        return credentials::are_configured() || byok::any();
     }
 
     /**
@@ -344,6 +344,11 @@ class lmslabs_provider implements provider {
      * @return bool
      */
     public static function bundle_mode(): bool {
+        // A run partly on the site's own AI is never a bundle: the package price covers the whole run, and the
+        // first credit request would otherwise be charged for work the site's own AI does.
+        if (byok::any()) {
+            return false;
+        }
         foreach (self::BUNDLE_ROUTES as $route) {
             if (!self::bundle_accepted($route)) {
                 return false;
@@ -442,7 +447,10 @@ class lmslabs_provider implements provider {
      * @return array Decoded response.
      */
     protected function attempt(string $path, array $payload, string $requestid): array {
-        if (!$this->is_configured()) {
+        if (byok::handles($path)) {
+            return $this->own_ai($path, $payload);
+        }
+        if (!credentials::are_configured()) {
             throw new generation_exception('error:nocredentials');
         }
 
@@ -615,6 +623,36 @@ class lmslabs_provider implements provider {
     }
 
     /**
+     * Answer a route on the site's own AI (Bring your own AI) instead of the LMS Labs service.
+     *
+     * Same request body, same data block back, so everything after this is unchanged. No LMS Labs
+     * credentials are needed and no credits are used; nothing is recorded in Client Portal.
+     *
+     * @param string $path Route.
+     * @param array $payload Request body.
+     * @return array The data block.
+     */
+    protected function own_ai(string $path, array $payload): array {
+        $this->lastexchange = ['route' => $path, 'request' => self::redact($payload)];
+        $started = microtime(true);
+        $result = byok::call($path, $payload);
+        $durationms = (int)round((microtime(true) - $started) * 1000);
+        $this->lastexchange += ['status' => 200, 'durationms' => $durationms, 'response' => ['ok' => true, 'byok' => true]];
+        $this->lastmeta = [
+            'model'              => '',
+            'provider'           => 'byok',
+            'durationms'         => $durationms,
+            'creditsused'        => 0,
+            'creditsremaining'   => 0,
+            'unlimited'          => false,
+            'branchingdecisions' => isset($result['quality']['branchingDecisions'])
+                ? max(0, (int)$result['quality']['branchingDecisions']) : null,
+            'branchingrepaired'  => isset($result['quality']['repaired']) ? !empty($result['quality']['repaired']) : null,
+        ];
+        return $result['data'];
+    }
+
+    /**
      * Turn a refused response into one safe line naming what the service objected to.
      *
      * The routes answer a rejected request with a code, a readable message, and - since
@@ -684,7 +722,11 @@ class lmslabs_provider implements provider {
             'message'   => '',
             'buyurl'    => '',
         ];
-        if (!$this->is_configured()) {
+        if (!credentials::are_configured()) {
+            if (byok::any()) {
+                return ['connected' => true, 'byok' => true, 'standardlimit' => self::standard_budget('generate'),
+                    'message' => get_string('status:byok', 'mod_aibranchedscenario')] + $blank;
+            }
             $blank['message'] = get_string('status:nocredentials', 'mod_aibranchedscenario');
             return $blank;
         }
@@ -732,6 +774,7 @@ class lmslabs_provider implements provider {
 
         return [
             'connected' => true,
+            'byok'      => byok::any(),
             'standardlimit' => self::standard_budget('generate'),
             'credits'   => $unlimited ? 0 : max(0, $raw),
             'unlimited' => $unlimited,
@@ -1352,6 +1395,10 @@ class lmslabs_provider implements provider {
      * @return void
      */
     protected function refresh_capabilities(): void {
+        if (byok::uses('text')) {
+            // The text routes answer here, and take the standard on both routes.
+            return;
+        }
         $seen = (int)get_config('mod_aibranchedscenario', 'standardseen');
         if ($seen > 0 && $seen > time() - self::CAPABILITY_TTL) {
             return;
@@ -1419,6 +1466,10 @@ class lmslabs_provider implements provider {
      * @return int Characters accepted, or 0 if the field must be omitted.
      */
     public static function standard_budget(string $route): int {
+        if (in_array($route, ['generate', 'populate'], true) && byok::uses('text')) {
+            // What scenario_engine accepts, as the service advertises it.
+            return 20000;
+        }
         $limit = (int)get_config('mod_aibranchedscenario', 'standardlimit');
         if ($limit <= 0) {
             return 0;

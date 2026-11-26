@@ -269,6 +269,9 @@ class generator {
             'error:serviceunauthorised',
             'error:serviceratelimited',
             'error:nocredentials',
+            // On the site's own AI: never charged in LMS Labs credits.
+            'error:byokfailed',
+            'error:byokunavailable',
         ];
     }
 
