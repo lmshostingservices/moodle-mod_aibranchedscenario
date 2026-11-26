@@ -24,8 +24,6 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Write prose that fills every slot of a prose schema.
  *
@@ -33,17 +31,21 @@ defined('MOODLE_INTERNAL') || die();
  * @return array
  */
 function mod_aibranchedscenario_byok_prose(array $schema): array {
-    $speakers = array_values(array_filter($schema['properties']['nodes']['properties']['n1']['anyOf'][0]['properties']['speaker']['enum']));
+    $speakers =
+        array_values(array_filter($schema['properties']['nodes']['properties']['n1']['anyOf'][0]['properties']['speaker']['enum']));
     $facilitator = $speakers[0];
     $other = $speakers[1] ?? $speakers[0];
-    $profile = function(string $role, string $gender, string $trait, string $look): array {
+    $profile = function (string $role, string $gender, string $trait, string $look): array {
         return ['role' => $role, 'gender' => $gender, 'trait' => $trait, 'appearance' => $look];
     };
     $people = [];
     for ($i = 0; $i < $schema['properties']['characters']['minItems']; $i++) {
-        $people[] = $profile('Crusher operator finishing night shift', 'female',
+        $people[] = $profile(
+            'Crusher operator finishing night shift',
+            'female',
             'Goes quiet and clipped when tired, then over-explains once she feels heard.',
-            'Medium build, dark hair tied back, hi-vis orange shirt, dusty steel-capped boots, radio on her belt.');
+            'Medium build, dark hair tied back, hi-vis orange shirt, dusty steel-capped boots, radio on her belt.'
+        );
     }
     $stage = 0;
     $nodes = [];
@@ -54,12 +56,16 @@ function mod_aibranchedscenario_byok_prose(array $schema): array {
         $isdecision = count($choiceids) === 3;
         $text = [
             'title' => "Handover at the primary crusher, part {$stage}",
-            'content' => "It is 5:40 am at the Kestrel Ridge primary crusher. {$other} has the night log open on the tablet, and "
-                . "the isolation board shows two locks still on conveyor CV-0{$stage}. The day crew is already waiting at the gate.",
+            'content' =>
+                "It is 5:40 am at the Kestrel Ridge primary crusher. {$other} has the night log open on the tablet, and "
+                . "the isolation board shows two locks still on conveyor CV-0{$stage}. "
+                . "The day crew is already waiting at the gate.",
             'facilitatorSpeech' => "Two locks are still on CV-0{$stage}, and the day crew wants to start in ten minutes.",
             'speaker' => $facilitator,
-            'imageAlt' => "{$other} stands beside the isolation board at the crusher, holding a tablet, while the day crew waits.",
-            'imagePrompt' => "A wide shot of a mine crusher control room at dawn with a long window onto a conveyor gantry. {$other} "
+            'imageAlt' =>
+                "{$other} stands beside the isolation board at the crusher, holding a tablet, while the day crew waits.",
+            'imagePrompt' =>
+                "A wide shot of a mine crusher control room at dawn with a long window onto a conveyor gantry. {$other} "
                 . "stands at a wall-mounted isolation board holding a tablet, two red personal locks still hanging on the "
                 . "conveyor isolator. Three workers in orange hi-vis wait by the doorway with hard hats under their arms. "
                 . "Coffee cups and a paper permit book sit on the bench beside a flickering radio. The light outside is pale "
@@ -70,7 +76,8 @@ function mod_aibranchedscenario_byok_prose(array $schema): array {
             'choices' => [],
         ];
         if (($props['crisisVariant']['type'] ?? '') === 'object') {
-            $text['crisisVariant'] = ['situation' => 'The control room radio crackles: a fitter reports the belt jolted while a lock '
+            $text['crisisVariant'] = ['situation' => 'The control room radio crackles: a fitter reports the belt jolted ' .
+                'while a lock '
                 . 'was still on.', 'facilitatorSpeech' => 'The belt just moved with a lock on it.',
                 'challenge' => 'What is the first thing you do now?'];
         }
@@ -80,9 +87,11 @@ function mod_aibranchedscenario_byok_prose(array $schema): array {
         foreach ($choiceids as $index => $choiceid) {
             $text['choices'][$choiceid] = [
                 'label' => $isdecision ? $labels[$index] . " ({$stage})" : 'Continue to the next part of the shift',
-                'feedback' => $isdecision ? "{$other} slows down when someone checks the board beside her, and the two locks get "
+                'feedback' => $isdecision ?
+                    "{$other} slows down when someone checks the board beside her, and the two locks get "
                     . "an owner within a minute. Step {$index}." : 'The shift moves on with the handover settled.',
-                'consequence' => $isdecision ? "The day crew sees who holds each lock before anyone touches the belt. Path {$index}."
+                'consequence' => $isdecision ?
+                    "The day crew sees who holds each lock before anyone touches the belt. Path {$index}."
                     : 'The crew moves to the next job.',
                 'outcomeNote' => "Taking this option at stage {$stage} leaves the crew with a clearer picture of who owns each "
                     . "isolation, and {$other} with a different view of how handovers work here. Variant {$index}.",
@@ -96,10 +105,16 @@ function mod_aibranchedscenario_byok_prose(array $schema): array {
         'title' => 'Handover at the primary crusher',
         'subtitle' => 'A night-to-day handover with two locks unaccounted for',
         'hook' => 'Ten minutes before the day crew starts, the isolation board does not match the log.',
-        'introduction' => 'You are the shift supervisor at the Kestrel Ridge primary crusher. Your job is to hand the plant over '
+        'introduction' => 'You are the shift supervisor at the Kestrel Ridge primary crusher. Your job is to hand the plant ' .
+            'over '
             . 'safely from the night crew to the day crew.',
-        'facilitator' => $profile('Senior shift supervisor', 'male', 'Stays calm and asks short questions when the pressure rises.',
-            'Tall, grey beard, navy work shirt with reflective tape, white hard hat with a supervisor stripe.'),
+        'facilitator' => $profile(
+            'Senior shift supervisor',
+            'male',
+            'Stays calm and asks short questions when the pressure ' .
+            'rises.',
+            'Tall, grey beard, navy work shirt with reflective tape, white hard hat with a supervisor stripe.'
+        ),
         'characters' => $people,
         'principles' => [['title' => 'Check the board, not the log', 'summary' => 'A handover is only complete when every '
             . 'lock on the board has a named owner.', 'example' => 'Walk the board together and read each tag aloud.',

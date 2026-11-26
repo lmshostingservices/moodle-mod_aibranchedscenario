@@ -96,7 +96,7 @@ class byok {
     public static function call(string $path, array $payload): array {
         $route = basename($path);
         \core_php_time_limit::raise(self::SCENARIO_TIMEOUT + 60);
-        scenario_engine::$aicall = function(string $system, string $user, array $options) use ($route): string {
+        scenario_engine::$aicall = function (string $system, string $user, array $options) use ($route): string {
             if ($route === 'generate') {
                 $options['timeout'] = self::SCENARIO_TIMEOUT;
             }
@@ -114,8 +114,12 @@ class byok {
                 case 'image':
                     return ['data' => self::image((string) ($payload['prompt'] ?? ''))];
                 case 'speech':
-                    return ['data' => self::speech((string) ($payload['text'] ?? ''), (string) ($payload['language'] ?? 'en-AU'),
-                        (string) ($payload['voice'] ?? 'Aoede'))];
+                    return ['data' => self::speech(
+                        (string) ($payload['text'] ?? ''),
+                        (string) ($payload['language'] ??
+                        'en-AU'),
+                        (string) ($payload['voice'] ?? 'Aoede')
+                    )];
             }
         } catch (byok_failure $e) {
             throw new generation_exception('error:byokfailed', $e->stage . ': ' . $e->rule);
@@ -125,7 +129,11 @@ class byok {
             if ($e->errorcode === 'byok_notavailable') {
                 throw new generation_exception('error:byokunavailable', $e->getMessage());
             }
-            throw new generation_exception('error:byokfailed', \core_text::substr(clean_param($e->getMessage(), PARAM_TEXT), 0, 300));
+            throw new generation_exception('error:byokfailed', \core_text::substr(
+                clean_param($e->getMessage(), PARAM_TEXT),
+                0,
+                300
+            ));
         }
         throw new generation_exception('error:byokfailed', 'route: ' . $route);
     }
@@ -173,8 +181,18 @@ class byok {
         $cropw = (int) round(self::IMAGE_WIDTH / $scale);
         $croph = (int) round(self::IMAGE_HEIGHT / $scale);
         $target = imagecreatetruecolor(self::IMAGE_WIDTH, self::IMAGE_HEIGHT);
-        imagecopyresampled($target, $source, 0, 0, (int) (($width - $cropw) / 2), (int) (($height - $croph) / 2),
-            self::IMAGE_WIDTH, self::IMAGE_HEIGHT, $cropw, $croph);
+        imagecopyresampled(
+            $target,
+            $source,
+            0,
+            0,
+            (int) (($width - $cropw) / 2),
+            (int) (($height - $croph) / 2),
+            self::IMAGE_WIDTH,
+            self::IMAGE_HEIGHT,
+            $cropw,
+            $croph
+        );
         ob_start();
         imagejpeg($target, null, 86);
         $jpeg = ob_get_clean();

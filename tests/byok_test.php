@@ -75,7 +75,7 @@ final class byok_test extends \advanced_testcase {
         set_config('testpublickey', base64_encode(sodium_crypto_sign_publickey($pair)), 'local_aiconfig');
         $payload = json_encode(['v' => 1, 'id' => 'lic_t', 'site' => \local_aiconfig\byok\licence::site_host(),
             'plan' => 'pro', 'byok' => true, 'products' => ['*'], 'sub' => 'sub_t', 'exp' => time() + DAYSECS]);
-        $b64 = function(string $s): string {
+        $b64 = function (string $s): string {
             return rtrim(strtr(base64_encode($s), '+/', '-_'), '=');
         };
         set_config('licencekey', $b64($payload) . '.' .
@@ -85,7 +85,7 @@ final class byok_test extends \advanced_testcase {
         set_config('key_anthropic', 'sk-test', 'local_aiconfig');
         $this->requests = [];
         $this->answers = [];
-        $GLOBALS['local_aiconfig_byok_mock'] = function($url, $headers, $body, $vendor, $raw = false) {
+        $GLOBALS['local_aiconfig_byok_mock'] = function ($url, $headers, $body, $vendor, $raw = false) {
             $this->requests[] = ['url' => $url, 'body' => $body];
             $answer = array_shift($this->answers);
             if ($answer === null) {
@@ -111,7 +111,7 @@ final class byok_test extends \advanced_testcase {
      * @return callable
      */
     protected function tool(callable $make): callable {
-        return function(array $body) use ($make) {
+        return function (array $body) use ($make) {
             $schema = json_decode(json_encode($body['tools'][0]['input_schema']), true);
             // Real calls get the raw reply back, so the answer is JSON text, as the provider sends it.
             return json_encode(['stop_reason' => 'tool_use', 'content' => [['type' => 'tool_use',
@@ -133,7 +133,7 @@ final class byok_test extends \advanced_testcase {
     }
 
     public function test_scenario_is_written_on_own_ai_and_passes_the_plugin_validator(): void {
-        $this->answers[] = $this->tool(function(array $schema) {
+        $this->answers[] = $this->tool(function (array $schema) {
             return mod_aibranchedscenario_byok_prose($schema);
         });
         $provider = new lmslabs_provider();
@@ -160,15 +160,19 @@ final class byok_test extends \advanced_testcase {
     }
 
     public function test_verdict_wording_gets_one_repair_call(): void {
-        $this->answers[] = $this->tool(function(array $schema) {
+        $this->answers[] = $this->tool(function (array $schema) {
             $prose = mod_aibranchedscenario_byok_prose($schema);
             $prose['nodes']['n1']['content'] = 'Well done, the crew has arrived early at the crusher.';
             return $prose;
         });
-        $this->answers[] = $this->tool(function(array $schema, array $body) {
+        $this->answers[] = $this->tool(function (array $schema, array $body) {
             $this->assertSame(1, $schema['properties']['repairs']['minItems']);
-            $this->assertStringContainsString('["nodes",0,"content"] (VERDICT_WORDING)', $body['messages'][0]['content'][0]['text']);
-            return ['repairs' => [['path' => ['nodes', 0, 'content'], 'value' => 'The crew has arrived early at the crusher.']]];
+            $this->assertStringContainsString(
+                '["nodes",0,"content"] (VERDICT_WORDING)',
+                $body['messages'][0]['content'][0]['text']
+            );
+            return ['repairs' => [['path' => ['nodes', 0, 'content'], 'value' =>
+                'The crew has arrived early at the crusher.']]];
         });
         $result = (new lmslabs_provider())->generate_scenario(self::WIZARD);
         $this->assertCount(2, $this->requests);
@@ -178,7 +182,7 @@ final class byok_test extends \advanced_testcase {
     }
 
     public function test_a_refused_scenario_names_the_stage_and_charges_nothing(): void {
-        $this->answers[] = $this->tool(function(array $schema) {
+        $this->answers[] = $this->tool(function (array $schema) {
             $prose = mod_aibranchedscenario_byok_prose($schema);
             unset($prose['nodes']['n2']);
             return $prose;
@@ -202,9 +206,10 @@ final class byok_test extends \advanced_testcase {
     }
 
     public function test_wizard_fill_and_field_suggestion(): void {
-        $this->answers[] = $this->tool(function() {
+        $this->answers[] = $this->tool(function () {
             return ['title' => 'Handover at the crusher', 'introduction' => 'You hand the plant over to the day crew.',
-                'audience' => 'Shift supervisors', 'learningObjectives' => ['Match every lock to an owner'], 'instructions' => ''];
+                'audience' => 'Shift supervisors', 'learningObjectives' => ['Match every lock to an owner'], 'instructions' =>
+                    ''];
         });
         $fields = (new lmslabs_provider())->populate(['sourcecontent' => self::WIZARD['sourcecontent'], 'title' => 'Draft']);
         $this->assertSame('Handover at the crusher', $fields['title']);
@@ -212,13 +217,16 @@ final class byok_test extends \advanced_testcase {
         $this->assertStringContainsString('Existing values: {"title":"Draft"}', $prompt);
         $this->assertSame(4000, $this->requests[0]['body']['max_tokens']);
 
-        $this->answers[] = $this->tool(function() {
+        $this->answers[] = $this->tool(function () {
             return ['suggestion' => '  Two locks on CV-03 have no owner at handover.  '];
         });
         $out = (new lmslabs_provider())->suggest('centralproblem', ['sourcecontent' => self::WIZARD['sourcecontent']]);
         $this->assertSame('Two locks on CV-03 have no owner at handover.', $out['suggestion']);
         $this->assertSame(1000, $this->requests[1]['body']['max_tokens']);
-        $this->assertStringContainsString('context.whatThisFieldNeeds', $this->requests[1]['body']['messages'][0]['content'][0]['text']);
+        $this->assertStringContainsString(
+            'context.whatThisFieldNeeds',
+            $this->requests[1]['body']['messages'][0]['content'][0]['text']
+        );
     }
 
     public function test_pictures_and_narration_on_own_keys(): void {

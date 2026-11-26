@@ -229,8 +229,12 @@ class get_generation_plan extends external_api {
             'allowancelimited'   => new external_value(PARAM_BOOL, 'Whether a daily allowance applies'),
             'allowanceremaining' => new external_value(PARAM_INT, 'How much of the daily allowance is left'),
             'buyurl'        => new external_value(PARAM_URL, 'Where more credits can be bought', VALUE_DEFAULT, ''),
-            'byok'          => new external_value(PARAM_BOOL, 'Whether some of the work runs on the site\'s own AI',
-                VALUE_DEFAULT, false),
+            'byok'          => new external_value(
+                PARAM_BOOL,
+                'Whether some of the work runs on the site\'s own AI',
+                VALUE_DEFAULT,
+                false
+            ),
         ]);
     }
 }

@@ -180,7 +180,7 @@ class draft_review implements \renderable, \templatable {
                 $this->tier
             ) !== null,
             // Numbered, as the debrief draws them: the lesson row has a column for the number.
-            'principles'  => array_map(function($principle, $index) {
+            'principles'  => array_map(function ($principle, $index) {
                 return ['number' => $index + 1] + (array) $principle;
             }, array_values($definition['principles']), array_keys(array_values($definition['principles']))),
             'hasprinciples' => !empty($definition['principles']),
