@@ -119,7 +119,13 @@
             <div class="aibs-pricing" data-region="pricing">
                 <div class="aibs-pricing-head">
                     <h4 class="aibs-h4">{{#str}} pricing:heading, mod_aibranchedscenario {{/str}}</h4>
+                    {{#pricing.ownai}}
+                        <span class="aibs-ownai-badge"><i class="fa fa-key" aria-hidden="true"></i>{{#str}} byok:badge, mod_aibranchedscenario {{/str}}</span>
+                    {{/pricing.ownai}}
                 </div>
+                {{#pricing.ownai}}
+                    <p class="aibs-pricing-ownai">{{#str}} pricing:ownai, mod_aibranchedscenario {{/str}}</p>
+                {{/pricing.ownai}}
                 <p class="aibs-pricing-rates">
                     {{#str}} pricing:lead, mod_aibranchedscenario, { "node": {{pricing.rates.node}}, "image": {{pricing.rates.image}}, "clip": {{pricing.rates.clip}} } {{/str}}</p>
                 <p class="aibs-pricing-now">{{pricing.amount}}</p>

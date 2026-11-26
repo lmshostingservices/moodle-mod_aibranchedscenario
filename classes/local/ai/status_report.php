@@ -38,6 +38,10 @@ class status_report {
         $resolved = credentials::resolve();
         $diagnostics = credentials::diagnostics();
 
+        if ($resolved['source'] === credentials::SOURCE_NONE && byok::any()) {
+            // No LMS Labs credentials, but Bring your own AI runs the work set to the site's own AI.
+            return html_writer::div(get_string('status:byok', 'mod_aibranchedscenario'), 'alert alert-info');
+        }
         if ($resolved['source'] === credentials::SOURCE_NONE) {
             // Say why, not just that. A bare "no credentials" sends an administrator
             // looking in the wrong place when the real cause is a half-filled source

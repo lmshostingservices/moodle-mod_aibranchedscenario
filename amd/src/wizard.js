@@ -1678,7 +1678,7 @@ class Wizard {
                 scenes: plan.scenes,
                 images: plan.images,
             }));
-            if (plan.balanceknown && !plan.unlimited) {
+            if (plan.balanceknown && !plan.unlimited && !(plan.byok && plan.estimate === 0)) {
                 lines.push(await getString('confirmgenerate:balance', 'mod_aibranchedscenario', plan.credits));
             }
             if (plan.allowancelimited && plan.allowanceremaining < plan.estimate) {

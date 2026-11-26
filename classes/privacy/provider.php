@@ -122,6 +122,10 @@ class provider implements
             'siteid'        => 'privacy:metadata:lmslabs:siteid',
         ], 'privacy:metadata:lmslabs');
 
+        $collection->add_external_location_link('byok_aiprovider', [
+            'sourcecontent' => 'privacy:metadata:byok_aiprovider:sourcecontent',
+        ], 'privacy:metadata:byok_aiprovider');
+
         return $collection;
     }
 

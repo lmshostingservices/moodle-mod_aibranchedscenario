@@ -20,6 +20,7 @@ use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
+use mod_aibranchedscenario\local\ai\byok;
 use mod_aibranchedscenario\local\ai\lmslabs_provider;
 use mod_aibranchedscenario\local\quality_review;
 use mod_aibranchedscenario\local\scenario_manager;
@@ -148,7 +149,10 @@ class get_generation_plan extends external_api {
         return [
             'decisions'    => $decisions,
             'scenes'       => $scenes,
-            'price'        => schema::price_text($price['total'], $price['currency'], $price['rate']),
+            'price'        => $price['total'] === 0 && byok::any()
+                ? get_string('price:ownai', 'mod_aibranchedscenario')
+                : schema::price_text($price['total'], $price['currency'], $price['rate']),
+            'byok'         => byok::any(),
             'pricetotal'   => $price['total'],
             'pricecurrency' => $price['currency'],
             'images'       => $images,
@@ -225,6 +229,12 @@ class get_generation_plan extends external_api {
             'allowancelimited'   => new external_value(PARAM_BOOL, 'Whether a daily allowance applies'),
             'allowanceremaining' => new external_value(PARAM_INT, 'How much of the daily allowance is left'),
             'buyurl'        => new external_value(PARAM_URL, 'Where more credits can be bought', VALUE_DEFAULT, ''),
+            'byok'          => new external_value(
+                PARAM_BOOL,
+                'Whether some of the work runs on the site\'s own AI',
+                VALUE_DEFAULT,
+                false
+            ),
         ]);
     }
 }
